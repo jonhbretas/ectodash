@@ -33,10 +33,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Success Criteria** (what must be TRUE):
   1. User can log in using their institutional email address.
   2. User remains logged in across browser sessions without repeated re-authentication.
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — Scaffold Next.js 16 + toolchain + Vitest + Supabase client factories (wave 1)
+- [ ] 01-02-PLAN.md — profiles table, RLS, identity trigger, blocking schema push (wave 2)
+- [ ] 01-03-PLAN.md — TRACER: end-to-end invite-only magic-link login (wave 3)
+- [ ] 01-04-PLAN.md — Session persistence, "Sair", Vercel production deploy (wave 4)
 
 ### Phase 2: Role-Based Access Control
 **Goal**: The system restricts access to sensitive data based on 4 fixed institutional roles, enforced at the database level rather than only hidden in the UI.
@@ -174,7 +177,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold & Institutional Login | 0/TBD | Not started | - |
+| 1. Project Scaffold & Institutional Login | 0/4 | Planned | - |
 | 2. Role-Based Access Control | 0/TBD | Not started | - |
 | 3. Accessible UI Foundation | 0/TBD | Not started | - |
 | 4. Demandas CRUD & Overdue Tracking | 0/TBD | Not started | - |
