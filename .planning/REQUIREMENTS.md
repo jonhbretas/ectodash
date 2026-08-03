@@ -27,11 +27,10 @@
 - [ ] **LEMB-03**: Envio é idempotente — não manda lembrete duplicado no mesmo dia/ciclo
 - [ ] **LEMB-04**: Execução do job de lembrete fica registrada e visível (sucesso/falha, quantidade enviada)
 
-### Transcrição de Reunião com IA
+### Extração de Demandas via IA
 
-- [ ] **IA-01**: Usuário cola texto de transcrição de reunião (vindo de Fireflies/tl;dv) no sistema
-- [ ] **IA-02**: Sistema gera resumo da reunião via IA
-- [ ] **IA-03**: Sistema extrai da transcrição uma lista de demandas sugeridas (título, responsável, prazo)
+- [ ] **IA-01**: Usuário cola resumo de reunião já pronto (gerado por Fireflies/tl;dv) no sistema
+- [ ] **IA-03**: Sistema extrai do resumo colado uma lista de demandas sugeridas (título, responsável, prazo)
 - [ ] **IA-04**: Demandas extraídas por IA passam por tela de revisão/confirmação humana antes de virarem demandas reais no sistema — nunca criação automática sem revisão
 
 ### Dashboard Financeiro
@@ -82,6 +81,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | Builder de permissões granulares por campo | Sistema de 4 papéis fixos é suficiente pro tamanho da instituição; permissão por campo é complexidade desproporcional |
 | Dashboard/BI genérico para financeiro (queries ad-hoc, drill-down livre) | Necessidade real é visão fixa de fluxo de caixa, não ferramenta de BI; planilha original continua disponível pra análises mais profundas |
 | Atualização em tempo real via websocket | Público não checa o painel a cada segundo; sincronização periódica com timestamp visível é suficiente e mais barata |
+| Sistema gerar resumo de reunião via IA | Fireflies/tl;dv já geram o resumo; sistema só recebe o resumo pronto colado pelo usuário, evita duplicar processamento |
 
 ## Traceability
 
@@ -89,39 +89,38 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| DEM-01 | TBD | Pending |
-| DEM-02 | TBD | Pending |
-| DEM-03 | TBD | Pending |
-| DEM-04 | TBD | Pending |
-| DEM-05 | TBD | Pending |
-| LEMB-01 | TBD | Pending |
-| LEMB-02 | TBD | Pending |
-| LEMB-03 | TBD | Pending |
-| LEMB-04 | TBD | Pending |
-| IA-01 | TBD | Pending |
-| IA-02 | TBD | Pending |
-| IA-03 | TBD | Pending |
-| IA-04 | TBD | Pending |
-| FIN-01 | TBD | Pending |
-| FIN-02 | TBD | Pending |
-| FIN-03 | TBD | Pending |
-| FIN-04 | TBD | Pending |
-| COORD-01 | TBD | Pending |
-| COORD-02 | TBD | Pending |
-| COORD-03 | TBD | Pending |
-| UX-01 | TBD | Pending |
-| UX-02 | TBD | Pending |
-| UX-03 | TBD | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| UX-01 | Phase 3 | Pending |
+| UX-03 | Phase 3 | Pending |
+| DEM-01 | Phase 4 | Pending |
+| DEM-02 | Phase 4 | Pending |
+| DEM-03 | Phase 4 | Pending |
+| DEM-04 | Phase 5 | Pending |
+| DEM-05 | Phase 5 | Pending |
+| UX-02 | Phase 5 | Pending |
+| COORD-01 | Phase 6 | Pending |
+| COORD-02 | Phase 6 | Pending |
+| COORD-03 | Phase 6 | Pending |
+| LEMB-01 | Phase 7 | Pending |
+| LEMB-02 | Phase 7 | Pending |
+| LEMB-03 | Phase 7 | Pending |
+| LEMB-04 | Phase 7 | Pending |
+| IA-01 | Phase 8 | Pending |
+| IA-03 | Phase 8 | Pending |
+| IA-04 | Phase 8 | Pending |
+| FIN-01 | Phase 9 | Pending |
+| FIN-03 | Phase 9 | Pending |
+| FIN-02 | Phase 10 | Pending |
+| FIN-04 | Phase 10 | Pending |
 
 **Coverage:**
-- v1 requirements: 27 total
-- Mapped to phases: 0 (roadmap not yet created)
-- Unmapped: 27 ⚠️ (resolved during roadmap creation)
+- v1 requirements: 26 total
+- Mapped to phases: 26 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-08-02*
-*Last updated: 2026-08-02 after initial definition*
+*Last updated: 2026-08-03 after roadmap revision (IA-02 removed/moved to Out of Scope; old Phase 8 merged into Phase 8/9→8; phases renumbered 8-11 down to 8-10)*
