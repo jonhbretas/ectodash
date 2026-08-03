@@ -13,7 +13,7 @@ EctoDash starts from a hard dependency everything else needs: institutional logi
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Project Scaffold & Institutional Login** - Volunteers log in with institutional email and stay signed in across sessions
+- [x] **Phase 1: Project Scaffold & Institutional Login** - Volunteers log in with institutional email and stay signed in across sessions
 - [ ] **Phase 2: Role-Based Access Control** - Every account gets one of 4 fixed roles, enforced via RLS at the database level
 - [ ] **Phase 3: Accessible UI Foundation** - Base interface is legible, touch-friendly, and responsive for an elderly-inclusive audience
 - [ ] **Phase 4: Demandas CRUD & Overdue Tracking** - Users create, edit, and conclude demandas, with overdue ones flagged automatically
@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can log in using their institutional email address.
   2. User remains logged in across browser sessions without repeated re-authentication.
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -50,7 +50,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — TRACER: end-to-end invite-only magic-link login (wave 3)
+- [x] 01-03-PLAN.md — TRACER: end-to-end invite-only magic-link login (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -228,7 +228,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold & Institutional Login | 3/4 | In Progress|  |
+| 1. Project Scaffold & Institutional Login | 4/4 | In Progress|  |
 | 2. Role-Based Access Control | 0/TBD | Not started | - |
 | 3. Accessible UI Foundation | 0/TBD | Not started | - |
 | 4. Demandas CRUD & Overdue Tracking | 0/TBD | Not started | - |
