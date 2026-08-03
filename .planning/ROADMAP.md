@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can log in using their institutional email address.
   2. User remains logged in across browser sessions without repeated re-authentication.
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 
 Plans:
 **Wave 1**
@@ -46,7 +46,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — profiles table, RLS, identity trigger, blocking schema push (wave 2)
+- [x] 01-02-PLAN.md — profiles table, RLS, identity trigger, blocking schema push (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -228,7 +228,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold & Institutional Login | 1/4 | In Progress|  |
+| 1. Project Scaffold & Institutional Login | 2/4 | In Progress|  |
 | 2. Role-Based Access Control | 0/TBD | Not started | - |
 | 3. Accessible UI Foundation | 0/TBD | Not started | - |
 | 4. Demandas CRUD & Overdue Tracking | 0/TBD | Not started | - |

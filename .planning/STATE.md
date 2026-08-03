@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Project Scaffold & Institutional Login
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-08-03T13:55:32.424Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-08-03T16:54:35.932Z"
 last_activity: 2026-08-03
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 ## Current Position
 
 Phase: 01 (Project Scaffold & Institutional Login) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-03 — Phase 01 execution started
 
-Progress: [███░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 25%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 13min | 3 tasks | 25 files |
+| Phase 01 P02 | 20min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - Roadmap revision (2026-08-03): System no longer generates its own meeting summary — Fireflies/tl;dv already produce it (IA-02 removed, moved to Out of Scope; IA-01 reworded to "paste ready-made summary"). Old Phase 8 (AI Meeting Summary) merged into old Phase 9, forming the new Phase 8 (AI Task Extraction & Review: paste summary + extract suggested demandas + human review gate). All phases from old 9-11 renumbered down to 8-10. Total phase count: 11 → 10.
 - [Phase ?]: Kept typescript pinned at researched latest (7.0.2) rather than downgrading to satisfy lagging tooling; hand-assembled eslint.config.mjs from underlying plugins since eslint-config-next cannot load under TS 7.x (typescript-eslint/typescript-eslint#10940); enabled next.config.ts experimental.useTypeScriptCli for the same reason
 - [Phase ?]: Tightened .gitignore from create-next-app default .env* to .env*.local so the tracked .env.local.example template is not itself gitignored
+- [Phase ?]: Phase 1: profiles table limited to id/email/created_at; role/área/permission columns deferred to Phase 2 migration
+- [Phase ?]: Phase 1: all Supabase CLI operations run via npx supabase@latest (no global install, no Docker) against the hosted project directly
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-03T13:55:32.417Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-08-03T16:54:35.924Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
