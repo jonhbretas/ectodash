@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import SignOutButton from "./sign-out-button";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -29,6 +30,7 @@ export default async function DashboardPage() {
       <p className="text-xl text-zinc-700">
         As demandas da instituição vão aparecer aqui em uma fase futura.
       </p>
+      <SignOutButton />
     </main>
   );
 }
