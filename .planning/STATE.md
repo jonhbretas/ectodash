@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
+current_phase: 02
 current_phase_name: Role-Based Access Control
-status: planning
-stopped_at: Completed 01-03-PLAN.md — Phase 1 fully complete (all 4 plans closed)
-last_updated: "2026-08-03T22:37:22.112Z"
+status: executing
+stopped_at: Completed 02-01-PLAN.md — role model + RLS enforcement live on hosted project
+last_updated: "2026-08-03T23:56:04.138Z"
 last_activity: 2026-08-03
-last_activity_desc: Phase 1 complete, transitioned to Phase 2
+last_activity_desc: Phase 02 execution started
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 8
+  completed_plans: 5
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-02)
 
 **Core value:** Coordenador consegue ver, num só lugar, o andamento real de todas as demandas/projetos da instituição — quem é responsável, qual o prazo, o que está atrasado — sem precisar cobrar manualmente ou vasculhar planilhas e grupos.
-**Current focus:** Phase 01 — Project Scaffold & Institutional Login
+**Current focus:** Phase 02 — Role-Based Access Control
 
 ## Current Position
 
-Phase: 2 — Role-Based Access Control
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-03 — Phase 1 complete, transitioned to Phase 2
+Phase: 02 (Role-Based Access Control) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-08-03 — Phase 02 execution started
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 63%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 01 P02 | 20min | 3 tasks | 5 files |
 | Phase 01 P04 | 35min | 3 tasks | 6 files |
 | Phase 01 P03 | 25min | 3 tasks | 2 files |
+| Phase 02 P01 | 52min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Plan 01-03 closed out: deleted the temporary admin.createUser-bypass coordinator account and re-seeded via the real admin.inviteUserByEmail path, confirming public.profiles ON DELETE CASCADE works and closing the invite-only onboarding loop end-to-end.
 - [Phase ?]: Supabase Auth email send-rate-limit raised (2/hour default -> 30/hour) via Dashboard -> Authentication -> Rate Limits to allow the real invite flow to succeed now that custom SMTP (Resend, ectolab.org) is configured.
 - [Phase ?]: Supabase admin.inviteUserByEmail resends (exit 0) for a still-pending invite and only rejects (already registered) once the invited user has confirmed via the link -- duplicate-invite verification was resequenced accordingly.
+- [Phase ?]: [Phase 02-01] Coordinator role backfill targets the earliest-created profiles row structurally (created_at asc limit 1) rather than hardcoding the coordinator's personal email — repository is public on GitHub
+- [Phase ?]: [Phase 02-01] Added a coordinator-only SELECT policy alongside the planned coordinator-only UPDATE policy on public.profiles — Postgres RLS gates an UPDATE's row lookup through SELECT policies, so without it the UPDATE was silently unreachable (0 rows affected, no error), a gap not covered in phase research
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-03T22:17:57.828Z
-Stopped at: Completed 01-03-PLAN.md — Phase 1 fully complete (all 4 plans closed)
+Last session: 2026-08-03T23:56:04.128Z
+Stopped at: Completed 02-01-PLAN.md — role model + RLS enforcement live on hosted project
 Resume file: None
