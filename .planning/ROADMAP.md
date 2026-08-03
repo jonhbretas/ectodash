@@ -228,7 +228,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold & Institutional Login | 4/4 | In Progress|  |
+| 1. Project Scaffold & Institutional Login | 4/4 | Complete    | 2026-08-03 |
 | 2. Role-Based Access Control | 0/TBD | Not started | - |
 | 3. Accessible UI Foundation | 0/TBD | Not started | - |
 | 4. Demandas CRUD & Overdue Tracking | 0/TBD | Not started | - |
