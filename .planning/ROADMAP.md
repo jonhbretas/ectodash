@@ -59,6 +59,7 @@ Plans:
 ### Phase 2: Role-Based Access Control
 
 **Goal**: The system restricts access to sensitive data based on 4 fixed institutional roles, enforced at the database level rather than only hidden in the UI.
+**UI hint**: no
 **Mode:** mvp
 **Depends on**: Phase 1
 **Requirements**: AUTH-02, AUTH-03
