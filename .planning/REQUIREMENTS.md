@@ -7,7 +7,7 @@
 
 ### Autenticação e Papéis
 
-- [ ] **AUTH-01**: Usuário faz login com e-mail institucional
+- [x] **AUTH-01**: Usuário faz login com e-mail institucional
 - [ ] **AUTH-02**: Sistema define 4 papéis fixos: Coordenador geral, Líder de área/projeto, Voluntário comum, Financeiro
 - [ ] **AUTH-03**: Acesso a dados sensíveis (financeiro) é restrito por papel via RLS no banco, não só ocultado na tela
 - [ ] **AUTH-04**: Sessão persiste entre acessos (sem re-login constante)
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
 | AUTH-04 | Phase 1 | Pending |
 | AUTH-02 | Phase 2 | Pending |
 | AUTH-03 | Phase 2 | Pending |
@@ -117,6 +117,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIN-04 | Phase 10 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 26 total
 - Mapped to phases: 26 (100%)
 - Unmapped: 0
