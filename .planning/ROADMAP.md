@@ -7,6 +7,7 @@ EctoDash starts from a hard dependency everything else needs: institutional logi
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -26,148 +27,198 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Project Scaffold & Institutional Login
+
 **Goal**: Volunteers can log in with their institutional email and remain authenticated across sessions, on a deployed Next.js + Supabase foundation.
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: AUTH-01, AUTH-04
 **Success Criteria** (what must be TRUE):
+
   1. User can log in using their institutional email address.
   2. User remains logged in across browser sessions without repeated re-authentication.
+
 **Plans**: 4 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 01-01-PLAN.md — Scaffold Next.js 16 + toolchain + Vitest + Supabase client factories (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01-02-PLAN.md — profiles table, RLS, identity trigger, blocking schema push (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01-03-PLAN.md — TRACER: end-to-end invite-only magic-link login (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 01-04-PLAN.md — Session persistence, "Sair", Vercel production deploy (wave 4)
 
 ### Phase 2: Role-Based Access Control
+
 **Goal**: The system restricts access to sensitive data based on 4 fixed institutional roles, enforced at the database level rather than only hidden in the UI.
 **Mode:** mvp
 **Depends on**: Phase 1
 **Requirements**: AUTH-02, AUTH-03
 **Success Criteria** (what must be TRUE):
+
   1. Every user account is assigned exactly one of 4 roles (Coordenador geral, Líder de área/projeto, Voluntário comum, Financeiro).
   2. A user without the Financeiro or Coordenador role cannot retrieve financial data even via direct API/database query, not just via a hidden UI element.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] 02-01: TBD
 
 ### Phase 3: Accessible UI Foundation
+
 **Goal**: The application's base interface is legible, touch-friendly, and responsive enough for an elderly-inclusive volunteer audience to use without friction.
 **Mode:** mvp
 **Depends on**: Phase 1
 **Requirements**: UX-01, UX-03
 **Success Criteria** (what must be TRUE):
+
   1. Text, buttons, and touch targets are large enough and contrast is high enough to read and tap comfortably for older users.
   2. The application layout adapts and remains fully usable on both mobile phones and desktop browsers.
+
 **Plans**: TBD
 **UI hint**: yes
 
 Plans:
+
 - [ ] 03-01: TBD
 
 ### Phase 4: Demandas CRUD & Overdue Tracking
+
 **Goal**: Users can create, edit, and track the status of demandas (tasks), with overdue items flagged automatically without manual marking.
 **Mode:** mvp
 **Depends on**: Phase 2, Phase 3
 **Requirements**: DEM-01, DEM-02, DEM-03
 **Success Criteria** (what must be TRUE):
+
   1. User can create a demanda with título, responsável, prazo, status, and área/projeto.
   2. User can edit an existing demanda and mark it as concluded.
   3. A demanda whose prazo has passed is visually flagged as atrasada automatically.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] 04-01: TBD
 
 ### Phase 5: Demandas Filtering & Role-Scoped Access
+
 **Goal**: Users can quickly find relevant demandas and only see/edit what their role permits, through short, accessible forms.
 **Mode:** mvp
 **Depends on**: Phase 4
 **Requirements**: DEM-04, DEM-05, UX-02
 **Success Criteria** (what must be TRUE):
+
   1. User can filter/group the demandas list by área, projeto, or responsável.
   2. Voluntário comum sees and edits only their own demandas; líder de área sees their área's demandas; coordenador sees all demandas.
   3. Demanda forms are short, with few fields per screen, and confirm important actions clearly before applying them.
+
 **Plans**: TBD
 **UI hint**: yes
 
 Plans:
+
 - [ ] 05-01: TBD
 
 ### Phase 6: Coordinator Overview Dashboard
+
 **Goal**: Coordenador can view, in a single dashboard, the real status of every demanda, project, and volunteer across the institution.
 **Mode:** mvp
 **Depends on**: Phase 5
 **Requirements**: COORD-01, COORD-02, COORD-03
 **Success Criteria** (what must be TRUE):
+
   1. Coordenador sees a single dashboard summarizing status of projetos/pesquisas/tarefas by volunteer.
   2. Overdue demandas across the whole institution are highlighted in this dashboard.
   3. Dashboard shows counts of demandas grouped by área and by volunteer.
+
 **Plans**: TBD
 **UI hint**: yes
 
 Plans:
+
 - [ ] 06-01: TBD
 
 ### Phase 7: Email Reminders
+
 **Goal**: Volunteers and leaders are automatically reminded by email about approaching and overdue demandas, with reliable, traceable delivery.
 **Mode:** mvp
 **Depends on**: Phase 4, Phase 1
 **Requirements**: LEMB-01, LEMB-02, LEMB-03, LEMB-04
 **Success Criteria** (what must be TRUE):
+
   1. User receives an email reminder when one of their demandas has an approaching prazo.
   2. User receives an email reminder when one of their demandas is already atrasada.
   3. A user never receives more than one reminder for the same demanda within the same day/cycle.
   4. Coordenador can see a log of reminder job runs showing success/failure and how many emails were sent.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] 07-01: TBD
 
 ### Phase 8: AI Task Extraction & Review
+
 **Goal**: Users paste a meeting summary already generated by an external tool (Fireflies/tl;dv), and new demandas are proposed from it by AI — but only created after a human confirms them, never automatically.
 **Mode:** mvp
 **Depends on**: Phase 1, Phase 4
 **Requirements**: IA-01, IA-03, IA-04
 **Success Criteria** (what must be TRUE):
+
   1. User can paste a ready-made meeting summary (generated by Fireflies/tl;dv) into the system.
   2. System extracts a list of suggested demandas (título, responsável, prazo) from the pasted summary.
   3. User reviews each AI-suggested demanda on a confirmation screen and can edit or reject it before it becomes a real demanda.
   4. No demanda is ever created directly from AI extraction without passing through this review step.
+
 **Plans**: TBD
 **UI hint**: yes
 
 Plans:
+
 - [ ] 08-01: TBD
 
 ### Phase 9: Google Sheets Sync
+
 **Goal**: Financial data flows automatically from the institution's existing cash-flow spreadsheet into the system, with sync health always visible.
 **Mode:** mvp
 **Depends on**: Phase 1
 **Requirements**: FIN-01, FIN-03
 **Success Criteria** (what must be TRUE):
+
   1. System automatically pulls updated data from the fixed-format Google Sheets cash-flow spreadsheet on a schedule.
   2. User can see when the last sync happened and whether it succeeded or failed.
+
 **Plans**: TBD
 
 Plans:
+
 - [ ] 09-01: TBD
 
 ### Phase 10: Financial Dashboard
+
 **Goal**: Coordenador and Financeiro can see a clear visual picture of the institution's finances, restricted to authorized roles.
 **Mode:** mvp
 **Depends on**: Phase 9, Phase 2
 **Requirements**: FIN-02, FIN-04
 **Success Criteria** (what must be TRUE):
+
   1. User with Coordenador or Financeiro role sees a visual dashboard with entradas, saídas, resultado do mês, and caixa atual.
   2. Users without Coordenador or Financeiro role cannot access the financial dashboard.
+
 **Plans**: TBD
 **UI hint**: yes
 
 Plans:
+
 - [ ] 10-01: TBD
 
 ## Progress
