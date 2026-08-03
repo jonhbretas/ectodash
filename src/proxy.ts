@@ -1,0 +1,37 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
+
+function isPublicPath(pathname: string): boolean {
+  return pathname === "/login" || pathname.startsWith("/auth");
+}
+
+// Next.js 16 renamed the middleware.ts/middleware() convention to
+// proxy.ts/proxy() (functionality unchanged) — see
+// node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md. This
+// project uses --src-dir, so the file must live alongside src/app, not at
+// the repository root (confirmed experimentally: a root-level file was
+// registered in the dev middleware manifest but never actually intercepted
+// requests under either Turbopack or webpack).
+export async function proxy(request: NextRequest) {
+  const { response, user } = await updateSession(request);
+
+  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+    const loginUrl = new URL("/login", request.url);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+
+    // Preserve any cookies already refreshed onto `response` by
+    // updateSession() so a redirected request doesn't drop a just-rotated
+    // session cookie.
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
+    });
+
+    return redirectResponse;
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

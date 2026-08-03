@@ -1,9 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { User } from "@supabase/supabase-js";
+
+export type SessionUpdate = {
+  response: NextResponse;
+  user: User | null;
+};
 
 export async function updateSession(
   request: NextRequest
-): Promise<NextResponse> {
+): Promise<SessionUpdate> {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -30,7 +36,9 @@ export async function updateSession(
   // IMPORTANT: getUser() must be called for the refresh token to be
   // validated/rotated. The non-validating session-read alternative
   // silently breaks indefinite session persistence (RESEARCH.md Pitfall 3).
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return supabaseResponse;
+  return { response: supabaseResponse, user };
 }
