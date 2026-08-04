@@ -116,7 +116,7 @@ Plans:
   2. User can edit an existing demanda and mark it as concluded.
   3. A demanda whose prazo has passed is visually flagged as atrasada automatically.
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 
 Plans:
 **Wave 1**
@@ -125,7 +125,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-02-PLAN.md — TRACER: end-to-end create-demanda-with-multiple-responsáveis flow, deployed to production (wave 2)
+- [x] 04-02-PLAN.md — TRACER: end-to-end create-demanda-with-multiple-responsáveis flow, deployed to production (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -254,7 +254,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Project Scaffold & Institutional Login | 4/4 | Complete    | 2026-08-03 |
 | 2. Role-Based Access Control | 3/4 | In Progress|  |
 | 3. Accessible UI Foundation | 0/TBD | Not started | - |
-| 4. Demandas CRUD & Overdue Tracking | 1/4 | In Progress|  |
+| 4. Demandas CRUD & Overdue Tracking | 2/4 | In Progress|  |
 | 5. Demandas Filtering & Role-Scoped Access | 0/TBD | Not started | - |
 | 6. Coordinator Overview Dashboard | 0/TBD | Not started | - |
 | 7. Email Reminders | 0/TBD | Not started | - |
