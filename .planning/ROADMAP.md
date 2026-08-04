@@ -96,7 +96,7 @@ Plans:
   1. Text, buttons, and touch targets are large enough and contrast is high enough to read and tap comfortably for older users.
   2. The application layout adapts and remains fully usable on both mobile phones and desktop browsers.
 
-**Plans**: 1/3 plans executed
+**Plans**: 3/3 plans executed
 **UI hint**: yes
 
 Plans:
@@ -106,8 +106,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — Retrofit login/sign-out onto shadcn Button/Input, shared PageContainer + skip-link target (wave 2)
-- [ ] 03-03-PLAN.md — Retrofit demanda form/table/badges onto shadcn Input/Label/Table/Badge, native multi-select preserved (wave 2)
+- [x] 03-02-PLAN.md — Retrofit login/sign-out onto shadcn Button/Input, shared PageContainer + skip-link target (wave 2)
+- [x] 03-03-PLAN.md — Retrofit demanda form/table/badges onto shadcn Input/Label/Table/Badge, native multi-select preserved (wave 2)
 
 ### Phase 4: Demandas CRUD & Overdue Tracking
 
@@ -259,7 +259,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold & Institutional Login | 4/4 | Complete    | 2026-08-03 |
 | 2. Role-Based Access Control | 3/4 | In Progress|  |
-| 3. Accessible UI Foundation | 1/3 | In Progress|  |
+| 3. Accessible UI Foundation | 3/3 | In Progress|  |
 | 4. Demandas CRUD & Overdue Tracking | 4/4 | Complete |  |
 | 5. Demandas Filtering & Role-Scoped Access | 0/TBD | Not started | - |
 | 6. Coordinator Overview Dashboard | 0/TBD | Not started | - |

@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: Accessible UI Foundation
 status: executing
-stopped_at: Completed 03-01-PLAN.md — shadcn/ui foundation scaffold, globals.css reconciliation, skip-link
-last_updated: "2026-08-04T02:37:32.038Z"
-last_activity: 2026-08-03
-last_activity_desc: Phase 03 execution started
+stopped_at: Completed 03-02-PLAN.md and 03-03-PLAN.md (wave 2, parallel) — retrofit login/sign-out/dashboard shell and demanda form/table/badges onto shadcn
+last_updated: "2026-08-04T08:41:09.905Z"
+last_activity: 2026-08-04
+last_activity_desc: Phase 03 wave 2 execution complete (03-02 + 03-03)
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 14
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 ## Current Position
 
 Phase: 03 (Accessible UI Foundation) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-08-03 — Phase 03 execution started
+Plan: 3 of 3 (all wave 2 plans complete)
+Status: Wave 2 complete, ready for phase close-out verification
+Last activity: 2026-08-04 — Phase 03 wave 2 execution complete (03-02 + 03-03)
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -68,6 +68,8 @@ Progress: [████████░░] 80%
 | Phase 04 P03 | 6min | 1 tasks | 4 files |
 | Phase 04 P04 | 30min | 2 tasks | 6 files |
 | Phase 03 P01 | 5min | 1 tasks | 12 files |
+| Phase 3 P3 | 20m | 2 tasks | 4 files |
+| Phase 03 P02 | 25min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -98,6 +100,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Removed hardcoded defaultValue="pendente" DOM attribute from status select now that DemandaForm accepts defaultValues from the caller (edit mode)
 - [Phase 04-04]: Responsive demandas list built with StatusBadge/OverdueBadge as the sole components rendering demanda status/overdue state (reused by later phases). Single sort comparator in DemandaList (atrasada-first, prazo-ascending, concluida-last) reads only the server-computed `atrasada` boolean — never recomputes it client-side. CSS-only lg: breakpoint switch for card/table layouts, no shadcn/ui introduced.
 - [Phase ?]: [Phase 03-01] shadcn/ui initialized via current preset CLI (-p vega -b radix -y); globals.css reconciled to locked hex palette, no OKLCH defaults remain; button.tsx/input.tsx default size edited to min-h-14/text-xl floor; fixed two CLI-introduced regressions (self-referencing --font-sans var, unplanned Inter font addition to layout.tsx) before commit
+- [Phase ?]: Retrofit demanda-form.tsx título/prazo/área onto shadcn Input/Label; left responsavelIds native <select multiple> and status <select> untouched
+- [Phase ?]: Retrofit demanda-table.tsx onto shadcn Table sub-components and status-badge.tsx/overdue-badge.tsx onto shadcn Badge (with [&>svg]:size-4! override to counteract Badge's default icon-shrink rule) — both lossless, no plain-span fallback needed
+- [Phase 03-02]: Retrofitted login-form.tsx's Input/Button and sign-out-button.tsx's Button onto shadcn primitives by passing the exact pre-existing className as an override — twMerge resolves shadcn's rounded-md/ring-based-focus/hover-opacity defaults in favor of the original rounded-lg/outline-based-focus/hover-shade treatment, so no element needed the raw-native fallback. Extracted new PageContainer component (src/app/(dashboard)/page-container.tsx) replacing the triplicated py-16 px-6 bg-zinc-50 <main> wrapper across page.tsx/nova/page.tsx/[id]/editar/page.tsx, and added id="main-content" to all of them, completing Plan 03-01's skip-link target.
 
 ### Pending Todos
 
@@ -124,6 +129,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T02:37:32.028Z
-Stopped at: Completed 03-01-PLAN.md — shadcn/ui foundation scaffold, globals.css reconciliation, skip-link
+Last session: 2026-08-04T08:39:37.118Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
