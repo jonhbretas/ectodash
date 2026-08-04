@@ -221,7 +221,8 @@ export async function comentarDemanda(
   // same RLS-scoped profiles read the responsável select uses.
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, email, full_name");
+    .select("id, email, full_name")
+    .eq("ativo", true);
 
   const mencionados = resolverMencoes(conteudo.data, profiles ?? []);
   if (mencionados.length > 0) {

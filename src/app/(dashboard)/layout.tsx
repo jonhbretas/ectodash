@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
+import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import Sidebar from "./sidebar";
 
 // The (dashboard) group shell: one role read shared by the sidebar (menu
 // visibility is UX-only; every destination keeps its own server-side gate
-// and RLS as the real boundary). The mobile top bar + desktop sidebar live
-// here so no page renders them individually.
+// and RLS as the real boundary). Also gates soft-deleted accounts (ativo =
+// false, migration 0014): a disabled volunteer gets a clear screen instead
+// of the app.
 export default async function DashboardLayout({
   children,
 }: {
@@ -25,9 +27,27 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, ativo")
     .eq("id", user.id)
     .single();
+
+  if (profile && profile.ativo === false) {
+    return (
+      <main
+        id="main-content"
+        className="flex flex-1 flex-col items-center justify-center gap-4 bg-zinc-50 px-6 py-16 text-center"
+      >
+        <Lock size={48} className="text-zinc-400" aria-hidden="true" />
+        <h1 className="text-3xl font-semibold text-zinc-900">
+          Conta desativada
+        </h1>
+        <p className="max-w-md text-xl text-zinc-700">
+          Sua conta foi desativada pelo coordenador. Fale com ele para saber
+          mais.
+        </p>
+      </main>
+    );
+  }
 
   const role = profile?.role;
   const isCoordenador = role === "coordenador_geral";

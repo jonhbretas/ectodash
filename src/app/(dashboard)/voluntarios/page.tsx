@@ -55,12 +55,21 @@ export default async function VoluntariosPage() {
     );
   }
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, role, created_at")
-    .order("email");
+  const [ativosResult, inativosResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, role, area_atuacao")
+      .eq("ativo", true)
+      .order("email"),
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, role, area_atuacao")
+      .eq("ativo", false)
+      .order("email"),
+  ]);
 
-  const rows = profiles ?? [];
+  const rows = ativosResult.data ?? [];
+  const inativos = inativosResult.data ?? [];
 
   return (
     <PageContainer>
@@ -71,7 +80,8 @@ export default async function VoluntariosPage() {
         </h1>
         <p className="text-base text-zinc-700">
           {rows.length} {rows.length === 1 ? "voluntário" : "voluntários"} na
-          instituição.
+          instituição
+          {inativos.length > 0 ? ` · ${inativos.length} desativado${inativos.length > 1 ? "s" : ""}` : ""}.
         </p>
       </div>
 
@@ -88,27 +98,66 @@ export default async function VoluntariosPage() {
       ) : (
         <div className="flex w-full max-w-4xl flex-col rounded-xl border border-zinc-200 bg-white shadow-sm">
           {rows.map((row, index) => (
-            <Link
+            <div
               key={row.email}
-              href={`/voluntarios/${row.id}`}
-              className={`flex flex-col gap-1 px-5 py-4 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:flex-row sm:items-center sm:justify-between ${
+              className={`flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${
                 index > 0 ? "border-t border-zinc-200" : ""
               }`}
             >
-              <div className="flex min-w-0 flex-col gap-0.5">
+              <Link
+                href={`/voluntarios/${row.id}`}
+                className="flex min-w-0 flex-col gap-0.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              >
                 <span className="truncate text-xl font-medium text-zinc-900">
                   {displayName(row)}
                 </span>
                 <span className="truncate text-base text-zinc-700">
                   {row.email}
+                  {row.area_atuacao ? ` · ${row.area_atuacao}` : ""}
                 </span>
+              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
+                  {ROLE_LABELS[row.role] ?? row.role}
+                </span>
+                <Link
+                  href={`/voluntarios/${row.id}/editar`}
+                  className="min-h-12 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                >
+                  Editar
+                </Link>
               </div>
-              <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
-                {ROLE_LABELS[row.role] ?? row.role}
-              </span>
-            </Link>
+            </div>
           ))}
         </div>
+      )}
+
+      {inativos.length > 0 && (
+        <details className="w-full max-w-4xl">
+          <summary className="min-h-14 cursor-pointer list-none text-2xl font-semibold text-zinc-900 marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+            Voluntários desativados ({inativos.length})
+          </summary>
+          <div className="mt-2 flex flex-col rounded-xl border border-zinc-200 bg-white shadow-sm">
+            {inativos.map((row, index) => (
+              <div
+                key={row.email}
+                className={`flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${
+                  index > 0 ? "border-t border-zinc-200" : ""
+                }`}
+              >
+                <span className="truncate text-xl text-zinc-500 line-through">
+                  {displayName(row)}
+                </span>
+                <Link
+                  href={`/voluntarios/${row.id}/editar`}
+                  className="min-h-12 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                >
+                  Reativar / editar
+                </Link>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
     </PageContainer>
   );

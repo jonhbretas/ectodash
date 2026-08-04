@@ -14,6 +14,7 @@ import {
   Wallet,
   LayoutDashboard,
   BarChart3,
+  UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -35,6 +36,7 @@ export const navItems: NavItem[] = [
   { href: "/analise", label: "Análise", Icon: BarChart3 },
   { href: "/utilidades", label: "Utilidades", Icon: Wrench },
   { href: "/financeiro", label: "Financeiro", Icon: Wallet, visibleTo: "financeiro" },
+  { href: "/perfil", label: "Meu perfil", Icon: UserRound },
 ];
 
 // Coordenador-only entry points live in their own section at the bottom of

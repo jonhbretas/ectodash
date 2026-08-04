@@ -75,7 +75,7 @@ export default async function EditarDemandaPage({
       .from("demanda_membros")
       .select("profile_id")
       .eq("demanda_id", id),
-    supabase.from("profiles").select("id, email, full_name").order("email"),
+    supabase.from("profiles").select("id, email, full_name").eq("ativo", true).order("email"),
     supabase
       .from("eventos")
       .select("id, titulo")
