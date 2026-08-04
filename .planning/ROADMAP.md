@@ -150,12 +150,17 @@ Plans:
   2. Voluntário comum sees and edits only their own demandas; líder de área sees their área's demandas; coordenador sees all demandas.
   3. Demanda forms are short, with few fields per screen, and confirm important actions clearly before applying them.
 
-**Plans**: TBD
+**Plans**: 0/2 plans executed
 **UI hint**: yes
 
 Plans:
+**Wave 1**
 
-- [ ] 05-01: TBD
+- [ ] 05-01-PLAN.md — TRACER: lider_areas join table (multi-área líder support), helper functions, RLS narrowing on demandas/demanda_responsaveis, proven live (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 05-02-PLAN.md — Filter/group UI (área, responsável, agrupar por), role-scoped-view notices, conclude-confirmation (wave 2)
 
 ### Phase 6: Coordinator Overview Dashboard
 
@@ -261,7 +266,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Role-Based Access Control | 3/4 | In Progress|  |
 | 3. Accessible UI Foundation | 3/3 | In Progress|  |
 | 4. Demandas CRUD & Overdue Tracking | 4/4 | Complete |  |
-| 5. Demandas Filtering & Role-Scoped Access | 0/TBD | Not started | - |
+| 5. Demandas Filtering & Role-Scoped Access | 0/2 | Not started | - |
 | 6. Coordinator Overview Dashboard | 0/TBD | Not started | - |
 | 7. Email Reminders | 0/TBD | Not started | - |
 | 8. AI Task Extraction & Review | 0/TBD | Not started | - |
