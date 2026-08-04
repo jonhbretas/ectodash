@@ -12,6 +12,7 @@
     "seed:coordinator": "node --env-file=.env.local --experimental-strip-types scripts/seed-coordinator.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.15.0",
     "@hookform/resolvers": "^5.7.1",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.0",
