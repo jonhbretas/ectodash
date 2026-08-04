@@ -153,7 +153,7 @@ export default function DemandaFilters({
   const activeCount = activeChips.length;
 
   const triggerClassName =
-    "min-h-14 w-full rounded-lg border border-zinc-400 bg-white px-4 text-lg text-zinc-900";
+    "min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
 
   const selectControl = (
     ariaLabel: string,
@@ -182,14 +182,14 @@ export default function DemandaFilters({
   return (
     <section
       aria-label="Filtrar demandas"
-      className="flex w-full flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm"
+      className="flex w-full flex-col gap-3 rounded-2xl bg-white p-3 ring-1 ring-zinc-200/60"
     >
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={toggleOpen}
           aria-expanded={open}
-          className="flex min-h-12 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="flex min-h-12 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-lg font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
         >
           <SlidersHorizontal size={20} aria-hidden="true" />
           Filtros
@@ -199,9 +199,9 @@ export default function DemandaFilters({
             </span>
           )}
           {open ? (
-            <ChevronUp size={20} aria-hidden="true" />
+            <ChevronUp size={20} aria-hidden="true" className="transition-transform duration-200" />
           ) : (
-            <ChevronDown size={20} aria-hidden="true" />
+            <ChevronDown size={20} aria-hidden="true" className="transition-transform duration-200" />
           )}
         </button>
 
@@ -209,7 +209,7 @@ export default function DemandaFilters({
           {activeChips.map((chip) => (
             <span
               key={chip.key}
-              className="flex max-w-[16rem] items-center gap-1 truncate rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700"
+              className="flex max-w-[16rem] items-center gap-1 truncate rounded-full bg-zinc-100 px-2.5 py-1 text-base text-zinc-700 ring-1 ring-zinc-200/60"
               title={chip.title}
             >
               <span className="truncate">{chip.label}</span>
@@ -217,7 +217,7 @@ export default function DemandaFilters({
                 type="button"
                 onClick={() => removeFilter(chip.key)}
                 aria-label={`Remover filtro de ${chip.title.toLowerCase()}`}
-                className="shrink-0"
+                className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-zinc-200"
               >
                 <X size={14} aria-hidden="true" />
               </button>
@@ -228,7 +228,7 @@ export default function DemandaFilters({
             <button
               type="button"
               onClick={clearFilters}
-              className="min-h-11 rounded-full border border-zinc-400 bg-white px-4 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="min-h-11 rounded-full bg-white px-4 text-lg font-medium text-zinc-700 ring-1 ring-zinc-300 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
             >
               Limpar filtros
             </button>

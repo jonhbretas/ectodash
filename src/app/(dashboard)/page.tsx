@@ -9,7 +9,6 @@ import DemandaViewToggle, {
 import KanbanBoard from "./demandas/kanban-board";
 import CalendarioView from "./demandas/calendario-view";
 import PageContainer from "./page-container";
-import StatCard from "@/components/stat-card";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -251,63 +250,75 @@ export default async function DashboardPage({
 
   return (
     <PageContainer>
-      <section className="flex w-full flex-col gap-1">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-semibold text-zinc-900">
-              Olá, {displayName(profile ?? { email: user.email ?? "" })}
-            </h1>
-            <p className="text-xl text-zinc-700">
-              Acompanhe suas demandas e prazos por aqui.
-            </p>
-          </div>
-          <Link
-            href="/demandas/nova"
-            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          >
-            <Plus size={22} aria-hidden="true" />
-            Nova demanda
-          </Link>
+      {/* Header — greeting + CTA, clear hierarchy. */}
+      <header className="flex w-full flex-wrap items-start justify-between gap-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-semibold text-zinc-900">
+            Olá, {displayName(profile ?? { email: user.email ?? "" })}
+          </h1>
+          <p className="text-xl text-zinc-500">
+            Acompanhe suas demandas e prazos por aqui.
+          </p>
         </div>
-      </section>
+        <Link
+          href="/demandas/nova"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 hover:shadow-[0_2px_6px_rgba(29,78,216,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        >
+          <Plus size={22} aria-hidden="true" />
+          Nova demanda
+        </Link>
+      </header>
 
+      {/* Stats — compact pills with semantic grouping. */}
       {demandaList.length > 0 && (
-        <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-5">
-          <StatCard
-            label="Suas demandas"
-            value={stats.total}
-            Icon={ClipboardList}
-          />
-          <StatCard
-            label="Atrasadas"
-            value={stats.atrasadas}
-            Icon={AlertTriangle}
-            highlight={stats.atrasadas > 0}
-          />
-          <StatCard
-            label="Pendentes"
-            value={stats.pendentes}
-            Icon={Circle}
-            iconClassName="text-amber-700"
-          />
-          <StatCard
-            label="Em andamento"
-            value={stats.emAndamento}
-            Icon={Clock}
-            iconClassName="text-blue-700"
-          />
-          <StatCard
-            label="Concluídas"
-            value={stats.concluidas}
-            Icon={CheckCircle2}
-            iconClassName="text-green-700"
-          />
+        <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            <ClipboardList size={22} className="text-zinc-500" aria-hidden="true" />
+            <div className="flex flex-col">
+              <span className="text-base font-medium text-zinc-500">Demandas</span>
+              <span className="text-2xl font-semibold text-zinc-900">{stats.total}</span>
+            </div>
+          </div>
+          <div className={`flex items-center gap-3 rounded-2xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ${
+            stats.atrasadas > 0
+              ? "bg-red-50 ring-1 ring-red-200/60"
+              : "bg-white ring-1 ring-zinc-200/60"
+          }`}>
+            <AlertTriangle size={22} className={stats.atrasadas > 0 ? "text-red-600" : "text-zinc-400"} aria-hidden="true" />
+            <div className="flex flex-col">
+              <span className={`text-base font-medium ${stats.atrasadas > 0 ? "text-red-600" : "text-zinc-500"}`}>Atrasadas</span>
+              <span className={`text-2xl font-semibold ${stats.atrasadas > 0 ? "text-red-700" : "text-zinc-900"}`}>{stats.atrasadas}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            <Circle size={22} className="text-amber-500" aria-hidden="true" />
+            <div className="flex flex-col">
+              <span className="text-base font-medium text-zinc-500">Pendentes</span>
+              <span className="text-2xl font-semibold text-zinc-900">{stats.pendentes}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            <Clock size={22} className="text-blue-500" aria-hidden="true" />
+            <div className="flex flex-col">
+              <span className="text-base font-medium text-zinc-500">Em andamento</span>
+              <span className="text-2xl font-semibold text-zinc-900">{stats.emAndamento}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            <CheckCircle2 size={22} className="text-green-500" aria-hidden="true" />
+            <div className="flex flex-col">
+              <span className="text-base font-medium text-zinc-500">Concluídas</span>
+              <span className="text-2xl font-semibold text-zinc-900">{stats.concluidas}</span>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="flex w-full flex-col gap-4">
+      <div className="flex w-full flex-col gap-5">
         {scopedViewNotice && (
-          <p className="text-base text-zinc-700">{scopedViewNotice}</p>
+          <p className="rounded-xl bg-zinc-100 px-4 py-2.5 text-base font-medium text-zinc-600">
+            {scopedViewNotice}
+          </p>
         )}
 
         <DemandaFilters

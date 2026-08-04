@@ -30,7 +30,7 @@ function ComentarButton() {
     <button
       type="submit"
       disabled={pending}
-      className="min-h-12 rounded-lg bg-blue-700 px-4 text-lg font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="min-h-12 self-start rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Enviando..." : "Comentar"}
     </button>
@@ -47,30 +47,33 @@ export default function DemandaComentarios({
   );
 
   return (
-    <section className="flex w-full flex-col gap-3" aria-label="Comentários">
+    <section className="flex w-full flex-col gap-4" aria-label="Comentários">
       <h2 className="flex items-center gap-2 text-xl font-semibold text-zinc-900">
-        <MessageSquare size={20} aria-hidden="true" />
-        Comentários ({comentarios.length})
+        <MessageSquare size={20} aria-hidden="true" className="text-zinc-400" />
+        Comentários
+        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-base font-medium text-zinc-500">
+          {comentarios.length}
+        </span>
       </h2>
 
       {comentarios.length > 0 && (
-        <ul className="flex flex-col rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <ul className="flex flex-col overflow-hidden rounded-xl ring-1 ring-zinc-200/60">
           {comentarios.map((comentario) => (
             <li
               key={comentario.id}
-              className="flex flex-col gap-1 border-b border-zinc-200 px-4 py-3 last:border-b-0"
+              className="flex flex-col gap-1.5 border-b border-zinc-100 bg-white px-5 py-4 last:border-b-0"
             >
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-base font-semibold text-zinc-900">
                   {comentario.autorNome}
                 </span>
-                <span className="text-base text-zinc-600">
+                <span className="text-base text-zinc-400">
                   {format(new Date(comentario.createdAt), "dd/MM/yyyy HH:mm", {
                     locale: ptBR,
                   })}
                 </span>
               </div>
-              <p className="whitespace-pre-wrap text-lg leading-relaxed text-zinc-800">
+              <p className="whitespace-pre-wrap text-lg leading-relaxed text-zinc-700">
                 {comentario.conteudo}
               </p>
             </li>
@@ -78,7 +81,13 @@ export default function DemandaComentarios({
         </ul>
       )}
 
-      <form action={formAction} className="flex flex-col gap-2" aria-live="polite">
+      {comentarios.length === 0 && (
+        <p className="text-base text-zinc-400">
+          Nenhum comentário ainda.
+        </p>
+      )}
+
+      <form action={formAction} className="flex flex-col gap-3" aria-live="polite">
         <label htmlFor="conteudo" className="text-lg font-medium text-zinc-900">
           Escreva um comentário
         </label>
@@ -88,11 +97,11 @@ export default function DemandaComentarios({
           rows={3}
           required
           placeholder='Mencione alguém com "@nome" para avisar por e-mail...'
-          className="rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
         />
         <ComentarButton />
         {state.message && (
-          <p className="text-base text-red-700">{state.message}</p>
+          <p className="text-base text-red-600">{state.message}</p>
         )}
       </form>
     </section>

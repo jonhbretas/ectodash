@@ -47,7 +47,7 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
     <button
       type="submit"
       disabled={pending}
-      className="min-h-14 w-full rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="min-h-14 w-full rounded-xl bg-blue-700 px-4 py-3 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 hover:shadow-[0_2px_6px_rgba(29,78,216,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? pendingLabel : idleLabel}
     </button>
@@ -69,6 +69,11 @@ type DemandaFormProps = {
   // the create screen stays at max-w-md.
   wide?: boolean;
 };
+
+const fieldLabelClass = "text-xl font-medium text-zinc-900";
+const fieldInputClass =
+  "min-h-14 rounded-xl border-zinc-200 bg-white text-zinc-900 shadow-none transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0";
+const errorClass = "text-base text-red-600";
 
 export default function DemandaForm({
   profiles,
@@ -156,42 +161,56 @@ export default function DemandaForm({
   return (
     <form
       onSubmit={handleSubmit(onValid)}
-      className={`flex w-full flex-col gap-4 ${wide ? "" : "max-w-md"}`}
+      className={`flex w-full flex-col gap-6 ${wide ? "" : "max-w-md"}`}
     >
-      <p className="text-base text-zinc-600">
+      <p className="text-base text-zinc-500">
         Campos com * são obrigatórios.
       </p>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="titulo" className="text-xl font-medium text-zinc-900">
-          Título *
-        </Label>
-        <Input
-          id="titulo"
-          type="text"
-          placeholder="Ex: Revisar relatório mensal"
-          className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
-          {...register("titulo")}
-        />
-        {errors.titulo && (
-          <span className="text-base text-red-700">
-            {errors.titulo.message}
-          </span>
-        )}
+      {/* === Primário: Título e Prazo === */}
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="titulo" className={fieldLabelClass}>
+            Título *
+          </Label>
+          <Input
+            id="titulo"
+            type="text"
+            placeholder="Ex: Revisar relatório mensal"
+            className={fieldInputClass}
+            {...register("titulo")}
+          />
+          {errors.titulo && (
+            <span className={errorClass}>{errors.titulo.message}</span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="prazo" className={fieldLabelClass}>
+            Prazo *
+          </Label>
+          <Input
+            id="prazo"
+            type="date"
+            className={fieldInputClass}
+            {...register("prazo")}
+          />
+          {errors.prazo && (
+            <span className={errorClass}>{errors.prazo.message}</span>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="responsavelIds"
-          className="text-xl font-medium text-zinc-900"
-        >
+      {/* === Responsáveis === */}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="responsavelIds" className={fieldLabelClass}>
           Responsável *
         </label>
         <select
           id="responsavelIds"
           multiple
           size={5}
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           {...register("responsavelIds")}
         >
           {profiles.map((profile) => (
@@ -201,36 +220,93 @@ export default function DemandaForm({
           ))}
         </select>
         {errors.responsavelIds && (
-          <span className="text-base text-red-700">
-            {errors.responsavelIds.message}
-          </span>
+          <span className={errorClass}>{errors.responsavelIds.message}</span>
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="prazo" className="text-xl font-medium text-zinc-900">
-          Prazo *
-        </Label>
-        <Input
-          id="prazo"
-          type="date"
-          className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
-          {...register("prazo")}
-        />
-        {errors.prazo && (
-          <span className="text-base text-red-700">
-            {errors.prazo.message}
-          </span>
-        )}
+      {/* === Membros === */}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="membroIds" className={fieldLabelClass}>
+          Membros / acompanhantes (opcional)
+        </label>
+        <select
+          id="membroIds"
+          multiple
+          size={4}
+          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          {...register("membroIds")}
+        >
+          {profiles.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {profile.full_name?.trim() || profile.email}
+            </option>
+          ))}
+        </select>
+        <p className="text-base text-zinc-500">
+          Acompanhantes acompanham a demanda e recebem os mesmos lembretes
+          por e-mail.
+        </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="status" className="text-xl font-medium text-zinc-900">
+      {/* === Secundário: Classificação === */}
+      <div className="rounded-2xl bg-zinc-50 p-5 ring-1 ring-zinc-200/60">
+        <h3 className="text-lg font-semibold text-zinc-700 mb-4">Classificação</h3>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="area" className={fieldLabelClass}>
+              Área
+            </Label>
+            <Input
+              id="area"
+              type="text"
+              placeholder="Ex: Pesquisa de Campo"
+              className={fieldInputClass}
+              {...register("area")}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="projeto" className={fieldLabelClass}>
+              Projeto
+            </Label>
+            <Input
+              id="projeto"
+              type="text"
+              placeholder="Ex: Projeto Horta Comunitária"
+              className={fieldInputClass}
+              {...register("projeto")}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="eventoId" className={fieldLabelClass}>
+              Evento (opcional)
+            </label>
+            <select
+              id="eventoId"
+              name="eventoId"
+              defaultValue={String(defaultValues?.eventoId ?? "")}
+              className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              <option value="">Nenhum evento</option>
+              {eventos.map((evento) => (
+                <option key={evento.id} value={evento.id}>
+                  {evento.titulo}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* === Status === */}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="status" className={fieldLabelClass}>
           Status
         </label>
         <select
           id="status"
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           {...register("status")}
         >
           <option value="pendente">Pendente</option>
@@ -239,66 +315,16 @@ export default function DemandaForm({
         </select>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="area" className="text-xl font-medium text-zinc-900">
-          Área
-        </Label>
-        <Input
-          id="area"
-          type="text"
-          placeholder="Ex: Pesquisa de Campo"
-          className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
-          {...register("area")}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="projeto" className="text-xl font-medium text-zinc-900">
-          Projeto
-        </Label>
-        <Input
-          id="projeto"
-          type="text"
-          placeholder="Ex: Projeto Horta Comunitária"
-          className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
-          {...register("projeto")}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="eventoId" className="text-xl font-medium text-zinc-900">
-          Evento (opcional)
-        </label>
-        {/* Uncontrolled native select — not registered with react-hook-form
-            (eventoId is validated separately server-side via eventoIdSchema);
-            the initial value comes from defaultValues when editing. */}
-        <select
-          id="eventoId"
-          name="eventoId"
-          defaultValue={String(defaultValues?.eventoId ?? "")}
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-        >
-          <option value="">Nenhum evento</option>
-          {eventos.map((evento) => (
-            <option key={evento.id} value={evento.id}>
-              {evento.titulo}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex flex-col gap-2">
+      {/* === Etiqueta === */}
+      <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <label
-            htmlFor="etiquetaId"
-            className="text-xl font-medium text-zinc-900"
-          >
+          <label htmlFor="etiquetaId" className={fieldLabelClass}>
             Etiqueta (opcional)
           </label>
           <button
             type="button"
             onClick={() => setCriandoEtiqueta((v) => !v)}
-            className="text-base font-medium text-blue-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="text-base font-medium text-blue-700 transition-colors hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           >
             {criandoEtiqueta ? "Cancelar" : "+ Nova etiqueta"}
           </button>
@@ -308,7 +334,7 @@ export default function DemandaForm({
           name="etiquetaId"
           value={etiquetaId}
           onChange={(e) => setEtiquetaId(e.target.value)}
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
         >
           <option value="">Nenhuma etiqueta</option>
           {etiquetaOptions.map((etiqueta) => (
@@ -319,30 +345,32 @@ export default function DemandaForm({
         </select>
 
         {criandoEtiqueta && (
-          <div className="flex flex-col gap-2 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3">
-            <p className="text-base text-zinc-700">
+          <div className="mt-1 flex flex-col gap-3 rounded-xl bg-zinc-50 p-4 ring-1 ring-zinc-200/60">
+            <p className="text-base text-zinc-600">
               Toda etiqueta pertence a uma área — escolha a área e dê um
               nome (ex.: Comunicação, Vendas, Artes).
             </p>
-            <input
-              value={novaEtiquetaArea}
-              onChange={(e) => setNovaEtiquetaArea(e.target.value)}
-              placeholder="Área (ex.: Pesquisa)"
-              className="min-h-12 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-            />
-            <input
-              value={novaEtiquetaNome}
-              onChange={(e) => setNovaEtiquetaNome(e.target.value)}
-              placeholder="Nome da etiqueta (ex.: Comunicação)"
-              className="min-h-12 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <input
+                value={novaEtiquetaArea}
+                onChange={(e) => setNovaEtiquetaArea(e.target.value)}
+                placeholder="Área (ex.: Pesquisa)"
+                className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              />
+              <input
+                value={novaEtiquetaNome}
+                onChange={(e) => setNovaEtiquetaNome(e.target.value)}
+                placeholder="Nome da etiqueta (ex.: Comunicação)"
+                className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              />
+            </div>
             {etiquetaError && (
-              <p className="text-base text-red-700">{etiquetaError}</p>
+              <p className="text-base text-red-600">{etiquetaError}</p>
             )}
             <button
               type="button"
               onClick={handleCriarEtiqueta}
-              className="min-h-12 rounded-lg bg-blue-700 px-4 text-lg font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="min-h-12 self-start rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
             >
               Criar etiqueta
             </button>
@@ -350,42 +378,17 @@ export default function DemandaForm({
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="membroIds"
-          className="text-xl font-medium text-zinc-900"
-        >
-          Membros / acompanhantes (opcional)
-        </label>
-        <select
-          id="membroIds"
-          multiple
-          size={4}
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          {...register("membroIds")}
-        >
-          {profiles.map((profile) => (
-            <option key={profile.id} value={profile.id}>
-              {profile.full_name?.trim() || profile.email}
-            </option>
-          ))}
-        </select>
-        <p className="text-base text-zinc-700">
-          Acompanhantes acompanham a demanda e recebem os mesmos lembretes
-          por e-mail.
-        </p>
-      </div>
-
+      {/* === Ações === */}
       <SubmitButton mode={mode} />
 
       <Link
         href="/"
-        className="min-h-14 flex items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="flex min-h-14 items-center justify-center rounded-xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
       >
         Cancelar
       </Link>
 
-      <div aria-live="polite" className="min-h-7 text-lg text-zinc-800">
+      <div aria-live="polite" className="min-h-7 text-lg text-zinc-700">
         {state.message}
       </div>
     </form>

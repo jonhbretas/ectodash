@@ -6,7 +6,7 @@
 import { useState, useTransition, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
-import { Plus, X } from "lucide-react";
+import { CheckCheck, Plus, X } from "lucide-react";
 import {
   adicionarItemChecklist,
   alternarItemChecklist,
@@ -36,12 +36,12 @@ function AddItemFields() {
         required
         placeholder="Adicionar item..."
         disabled={pending}
-        className="min-h-12 flex-1 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="min-h-12 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
       />
       <button
         type="submit"
         disabled={pending}
-        className="flex min-h-12 w-12 items-center justify-center rounded-lg bg-blue-700 text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-70"
+        className="flex min-h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-60"
         aria-label="Adicionar item ao checklist"
       >
         <Plus size={22} aria-hidden="true" />
@@ -91,37 +91,42 @@ export default function DemandaChecklist({
 
   return (
     <section
-      className="flex w-full flex-col gap-3"
+      className="flex w-full flex-col gap-4"
       aria-label="Checklist da demanda"
     >
       <h2 className="flex items-center justify-between text-xl font-semibold text-zinc-900">
-        Checklist
-        <span className="text-base font-normal text-zinc-700">
-          {done}/{total} concluídos
+        <span className="flex items-center gap-2">
+          <CheckCheck size={20} aria-hidden="true" className="text-zinc-400" />
+          Checklist
         </span>
+        {total > 0 && (
+          <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-base font-medium text-zinc-600">
+            {done}/{total}
+          </span>
+        )}
       </h2>
 
       {total === 0 ? (
-        <p className="text-base text-zinc-700">
+        <p className="text-base text-zinc-400">
           Nenhum item ainda — adicione abaixo.
         </p>
       ) : (
-        <ul className="flex flex-col rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <ul className="flex flex-col overflow-hidden rounded-xl ring-1 ring-zinc-200/60">
           {localItems.map((item) => (
             <li
               key={item.id}
-              className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3 last:border-b-0"
+              className="flex items-center gap-3 border-b border-zinc-100 bg-white px-4 py-3 last:border-b-0"
             >
               <input
                 type="checkbox"
                 checked={item.concluido}
                 onChange={(e) => toggle(item.id, e.target.checked)}
                 disabled={pending}
-                className="h-6 w-6 shrink-0 accent-blue-700"
+                className="h-5 w-5 shrink-0 rounded accent-blue-700"
                 aria-label={`Marcar "${item.item}"`}
               />
               <span
-                className={`flex-1 text-lg ${
+                className={`flex-1 text-lg transition-colors duration-200 ${
                   item.concluido
                     ? "text-zinc-400 line-through"
                     : "text-zinc-900"
@@ -134,9 +139,9 @@ export default function DemandaChecklist({
                 onClick={() => remove(item.id)}
                 disabled={pending}
                 aria-label={`Remover item "${item.item}"`}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-40"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-30"
               >
-                <X size={18} aria-hidden="true" />
+                <X size={17} aria-hidden="true" />
               </button>
             </li>
           ))}
@@ -150,9 +155,9 @@ export default function DemandaChecklist({
       >
         <AddItemFields />
         {addState.message && (
-          <p className="text-base text-red-700">{addState.message}</p>
+          <p className="text-base text-red-600">{addState.message}</p>
         )}
-        {error && <p className="text-base text-red-700">{error}</p>}
+        {error && <p className="text-base text-red-600">{error}</p>}
       </form>
     </section>
   );

@@ -45,7 +45,7 @@ export default function DemandaCard({
     <li>
       <Link
         href={`/demandas/${id}/editar`}
-        className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
       >
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-2 text-lg font-semibold text-zinc-900">
@@ -54,8 +54,8 @@ export default function DemandaCard({
           <StatusBadge status={status} />
         </div>
 
-        <p className="flex items-center gap-1 text-base text-zinc-700">
-          <User size={16} aria-hidden="true" />
+        <p className="flex items-center gap-1.5 text-base text-zinc-600">
+          <User size={15} aria-hidden="true" />
           {responsavelEmails.length > 0
             ? responsavelEmails.join(", ")
             : "Sem responsável definido"}
@@ -63,45 +63,47 @@ export default function DemandaCard({
 
         <div className="flex flex-wrap items-center gap-2">
           <p
-            className={`flex items-center gap-1 text-base ${
-              atrasada ? "text-red-700" : "text-zinc-700"
+            className={`flex items-center gap-1.5 text-base ${
+              atrasada ? "font-medium text-red-700" : "text-zinc-600"
             }`}
           >
-            <Calendar size={16} aria-hidden="true" />
+            <Calendar size={15} aria-hidden="true" />
             {prazoFormatada}
           </p>
           {atrasada && <OverdueBadge prazo={prazo} />}
         </div>
 
-        {area ? (
-          <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700">
-            {area}
-          </span>
-        ) : (
-          <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-500">
-            Sem área definida
-          </span>
-        )}
-        {projeto && (
-          <span className="w-fit rounded-full bg-blue-50 px-2 py-0.5 text-base font-medium text-blue-800">
-            {projeto}
-          </span>
-        )}
-        {eventoNome && (
-          <span className="w-fit rounded-full bg-purple-50 px-2 py-0.5 text-base font-medium text-purple-800">
-            {eventoNome}
-          </span>
-        )}
-        {etiquetaNome && (
-          <span className="w-fit rounded-full bg-amber-50 px-2 py-0.5 text-base font-medium text-amber-900">
-            {etiquetaNome}
-          </span>
-        )}
-        {checklistTotal > 0 && (
-          <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700">
-            Checklist {checklistFeitos}/{checklistTotal}
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {area ? (
+            <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-base text-zinc-700">
+              {area}
+            </span>
+          ) : (
+            <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-base text-zinc-400">
+              Sem área definida
+            </span>
+          )}
+          {projeto && (
+            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-base font-medium text-blue-700 ring-1 ring-blue-200/60">
+              {projeto}
+            </span>
+          )}
+          {eventoNome && (
+            <span className="rounded-full bg-purple-50 px-2.5 py-0.5 text-base font-medium text-purple-700 ring-1 ring-purple-200/60">
+              {eventoNome}
+            </span>
+          )}
+          {etiquetaNome && (
+            <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-base font-medium text-amber-800 ring-1 ring-amber-200/60">
+              {etiquetaNome}
+            </span>
+          )}
+          {checklistTotal > 0 && (
+            <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-base text-zinc-600">
+              Checklist {checklistFeitos}/{checklistTotal}
+            </span>
+          )}
+        </div>
       </Link>
     </li>
   );

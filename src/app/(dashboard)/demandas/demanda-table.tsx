@@ -15,7 +15,7 @@ import StatusBadge, { type DemandaStatus } from "./status-badge";
 import OverdueBadge from "./overdue-badge";
 
 // Desktop (lg and above) table view — same data as DemandaCard, with the
-// overdue border-l-4 row stripe as a redundant-but-scannable second signal
+// overdue left-border stripe as a redundant-but-scannable second signal
 // for a table full of rows (04-UI-SPEC.md Screen Inventory > 1). The
 // lg-breakpoint visibility switch itself lives in the caller (demanda-list.tsx).
 export type DemandaTableRow = {
@@ -41,22 +41,22 @@ export default function DemandaTable({ demandas }: DemandaTableProps) {
   const router = useRouter();
 
   return (
-    <Table className="w-full border-collapse overflow-hidden rounded-xl border border-zinc-200 shadow-sm">
+    <Table className="w-full overflow-hidden rounded-2xl ring-1 ring-zinc-200/60">
       <TableHeader>
-        <TableRow className="border-b-0 bg-zinc-100 text-base font-semibold text-zinc-700 hover:bg-zinc-100">
-          <TableHead className="h-auto px-4 py-3 text-left font-semibold text-zinc-700">
+        <TableRow className="border-b-0 bg-zinc-100/80 text-base font-semibold text-zinc-600 hover:bg-zinc-100/80">
+          <TableHead className="h-auto px-5 py-3.5 text-left font-semibold text-zinc-600">
             Título
           </TableHead>
-          <TableHead className="h-auto px-4 py-3 text-left font-semibold text-zinc-700">
+          <TableHead className="h-auto px-5 py-3.5 text-left font-semibold text-zinc-600">
             Responsável
           </TableHead>
-          <TableHead className="h-auto px-4 py-3 text-left font-semibold text-zinc-700">
+          <TableHead className="h-auto px-5 py-3.5 text-left font-semibold text-zinc-600">
             Prazo
           </TableHead>
-          <TableHead className="h-auto px-4 py-3 text-left font-semibold text-zinc-700">
+          <TableHead className="h-auto px-5 py-3.5 text-left font-semibold text-zinc-600">
             Status
           </TableHead>
-          <TableHead className="h-auto px-4 py-3 text-left font-semibold text-zinc-700">
+          <TableHead className="h-auto px-5 py-3.5 text-left font-semibold text-zinc-600">
             Área/Projeto
           </TableHead>
         </TableRow>
@@ -73,60 +73,60 @@ export default function DemandaTable({ demandas }: DemandaTableProps) {
             <TableRow
               key={demanda.id}
               onClick={() => router.push(`/demandas/${demanda.id}/editar`)}
-              className={`cursor-pointer border-t border-b-0 border-zinc-300 bg-white text-xl text-zinc-900 hover:bg-zinc-50 ${
-                demanda.atrasada ? "border-l-4 border-l-red-700" : ""
+              className={`cursor-pointer border-t border-b-0 border-zinc-100 bg-white text-xl text-zinc-900 transition-colors duration-200 hover:bg-zinc-50 ${
+                demanda.atrasada ? "border-l-3 border-l-red-500" : ""
               }`}
             >
               <TableCell
-                className="max-w-xs truncate px-4 py-3"
+                className="max-w-xs truncate px-5 py-3.5"
                 title={demanda.titulo}
               >
                 {demanda.titulo}
               </TableCell>
-              <TableCell className="whitespace-normal px-4 py-3">
+              <TableCell className="whitespace-normal px-5 py-3.5 text-zinc-700">
                 {demanda.responsavelEmails.length > 0
                   ? demanda.responsavelEmails.join(", ")
                   : "Sem responsável definido"}
               </TableCell>
-              <TableCell className="whitespace-normal px-4 py-3">
+              <TableCell className="whitespace-normal px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <span className={demanda.atrasada ? "text-red-700" : ""}>
+                  <span className={demanda.atrasada ? "font-medium text-red-700" : "text-zinc-600"}>
                     {prazoFormatada}
                   </span>
                   {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
                 </div>
               </TableCell>
-              <TableCell className="whitespace-normal px-4 py-3">
+              <TableCell className="whitespace-normal px-5 py-3.5">
                 <StatusBadge status={demanda.status} />
               </TableCell>
-              <TableCell className="whitespace-normal px-4 py-3">
-                <div className="flex flex-wrap gap-1">
+              <TableCell className="whitespace-normal px-5 py-3.5">
+                <div className="flex flex-wrap gap-1.5">
                   {demanda.area ? (
-                    <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700">
+                    <span className="w-fit rounded-full bg-zinc-100 px-2.5 py-0.5 text-base text-zinc-700">
                       {demanda.area}
                     </span>
                   ) : (
-                    <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-500">
+                    <span className="w-fit rounded-full bg-zinc-100 px-2.5 py-0.5 text-base text-zinc-400">
                       Sem área definida
                     </span>
                   )}
                   {demanda.projeto && (
-                    <span className="w-fit rounded-full bg-blue-50 px-2 py-0.5 text-base font-medium text-blue-800">
+                    <span className="w-fit rounded-full bg-blue-50 px-2.5 py-0.5 text-base font-medium text-blue-700 ring-1 ring-blue-200/60">
                       {demanda.projeto}
                     </span>
                   )}
                   {demanda.eventoNome && (
-                    <span className="w-fit rounded-full bg-purple-50 px-2 py-0.5 text-base font-medium text-purple-800">
+                    <span className="w-fit rounded-full bg-purple-50 px-2.5 py-0.5 text-base font-medium text-purple-700 ring-1 ring-purple-200/60">
                       {demanda.eventoNome}
                     </span>
                   )}
                   {demanda.etiquetaNome && (
-                    <span className="w-fit rounded-full bg-amber-50 px-2 py-0.5 text-base font-medium text-amber-900">
+                    <span className="w-fit rounded-full bg-amber-50 px-2.5 py-0.5 text-base font-medium text-amber-800 ring-1 ring-amber-200/60">
                       {demanda.etiquetaNome}
                     </span>
                   )}
                   {(demanda.checklistTotal ?? 0) > 0 && (
-                    <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700">
+                    <span className="w-fit rounded-full bg-zinc-100 px-2.5 py-0.5 text-base text-zinc-600">
                       Checklist {demanda.checklistFeitos ?? 0}/{demanda.checklistTotal}
                     </span>
                   )}
