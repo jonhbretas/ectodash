@@ -49,6 +49,13 @@ export default async function DashboardPage({
   const email = profile?.email ?? user.email;
   const role = profile?.role;
 
+  // Gates the "Painel do coordenador" entry-point link rendered by
+  // DemandaList below — threaded from this same profiles.role read, never a
+  // second/separate query (06-UI-SPEC.md's Entry Point contract). Purely a
+  // UX-hiding decision; /painel's own role branch (plan 06-01) is the real
+  // authorization boundary regardless of what this computes.
+  const isCoordenador = role === "coordenador_geral";
+
   // Only read when the caller is a lider_area — a coordenador/voluntario/
   // financeiro account has no lider_areas rows and no use for this read.
   const { data: liderAreasRows } =
@@ -238,6 +245,7 @@ export default async function DashboardPage({
           demandas={demandaList}
           groupBy={filters.agrupar}
           filtersActive={filtersActive}
+          isCoordenador={isCoordenador}
         />
       </div>
     </PageContainer>

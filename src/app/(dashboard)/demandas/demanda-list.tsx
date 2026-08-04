@@ -34,6 +34,12 @@ export type DemandaListProps = {
   // dataset down to nothing, never when the role-scoped dataset was already
   // empty to begin with.
   filtersActive?: boolean;
+  // isCoordenador: threaded from page.tsx's existing profiles.role read (no
+  // new query) — gates the "Painel do coordenador" entry-point link in the
+  // header row below. Purely a UX-hiding decision, never an authorization
+  // boundary (06-UI-SPEC.md's Entry Point contract; RLS on /painel's own
+  // queries from plan 06-01 is what actually matters).
+  isCoordenador?: boolean;
 };
 
 const SEM_AREA_DEFINIDA = "Sem área definida";
@@ -102,6 +108,7 @@ export default function DemandaList({
   demandas,
   groupBy,
   filtersActive = false,
+  isCoordenador = false,
 }: DemandaListProps) {
   const sorted = [...demandas].sort(compareDemandas);
   const count = demandas.length;
@@ -116,12 +123,23 @@ export default function DemandaList({
           <span className="text-base text-zinc-700">{countLabel}</span>
         </div>
 
-        <Link
-          href="/demandas/nova"
-          className="flex min-h-14 w-full items-center justify-center rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
-        >
-          Nova demanda
-        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          {isCoordenador && (
+            <Link
+              href="/painel"
+              className="flex min-h-14 w-full items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
+            >
+              Painel do coordenador
+            </Link>
+          )}
+
+          <Link
+            href="/demandas/nova"
+            className="flex min-h-14 w-full items-center justify-center rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
+          >
+            Nova demanda
+          </Link>
+        </div>
       </div>
 
       {count === 0 && filtersActive ? (
