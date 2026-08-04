@@ -29,7 +29,7 @@ describe("parseInviteArgs", () => {
     }
   );
 
-  it("rejects a role that is not one of the four fixed values", () => {
+  it("rejects a role that is not one of the five fixed values", () => {
     const result = parseInviteArgs([
       "voluntario@instituicao.org",
       "--role=super_admin",
@@ -52,12 +52,12 @@ describe("parseInviteArgs", () => {
 
   it("parses the role position-independently — before or after the address", () => {
     const roleFirst = parseInviteArgs([
-      "--role=lider_area",
+      "--role=coordenador_area",
       "voluntario@instituicao.org",
     ]);
     const roleLast = parseInviteArgs([
       "voluntario@instituicao.org",
-      "--role=lider_area",
+      "--role=coordenador_area",
     ]);
 
     expect(roleFirst.ok).toBe(true);

@@ -1,11 +1,15 @@
 "use server";
 
 // Volunteer management + self-service profile actions.
-// Self path: atualizar_meu_perfil (full_name ONLY — enforced by the
+// Self path: atualizarMeuPerfil (full_name ONLY — enforced by the
 // SECURITY DEFINER function, migration 0014).
-// Coordinator path: atualizarVoluntario / alternarAtivoVoluntario — gated
-// by the 0002 coordinator UPDATE policy (RLS is the real boundary; a
-// non-coordinator's update silently affects zero rows).
+// Roster path: criarVoluntario / atualizarVoluntario — thin wrappers over
+// migration 0017's SECURITY DEFINER functions (criar_voluntario /
+// atualizar_voluntario), the ONLY write paths to public.voluntarios. The
+// functions enforce the manager gate (coordenador_geral | voluntariado |
+// coordenador_area scoped to their own áreas), never let a non-geral caller
+// assign roles, and sync linked accounts' profiles when a coordenador_geral
+// edits role/áreas.
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -53,26 +57,120 @@ export async function atualizarMeuPerfil(
   return { ok: true, message: "Perfil atualizado." };
 }
 
-const roleSchema = z.enum([
+const papelSchema = z.enum([
   "coordenador_geral",
-  "lider_area",
+  "coordenador_area",
   "voluntario_comum",
   "financeiro",
+  "voluntariado",
 ]);
 
-const voluntarioSchema = z.object({
-  full_name: nomeSchema,
-  role: roleSchema,
-  area_atuacao: z.string().trim().max(200).optional(),
-  areas_lideradas: z.string().trim().max(2000).optional(),
+const dataIsoSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.");
+
+const campoTexto = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((value) => (value === "" ? null : value))
+    .optional();
+
+// Shared field set for create and edit — every field optional except nome.
+// Empty strings become null before reaching the RPC (the functions store
+// nulls, never empty strings).
+const voluntarioDadosSchema = z.object({
+  nome: nomeSchema,
+  codigo_pf: campoTexto(30),
+  unidade: campoTexto(120),
+  org_depto: campoTexto(200),
+  funcao: campoTexto(200),
+  data_inicio: dataIsoSchema.nullish(),
+  data_saida: dataIsoSchema.nullish(),
+  obs: campoTexto(2000),
+  area_atuacao: campoTexto(200),
+  papel: papelSchema.optional(),
+  areas_lideradas: campoTexto(2000),
 });
 
-// Coordinator-only (RLS). Replaces full_name, role, área de atuação and —
-// for líderes — the set of led áreas (comma-separated input replaces the
-// lider_areas rows wholesale, same replace semantics as the financial
-// import).
+type VoluntarioDados = z.infer<typeof voluntarioDadosSchema>;
+
+function parseDados(formData: FormData): VoluntarioDados | null {
+  const parsed = voluntarioDadosSchema.safeParse({
+    nome: formData.get("nome"),
+    codigo_pf: formData.get("codigo_pf") ?? undefined,
+    unidade: formData.get("unidade") ?? undefined,
+    org_depto: formData.get("org_depto") ?? undefined,
+    funcao: formData.get("funcao") ?? undefined,
+    data_inicio: formData.get("data_inicio") ?? undefined,
+    data_saida: formData.get("data_saida") ?? undefined,
+    obs: formData.get("obs") ?? undefined,
+    area_atuacao: formData.get("area_atuacao") ?? undefined,
+    papel: formData.get("papel") ?? undefined,
+    areas_lideradas: formData.get("areas_lideradas") ?? undefined,
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+function areasArray(areasTexto: string | null | undefined): string[] {
+  return (areasTexto ?? "")
+    .split(",")
+    .map((area) => area.trim())
+    .filter(Boolean);
+}
+
+export async function criarVoluntario(
+  prevState: PerfilState,
+  formData: FormData
+): Promise<PerfilState & { novoId?: number }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ...perfilInitial, message: "Sessão expirada." };
+  }
+
+  const dados = parseDados(formData);
+  if (!dados) {
+    return { ...perfilInitial, message: "Verifique os campos do formulário." };
+  }
+
+  // The SECURITY DEFINER function decides whether this caller may create a
+  // row at all (and, for a coordenador_area caller, pins the área to theirs
+  // and forces voluntario_comum).
+  const { data: novoId, error } = await supabase.rpc("criar_voluntario", {
+    p_nome: dados.nome,
+    p_codigo_pf: dados.codigo_pf ?? null,
+    p_unidade: dados.unidade ?? null,
+    p_org_depto: dados.org_depto ?? null,
+    p_funcao: dados.funcao ?? null,
+    p_data_inicio: dados.data_inicio ?? null,
+    p_data_saida: dados.data_saida ?? null,
+    p_obs: dados.obs ?? null,
+    p_area_atuacao: dados.area_atuacao ?? null,
+    p_papel: dados.papel ?? null,
+    p_areas_lideradas: areasArray(dados.areas_lideradas),
+  });
+
+  if (error || !novoId) {
+    console.error("criarVoluntario: rpc failed", error);
+    return {
+      ...perfilInitial,
+      message:
+        "Não foi possível cadastrar o voluntário. Verifique suas permissões.",
+    };
+  }
+
+  revalidatePath("/voluntarios");
+  return { ok: true, message: "Voluntário cadastrado.", novoId };
+}
+
 export async function atualizarVoluntario(
-  id: string,
+  id: number,
   prevState: PerfilState,
   formData: FormData
 ): Promise<PerfilState> {
@@ -85,41 +183,31 @@ export async function atualizarVoluntario(
     return { ...perfilInitial, message: "Sessão expirada." };
   }
 
-  const parsed = voluntarioSchema.safeParse({
-    full_name: formData.get("full_name"),
-    role: formData.get("role"),
-    area_atuacao: formData.get("area_atuacao") ?? undefined,
-    areas_lideradas: formData.get("areas_lideradas") ?? undefined,
-  });
-
-  if (!parsed.success) {
+  const dados = parseDados(formData);
+  if (!dados) {
     return { ...perfilInitial, message: "Verifique os campos do formulário." };
   }
 
-  const { data: profile, error: readError } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", id)
-    .single();
+  const ativo = formData.get("ativo") === "true";
 
-  if (readError || !profile) {
-    return { ...perfilInitial, message: "Voluntário não encontrado." };
-  }
+  const { data: ok, error } = await supabase.rpc("atualizar_voluntario", {
+    p_cadastro_id: id,
+    p_nome: dados.nome,
+    p_codigo_pf: dados.codigo_pf ?? null,
+    p_unidade: dados.unidade ?? null,
+    p_org_depto: dados.org_depto ?? null,
+    p_funcao: dados.funcao ?? null,
+    p_data_inicio: dados.data_inicio ?? null,
+    p_data_saida: dados.data_saida ?? null,
+    p_obs: dados.obs ?? null,
+    p_area_atuacao: dados.area_atuacao ?? null,
+    p_papel: dados.papel ?? null,
+    p_areas_lideradas: areasArray(dados.areas_lideradas),
+    p_ativo: ativo,
+  });
 
-  // RLS: only a coordenador_geral's UPDATE policy matches this row — a
-  // non-coordinator's update affects zero rows, detected below.
-  const { data: updated, error: updateError } = await supabase
-    .from("profiles")
-    .update({
-      full_name: parsed.data.full_name,
-      role: parsed.data.role,
-      area_atuacao: parsed.data.area_atuacao || null,
-    })
-    .eq("id", id)
-    .select("id");
-
-  if (updateError || !updated || updated.length === 0) {
-    console.error("atualizarVoluntario: update failed", updateError);
+  if (error || !ok) {
+    console.error("atualizarVoluntario: rpc failed", error);
     return {
       ...perfilInitial,
       message:
@@ -127,80 +215,9 @@ export async function atualizarVoluntario(
     };
   }
 
-  // Áreas lideradas: replace the lider_areas set wholesale for líderes;
-  // cleared for any other role.
-  const areas = (parsed.data.areas_lideradas ?? "")
-    .split(",")
-    .map((area) => area.trim())
-    .filter(Boolean);
-  const finalAreas = parsed.data.role === "lider_area" ? areas : [];
-
-  const { error: deleteError } = await supabase
-    .from("lider_areas")
-    .delete()
-    .eq("lider_id", id);
-
-  if (deleteError) {
-    console.error("atualizarVoluntario: lider_areas delete failed", deleteError);
-    return { ...perfilInitial, message: "Erro ao salvar as áreas lideradas." };
-  }
-
-  if (finalAreas.length > 0) {
-    const { error: insertError } = await supabase.from("lider_areas").insert(
-      finalAreas.map((area) => ({ lider_id: id, area }))
-    );
-    if (insertError) {
-      console.error("atualizarVoluntario: lider_areas insert failed", insertError);
-      return { ...perfilInitial, message: "Erro ao salvar as áreas lideradas." };
-    }
-  }
-
   revalidatePath("/voluntarios");
   revalidatePath(`/voluntarios/${id}`);
   revalidatePath(`/voluntarios/${id}/editar`);
   revalidatePath("/");
   return { ok: true, message: "Voluntário atualizado." };
-}
-
-// Soft delete / re-activate (ativo flag). Coordinator-only via RLS.
-// useActionState shape: (id bound, prevState, formData) — ativo comes from
-// the hidden form field.
-export async function alternarAtivoVoluntario(
-  id: string,
-  prevState: PerfilState,
-  formData: FormData
-): Promise<PerfilState> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { ...perfilInitial, message: "Sessão expirada." };
-  }
-
-  const ativo = formData.get("ativo") === "true";
-
-  const { data: updated, error } = await supabase
-    .from("profiles")
-    .update({ ativo })
-    .eq("id", id)
-    .select("id");
-
-  if (error || !updated || updated.length === 0) {
-    console.error("alternarAtivoVoluntario: update failed", error);
-    return {
-      ...perfilInitial,
-      message:
-        "Não foi possível alterar o voluntário. Verifique suas permissões.",
-    };
-  }
-
-  revalidatePath("/voluntarios");
-  revalidatePath(`/voluntarios/${id}`);
-  revalidatePath(`/voluntarios/${id}/editar`);
-  return {
-    ok: true,
-    message: ativo ? "Voluntário reativado." : "Voluntário desativado.",
-  };
 }

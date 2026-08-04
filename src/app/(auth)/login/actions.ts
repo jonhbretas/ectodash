@@ -15,7 +15,7 @@ const emailSchema = z.string().email();
 // institutional e-mail addresses (RESEARCH.md Security Domain, Information
 // Disclosure row; github.com/supabase/auth/issues/1547).
 const GENERIC_SUCCESS_MESSAGE =
-  "Se este e-mail estiver cadastrado, você receberá um link de acesso. Confira sua caixa de entrada.";
+  "Você receberá um link de acesso no e-mail. Na primeira vez, você escolherá seu nome na lista de voluntários.";
 
 export async function requestMagicLink(
   prevState: LoginState,
@@ -39,10 +39,14 @@ export async function requestMagicLink(
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data,
     options: {
-      // Per D-02, this is the single most important line in the phase:
-      // it prevents signInWithOtp from silently creating a new account for
-      // any never-invited address.
-      shouldCreateUser: false,
+      // Self-signup (user decision, 2026-08-04): volunteers register by the
+      // magic link and then link their account to their name in the
+      // institutional roster at /vincular (migration 0017). A first-time
+      // address therefore CREATES the account — shouldCreateUser: true
+      // replaces D-02's invite-only mode. New accounts start with
+      // vincular_pendente = true (handle_new_user trigger) and the
+      // dashboard layout redirects them to /vincular until they link.
+      shouldCreateUser: true,
       emailRedirectTo,
     },
   });

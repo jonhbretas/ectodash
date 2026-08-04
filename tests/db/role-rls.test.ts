@@ -19,9 +19,10 @@ const canRun = Boolean(supabaseUrl && anonKey && serviceRoleKey);
 
 type AppRole =
   | "coordenador_geral"
-  | "lider_area"
+  | "coordenador_area"
   | "voluntario_comum"
-  | "financeiro";
+  | "financeiro"
+  | "voluntariado";
 
 // Skip condition: without SUPABASE_SERVICE_ROLE_KEY (and the other project
 // credentials) this suite cannot reach the live hosted project. Skip visibly
@@ -110,7 +111,7 @@ describe.skipIf(!canRun)(
 
       const { error: updateError } = await coordinatorClient
         .from("profiles")
-        .update({ role: "lider_area" })
+        .update({ role: "coordenador_area" })
         .eq("id", volunteer.id);
 
       // RLS returns success-with-zero-rows (not an error) on a denied write,
@@ -127,7 +128,7 @@ describe.skipIf(!canRun)(
         .single();
 
       expect(rereadError).toBeNull();
-      expect(reread?.role).toBe("lider_area");
+      expect(reread?.role).toBe("coordenador_area");
     });
 
     it("voluntario_comum cannot change another user's role", async () => {
@@ -255,16 +256,17 @@ describe.skipIf(!canRun)(
 
     const allRoles: AppRole[] = [
       "coordenador_geral",
-      "lider_area",
+      "coordenador_area",
       "voluntario_comum",
       "financeiro",
+      "voluntariado",
     ];
 
-    it("has_role() returns true for exactly the caller's own role, false for the other three (per-role correctness matrix)", async () => {
-      // One fixture per role, each checked against all four role names over
+    it("has_role() returns true for exactly the caller's own role, false for the other four (per-role correctness matrix)", async () => {
+      // One fixture per role, each checked against all five role names over
       // RPC through its own signed-in client — never the service-role
       // client, which bypasses RLS entirely and carries no auth.uid().
-      // Driven from allRoles so a fifth role later extends the matrix by
+      // Driven from allRoles so a sixth role later extends the matrix by
       // editing one list rather than writing a new near-identical block.
       for (const ownRole of allRoles) {
         const fixture = await createUserWithRole(ownRole);
@@ -290,8 +292,9 @@ describe.skipIf(!canRun)(
       const expectedAdmit: Record<AppRole, boolean> = {
         financeiro: true,
         coordenador_geral: true,
-        lider_area: false,
+        coordenador_area: false,
         voluntario_comum: false,
+        voluntariado: false,
       };
 
       for (const role of allRoles) {

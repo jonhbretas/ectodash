@@ -48,8 +48,12 @@ describe("requestMagicLink", () => {
     process.env.NEXT_PUBLIC_SITE_URL = ORIGINAL_SITE_URL;
   });
 
-  // Test 1 (AUTH-01, D-02): shouldCreateUser is pinned to false.
-  it("passes shouldCreateUser: false to signInWithOtp", async () => {
+  // Test 1 (AUTH-01, revised 2026-08-04): shouldCreateUser is pinned to
+  // true — volunteers self-register by the magic link and link their
+  // account to their name in the institutional roster at /vincular
+  // (migration 0017). D-02's invite-only mode was replaced by the
+  // self-signup decision; new accounts start with vincular_pendente = true.
+  it("passes shouldCreateUser: true to signInWithOtp", async () => {
     await requestMagicLink(
       initialState,
       formDataWith({ email: "voluntario@instituicao.org" })
@@ -57,7 +61,7 @@ describe("requestMagicLink", () => {
 
     expect(signInWithOtp).toHaveBeenCalledTimes(1);
     const [callArgs] = signInWithOtp.mock.calls[0];
-    expect(callArgs.options.shouldCreateUser).toBe(false);
+    expect(callArgs.options.shouldCreateUser).toBe(true);
   });
 
   // Test 2: emailRedirectTo is built only from NEXT_PUBLIC_SITE_URL — a
@@ -124,37 +128,37 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const canRunLive = Boolean(supabaseUrl && anonKey && serviceRoleKey);
 
 describe.skipIf(!canRunLive)(
-  "requestMagicLink integration (live Supabase project, D-02)",
+  "requestMagicLink integration (live Supabase project)",
   () => {
-    it("creates no account for a never-invited address", async () => {
-      const email = `ectodash-never-invited-${Date.now()}@example.invalid`;
+    it("creates an account for a new address (self-signup), with vincular_pendente set", async () => {
+      const email = `ectodash-selfsignup-${Date.now()}@example.invalid`;
 
       const anon = createSupabaseClient(supabaseUrl!, anonKey!);
-      // No assertion on the call's error here: with shouldCreateUser: false
-      // and self-signup disabled Dashboard-wide, Supabase may reject this
-      // outright (e.g. "Signups not allowed for otp") rather than resolving
-      // silently — either shape is consistent with D-02. What actually
-      // matters, and is asserted below, is that no account/profile row gets
-      // created for a never-invited address either way.
       await anon.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: false },
+        options: { shouldCreateUser: true },
       });
 
       const admin = createSupabaseClient(supabaseUrl!, serviceRoleKey!);
       const { data, error: profileError } = await admin
         .from("profiles")
-        .select("id")
+        .select("id, vincular_pendente")
         .eq("email", email);
 
       expect(profileError).toBeNull();
-      expect(data).toHaveLength(0);
+      expect(data).toHaveLength(1);
+      expect(data?.[0]?.vincular_pendente).toBe(true);
+
+      // Clean up the disposable self-signup account.
+      if (data?.[0]?.id) {
+        await admin.auth.admin.deleteUser(data[0].id);
+      }
     });
   }
 );
 
 if (!canRunLive) {
-  describe("requestMagicLink integration (live Supabase project, D-02)", () => {
+  describe("requestMagicLink integration (live Supabase project)", () => {
     it.skip("SUPABASE_SERVICE_ROLE_KEY (or other required project env vars) not set — skipping live integration test", () => {
       // Intentionally empty: surfaces a visible skip message when
       // hosted-project credentials are unavailable.

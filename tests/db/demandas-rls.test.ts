@@ -19,7 +19,7 @@ const canRun = Boolean(supabaseUrl && anonKey && serviceRoleKey);
 
 type AppRole =
   | "coordenador_geral"
-  | "lider_area"
+  | "coordenador_area"
   | "voluntario_comum"
   | "financeiro";
 
@@ -83,7 +83,7 @@ describe.skipIf(!canRun)(
       return fixture;
     }
 
-    // Assigns an área to a líder fixture via the service-role client
+    // Assigns an área to a coordenador fixture via the service-role client
     // (mirrors docs/areas.md's coordenador-only runbook) and tracks the
     // composite key for afterAll cleanup.
     async function assignArea(liderId: string, area: string) {
@@ -243,7 +243,7 @@ describe.skipIf(!canRun)(
       // authenticated user could edit ANY demanda (Phase 4's permissive
       // using(true) RLS). DEM-05 deliberately breaks that: the "editor"
       // fixture here is deliberately unrelated — not criado_por, not
-      // responsável, not líder of that área, not coordenador — and the
+      // responsável, not coordenador of that área, not coordenador — and the
       // narrowed role-scoped policy must now deny the write.
       const criador = await createFixtureUser();
       const editor = await createFixtureWithRole("voluntario_comum");
@@ -583,8 +583,8 @@ describe.skipIf(!canRun)(
       expect(row?.titulo).toBe("Editado pelo coordenador");
     });
 
-    it("DEM-05: lider_area with one área can SELECT/UPDATE a case/whitespace-mismatched demanda in that área, and is denied on an unrelated área", async () => {
-      const lider = await createFixtureWithRole("lider_area");
+    it("DEM-05: coordenador_area with one área can SELECT/UPDATE a case/whitespace-mismatched demanda in that área, and is denied on an unrelated área", async () => {
+      const lider = await createFixtureWithRole("coordenador_area");
       await assignArea(lider.id, "Pesquisa");
 
       const criador = await createFixtureUser();
@@ -608,7 +608,7 @@ describe.skipIf(!canRun)(
       const { data: deniedInsert, error: deniedInsertError } = await criadorClient
         .from("demandas")
         .insert({
-          titulo: "Demanda da área Financeiro (não relacionada ao líder)",
+          titulo: "Demanda da área Financeiro (não relacionada ao coordenador)",
           prazo: "2027-05-06",
           status: "pendente",
           area: "Financeiro",
@@ -625,7 +625,7 @@ describe.skipIf(!canRun)(
       // Allowed path: case/whitespace-mismatched área still matches.
       const { error: allowedUpdateError } = await liderClient
         .from("demandas")
-        .update({ titulo: "Editado pelo líder de Pesquisa" })
+        .update({ titulo: "Editado pelo coordenador de Pesquisa" })
         .eq("id", allowedDemandaId);
 
       expect(allowedUpdateError).toBeNull();
@@ -637,7 +637,7 @@ describe.skipIf(!canRun)(
         .single();
 
       expect(allowedReadError).toBeNull();
-      expect(allowedRow?.titulo).toBe("Editado pelo líder de Pesquisa");
+      expect(allowedRow?.titulo).toBe("Editado pelo coordenador de Pesquisa");
 
       // Denied path: an unrelated área is not visible or editable.
       const { data: deniedSelect, error: deniedSelectError } = await liderClient
@@ -662,11 +662,11 @@ describe.skipIf(!canRun)(
         .single();
 
       expect(deniedReadError).toBeNull();
-      expect(deniedRow?.titulo).toBe("Demanda da área Financeiro (não relacionada ao líder)");
+      expect(deniedRow?.titulo).toBe("Demanda da área Financeiro (não relacionada ao coordenador)");
     });
 
-    it("DEM-05: lider_area assigned to TWO áreas simultaneously can SELECT/UPDATE demandas in either área, and is denied on a third", async () => {
-      const lider = await createFixtureWithRole("lider_area");
+    it("DEM-05: coordenador_area assigned to TWO áreas simultaneously can SELECT/UPDATE demandas in either área, and is denied on a third", async () => {
+      const lider = await createFixtureWithRole("coordenador_area");
       await assignArea(lider.id, "Pesquisa");
       await assignArea(lider.id, "Eventos");
 
@@ -719,8 +719,8 @@ describe.skipIf(!canRun)(
 
       // Allowed: both assigned áreas.
       for (const [id, title] of [
-        [pesquisaDemandaId, "Editado — líder multi-área (Pesquisa)"],
-        [eventosDemandaId, "Editado — líder multi-área (Eventos)"],
+        [pesquisaDemandaId, "Editado — coordenador multi-área (Pesquisa)"],
+        [eventosDemandaId, "Editado — coordenador multi-área (Eventos)"],
       ] as const) {
         const { error: updateError } = await liderClient
           .from("demandas")
@@ -852,7 +852,7 @@ describe.skipIf(!canRun)(
       expect(row?.titulo).toBe("Editado pelo responsável");
 
       // Unrelated third voluntário: no criado_por, no responsável link, no
-      // líder role — denied both SELECT and UPDATE.
+      // coordenador role — denied both SELECT and UPDATE.
       const unrelatedClient = await signInAs(unrelated);
 
       const { data: deniedSelect, error: deniedSelectError } = await unrelatedClient
@@ -926,8 +926,8 @@ describe.skipIf(!canRun)(
       expect(responsaveisSelect ?? []).toHaveLength(0);
     });
 
-    it("DEM-05: demandas_com_status view returns exactly the same demanda ids as a direct demandas query, for a lider_area fixture", async () => {
-      const lider = await createFixtureWithRole("lider_area");
+    it("DEM-05: demandas_com_status view returns exactly the same demanda ids as a direct demandas query, for a coordenador_area fixture", async () => {
+      const lider = await createFixtureWithRole("coordenador_area");
       await assignArea(lider.id, "Pesquisa");
 
       const criador = await createFixtureUser();
@@ -982,8 +982,8 @@ describe.skipIf(!canRun)(
       expect(tableIds).toEqual([matchDemandaId]);
     });
 
-    it("DEM-05: a lider_area cannot self-assign a new área (self-escalation guard), but can view their own existing lider_areas rows", async () => {
-      const lider = await createFixtureWithRole("lider_area");
+    it("DEM-05: a coordenador_area cannot self-assign a new área (self-escalation guard), but can view their own existing lider_areas rows", async () => {
+      const lider = await createFixtureWithRole("coordenador_area");
       await assignArea(lider.id, "Pesquisa");
 
       const liderClient = await signInAs(lider);
@@ -1009,7 +1009,7 @@ describe.skipIf(!canRun)(
       // exact shape being the sole proof of denial.
       void insertError;
 
-      // Allowed read: the líder CAN see their own existing lider_areas row.
+      // Allowed read: the coordenador CAN see their own existing lider_areas row.
       const { data: ownRows, error: ownRowsError } = await liderClient
         .from("lider_areas")
         .select("area")

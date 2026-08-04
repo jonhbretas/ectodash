@@ -66,6 +66,8 @@ export default async function LoginPage({
           <p className="text-xl text-zinc-700">
             Digite seu e-mail institucional abaixo. Enviaremos um link de
             acesso por e-mail — não é preciso criar ou digitar nenhuma senha.
+            Na primeira vez, você escolherá seu nome na lista de voluntários
+            para vincular o cadastro.
           </p>
           {erro === "link_invalido" && (
             <p className="text-xl font-medium text-red-700">

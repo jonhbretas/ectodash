@@ -2,8 +2,8 @@
 // imported by a page, route, component, or Server Action — it holds the
 // service-role key, which bypasses every RLS policy. Run locally with:
 //   npm run seed:coordinator -- <email> [--role=<papel>]
-// Papéis válidos: coordenador_geral, lider_area, voluntario_comum,
-// financeiro (padrão: voluntario_comum).
+// Papéis válidos: coordenador_geral, coordenador_area, voluntario_comum,
+// financeiro, voluntariado (padrão: voluntario_comum).
 import { createClient } from "@supabase/supabase-js";
 import { parseInviteArgs } from "./lib/role-arg.ts";
 

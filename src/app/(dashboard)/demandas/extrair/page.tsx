@@ -31,7 +31,8 @@ export default async function ExtrairDemandasPage() {
     .single();
 
   const canExtractDemandas =
-    profile?.role === "coordenador_geral" || profile?.role === "lider_area";
+    profile?.role === "coordenador_geral" ||
+    profile?.role === "coordenador_area";
 
   if (!canExtractDemandas) {
     return (
@@ -39,7 +40,7 @@ export default async function ExtrairDemandasPage() {
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Lock size={48} className="text-zinc-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-zinc-900">
-            Este recurso é exclusivo de coordenadores e líderes de área
+            Este recurso é exclusivo de coordenadores
           </h1>
           <p className="max-w-md text-xl text-zinc-700">
             Você não tem acesso à extração de demandas por IA. Toque abaixo

@@ -1,9 +1,14 @@
+// /voluntarios/[id]/editar — coordinator-side volunteer edit. Reads the
+// roster row (RLS 0017 decides visibility: coordenador_geral/voluntariado
+// see any row, coordenador_area only their own áreas) and submits through
+// the atualizar_voluntario SECURITY DEFINER function. The papel/áreas
+// fields appear only for a coordenador_geral caller — the function enforces
+// the same rule server-side.
 import Link from "next/link";
 import { Lock, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { displayName } from "@/lib/display-name";
 import PageContainer from "../../../page-container";
-import EditarVoluntarioForm, { AlternarAtivoButton } from "../../editar-voluntario-form";
+import VoluntarioForm, { type VoluntarioFormValues } from "../../voluntario-form";
 
 type EditarVoluntarioPageProps = {
   params: Promise<{ id: string }>;
@@ -28,13 +33,19 @@ export default async function EditarVoluntarioPage({
     .eq("id", user.id)
     .single();
 
-  if (me?.role !== "coordenador_geral") {
+  const role = me?.role;
+  const canManage =
+    role === "coordenador_geral" ||
+    role === "voluntariado" ||
+    role === "coordenador_area";
+
+  if (!canManage) {
     return (
       <PageContainer>
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Lock size={48} className="text-zinc-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-zinc-900">
-            Edição de voluntários é exclusiva do coordenador
+            Edição de voluntários é exclusiva da coordenação
           </h1>
           <Link
             href="/voluntarios"
@@ -47,20 +58,24 @@ export default async function EditarVoluntarioPage({
     );
   }
 
-  const [profileResult, liderAreasResult] = await Promise.all([
+  const [voluntarioResult, areasResult] = await Promise.all([
     supabase
-      .from("profiles")
-      .select("id, email, full_name, role, area_atuacao, ativo")
-      .eq("id", id)
-      .single(),
-    supabase.from("lider_areas").select("area").eq("lider_id", id),
+      .from("voluntarios")
+      .select(
+        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo"
+      )
+      .eq("id", Number(id))
+      .maybeSingle(),
+    supabase.from("voluntarios").select("area_atuacao"),
   ]);
 
-  const profile = profileResult.data;
-  if (!profile) {
+  const voluntario = voluntarioResult.data;
+  if (!voluntario) {
     return (
       <PageContainer>
-        <p className="text-xl text-zinc-700">Voluntário não encontrado.</p>
+        <p className="text-xl text-zinc-700">
+          Voluntário não encontrado ou sem acesso a este cadastro.
+        </p>
         <Link
           href="/voluntarios"
           className="text-xl font-medium text-blue-700 underline"
@@ -71,36 +86,46 @@ export default async function EditarVoluntarioPage({
     );
   }
 
+  const areaOptions = [
+    ...new Set(
+      (areasResult.data ?? [])
+        .map((row) => row.area_atuacao)
+        .filter((area): area is string => Boolean(area && area.trim()))
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+
+  const values: VoluntarioFormValues = {
+    nome: voluntario.nome,
+    codigo_pf: voluntario.codigo_pf,
+    unidade: voluntario.unidade,
+    org_depto: voluntario.org_depto,
+    funcao: voluntario.funcao,
+    data_inicio: voluntario.data_inicio,
+    data_saida: voluntario.data_saida,
+    obs: voluntario.obs,
+    area_atuacao: voluntario.area_atuacao,
+    papel: voluntario.role,
+    areasLideradas: [],
+    ativo: voluntario.ativo,
+  };
+
   return (
     <PageContainer>
-      <div className="flex w-full max-w-4xl flex-col gap-2">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-          <Pencil size={28} aria-hidden="true" />
+      <div className="flex w-full max-w-3xl flex-col gap-2">
+        <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
+          <Pencil size={30} aria-hidden="true" />
           Editar voluntário
         </h1>
-        <p className="text-base text-zinc-700">
-          {displayName(profile)} — {profile.email}
-        </p>
+        <p className="text-xl text-zinc-500">{voluntario.nome}</p>
       </div>
 
-      <EditarVoluntarioForm
-        voluntarioId={id}
-        values={{
-          full_name: displayName(profile),
-          role: profile.role,
-          area_atuacao: profile.area_atuacao,
-          areasLideradas: (liderAreasResult.data ?? []).map((row) => row.area),
-          ativo: profile.ativo,
-        }}
+      <VoluntarioForm
+        mode="editar"
+        voluntarioId={voluntario.id}
+        values={values}
+        areaOptions={areaOptions}
+        canAssignRole={role === "coordenador_geral"}
       />
-
-      <div className="flex w-full max-w-md flex-col gap-1">
-        <AlternarAtivoButton voluntarioId={id} ativo={profile.ativo} />
-        <p className="text-base text-zinc-700">
-          Desativar remove o voluntário das listas e bloqueia o acesso, mas
-          mantém o histórico (demandas, comentários e atas).
-        </p>
-      </div>
     </PageContainer>
   );
 }

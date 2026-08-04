@@ -8,9 +8,10 @@ const ROLE_FLAG_PREFIX = "--role=";
 
 export const ROLE_VALUES = [
   'coordenador_geral',
-  'lider_area',
+  'coordenador_area',
   'voluntario_comum',
   'financeiro',
+  'voluntariado',
 ] as const;
 
 export const roleSchema = z.enum(ROLE_VALUES);

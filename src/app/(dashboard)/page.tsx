@@ -45,9 +45,9 @@ export default async function DashboardPage({
 
   const role = profile?.role;
 
-  // Only read when the caller is a lider_area.
+  // Only read when the caller is a coordenador_area.
   const { data: liderAreasRows } =
-    role === "lider_area"
+    role === "coordenador_area"
       ? await supabase.from("lider_areas").select("area").eq("lider_id", user.id)
       : { data: [] as { area: string }[] };
 
@@ -57,7 +57,7 @@ export default async function DashboardPage({
   let scopedViewNotice: string | null = null;
   if (role === "voluntario_comum") {
     scopedViewNotice = "Mostrando apenas as demandas atribuídas a você.";
-  } else if (role === "lider_area") {
+  } else if (role === "coordenador_area") {
     if (liderAreas.length === 0) {
       scopedViewNotice = "Mostrando apenas as demandas atribuídas a você.";
     } else if (liderAreas.length === 1) {

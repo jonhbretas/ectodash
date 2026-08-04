@@ -25,7 +25,7 @@ export default async function UtilidadesPage() {
   const role = profile?.role;
   const isCoordenador = role === "coordenador_geral";
   const isFinanceiro = role === "financeiro";
-  const canExtract = role === "coordenador_geral" || role === "lider_area";
+  const canExtract = role === "coordenador_geral" || role === "coordenador_area";
 
   const tools: Array<{
     href: string;
