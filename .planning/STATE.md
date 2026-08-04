@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 03
-current_phase_name: Accessible UI Foundation
+current_phase: 05
+current_phase_name: Demandas Filtering & Role-Scoped Access
 status: executing
-stopped_at: Completed 03-02-PLAN.md and 03-03-PLAN.md (wave 2, parallel) — retrofit login/sign-out/dashboard shell and demanda form/table/badges onto shadcn
-last_updated: "2026-08-04T08:41:09.905Z"
+stopped_at: Completed 05-01-PLAN.md (lider_areas join table + narrowed demandas/demanda_responsaveis RLS, applied live)
+last_updated: "2026-08-04T12:45:25.764Z"
 last_activity: 2026-08-04
-last_activity_desc: Phase 03 wave 2 execution complete (03-02 + 03-03)
+last_activity_desc: Phase 05 execution started
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 3
-  total_plans: 15
-  completed_plans: 14
+  total_plans: 17
+  completed_plans: 15
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-02)
 
 **Core value:** Coordenador consegue ver, num só lugar, o andamento real de todas as demandas/projetos da instituição — quem é responsável, qual o prazo, o que está atrasado — sem precisar cobrar manualmente ou vasculhar planilhas e grupos.
-**Current focus:** Phase 03 — Accessible UI Foundation
+**Current focus:** Phase 05 — Demandas Filtering & Role-Scoped Access
 
 ## Current Position
 
-Phase: 03 (Accessible UI Foundation) — EXECUTING
-Plan: 3 of 3 (all wave 2 plans complete)
-Status: Wave 2 complete, ready for phase close-out verification
-Last activity: 2026-08-04 — Phase 03 wave 2 execution complete (03-02 + 03-03)
+Phase: 05 (Demandas Filtering & Role-Scoped Access) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-08-04 — Phase 05 execution started
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 93%
 | Phase 03 P01 | 5min | 1 tasks | 12 files |
 | Phase 3 P3 | 20m | 2 tasks | 4 files |
 | Phase 03 P02 | 25min | 2 tasks | 6 files |
+| Phase 05 P01 | 62min | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Retrofit demanda-form.tsx título/prazo/área onto shadcn Input/Label; left responsavelIds native <select multiple> and status <select> untouched
 - [Phase ?]: Retrofit demanda-table.tsx onto shadcn Table sub-components and status-badge.tsx/overdue-badge.tsx onto shadcn Badge (with [&>svg]:size-4! override to counteract Badge's default icon-shrink rule) — both lossless, no plain-span fallback needed
 - [Phase 03-02]: Retrofitted login-form.tsx's Input/Button and sign-out-button.tsx's Button onto shadcn primitives by passing the exact pre-existing className as an override — twMerge resolves shadcn's rounded-md/ring-based-focus/hover-opacity defaults in favor of the original rounded-lg/outline-based-focus/hover-shade treatment, so no element needed the raw-native fallback. Extracted new PageContainer component (src/app/(dashboard)/page-container.tsx) replacing the triplicated py-16 px-6 bg-zinc-50 <main> wrapper across page.tsx/nova/page.tsx/[id]/editar/page.tsx, and added id="main-content" to all of them, completing Plan 03-01's skip-link target.
+- [Phase ?]: [Phase 05-01] lider_areas many-to-many join table (lider_id, area composite PK) built instead of a single profiles.area_liderada column, per the locked user decision that a lider can lead multiple areas simultaneously, overriding 05-RESEARCH.md's own assumed single-column design
+- [Phase ?]: [Phase 05-01] demandas SELECT and UPDATE/WITH CHECK predicates are byte-identical (copy-pasted, not abstracted) as the simplest guarantee against the SELECT-gates-UPDATE trap silently reappearing
+- [Phase ?]: [Phase 05-01] Disabled vitest fileParallelism globally after the extended live-integration RLS test suites collectively exceeded Supabase Auth's free-tier 30-sign-ins-per-5-minutes rate limit when run in parallel
 
 ### Pending Todos
 
@@ -129,6 +133,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T05:45:00.000Z
-Stopped at: Completed 03-02-PLAN.md and 03-03-PLAN.md (wave 2, parallel) — Phase 3 all plans executed
+Last session: 2026-08-04T12:45:25.752Z
+Stopped at: Completed 05-01-PLAN.md (lider_areas join table + narrowed demandas/demanda_responsaveis RLS, applied live)
 Resume file: None

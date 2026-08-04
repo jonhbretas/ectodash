@@ -18,7 +18,7 @@
 - [x] **DEM-02**: Usuário edita e conclui demanda
 - [x] **DEM-03**: Demanda com prazo vencido é sinalizada visualmente como atrasada
 - [ ] **DEM-04**: Usuário filtra/agrupa demandas por área, projeto ou responsável
-- [ ] **DEM-05**: Voluntário comum vê e edita só suas próprias demandas; líder de área vê as da sua área; coordenador vê tudo
+- [x] **DEM-05**: Voluntário comum vê e edita só suas próprias demandas; líder de área vê as da sua área; coordenador vê tudo
 
 ### Lembretes por E-mail
 
@@ -99,7 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEM-02 | Phase 4 | Complete |
 | DEM-03 | Phase 4 | Complete |
 | DEM-04 | Phase 5 | Pending |
-| DEM-05 | Phase 5 | Pending |
+| DEM-05 | Phase 5 | Complete |
 | UX-02 | Phase 5 | Pending |
 | COORD-01 | Phase 6 | Pending |
 | COORD-02 | Phase 6 | Pending |
