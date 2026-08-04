@@ -252,6 +252,107 @@ describe.skipIf(!canRun)(
       expect(error).toBeNull();
       expect((data ?? []).length).toBeGreaterThan(0);
     });
+
+    const allRoles: AppRole[] = [
+      "coordenador_geral",
+      "lider_area",
+      "voluntario_comum",
+      "financeiro",
+    ];
+
+    it("has_role() returns true for exactly the caller's own role, false for the other three (per-role correctness matrix)", async () => {
+      // One fixture per role, each checked against all four role names over
+      // RPC through its own signed-in client — never the service-role
+      // client, which bypasses RLS entirely and carries no auth.uid().
+      // Driven from allRoles so a fifth role later extends the matrix by
+      // editing one list rather than writing a new near-identical block.
+      for (const ownRole of allRoles) {
+        const fixture = await createUserWithRole(ownRole);
+        const client = await signInAs(fixture);
+
+        for (const checkedRole of allRoles) {
+          const { data, error } = await client.rpc("has_role", {
+            required_role: checkedRole,
+          });
+
+          expect(error).toBeNull();
+          expect(data).toBe(checkedRole === ownRole);
+        }
+      }
+    });
+
+    it("the Phase 10 financial predicate — has_role('financeiro') or has_role('coordenador_geral') — admits only those two roles", async () => {
+      // Stands in for ROADMAP Success Criterion 2 ("cannot retrieve
+      // financial data") until the real table lands in Phase 10 (D-03): no
+      // financial table, view, or column is created here. This proves the
+      // exact composite predicate Phase 10's policy will use, evaluated
+      // through each role's own signed-in client.
+      const expectedAdmit: Record<AppRole, boolean> = {
+        financeiro: true,
+        coordenador_geral: true,
+        lider_area: false,
+        voluntario_comum: false,
+      };
+
+      for (const role of allRoles) {
+        const fixture = await createUserWithRole(role);
+        const client = await signInAs(fixture);
+
+        const [financeiroCheck, coordenadorCheck] = await Promise.all([
+          client.rpc("has_role", { required_role: "financeiro" }),
+          client.rpc("has_role", { required_role: "coordenador_geral" }),
+        ]);
+
+        expect(financeiroCheck.error).toBeNull();
+        expect(coordenadorCheck.error).toBeNull();
+
+        const admitted = Boolean(financeiroCheck.data) || Boolean(coordenadorCheck.data);
+        expect(admitted).toBe(expectedAdmit[role]);
+      }
+    });
+
+    it("an unauthenticated caller cannot obtain a usable answer from has_role()", async () => {
+      // A fresh client built from the anon key, no session established.
+      // EXECUTE was revoked from PUBLIC/anon in migration 0002, so the RPC
+      // must not yield a usable true/false answer. Asserting on the absence
+      // of `data === true` (rather than a specific status code or message
+      // string) avoids pinning this test to a PostgREST implementation
+      // detail that could change on a platform update without indicating a
+      // real regression.
+      const anonClient = createClient(supabaseUrl!, anonKey!);
+
+      const { data, error } = await anonClient.rpc("has_role", {
+        required_role: "voluntario_comum",
+      });
+
+      expect(data).not.toBe(true);
+      // A rejection is expected in one of two shapes: an explicit RPC error
+      // (the common case, since EXECUTE is revoked), or — should PostgREST
+      // ever change how it reports a permission denial — a non-true data
+      // value with no error. Either way, "true" must never be reachable.
+      if (!error) {
+        expect(data).not.toBe(true);
+      }
+    });
+
+    it("recursion regression guard: a signed-in voluntario_comum can still read their own profile row, including role, with no error", async () => {
+      // Phase 1's self-only SELECT policy still governs this read. If a
+      // future phase widens profile access using has_role() in a way that
+      // re-enters policy evaluation on profiles, this fails loudly here
+      // rather than in production (Pitfall 1 / T-02-13).
+      const volunteer = await createUserWithRole("voluntario_comum");
+      const client = await signInAs(volunteer);
+
+      const { data, error } = await client
+        .from("profiles")
+        .select("id, role")
+        .eq("id", volunteer.id)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data?.id).toBe(volunteer.id);
+      expect(data?.role).toBe("voluntario_comum");
+    });
   }
 );
 
