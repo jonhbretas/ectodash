@@ -174,7 +174,7 @@ Plans:
   2. Overdue demandas across the whole institution are highlighted in this dashboard.
   3. Dashboard shows counts of demandas grouped by área and by volunteer.
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans executed
 **UI hint**: yes
 
 Plans:
@@ -184,7 +184,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 06-02-PLAN.md — Coordenador-only "Painel do coordenador" entry-point link on / (wave 2)
+- [x] 06-02-PLAN.md — Coordenador-only "Painel do coordenador" entry-point link on / (wave 2)
 
 ### Phase 7: Email Reminders
 
@@ -272,7 +272,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Accessible UI Foundation | 3/3 | In Progress|  |
 | 4. Demandas CRUD & Overdue Tracking | 4/4 | Complete |  |
 | 5. Demandas Filtering & Role-Scoped Access | 2/2 | In Progress|  |
-| 6. Coordinator Overview Dashboard | 1/2 | In Progress|  |
+| 6. Coordinator Overview Dashboard | 2/2 | In Progress|  |
 | 7. Email Reminders | 0/TBD | Not started | - |
 | 8. AI Task Extraction & Review | 0/TBD | Not started | - |
 | 9. Google Sheets Sync | 0/TBD | Not started | - |

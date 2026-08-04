@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 06
 current_phase_name: Coordinator Overview Dashboard
-status: executing
-stopped_at: Completed 06-01-PLAN.md (painel coordinator dashboard tracer)
-last_updated: "2026-08-04T14:05:39.293Z"
+status: verifying
+stopped_at: Completed 06-02-PLAN.md (coordenador entry-point link) — Phase 6 complete
+last_updated: "2026-08-04T14:12:22.994Z"
 last_activity: 2026-08-04
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 
 Phase: 06 (Coordinator Overview Dashboard) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-04 — Phase 06 execution started
 
-Progress: [█████████░] 89%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [█████████░] 89%
 | Phase 05 P01 | 62min | 1 tasks | 4 files |
 | Phase 05 P02 | 55min | 3 tasks | 7 files |
 | Phase 06 P01 | 45min | 1 tasks | 5 files |
+| Phase 06 P02 | 3min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 05-02] Multi-área role-scoped-view notice for a líder with 2+ áreas uses best-effort natural PT-BR phrasing (comma-joined, final 'e') since no locked copy existed beyond the single-área example; a líder with zero lider_areas rows falls back to the voluntário-comum notice string rather than a broken empty interpolation
 - [Phase ?]: [Phase 05-02] Extended vitest.config.ts's include glob to also cover src/**/*.test.ts, since the TDD task's colocated unit test file lived outside the previous tests/**/*.test.ts-only scope
 - [Phase ?]: Phase 06-01: /painel coordinator dashboard built entirely on migration 0004's already-live RLS grant, zero new migrations; adopted 06-UI-SPEC.md's /painel route + same-URL access-denied state over 06-RESEARCH.md's /coordenador + redirect() recommendation
+- [Phase ?]: [Phase 06-02] Coordenador-only 'Painel do coordenador' entry-point link added to /'s header row, threaded from page.tsx's existing profiles.role read (isCoordenador prop, no new query); reused demanda-filters.tsx's exact 'Limpar filtros' secondary/outline className. Plan's bg-blue-700 acceptance criterion expected count 1 but file already had 2 pre-existing occurrences (header + empty-state Nova demanda buttons) before this plan — documented as a plan-authoring discrepancy, not an implementation defect.
 
 ### Pending Todos
 
@@ -139,6 +141,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T14:05:39.276Z
-Stopped at: Completed 06-01-PLAN.md (painel coordinator dashboard tracer)
+Last session: 2026-08-04T14:12:22.970Z
+Stopped at: Completed 06-02-PLAN.md (coordenador entry-point link) — Phase 6 complete
 Resume file: None
