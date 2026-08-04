@@ -1,4 +1,5 @@
 import { CheckCircle2, Circle, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // The only component in the codebase rendering a demanda's status — Phase
 // 5's filtered views and Phase 6's coordinator dashboard reuse this rather
@@ -41,11 +42,11 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
   const { label, Icon, className } = STATUS_CONFIG[status];
 
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-base font-semibold ${className}`}
+    <Badge
+      className={`h-auto rounded-full px-2 py-0.5 text-base font-semibold [&>svg]:size-4! ${className}`}
     >
       <Icon size={16} aria-hidden="true" />
       {label}
-    </span>
+    </Badge>
   );
 }

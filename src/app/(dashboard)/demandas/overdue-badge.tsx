@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 
 // Rendered only by the caller when `atrasada === true` — this component
 // never receives or checks that boolean itself. The decision is made once,
@@ -16,12 +17,12 @@ export default function OverdueBadge({ prazo }: OverdueBadgeProps) {
   });
 
   return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full border border-red-300 bg-red-100 px-2 py-0.5 text-base font-semibold text-red-800"
+    <Badge
+      className="h-auto rounded-full border-red-300 bg-red-100 px-2 py-0.5 text-base font-semibold text-red-800 [&>svg]:size-4!"
       aria-label={`Atrasada — prazo era ${formatted}`}
     >
       <AlertTriangle size={16} aria-hidden="true" />
       Atrasada
-    </span>
+    </Badge>
   );
 }
