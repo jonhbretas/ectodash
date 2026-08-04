@@ -1,11 +1,11 @@
 "use client";
 
-// Trello-style checklist on the demanda edit screen. Toggles are instant
-// (optimistic via local state) and reconciled by router.refresh(); add and
-// remove are server-action forms.
-import { useState, useTransition, useActionState } from "react";
+// Trello-style checklist on the demanda edit screen. Toggles and adds are
+// instant (optimistic local state). Checkboxes never block — the user can
+// keep clicking while the server confirms in the background. Adding an item
+// shows it immediately; the server's revalidation eventually reconciles.
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useFormStatus } from "react-dom";
 import { CheckCheck, Plus, X } from "lucide-react";
 import {
   adicionarItemChecklist,
@@ -24,68 +24,102 @@ export type DemandaChecklistProps = {
   items: ChecklistItem[];
 };
 
-const checklistInitial = { ok: false, message: "" };
-
-function AddItemFields() {
-  const { pending } = useFormStatus();
-  return (
-    <div className="flex gap-2">
-      <input
-        id="item"
-        name="item"
-        required
-        placeholder="Adicionar item..."
-        disabled={pending}
-        className="min-h-12 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className="flex min-h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-60"
-        aria-label="Adicionar item ao checklist"
-      >
-        <Plus size={22} aria-hidden="true" />
-      </button>
-    </div>
-  );
-}
+// Counter for unique optimistic IDs (negative numbers so they never collide
+// with real DB ids). Shared across renders via module-level.
+let nextTempId = -1;
 
 export default function DemandaChecklist({
   demandaId,
   items,
 }: DemandaChecklistProps) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const [localItems, setLocalItems] = useState(items);
-  const [addState, addFormAction] = useActionState(
-    adicionarItemChecklist.bind(null, demandaId),
-    checklistInitial
-  );
+  const [addPending, setAddPending] = useState(false);
 
-  const done = localItems.filter((i) => i.concluido).length;
-  const total = localItems.length;
+  // Optimistic toggle overrides — keyed by item ID.
+  const [toggleOverrides, setToggleOverrides] = useState<
+    Map<number, boolean>
+  >(new Map());
+
+  // Optimistic adds: items inserted before the server re-fetches.
+  const [optimisticAdds, setOptimisticAdds] = useState<ChecklistItem[]>([]);
+
+  // Remove optimistic entries that are now in the server data (display-only
+  // filter — stale entries in state are harmless and cleaned up on the next
+  // add/remove mutation).
+  const serverIds = new Set((items ?? []).map((i) => i.id));
+  const filteredAdds = optimisticAdds.filter((add) => !serverIds.has(add.id));
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAdd(formData: FormData) {
+    const text = (formData.get("item") as string)?.trim();
+    if (!text) return;
+    const tempId = nextTempId--;
+    setOptimisticAdds((c) => [...c, { id: tempId, item: text, concluido: false }]);
+    setAddPending(true);
+    // Clear the input
+    if (inputRef.current) inputRef.current.value = "";
+
+    const result = await adicionarItemChecklist(demandaId, { ok: false, message: "" }, formData);
+    setAddPending(false);
+    if (!result.ok) {
+      setError(result.message);
+      setOptimisticAdds((c) => c.filter((add) => add.id !== tempId));
+    } else {
+      // Let server revalidation deliver the real row.
+      startTransition(() => router.refresh());
+    }
+  }
+
+  // Merge server items + toggle overrides + optimistic adds.
+  const displayItems: ChecklistItem[] = (items ?? []).map((item) => ({
+    ...item,
+    concluido: toggleOverrides.has(item.id)
+      ? toggleOverrides.get(item.id)!
+      : item.concluido,
+  }));
+  for (const add of filteredAdds) {
+    if (!serverIds.has(add.id)) {
+      displayItems.push(add);
+    }
+  }
+
+  const done = displayItems.filter((i) => i.concluido).length;
+  const total = displayItems.length;
 
   function toggle(itemId: number, concluido: boolean) {
-    setLocalItems((current) =>
-      current.map((i) => (i.id === itemId ? { ...i, concluido } : i))
-    );
-    startTransition(async () => {
-      const result = await alternarItemChecklist(itemId, concluido);
+    setToggleOverrides((current) => {
+      const next = new Map(current);
+      next.set(itemId, concluido);
+      return next;
+    });
+    alternarItemChecklist(itemId, concluido).then((result) => {
       if (!result.ok) {
         setError(result.message);
+        setToggleOverrides((current) => {
+          const next = new Map(current);
+          next.delete(itemId);
+          return next;
+        });
       }
-      router.refresh();
+      startTransition(() => router.refresh());
     });
   }
 
-  function remove(itemId: number) {
-    startTransition(async () => {
-      const result = await removerItemChecklist(itemId);
+  function removeItem(itemId: number) {
+    setOptimisticAdds((c) => c.filter((add) => add.id !== itemId));
+    setToggleOverrides((current) => {
+      const next = new Map(current);
+      next.delete(itemId);
+      return next;
+    });
+    removerItemChecklist(itemId).then((result) => {
       if (!result.ok) {
         setError(result.message);
+        startTransition(() => router.refresh());
       }
-      router.refresh();
     });
   }
 
@@ -112,7 +146,7 @@ export default function DemandaChecklist({
         </p>
       ) : (
         <ul className="flex flex-col overflow-hidden rounded-xl ring-1 ring-zinc-200/60">
-          {localItems.map((item) => (
+          {displayItems.map((item) => (
             <li
               key={item.id}
               className="flex items-center gap-3 border-b border-zinc-100 bg-white px-4 py-3 last:border-b-0"
@@ -121,7 +155,6 @@ export default function DemandaChecklist({
                 type="checkbox"
                 checked={item.concluido}
                 onChange={(e) => toggle(item.id, e.target.checked)}
-                disabled={pending}
                 className="h-5 w-5 shrink-0 rounded accent-blue-700"
                 aria-label={`Marcar "${item.item}"`}
               />
@@ -136,10 +169,9 @@ export default function DemandaChecklist({
               </span>
               <button
                 type="button"
-                onClick={() => remove(item.id)}
-                disabled={pending}
+                onClick={() => removeItem(item.id)}
                 aria-label={`Remover item "${item.item}"`}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-30"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
               >
                 <X size={17} aria-hidden="true" />
               </button>
@@ -148,15 +180,25 @@ export default function DemandaChecklist({
         </ul>
       )}
 
-      <form
-        action={addFormAction}
-        className="flex flex-col gap-1"
-        aria-live="polite"
-      >
-        <AddItemFields />
-        {addState.message && (
-          <p className="text-base text-red-600">{addState.message}</p>
-        )}
+      <form action={handleAdd} className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            name="item"
+            required
+            placeholder="Adicionar item..."
+            disabled={addPending}
+            className="min-h-12 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          />
+          <button
+            type="submit"
+            disabled={addPending}
+            className="flex min-h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-60"
+            aria-label="Adicionar item ao checklist"
+          >
+            <Plus size={22} aria-hidden="true" />
+          </button>
+        </div>
         {error && <p className="text-base text-red-600">{error}</p>}
       </form>
     </section>
