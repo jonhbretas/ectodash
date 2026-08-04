@@ -1,12 +1,16 @@
 // src/lib/financeiro/parse-ectolab.ts
 // Parser para o formato específico da planilha de fluxo de caixa da
 // EctoLab (SISPRIME). O layout é uma matriz mensal:
-//   - Col A: vazia
-//   - Col B: descrição do item
-//   - Col C: centro de custo (categoria)
-//   - Cols D-O: Janeiro … Dezembro
-//   - Col P: Total Geral
-//   - Col Q: %
+//   - Col de descrição do item (na exportação CSV há uma coluna vazia
+//     antes; no XLSX a descrição vem direto na col A)
+//   - Col de centro de custo (categoria)
+//   - Cols dos meses: Janeiro … Dezembro
+//   - Col de Total Geral (ignorada)
+//   - Col %
+//
+// As posições de descrição/categoria/meses são DERIVADAS do cabeçalho
+// detectado (as duas colunas à esquerda do primeiro mês), então o mesmo
+// parser aceita o CSV e o XLSX da mesma planilha.
 //
 // A planilha tem seções de RECEITAS (antes do primeiro TOTAL GERAL) e
 // DESPESAS (depois do primeiro TOTAL GERAL, agrupadas por centro de
@@ -17,7 +21,7 @@
 
 import type { FinancialEntry } from "@/lib/sheets/parse-rows";
 
-const MONTH_NAMES = [
+const MONTH_NAMES: string[] = [
   "janeiro",
   "fevereiro",
   "março",
@@ -32,6 +36,8 @@ const MONTH_NAMES = [
   "novembro",
   "dezembro",
 ];
+
+export { MONTH_NAMES };
 
 function extractYear(rows: unknown[][]): number | null {
   for (const row of rows.slice(0, 5)) {
@@ -148,6 +154,16 @@ export function parseEctolabRows(
   if (!headerResult) return null;
 
   const { rowIndex: headerRowIndex, monthIndices } = headerResult;
+
+  // Column positions are DERIVED from the detected header, never hardcoded:
+  // the same workbook exports differently (CSV keeps a leading empty column,
+  // XLSX does not — description sits at 0 in one and at 1 in the other).
+  // The description/category columns are always the two columns left of the
+  // first month.
+  const firstMonthCol = Math.min(...monthIndices.keys());
+  const colDesc = Math.max(0, firstMonthCol - 2);
+  const colCat = Math.max(0, firstMonthCol - 1);
+
   const entries: FinancialEntry[] = [];
   let foundFirstTotal = false;
 
@@ -155,8 +171,8 @@ export function parseEctolabRows(
     const row = rows[i];
     if (!Array.isArray(row)) continue;
 
-    const desc = String(row[1] ?? "").trim();
-    const categoria = String(row[2] ?? "").trim();
+    const desc = String(row[colDesc] ?? "").trim();
+    const categoria = String(row[colCat] ?? "").trim();
 
     // Pula linhas completamente vazias nas colunas relevantes
     if (!desc && !categoria) continue;

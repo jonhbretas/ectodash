@@ -133,7 +133,7 @@ async function importarEventosInner(
   try {
     if (isXlsx) {
       const buffer = await arquivo.arrayBuffer();
-      allRows = parseXlsx(buffer);
+      allRows = parseXlsx(buffer).rows;
     } else {
       let texto: string;
       try {

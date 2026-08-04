@@ -42,6 +42,22 @@ function makeRow(
   return row;
 }
 
+// Layout XLSX: a planilha real exporta SEM a coluna vazia inicial que o
+// CSV tem — descrição na col 0, centro de custo na col 1, meses da col 2.
+function makeXlsxRow(
+  desc: string,
+  categoria: string,
+  ...months: (string | number | null | undefined)[]
+) {
+  const row: unknown[] = Array(17).fill("");
+  row[0] = desc;
+  row[1] = categoria;
+  for (let i = 0; i < months.length && i < 12; i++) {
+    row[2 + i] = months[i] ?? "";
+  }
+  return row;
+}
+
 describe("isEctolabFormat", () => {
   it("retorna true quando há pelo menos 6 meses no cabeçalho", () => {
     expect(isEctolabFormat([HEADER_ROW])).toBe(true);
@@ -244,5 +260,56 @@ describe("parseEctolabRows", () => {
     const entries = parseEctolabRows(rows);
     expect(entries).not.toBeNull();
     expect(entries![0].data).toBe(`${currentYear}-01-31`);
+  });
+
+  it("parseia o layout XLSX (sem coluna vazia inicial, meses na col 2)", () => {
+    const xlsxHeader = [
+      "Receitas - Forma de Pagamento",
+      "Centro de Custo",
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+      "Total Geral",
+      "",
+      "%",
+    ];
+    const rows = [
+      ["Fluxo de Caixa - 2026"],
+      xlsxHeader,
+      makeXlsxRow("Vendas à vista -  Ted, Pix", "Depósitos", 5350.39, 2635, 7185),
+      makeXlsxRow("TOTAL GERAL", "Receitas Diversas", 18857.82),
+      makeXlsxRow("Facebook", "Comunicação e MKT", null, null, null, 255.86),
+      makeXlsxRow("TOTAL GERAL", "COMUNICAÇÃO E MKT", 0, 0, 0, 255.86),
+    ];
+
+    const entries = parseEctolabRows(rows);
+    expect(entries).not.toBeNull();
+
+    const receita = entries!.find((e) => e.descricao === "Vendas à vista -  Ted, Pix");
+    expect(receita).toEqual({
+      tipo: "entrada",
+      descricao: "Vendas à vista -  Ted, Pix",
+      valor: 5350.39,
+      data: "2026-01-31",
+      categoria: "Depósitos",
+    });
+
+    const despesa = entries!.find((e) => e.descricao === "Facebook");
+    expect(despesa).toEqual({
+      tipo: "saida",
+      descricao: "Facebook",
+      valor: 255.86,
+      data: "2026-04-30",
+      categoria: "Comunicação e MKT",
+    });
   });
 });
