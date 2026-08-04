@@ -13,6 +13,7 @@ import {
   Wrench,
   Wallet,
   LayoutDashboard,
+  BarChart3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -31,6 +32,7 @@ export const navItems: NavItem[] = [
   { href: "/projetos", label: "Projetos", Icon: FolderKanban },
   { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical },
   { href: "/eventos", label: "Eventos", Icon: CalendarDays },
+  { href: "/analise", label: "Análise", Icon: BarChart3 },
   { href: "/utilidades", label: "Utilidades", Icon: Wrench },
   { href: "/financeiro", label: "Financeiro", Icon: Wallet, visibleTo: "financeiro" },
 ];
