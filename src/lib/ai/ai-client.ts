@@ -3,10 +3,11 @@
 // subscription's model gateway) powering BOTH the meeting-demandas
 // extraction (extrair) and the financial dashboard's didactic summary.
 // OpenAI-compatible endpoint, plain fetch, no SDK. The endpoint and model
-// are env-overridable (AI_API_URL / AI_MODEL); defaults are the gateway's
-// documented values. SERVER-ONLY: never imported from client components.
+// are env-overridable (AI_API_URL / AI_MODEL); defaults are the Go
+// gateway's documented values. SERVER-ONLY: never imported from client
+// components.
 
-const DEFAULT_AI_API_URL = "https://opencode.ai/zen/v1/chat/completions";
+const DEFAULT_AI_API_URL = "https://opencode.ai/zen/go/v1/chat/completions";
 const DEFAULT_AI_MODEL = "deepseek-v4-flash";
 
 export function aiConfig() {

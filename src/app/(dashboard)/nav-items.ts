@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   BarChart3,
   UserRound,
+  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -34,6 +35,7 @@ export const navItems: NavItem[] = [
   { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical },
   { href: "/eventos", label: "Eventos", Icon: CalendarDays },
   { href: "/analise", label: "Análise", Icon: BarChart3 },
+  { href: "/analisar", label: "Analisar com IA", Icon: Sparkles },
   { href: "/utilidades", label: "Utilidades", Icon: Wrench },
   { href: "/financeiro", label: "Financeiro", Icon: Wallet, visibleTo: "financeiro" },
   { href: "/perfil", label: "Meu perfil", Icon: UserRound },
