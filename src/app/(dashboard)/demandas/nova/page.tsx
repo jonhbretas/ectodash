@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import DemandaForm from "../demanda-form";
+import AppHeader from "../../app-header";
 import PageContainer from "../../page-container";
 
 export default async function NovaDemandaPage() {
@@ -15,6 +16,7 @@ export default async function NovaDemandaPage() {
 
   return (
     <PageContainer>
+      <AppHeader />
       <h1 className="text-2xl font-semibold text-zinc-900">Nova demanda</h1>
       <DemandaForm profiles={profiles ?? []} />
     </PageContainer>

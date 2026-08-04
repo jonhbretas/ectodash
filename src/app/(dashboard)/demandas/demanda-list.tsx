@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, FilterX } from "lucide-react";
+import { FilterX, ClipboardList } from "lucide-react";
 import DemandaCard from "./demanda-card";
 import DemandaTable from "./demanda-table";
 import type { DemandaStatus } from "./status-badge";
@@ -34,20 +34,6 @@ export type DemandaListProps = {
   // dataset down to nothing, never when the role-scoped dataset was already
   // empty to begin with.
   filtersActive?: boolean;
-  // isCoordenador: threaded from page.tsx's existing profiles.role read (no
-  // new query) — gates the "Painel do coordenador" entry-point link in the
-  // header row below. Purely a UX-hiding decision, never an authorization
-  // boundary (06-UI-SPEC.md's Entry Point contract; RLS on /painel's own
-  // queries from plan 06-01 is what actually matters).
-  isCoordenador?: boolean;
-  // canExtractDemandas: threaded from page.tsx's existing profiles.role
-  // read (no new query) — gates the "Extrair demandas de reunião"
-  // entry-point link below, visible to coordenador_geral AND lider_area
-  // (unlike isCoordenador above, which is coordenador-only). Purely a
-  // UX-hiding decision; /demandas/extrair's own page-level role check
-  // (plan 08-02, Task 1) is what actually matters
-  // (08-UI-SPEC.md's Entry Point contract).
-  canExtractDemandas?: boolean;
 };
 
 const SEM_AREA_DEFINIDA = "Sem área definida";
@@ -116,8 +102,6 @@ export default function DemandaList({
   demandas,
   groupBy,
   filtersActive = false,
-  isCoordenador = false,
-  canExtractDemandas = false,
 }: DemandaListProps) {
   const sorted = [...demandas].sort(compareDemandas);
   const count = demandas.length;
@@ -126,38 +110,9 @@ export default function DemandaList({
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold text-zinc-900">Demandas</h1>
-          <span className="text-base text-zinc-700">{countLabel}</span>
-        </div>
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          {isCoordenador && (
-            <Link
-              href="/painel"
-              className="flex min-h-14 w-full items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
-            >
-              Painel do coordenador
-            </Link>
-          )}
-
-          {canExtractDemandas && (
-            <Link
-              href="/demandas/extrair"
-              className="flex min-h-14 w-full items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
-            >
-              Extrair demandas de reunião
-            </Link>
-          )}
-
-          <Link
-            href="/demandas/nova"
-            className="flex min-h-14 w-full items-center justify-center rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
-          >
-            Nova demanda
-          </Link>
-        </div>
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-semibold text-zinc-900">Demandas</h1>
+        <span className="text-base text-zinc-700">{countLabel}</span>
       </div>
 
       {count === 0 && filtersActive ? (

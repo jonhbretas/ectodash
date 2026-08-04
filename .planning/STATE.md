@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 08
-current_phase_name: AI Task Extraction & Review
+current_phase: 09
+current_phase_name: Google Sheets Sync
 status: executing
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-08-04T17:12:27.258Z"
+stopped_at: Phase 9 code shipped (migration 0006 + cron route); awaiting human setup (service account + spreadsheet share)
+last_updated: "2026-08-04T17:30:00.000Z"
 last_activity: 2026-08-04
-last_activity_desc: Phase 08 execution started
+last_activity_desc: Phases 9-10 code shipped in one pass; Phase 8-03 awaits GEMINI_API_KEY
 progress:
   total_phases: 8
   completed_phases: 6
@@ -23,16 +23,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-02)
 
 **Core value:** Coordenador consegue ver, num só lugar, o andamento real de todas as demandas/projetos da instituição — quem é responsável, qual o prazo, o que está atrasado — sem precisar cobrar manualmente ou vasculhar planilhas e grupos.
-**Current focus:** Phase 08 — AI Task Extraction & Review
+**Current focus:** Phases 09-10 — Sheets sync code shipped; financial dashboard (/financeiro) built; both await real credentials/data
 
 ## Current Position
 
-Phase: 08 (AI Task Extraction & Review) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-08-04 — Phase 08 execution started
+Phase: 09 (Google Sheets Sync) — code shipped, AWAITING HUMAN SETUP
+Plan: 09-01 — executed lean (no PLAN/SUMMARY ceremony per user decision to accelerate)
+Status: Waiting on human: Google service account creation, spreadsheet share (Viewer), and GOOGLE_SERVICE_ACCOUNT_JSON/SPREADSHEET_ID env vars in Vercel + .env.local
+Last activity: 2026-08-04 — Phases 9+10 code shipped; migration 0006 applied to live Supabase
 
-Progress: [█████████░] 88%
+Phase: 10 (Financial Dashboard) — /financeiro SHIPPED
+Plan: 10-01 — executed lean (no PLAN/SUMMARY ceremony per user decision to accelerate)
+Status: Implemented (role-gated UI, RLS-backed reads, empty states); final verification pending real synced data
+
+Phase: 08 (AI Task Extraction) — 08-03 pending human GEMINI_API_KEY checkpoint
+
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 

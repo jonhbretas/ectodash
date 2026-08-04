@@ -293,9 +293,11 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Demandas Filtering & Role-Scoped Access | 2/2 | In Progress|  |
 | 6. Coordinator Overview Dashboard | 2/2 | In Progress|  |
 | 7. Email Reminders | 3/3 | In Progress|  |
-| 8. AI Task Extraction & Review | 1/3 | In Progress|  |
-| 9. Google Sheets Sync | 0/TBD | Not started | - |
-| 10. Financial Dashboard | 0/TBD | Not started | - |
+| 8. AI Task Extraction & Review | 2/3 | In Progress|  |
+| 9. Google Sheets Sync | 1/1* | Code shipped, awaiting human setup | - |
+| 10. Financial Dashboard | 1/1* | Implemented, awaiting real data | - |
+
+\* Phases 9-10 executed lean (no PLAN/SUMMARY ceremony) per the user's 2026-08-04 decision to accelerate: migration 0006 + sync-sheets cron route + /painel sync panel + /financeiro dashboard shipped in one pass. The remaining blockers are human-setup actions: Google service account + spreadsheet share + env vars (Phase 9), and a real sync run to verify Phase 10 against real data.
 
 ---
 *Roadmap created: 2026-08-02*

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import DemandaForm from "../../demanda-form";
 import ConcludeButton from "../../conclude-button";
 import type { DemandaFormValues } from "../../demanda-schema";
+import AppHeader from "../../../app-header";
 import PageContainer from "../../../page-container";
 
 type EditarDemandaPageProps = {
@@ -75,6 +76,7 @@ export default async function EditarDemandaPage({
 
   return (
     <PageContainer>
+      <AppHeader />
       <h1 className="text-2xl font-semibold text-zinc-900">Editar demanda</h1>
       <DemandaForm
         mode="edit"

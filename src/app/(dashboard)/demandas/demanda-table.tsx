@@ -36,7 +36,7 @@ export default function DemandaTable({ demandas }: DemandaTableProps) {
   const router = useRouter();
 
   return (
-    <Table className="w-full border-collapse overflow-hidden rounded-lg border border-zinc-300">
+    <Table className="w-full border-collapse overflow-hidden rounded-xl border border-zinc-200 shadow-sm">
       <TableHeader>
         <TableRow className="border-b-0 bg-zinc-100 text-base font-semibold text-zinc-700 hover:bg-zinc-100">
           <TableHead className="h-auto px-4 py-3 text-left font-semibold text-zinc-700">

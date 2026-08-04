@@ -15,7 +15,7 @@ export default function PageContainer({ children }: PageContainerProps) {
   return (
     <main
       id="main-content"
-      className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-16"
+      className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 pb-20 pt-8"
     >
       {children}
     </main>

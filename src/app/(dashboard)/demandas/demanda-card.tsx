@@ -35,7 +35,7 @@ export default function DemandaCard({
     <li>
       <Link
         href={`/demandas/${id}/editar`}
-        className="flex flex-col gap-2 rounded-lg border border-zinc-300 bg-white p-4 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
       >
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-2 text-lg font-semibold text-zinc-900">

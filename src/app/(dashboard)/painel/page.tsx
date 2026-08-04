@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ClipboardList, Clock, Circle, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
+import StatCard from "@/components/stat-card";
+import AppHeader from "../app-header";
 import PageContainer from "../page-container";
 import type { DemandaTableRow } from "../demandas/demanda-table";
 import AreaSummary, { type AreaSummaryRow } from "./area-summary";
@@ -12,70 +13,13 @@ import OverduePanel from "./overdue-panel";
 import ReminderRunsPanel, {
   type ReminderRunRow,
 } from "./reminder-runs-panel";
+import SheetSyncPanel, { type SheetSyncRunRow } from "./sheet-sync-panel";
 
 // Matches demanda-list.tsx's SEM_AREA_DEFINIDA constant exactly, character
 // for character — the coordinator dashboard's área breakdown must never
 // visually disagree with the personal dashboard's grouped view for the same
 // underlying data (06-RESEARCH.md Pitfall 5).
 const SEM_AREA_DEFINIDA = "Sem área definida";
-
-type StatCardProps = {
-  label: string;
-  value: number;
-  Icon: typeof Circle;
-  iconClassName?: string;
-  highlight?: boolean;
-};
-
-// Plain stat card built on the new shadcn Card/CardContent — every size is
-// per-instance via className, matching the "override via className, don't
-// edit the copied source" approach already used for Table/Badge. Only the
-// Atrasadas card gets a non-neutral red fill and text; every other card
-// uses zinc text with its own status-matching icon color, mirroring
-// status-badge.tsx's existing icon/color pairing exactly.
-function StatCard({
-  label,
-  value,
-  Icon,
-  iconClassName = "text-zinc-700",
-  highlight = false,
-}: StatCardProps) {
-  return (
-    <Card
-      role="group"
-      aria-label={`${label}: ${value}`}
-      className={
-        highlight
-          ? "border-red-300 bg-red-100"
-          : "border border-zinc-300 bg-white"
-      }
-    >
-      <CardContent className="flex flex-col gap-2 p-6">
-        <div className="flex items-center gap-2">
-          <Icon
-            size={24}
-            aria-hidden="true"
-            className={highlight ? "text-red-800" : iconClassName}
-          />
-          <span
-            className={`text-xl font-medium ${
-              highlight ? "text-red-800" : "text-zinc-700"
-            }`}
-          >
-            {label}
-          </span>
-        </div>
-        <span
-          className={`text-3xl font-semibold ${
-            highlight ? "text-red-800" : "text-zinc-900"
-          }`}
-        >
-          {value}
-        </span>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default async function PainelPage() {
   const supabase = await createClient();
@@ -102,6 +46,7 @@ export default async function PainelPage() {
   if (profile?.role !== "coordenador_geral") {
     return (
       <PageContainer>
+        <AppHeader />
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Lock size={48} className="text-zinc-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-zinc-900">
@@ -132,6 +77,8 @@ export default async function PainelPage() {
 
   return (
     <PageContainer>
+      <AppHeader isCoordenador />
+
       <div className="flex w-full max-w-4xl flex-col gap-2">
         <h1 className="text-2xl font-semibold text-zinc-900">
           Painel do coordenador
@@ -307,6 +254,27 @@ async function PainelContent({
     })
   );
 
+  // Sheets-sync run log (FIN-03) — same coordenador-only RLS story as
+  // reminder_runs above: this query only returns rows for the coordenador
+  // (migration 0006's financeiro/coordenador SELECT policy is a superset).
+  const { data: sheetSyncRunRows } = await supabase.from("sheet_sync_runs")
+    .select(
+      "id, started_at, finished_at, status, entries_count, error_message"
+    )
+    .order("started_at", { ascending: false })
+    .limit(20);
+
+  const sheetSyncRuns: SheetSyncRunRow[] = (sheetSyncRunRows ?? []).map(
+    (row) => ({
+      id: row.id,
+      startedAt: row.started_at,
+      finishedAt: row.finished_at,
+      status: row.status,
+      entriesCount: row.entries_count,
+      errorMessage: row.error_message,
+    })
+  );
+
   return (
     <>
       <div className="grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -346,6 +314,7 @@ async function PainelContent({
       <ResponsavelSummary rows={responsavelRows} />
       <OverduePanel demandas={overduePanelRows} />
       <ReminderRunsPanel runs={reminderRuns} />
+      <SheetSyncPanel runs={sheetSyncRuns} />
     </>
   );
 }
