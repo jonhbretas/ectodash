@@ -1,16 +1,16 @@
 // scripts/lib/role-arg.ts
 // Pure argument parser and role validator for scripts/seed-coordinator.ts.
-// No side effects, no Supabase import — safe to import from tests without
-// ever risking a real invite against the live project.
+// No side effects, no hosted-project client import — safe to import from
+// tests without ever risking a real invite against the live project.
 import { z } from "zod";
 
 const ROLE_FLAG_PREFIX = "--role=";
 
 export const ROLE_VALUES = [
-  "coordenador_geral",
-  "lider_area",
-  "voluntario_comum",
-  "financeiro",
+  'coordenador_geral',
+  'lider_area',
+  'voluntario_comum',
+  'financeiro',
 ] as const;
 
 export const roleSchema = z.enum(ROLE_VALUES);
