@@ -5,10 +5,12 @@
 // coordinator branch AND the /financeiro page's role branch, backstopped by
 // sheet_sync_runs' own financeiro/coordenador-only SELECT RLS policy
 // (migration 0006). Icon+label always paired, never color alone, matching
-// the established convention.
+// the established convention. className lets callers opt out of the default
+// max-w-4xl constraint (the full-width /financeiro layout).
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export type SheetSyncStatus = "running" | "success" | "failed";
 
@@ -23,6 +25,7 @@ export type SheetSyncRunRow = {
 
 export type SheetSyncPanelProps = {
   runs: SheetSyncRunRow[];
+  className?: string;
 };
 
 const STATUS_CONFIG: Record<
@@ -85,12 +88,15 @@ function SyncRunRow({
   );
 }
 
-export default function SheetSyncPanel({ runs }: SheetSyncPanelProps) {
+export default function SheetSyncPanel({ runs, className }: SheetSyncPanelProps) {
   const lastRun = runs[0] ?? null;
 
   return (
     <section
-      className="flex w-full max-w-4xl flex-col gap-2"
+      className={cn(
+        "flex w-full max-w-4xl flex-col gap-2",
+        className
+      )}
       aria-label="Sincronização com a planilha"
     >
       <h2 className="text-2xl font-semibold text-zinc-900">
