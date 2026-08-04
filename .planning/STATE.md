@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 08
 current_phase_name: AI Task Extraction & Review
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-08-04T16:51:53.845Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-08-04T17:12:27.258Z"
 last_activity: 2026-08-04
 last_activity_desc: Phase 08 execution started
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 25
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 ## Current Position
 
 Phase: 08 (AI Task Extraction & Review) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-04 — Phase 08 execution started
 
-Progress: [████████░░] 84%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [████████░░] 84%
 | Phase 07 P02 | ~50min | 1 tasks | 8 files |
 | Phase 07 P03 | ~40min | 2 tasks | 2 files |
 | Phase 08 P01 | 1h | 2 tasks | 9 files |
+| Phase 08 P02 | 1h | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,8 @@ Recent decisions affecting current work:
 - [Phase ?]: reminder-runs-panel.tsx adds zero role check of its own — relies entirely on page.tsx's existing coordenador_geral branch plus reminder_runs' own coordenador-only RLS SELECT policy (migration 0005), matching the must_haves truth explicitly
 - [Phase ?]: Verified gemini-3.1-flash-lite live against ai.google.dev/gemini-api/docs/models (2026-08-04) instead of copying CLAUDE.md's older gemini-2.5-flash-lite (announced shutdown ~Oct 2026)
 - [Phase ?]: @google/genai install approved via human-verify checkpoint before Task 2 ran (package legitimacy confirmed: official googleapis/js-genai org, registered 2025-03-11, no deprecation)
+- [Phase ?]: [Phase 08-02] Installed @testing-library/react, @testing-library/user-event, jsdom as devDependencies to enable Task 2's tdd=true component tests — no component-test infra existed in this repo before this plan; added tests/setup-dom.ts with standard Radix pointer-capture/ResizeObserver jsdom polyfills
+- [Phase ?]: [Phase 08-02] extractDemandas' empty-paste validation message is rendered as an inline span next to the textarea (matching demanda-form.tsx's field-error convention), distinct from the AlertCircle extraction-error block reserved for genuine Gemini/API failures, per 08-UI-SPEC.md's explicit carve-out
 
 ### Pending Todos
 
@@ -155,6 +158,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T16:51:53.829Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-08-04T17:12:27.214Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None

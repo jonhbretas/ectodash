@@ -228,7 +228,7 @@ Plans:
   3. User reviews each AI-suggested demanda on a confirmation screen and can edit or reject it before it becomes a real demanda.
   4. No demanda is ever created directly from AI extraction without passing through this review step.
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 **UI hint**: yes
 
 Plans:
@@ -238,7 +238,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-02-PLAN.md — /demandas/extrair role-gated page, paste form (Screen 1), per-card suggestion review list confirming via the unchanged createDemanda (Screen 2), entry-point link on / (wave 2)
+- [x] 08-02-PLAN.md — /demandas/extrair role-gated page, paste form (Screen 1), per-card suggestion review list confirming via the unchanged createDemanda (Screen 2), entry-point link on / (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
