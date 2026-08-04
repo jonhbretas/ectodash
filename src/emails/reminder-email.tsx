@@ -1,7 +1,7 @@
 // src/emails/reminder-email.tsx
 // react-email template for LEMB-01/LEMB-02 reminder emails. Imports from the
-// unified "react-email" package only — NEVER "@react-email/components",
-// which the maintainers have marked "no longer supported"
+// unified "react-email" package only — never the deprecated scoped
+// components package the maintainers have marked "no longer supported"
 // (07-RESEARCH.md Package Legitimacy Audit, Pitfall 6).
 //
 // Large text / high-contrast / plain-structure copy, matching this project's

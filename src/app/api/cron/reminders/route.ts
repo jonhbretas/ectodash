@@ -120,9 +120,12 @@ export async function GET(request: NextRequest) {
       // Loop over (demanda, responsável) PAIRS — LEMB-03's dedup granularity
       // is per-recipient, not per-demanda (07-RESEARCH.md Anti-Patterns).
       for (const responsavel of responsaveis as ResponsavelRow[]) {
-        // 4. Dedup check IS the atomic INSERT ... ON CONFLICT — never a
-        // separate SELECT-then-conditional-INSERT (07-RESEARCH.md Pattern 2,
-        // Anti-Patterns). This insert claims today's slot before any send.
+        // 4. Dedup check IS the atomic insert-with-conflict-handling below —
+        // never a separate SELECT-then-conditional-INSERT (07-RESEARCH.md
+        // Pattern 2, Anti-Patterns). This insert claims today's slot before
+        // any send; a 23505 unique-violation on the claim itself is the skip
+        // signal (handled below), expressed via the Supabase client's own
+        // insert+select+error-code idiom rather than a raw SQL upsert clause.
         const { data: dedupRow, error: dedupError } = await supabase
           .from("demanda_reminders_log")
           .insert({
