@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 07
 current_phase_name: Email Reminders
-status: executing
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-08-04T15:42:04.007Z"
+status: verifying
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-08-04T16:03:55.378Z"
 last_activity: 2026-08-04
 last_activity_desc: Phase 07 execution started
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 22
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 
 Phase: 07 (Email Reminders) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-04 — Phase 07 execution started
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Progress: [█████████░] 86%
 | Phase 07 P01 | 31536581s | 2 tasks | 8 files |
 | Phase 07 P01 | 9min | 2 tasks | 8 files |
 | Phase 07 P02 | ~50min | 1 tasks | 8 files |
+| Phase 07 P03 | ~40min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Recent decisions affecting current work:
 - [Phase ?]: reminderTipoFor() uses date-fns parseISO instead of new Date() to avoid a UTC-parsing off-by-one day-count bug discovered locally in a UTC-3 timezone
 - [Phase ?]: Cron route auth failure lifecycle (LEMB-04) proven via a spied PostgrestFilterBuilder.or() rejection against the live project, not a synthetic mock — confirms reminder_runs never remains 'running' on a real mid-run crash.
 - [Phase ?]: src/proxy.ts's isPublicPath() gate exempts /api/cron/* — a Vercel Cron invocation has no end-user session, so without this exemption the proxy redirected every cron request to /login before the route's own CRON_SECRET check ever ran (Rule 1 bug found via manual curl verification).
+- [Phase ?]: Task 1 (Vercel Production secrets + deployed cron route verification) was already performed and approved by the human in the orchestrating conversation before Task 2 execution began — recorded as approved, not re-run
+- [Phase ?]: reminder-runs-panel.tsx adds zero role check of its own — relies entirely on page.tsx's existing coordenador_geral branch plus reminder_runs' own coordenador-only RLS SELECT policy (migration 0005), matching the must_haves truth explicitly
 
 ### Pending Todos
 
@@ -149,6 +152,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T15:42:03.995Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-08-04T16:03:55.365Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
