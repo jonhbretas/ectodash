@@ -1,0 +1,243 @@
+// src/app/api/cron/reminders/route.ts
+// GET /api/cron/reminders — Vercel Cron-triggered, CRON_SECRET-gated Route
+// Handler. This is the phase's only new server entry point and the sole
+// place createAdminClient() is imported outside a test file (see
+// src/lib/supabase/admin.ts's own restriction comment).
+//
+// Composes plan 07-01's schema (reminder_runs, demanda_reminders_log) and
+// eligibility classifier (reminderTipoFor) into the actual daily reminder
+// mechanism. Structure follows 07-RESEARCH.md's "Cron route skeleton" Code
+// Example, adapted to this repo's real import paths.
+import type { NextRequest } from "next/server";
+import { Resend } from "resend";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { reminderTipoFor } from "@/lib/reminders/eligibility";
+import { sendReminder } from "@/lib/reminders/send-reminder";
+
+// Days from today (inclusive) that count as "prazo próximo" for the
+// eligibility query's own date-window predicate. Mirrors
+// APPROACHING_PRAZO_DAYS in src/lib/reminders/eligibility.ts — kept as a
+// separate literal here only because this one feeds a Postgres .lte() date
+// string, not the reminderTipoFor() classifier itself (which remains the
+// single source of truth for the actual atrasada/aproximando/null decision
+// applied per row below).
+const APPROACHING_WINDOW_DAYS = 3;
+
+interface DemandaRow {
+  id: number;
+  titulo: string;
+  prazo: string;
+  status: "pendente" | "em_andamento" | "concluida";
+  atrasada: boolean;
+}
+
+interface ResponsavelRow {
+  profile_id: string;
+  profiles: { email: string } | { email: string }[] | null;
+}
+
+export async function GET(request: NextRequest) {
+  // 1. Authenticate the REQUEST itself (there is no end-user session in a
+  // cron context) — this comparison naturally fails closed if CRON_SECRET is
+  // unset/undefined; a missing secret is never treated as "no auth required".
+  // Rejected BEFORE any database or Resend call — status(401), zero side effects.
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // 2. Build the trusted, service-role client and the Resend SDK client.
+  // Nothing before this point touches the database or Resend.
+  const supabase = createAdminClient();
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  // 3. Create the reminder_runs row FIRST, before the eligibility query runs
+  // — this row exists even if everything after this point crashes,
+  // satisfying LEMB-04's "failure is visible, never silently swallowed"
+  // requirement.
+  const { data: run, error: runInsertError } = await supabase
+    .from("reminder_runs")
+    .insert({ status: "running" })
+    .select("id")
+    .single();
+
+  if (runInsertError || !run) {
+    return Response.json(
+      { error: "failed to start reminder run" },
+      { status: 500 }
+    );
+  }
+
+  const runId = run.id as number;
+
+  let sentCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  let skippedNoResponsavel = 0;
+
+  try {
+    const windowEnd = new Date();
+    windowEnd.setDate(windowEnd.getDate() + APPROACHING_WINDOW_DAYS);
+    const windowEndISO = windowEnd.toISOString().slice(0, 10);
+
+    // One query serves BOTH LEMB-01 (approaching) and LEMB-02 (atrasada) —
+    // never two separate queries or a client-side re-filter pass
+    // (07-RESEARCH.md Pattern 1).
+    const { data: demandas, error: demandasError } = await supabase
+      .from("demandas_com_status")
+      .select("id, titulo, prazo, status, atrasada")
+      .neq("status", "concluida")
+      .or(`atrasada.eq.true,prazo.lte.${windowEndISO}`);
+
+    if (demandasError) {
+      throw new Error(demandasError.message);
+    }
+
+    for (const demanda of (demandas ?? []) as DemandaRow[]) {
+      // reminderTipoFor() is the SOLE source of truth for the
+      // atrasada/aproximando/null classification — never re-derived inline.
+      const tipo = reminderTipoFor(demanda);
+      if (!tipo) continue;
+
+      const { data: responsaveis, error: responsaveisError } = await supabase
+        .from("demanda_responsaveis")
+        .select("profile_id, profiles(email)")
+        .eq("demanda_id", demanda.id);
+
+      if (responsaveisError) {
+        throw new Error(responsaveisError.message);
+      }
+
+      // A demanda with zero responsáveis is explicitly tracked, never
+      // silently dropped (07-RESEARCH.md Pitfall 4).
+      if (!responsaveis || responsaveis.length === 0) {
+        skippedNoResponsavel++;
+        continue;
+      }
+
+      // Loop over (demanda, responsável) PAIRS — LEMB-03's dedup granularity
+      // is per-recipient, not per-demanda (07-RESEARCH.md Anti-Patterns).
+      for (const responsavel of responsaveis as ResponsavelRow[]) {
+        // 4. Dedup check IS the atomic INSERT ... ON CONFLICT — never a
+        // separate SELECT-then-conditional-INSERT (07-RESEARCH.md Pattern 2,
+        // Anti-Patterns). This insert claims today's slot before any send.
+        const { data: dedupRow, error: dedupError } = await supabase
+          .from("demanda_reminders_log")
+          .insert({
+            demanda_id: demanda.id,
+            profile_id: responsavel.profile_id,
+            tipo,
+            run_id: runId,
+          })
+          .select("id")
+          .single();
+
+        if (dedupError) {
+          // 23505 = unique_violation: already reminded today for this exact
+          // (demanda, profile, tipo) tuple. Skip silently — counts as
+          // skipped, not failed. Handled defensively for either error-code
+          // shape the Supabase client may surface.
+          if (dedupError.code === "23505") {
+            skippedCount++;
+            continue;
+          }
+          throw new Error(dedupError.message);
+        }
+
+        if (!dedupRow) {
+          // Defensive: some client/driver combinations may surface a
+          // conflict as a null result rather than a thrown error.
+          skippedCount++;
+          continue;
+        }
+
+        const profileRow = Array.isArray(responsavel.profiles)
+          ? responsavel.profiles[0]
+          : responsavel.profiles;
+
+        if (!profileRow?.email) {
+          // No resolvable email for this responsável — the dedup slot is
+          // already claimed (correctly, since a retry today would just hit
+          // the same conflict); mark this claimed row failed rather than
+          // silently leaving it 'pending' forever.
+          await supabase
+            .from("demanda_reminders_log")
+            .update({
+              status: "failed",
+              error_message: "responsável sem e-mail resolvível",
+            })
+            .eq("id", dedupRow.id);
+          failedCount++;
+          continue;
+        }
+
+        // 5. Send — via the resend package directly, never through Supabase
+        // Auth's SMTP relay (07-RESEARCH.md Pitfall 1).
+        const { error: sendError } = await sendReminder({
+          resend,
+          to: profileRow.email,
+          titulo: demanda.titulo,
+          prazoFormatado: format(new Date(demanda.prazo), "dd/MM/yyyy", {
+            locale: ptBR,
+          }),
+          tipo,
+        });
+
+        // 6. Mark the already-claimed dedup row sent|failed — NEVER deleted,
+        // NEVER retried later this same run (07-RESEARCH.md resolved Open
+        // Question 1: a failed send waits until tomorrow's run).
+        await supabase
+          .from("demanda_reminders_log")
+          .update({
+            status: sendError ? "failed" : "sent",
+            error_message: sendError,
+          })
+          .eq("id", dedupRow.id);
+
+        if (sendError) {
+          failedCount++;
+        } else {
+          sentCount++;
+        }
+      }
+    }
+
+    // 7. Final run-summary update — happens exactly once, after the loop.
+    await supabase
+      .from("reminder_runs")
+      .update({
+        status: failedCount > 0 ? "partial_failure" : "success",
+        finished_at: new Date().toISOString(),
+        sent_count: sentCount,
+        failed_count: failedCount,
+        skipped_count: skippedCount + skippedNoResponsavel,
+      })
+      .eq("id", runId);
+
+    return Response.json({
+      sentCount,
+      failedCount,
+      skippedCount,
+      skippedNoResponsavel,
+    });
+  } catch (err) {
+    // A thrown exception mid-run still leaves a traceable, non-'running'-
+    // forever row — never an indefinitely 'running' row with no trace
+    // (LEMB-04, 07-RESEARCH.md Pattern 3).
+    await supabase
+      .from("reminder_runs")
+      .update({
+        status: "failed",
+        finished_at: new Date().toISOString(),
+        sent_count: sentCount,
+        failed_count: failedCount,
+        skipped_count: skippedCount + skippedNoResponsavel,
+        error_message: err instanceof Error ? err.message : "unknown error",
+      })
+      .eq("id", runId);
+
+    return Response.json({ error: "internal error" }, { status: 500 });
+  }
+}
