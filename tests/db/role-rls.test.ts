@@ -176,6 +176,82 @@ describe.skipIf(!canRun)(
       expect(rereadError).toBeNull();
       expect(reread?.role).toBe("voluntario_comum");
     });
+
+    it("a newly created account defaults to voluntario_comum with no role handling at all", async () => {
+      // No role argument, no post-creation update — this exercises exactly
+      // what a brand-new volunteer gets from Phase 1's identity trigger plus
+      // the column DEFAULT, with nothing else in the path touching role.
+      fixtureCounter += 1;
+      const email = `ectodash-test-default-${Date.now()}-${fixtureCounter}@example.invalid`;
+      const password = `Test-${Math.random().toString(36).slice(2)}-${Date.now()}!`;
+
+      const { data, error } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+
+      if (error || !data.user) {
+        throw new Error(`Failed to create default-role fixture: ${error?.message}`);
+      }
+      createdUserIds.push(data.user.id);
+
+      const { data: reread, error: rereadError } = await admin
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+      expect(rereadError).toBeNull();
+      expect(reread?.role).toBe("voluntario_comum");
+    });
+
+    // COORDINATOR_EMAIL is deliberately not hardcoded here — it names the
+    // institution's real Coordenador geral address, and this repository is
+    // public. The suite reads it from the git-ignored .env.local, and this
+    // one assertion skips visibly (naming the missing variable) rather than
+    // failing when it is absent, per this plan's must_haves.
+    const coordinatorEmail = process.env.COORDINATOR_EMAIL;
+
+    it.skipIf(!coordinatorEmail)(
+      "the seeded Coordenador geral account (COORDINATOR_EMAIL) holds coordenador_geral after the migration",
+      async () => {
+        const { data, error } = await admin
+          .from("profiles")
+          .select("role")
+          .eq("email", coordinatorEmail as string);
+
+        expect(error).toBeNull();
+        expect(data).toHaveLength(1);
+        expect(data?.[0]?.role).toBe("coordenador_geral");
+      }
+    );
+
+    if (!coordinatorEmail) {
+      it.skip(
+        "COORDINATOR_EMAIL not set — skipping the targeted coordinator-backfill assertion (see .env.local.example)",
+        () => {
+          // Intentionally empty: surfaces a visible, named skip reason.
+        }
+      );
+    }
+
+    it("structural backstop: at least one non-fixture account holds coordenador_geral after the migration", async () => {
+      // Runs unconditionally, independent of COORDINATOR_EMAIL. Catches the
+      // total-failure mode of migration 0002's backfill (column added, but
+      // the UPDATE never ran or targeted nothing) even on a machine that
+      // never configured the optional variable. Fixture accounts created by
+      // this suite always live under the @example.invalid domain, so
+      // excluding it can't accidentally match a disposable test row.
+      const { data, error } = await admin
+        .from("profiles")
+        .select("id, email")
+        .eq("role", "coordenador_geral")
+        .not("email", "like", "%@example.invalid");
+
+      expect(error).toBeNull();
+      expect((data ?? []).length).toBeGreaterThan(0);
+    });
   }
 );
 
