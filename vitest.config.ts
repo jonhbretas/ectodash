@@ -9,7 +9,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    // src/**/*.test.ts (added 05-02): pure-unit tests colocated with the
+    // module they validate (demanda-filter-schema.test.ts) — no live
+    // database, safe to run in parallel with the tests/db/*.test.ts
+    // live-integration suites below.
+    include: ["tests/**/*.test.ts", "src/**/*.test.ts"],
     testTimeout: 30000,
     // tests/db/*.test.ts are live-integration suites that mint and sign in
     // many disposable @example.invalid fixture accounts against the real
