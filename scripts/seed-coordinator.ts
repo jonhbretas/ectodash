@@ -5,7 +5,7 @@
 // Papéis válidos: coordenador_geral, lider_area, voluntario_comum,
 // financeiro (padrão: voluntario_comum).
 import { createClient } from "@supabase/supabase-js";
-import { parseInviteArgs } from "./lib/role-arg";
+import { parseInviteArgs } from "./lib/role-arg.ts";
 
 async function main() {
   const parsed = parseInviteArgs(process.argv.slice(2));
