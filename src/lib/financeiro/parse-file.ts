@@ -69,7 +69,18 @@ export function parseCsv(texto: string): unknown[][] {
 }
 
 export function parseXlsx(buffer: ArrayBuffer): unknown[][] {
-  const workbook = XLSX.read(buffer, { type: "array" });
+  // cellFormula:false is the KEY tolerance: SheetJS throws "ERROR <code>@<cell>"
+  // (e.g. 2185920330@E352) when a cell holds a formula it cannot parse —
+  // corrupted/foreign formulas are common in real cash-flow sheets. Skipping
+  // formula parsing reads each cell's cached/display value instead, which is
+  // exactly what an import needs. cellNF/cellHTML false skip equally
+  // crash-prone number-format and HTML parsing.
+  const workbook = XLSX.read(buffer, {
+    type: "array",
+    cellFormula: false,
+    cellNF: false,
+    cellHTML: false,
+  });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) {
     throw new Error("O arquivo XLSX não contém nenhuma planilha.");
@@ -80,7 +91,18 @@ export function parseXlsx(buffer: ArrayBuffer): unknown[][] {
     defval: "",
     raw: true,
   }) as unknown[][];
-  return rows;
+
+  // Last line of defense: any cell that still surfaces as a SheetJS error
+  // object (t === "e") is normalized to an empty string instead of crashing
+  // or producing garbage values.
+  return rows.map((row) =>
+    row.map((cell) => {
+      if (cell && typeof cell === "object" && "t" in cell && (cell as { t: string }).t === "e") {
+        return "";
+      }
+      return cell;
+    })
+  );
 }
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2MB — bounds memory, not use
@@ -113,7 +135,8 @@ export async function parseFinanceiroFile(
   } catch {
     return {
       ok: false,
-      error: "Não foi possível ler o arquivo. Verifique se ele está íntegro.",
+      error:
+        "Não foi possível ler o arquivo. Se for XLSX, verifique se não há fórmulas corrompidas (células com #REF! ou erros) — salve como .csv e tente novamente.",
     };
   }
 
