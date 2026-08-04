@@ -90,6 +90,22 @@ export async function importarEventos(
   prevState: ImportarEventosState,
   formData: FormData
 ): Promise<ImportarEventosState> {
+  try {
+    return await importarEventosInner(prevState, formData);
+  } catch (err) {
+    console.error("importarEventos: unhandled error", err);
+    return {
+      ...initialState,
+      message:
+        "Ocorreu um erro inesperado ao importar. Verifique se o arquivo é um CSV válido (texto) e tente novamente.",
+    };
+  }
+}
+
+async function importarEventosInner(
+  prevState: ImportarEventosState,
+  formData: FormData
+): Promise<ImportarEventosState> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -117,7 +133,30 @@ export async function importarEventos(
     return { ...initialState, message: "Não foi possível ler o arquivo." };
   }
 
-  const allRows = parseCsv(texto);
+  // Detect binary files (XLSX saved as .csv) — CSV text should never
+  // contain null bytes in the first 512 characters. SheetJS error codes
+  // like "ERROR 3240671882@E352" appear when binary XLSX is fed to CSV
+  // parsing.
+  const probe = texto.slice(0, 512);
+  if (/\0/.test(probe)) {
+    return {
+      ...initialState,
+      message:
+        "Este arquivo parece ser XLSX (binário), não CSV. Salve como .csv no Excel/Google Sheets e tente novamente, ou envie o .xlsx diretamente.",
+    };
+  }
+
+  let allRows: unknown[][];
+  try {
+    allRows = parseCsv(texto);
+  } catch {
+    return {
+      ...initialState,
+      message:
+        "Não foi possível interpretar o CSV. Verifique se o arquivo está salvo como texto (não binário) e tente novamente.",
+    };
+  }
+
   if (allRows.length < 2) {
     return { ...initialState, message: "O arquivo está vazio ou não tem dados." };
   }
