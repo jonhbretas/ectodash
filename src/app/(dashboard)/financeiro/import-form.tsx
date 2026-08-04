@@ -45,11 +45,23 @@ export default function ImportFinanceiroForm() {
         resumo didático dos números.
       </p>
       <p className="text-base text-zinc-700">
-        Colunas esperadas (com cabeçalho na primeira linha):{" "}
-        <span className="font-medium text-zinc-900">
-          Data; Descrição; Tipo (entrada ou saída); Valor; Categoria
-        </span>
-        . Os lançamentos atuais serão substituídos pelos do arquivo.
+        Formatos aceitos (detectados automaticamente):
+      </p>
+      <ul className="list-disc space-y-1 pl-5 text-base text-zinc-700">
+        <li>
+          <span className="font-medium text-zinc-900">
+            Fluxo de caixa mensal
+          </span>{" "}
+          (EctoLab): colunas Janeiro…Dezembro, com receitas e despesas
+          agrupadas por centro de custo.
+        </li>
+        <li>
+          <span className="font-medium text-zinc-900">Lista simples</span>:{" "}
+          Data; Descrição; Tipo (entrada/saída); Valor; Categoria (opcional).
+        </li>
+      </ul>
+      <p className="text-base text-zinc-700">
+        Os lançamentos atuais serão substituídos pelos do arquivo.
       </p>
 
       <form action={formAction} className="flex flex-col gap-4">

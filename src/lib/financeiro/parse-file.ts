@@ -1,12 +1,18 @@
 // src/lib/financeiro/parse-file.ts
 // Manual spreadsheet import parsing — CSV (PT-BR: semicolon or comma
 // delimited, quoted fields) and XLSX (first sheet, via the xlsx package).
-// Both produce the same raw unknown[][] grid the Sheets-sync pipeline
-// already validates with parseSheetRows (src/lib/sheets/parse-rows.ts) —
-// one validation boundary for every financial ingest path.
+// Two formats are supported and auto-detected:
+//   1. EctoLab cash-flow (monthly pivot: Janeiro…Dezembro columns) —
+//      parsed by parseEctolabRows.
+//   2. Flat ledger (Data; Descrição; Tipo; Valor; Categoria) — parsed by
+//      parseSheetRows, shared with the Google Sheets cron sync.
 import * as XLSX from "xlsx";
 import { parseSheetRows } from "@/lib/sheets/parse-rows";
 import type { FinancialEntry } from "@/lib/sheets/parse-rows";
+import {
+  isEctolabFormat,
+  parseEctolabRows,
+} from "./parse-ectolab";
 
 export type ParseFileResult =
   | { ok: true; entries: FinancialEntry[] }
@@ -145,6 +151,26 @@ export async function parseFinanceiroFile(
       error:
         "Não foi possível ler o arquivo. Se for XLSX, verifique se não há fórmulas corrompidas (células com #REF! ou erros) — salve como .csv e tente novamente.",
     };
+  }
+
+  // Auto-detect format: EctoLab monthly cash-flow vs flat ledger
+  if (isEctolabFormat(rows)) {
+    const entries = parseEctolabRows(rows);
+    if (entries === null) {
+      return {
+        ok: false,
+        error:
+          "Detectamos o formato de fluxo de caixa mensal, mas não conseguimos extrair os lançamentos. Verifique se as colunas de mês (Janeiro … Dezembro) estão presentes.",
+      };
+    }
+    if (entries.length === 0) {
+      return {
+        ok: false,
+        error:
+          "Nenhum lançamento encontrado no fluxo de caixa (todos os valores estão zerados?).",
+      };
+    }
+    return { ok: true, entries };
   }
 
   const entries = parseSheetRows(rows);
