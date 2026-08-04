@@ -47,7 +47,7 @@ export default function DemandaComentarios({
   );
 
   return (
-    <section className="flex w-full max-w-md flex-col gap-3" aria-label="Comentários">
+    <section className="flex w-full flex-col gap-3" aria-label="Comentários">
       <h2 className="flex items-center gap-2 text-xl font-semibold text-zinc-900">
         <MessageSquare size={20} aria-hidden="true" />
         Comentários ({comentarios.length})

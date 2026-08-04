@@ -222,7 +222,8 @@ export async function comentarDemanda(
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, email, full_name")
-    .eq("ativo", true);
+    .eq("ativo", true)
+    .not("email", "ilike", "%example.invalid%");
 
   const mencionados = resolverMencoes(conteudo.data, profiles ?? []);
   if (mencionados.length > 0) {

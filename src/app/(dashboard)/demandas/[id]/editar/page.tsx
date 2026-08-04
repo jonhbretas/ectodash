@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { displayName } from "@/lib/display-name";
 import DemandaForm from "../../demanda-form";
 import ConcludeButton from "../../conclude-button";
 import DemandaChecklist from "../../demanda-checklist";
 import DemandaComentarios from "../../demanda-comentarios";
+import StatusBadge from "../../status-badge";
+import OverdueBadge from "../../overdue-badge";
 import type { DemandaFormValues } from "../../demanda-schema";
 import PageContainer from "../../../page-container";
 
@@ -40,7 +44,7 @@ export default async function EditarDemandaPage({
   // source shared with the list view (plan 04-02's precedent).
   const { data: demanda } = await supabase
     .from("demandas_com_status")
-    .select("id, titulo, prazo, status, area, projeto, evento_id, etiqueta_id")
+    .select("id, titulo, prazo, status, area, projeto, evento_id, etiqueta_id, atrasada")
     .eq("id", id)
     .single();
 
@@ -75,7 +79,12 @@ export default async function EditarDemandaPage({
       .from("demanda_membros")
       .select("profile_id")
       .eq("demanda_id", id),
-    supabase.from("profiles").select("id, email, full_name").eq("ativo", true).order("email"),
+    supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .eq("ativo", true)
+      .not("email", "ilike", "%example.invalid%")
+      .order("email"),
     supabase
       .from("eventos")
       .select("id, titulo")
@@ -123,39 +132,78 @@ export default async function EditarDemandaPage({
 
   return (
     <PageContainer>
-      <h1 className="text-2xl font-semibold text-zinc-900">Editar demanda</h1>
-      <DemandaForm
-        mode="edit"
-        demandaId={id}
-        defaultValues={defaultValues}
-        profiles={profiles ?? []}
-        eventos={eventos ?? []}
-        etiquetas={etiquetas ?? []}
-      />
-
-      <DemandaChecklist
-        demandaId={id}
-        items={(checklistItems ?? []).map((item) => ({
-          id: item.id,
-          item: item.item,
-          concluido: item.concluido,
-        }))}
-      />
-
-      <DemandaComentarios
-        demandaId={String(id)}
-        comentarios={comentarios}
-      />
-
-      {/* Separated from Cancelar/Salvar by extra gap-6 (24px) spacing to
-          signal a distinct action, not a third form button in the same row
-          (04-UI-SPEC.md Screen Inventory -> 4. Edit form). Hidden — not
-          disabled — when the demanda is already concluída. */}
-      {demanda.status !== "concluida" && (
-        <div className="flex w-full max-w-md flex-col gap-6">
-          <ConcludeButton demandaId={id} />
+      {/* Header — título + status, prazo e atraso em badges. */}
+      <div className="flex w-full max-w-7xl flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-semibold text-zinc-900">
+            {demanda.titulo}
+          </h1>
+          <StatusBadge status={demanda.status} />
+          {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
         </div>
-      )}
+        <p className="text-xl text-zinc-700">
+          Prazo:{" "}
+          {format(new Date(`${demanda.prazo}T00:00:00`), "dd/MM/yyyy", {
+            locale: ptBR,
+          })}
+          {demanda.area ? ` · Área: ${demanda.area}` : ""}
+          {demanda.projeto ? ` · Projeto: ${demanda.projeto}` : ""}
+        </p>
+        <Link href="/" className="text-base font-medium text-blue-700 underline">
+          Voltar para a lista
+        </Link>
+      </div>
+
+      {/* Desktop: two-column grid (form | checklist+comments); mobile:
+          stacked, one column. */}
+      <div className="grid w-full max-w-7xl grid-cols-1 items-start gap-8 lg:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-zinc-900">
+              Dados da demanda
+            </h2>
+            <DemandaForm
+              mode="edit"
+              wide
+              demandaId={id}
+              defaultValues={defaultValues}
+              profiles={profiles ?? []}
+              eventos={eventos ?? []}
+              etiquetas={etiquetas ?? []}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <DemandaChecklist
+              demandaId={id}
+              items={(checklistItems ?? []).map((item) => ({
+                id: item.id,
+                item: item.item,
+                concluido: item.concluido,
+              }))}
+            />
+          </div>
+
+          <div className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <DemandaComentarios
+              demandaId={String(id)}
+              comentarios={comentarios}
+            />
+          </div>
+
+          {/* Separated from Cancelar/Salvar by extra gap-6 (24px) spacing to
+              signal a distinct action, not a third form button in the same row
+              (04-UI-SPEC.md Screen Inventory -> 4. Edit form). Hidden — not
+              disabled — when the demanda is already concluída. */}
+          {demanda.status !== "concluida" && (
+            <div className="flex w-full flex-col gap-6">
+              <ConcludeButton demandaId={id} />
+            </div>
+          )}
+        </div>
+      </div>
     </PageContainer>
   );
 }

@@ -9,7 +9,7 @@ export default async function NovaDemandaPage() {
   // the display label for the responsável select. Known limitation, not a
   // blocker, per this plan's own notes.
   const [profilesResult, eventosResult, etiquetasResult] = await Promise.all([
-    supabase.from("profiles").select("id, email, full_name").eq("ativo", true).order("email"),
+    supabase.from("profiles").select("id, email, full_name").eq("ativo", true).not("email", "ilike", "%example.invalid%").order("email"),
     supabase
       .from("eventos")
       .select("id, titulo")

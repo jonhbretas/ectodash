@@ -91,7 +91,7 @@ export default function DemandaChecklist({
 
   return (
     <section
-      className="flex w-full max-w-md flex-col gap-3"
+      className="flex w-full flex-col gap-3"
       aria-label="Checklist da demanda"
     >
       <h2 className="flex items-center justify-between text-xl font-semibold text-zinc-900">

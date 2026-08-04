@@ -65,6 +65,9 @@ type DemandaFormProps = {
     etiquetaId?: number;
     membroIds?: string[];
   };
+  // wide: desktop full-width layout (the edit screen's two-column grid);
+  // the create screen stays at max-w-md.
+  wide?: boolean;
 };
 
 export default function DemandaForm({
@@ -74,6 +77,7 @@ export default function DemandaForm({
   mode = "create",
   demandaId,
   defaultValues,
+  wide = false,
 }: DemandaFormProps) {
   // One DemandaForm handles both modes via props — mode="edit" binds the
   // update action to a server-trusted demandaId via .bind(null, demandaId),
@@ -152,7 +156,7 @@ export default function DemandaForm({
   return (
     <form
       onSubmit={handleSubmit(onValid)}
-      className="flex w-full max-w-md flex-col gap-4"
+      className={`flex w-full flex-col gap-4 ${wide ? "" : "max-w-md"}`}
     >
       <p className="text-base text-zinc-600">
         Campos com * são obrigatórios.
