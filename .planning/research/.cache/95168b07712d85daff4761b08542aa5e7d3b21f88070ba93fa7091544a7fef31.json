@@ -1,0 +1,1 @@
+{"content":"Supabase Vercel integration auto-syncs env vars (NEXT_PUBLIC_SUPABASE_URL/ANON_KEY, service role key, JWT secret) and updates Auth redirect URIs to match Vercel domain.","source":"web","provider":"websearch","confidence":"LOW","fetched_at":"2026-08-03T09:06:48.524Z","ttl":86400000,"kind":"web"}

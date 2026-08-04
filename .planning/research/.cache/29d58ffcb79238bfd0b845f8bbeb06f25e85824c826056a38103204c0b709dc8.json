@@ -1,0 +1,1 @@
+{"content":"@supabase/ssr requires three clients (server/browser/middleware); middleware must call supabase.auth.getUser() to refresh and rewrite session cookies since Server Components cannot write cookies.","source":"web","provider":"websearch","confidence":"MEDIUM","fetched_at":"2026-08-03T09:06:47.877Z","ttl":86400000,"kind":"docs"}

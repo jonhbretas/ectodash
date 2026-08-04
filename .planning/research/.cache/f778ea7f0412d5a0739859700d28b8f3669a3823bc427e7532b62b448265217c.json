@@ -1,0 +1,1 @@
+{"content":"Common magic-link redirect failures: redirect URL not allow-listed (redirects to localhost in prod), URL fragment tokens invisible server-side (must use PKCE/code query param), missing router.refresh() after callback.","source":"web","provider":"websearch","confidence":"LOW","fetched_at":"2026-08-03T09:06:48.836Z","ttl":86400000,"kind":"web"}

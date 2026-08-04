@@ -1,0 +1,1 @@
+{"content":"Supabase refresh tokens never expire (single-use rotation); with default persistSession+autoRefreshToken, users stay logged in indefinitely regardless of JWT expiry or browser restart; session timeboxing feature is Pro-plan only.","source":"web","provider":"websearch","confidence":"MEDIUM","fetched_at":"2026-08-03T09:06:47.249Z","ttl":86400000,"kind":"docs"}

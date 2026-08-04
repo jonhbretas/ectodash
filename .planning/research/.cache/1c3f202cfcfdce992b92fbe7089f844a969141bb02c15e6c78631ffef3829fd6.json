@@ -1,0 +1,1 @@
+{"content":"supabase.auth.admin.inviteUserByEmail requires service-role key, server-only; sends invite email, default flow assumes password-set on accept; invite link expiry follows Email OTP Expiration setting (default 1hr).","source":"web","provider":"websearch","confidence":"MEDIUM","fetched_at":"2026-08-03T09:06:47.564Z","ttl":86400000,"kind":"docs"}
