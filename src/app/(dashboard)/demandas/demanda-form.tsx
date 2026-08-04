@@ -5,6 +5,8 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   createDemanda,
   updateDemanda,
@@ -96,14 +98,14 @@ export default function DemandaForm({
       </p>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="titulo" className="text-xl font-medium text-zinc-900">
+        <Label htmlFor="titulo" className="text-xl font-medium text-zinc-900">
           Título *
-        </label>
-        <input
+        </Label>
+        <Input
           id="titulo"
           type="text"
           placeholder="Ex: Revisar relatório mensal"
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
           {...register("titulo")}
         />
         {errors.titulo && (
@@ -141,13 +143,13 @@ export default function DemandaForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="prazo" className="text-xl font-medium text-zinc-900">
+        <Label htmlFor="prazo" className="text-xl font-medium text-zinc-900">
           Prazo *
-        </label>
-        <input
+        </Label>
+        <Input
           id="prazo"
           type="date"
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
           {...register("prazo")}
         />
         {errors.prazo && (
@@ -173,14 +175,14 @@ export default function DemandaForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="area" className="text-xl font-medium text-zinc-900">
+        <Label htmlFor="area" className="text-xl font-medium text-zinc-900">
           Área ou projeto
-        </label>
-        <input
+        </Label>
+        <Input
           id="area"
           type="text"
           placeholder="Ex: Pesquisa de Campo"
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
           {...register("area")}
         />
       </div>
