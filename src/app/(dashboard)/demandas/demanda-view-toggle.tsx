@@ -49,7 +49,7 @@ export default function DemandaViewToggle({
     <div
       role="group"
       aria-label="Modo de visualização"
-      className="flex w-full max-w-4xl items-center gap-1 rounded-xl border border-zinc-200 bg-white p-1 shadow-sm"
+      className="flex w-full items-center gap-1 rounded-xl border border-zinc-200 bg-white p-1 shadow-sm"
     >
       {OPTIONS.map((option) => {
         const active = option.value === currentView;

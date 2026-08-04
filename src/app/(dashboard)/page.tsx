@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
+import Link from "next/link";
 import DemandaList from "./demandas/demanda-list";
 import DemandaFilters from "./demandas/demanda-filters";
 import DemandaViewToggle, {
@@ -15,6 +16,7 @@ import {
   Circle,
   ClipboardList,
   Clock,
+  Plus,
 } from "lucide-react";
 import { parseDemandaFilters } from "./demandas/demanda-filter-schema";
 
@@ -230,7 +232,10 @@ export default async function DashboardPage({
       filters.status
   );
 
-  const view: DemandaView = filters.view ?? "lista";
+  // Kanban is the default work view (the screen's centerpiece): the
+  // absence of the param means kanban, and lista/calendario opt in
+  // explicitly via ?view=...
+  const view: DemandaView = filters.view ?? "kanban";
 
   const stats = {
     total: demandaList.length,
@@ -246,17 +251,28 @@ export default async function DashboardPage({
 
   return (
     <PageContainer>
-      <section className="flex w-full max-w-7xl flex-col gap-1">
-        <h1 className="text-3xl font-semibold text-zinc-900">
-          Olá, {displayName(profile ?? { email: user.email ?? "" })}
-        </h1>
-        <p className="text-xl text-zinc-700">
-          Acompanhe suas demandas e prazos por aqui.
-        </p>
+      <section className="flex w-full flex-col gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-3xl font-semibold text-zinc-900">
+              Olá, {displayName(profile ?? { email: user.email ?? "" })}
+            </h1>
+            <p className="text-xl text-zinc-700">
+              Acompanhe suas demandas e prazos por aqui.
+            </p>
+          </div>
+          <Link
+            href="/demandas/nova"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          >
+            <Plus size={22} aria-hidden="true" />
+            Nova demanda
+          </Link>
+        </div>
       </section>
 
       {demandaList.length > 0 && (
-        <div className="grid w-full max-w-7xl grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-5">
           <StatCard
             label="Suas demandas"
             value={stats.total}
@@ -289,7 +305,7 @@ export default async function DashboardPage({
         </div>
       )}
 
-      <div className="flex w-full max-w-7xl flex-col gap-4">
+      <div className="flex w-full flex-col gap-4">
         {scopedViewNotice && (
           <p className="text-base text-zinc-700">{scopedViewNotice}</p>
         )}

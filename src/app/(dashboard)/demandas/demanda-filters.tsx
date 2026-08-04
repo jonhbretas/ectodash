@@ -1,15 +1,18 @@
 "use client";
 
-// Filter bar — five independent dimensions (Área, Projeto, Evento,
-// Voluntário, Status) plus the optional Agrupar por, per the user's
-// 2026-08-04 decision. Every change navigates via router.push with an
-// updated query string; this component never holds the filtered *data* in
-// client state, only momentary control state during interaction
-// (05-UI-SPEC.md's Filter State Pattern). The actual data-fetching read of
-// these same params happens exclusively server-side in page.tsx.
+// Compact collapsible filter bar — one row of controls (Área, Projeto,
+// Evento, Etiqueta, Voluntário, Status, Agrupar por), collapsed by default
+// to a single "Filtros" button so the work area below keeps nearly all the
+// screen. Active filters render as removable chips even while collapsed.
+// Every change navigates via router.push with an updated query string; this
+// component never holds the filtered *data* in client state, only the
+// momentary control state and the open/collapsed flag (05-UI-SPEC.md's
+// Filter State Pattern). The actual data-fetching read of these same params
+// happens exclusively server-side in page.tsx.
 import { useRouter, useSearchParams } from "next/navigation";
-import { X } from "lucide-react";
-import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import type { ReactNode } from "react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -17,10 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useStoredPreference } from "@/lib/use-stored-preference";
 import type { DemandaFilters } from "./demanda-filter-schema";
 
 const ALL_VALUE = "__todas__";
 const NO_GROUPING_VALUE = "__sem_agrupamento__";
+
+// localStorage key — the expanded/collapsed preference, survives reloads.
+const OPEN_KEY = "ectodash:filtros-abertos";
 
 export type EventoFilterOption = { id: number; titulo: string };
 
@@ -45,6 +52,12 @@ export default function DemandaFilters({
 }: DemandaFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [openRaw, setOpenRaw] = useStoredPreference(OPEN_KEY, "0");
+  const open = openRaw === "1";
+
+  function toggleOpen() {
+    setOpenRaw(open ? "0" : "1");
+  }
 
   function navigateWith(updates: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -82,270 +95,240 @@ export default function DemandaFilters({
       currentFilters.status
   );
 
-  const filterClassName =
-    "min-h-14 w-full rounded-lg border border-zinc-400 bg-white px-4 text-xl text-zinc-900";
-  const labelClassName = "text-xl font-medium text-zinc-900";
+  const activeChips = [
+    {
+      key: "area" as const,
+      label: `Área: ${currentFilters.area}`,
+      title: `Área: ${currentFilters.area}`,
+    },
+    {
+      key: "projeto" as const,
+      label: `Projeto: ${currentFilters.projeto}`,
+      title: `Projeto: ${currentFilters.projeto}`,
+    },
+    {
+      key: "evento" as const,
+      label: `Evento: ${
+        eventoOptions.find((e) => String(e.id) === currentFilters.evento)
+          ?.titulo ?? currentFilters.evento
+      }`,
+      title: "Evento",
+    },
+    {
+      key: "etiqueta" as const,
+      label: `Etiqueta: ${
+        etiquetaOptions.find((e) => String(e.id) === currentFilters.etiqueta)
+          ?.nome ?? currentFilters.etiqueta
+      }`,
+      title: "Etiqueta",
+    },
+    {
+      key: "responsavel" as const,
+      label: `Voluntário: ${
+        responsavelLabelById.get(currentFilters.responsavel ?? "") ??
+        currentFilters.responsavel
+      }`,
+      title: "Voluntário",
+    },
+    {
+      key: "status" as const,
+      label: `Status: ${
+        currentFilters.status === "em_andamento"
+          ? "Em andamento"
+          : currentFilters.status === "concluida"
+            ? "Concluída"
+            : "Pendente"
+      }`,
+      title: "Status",
+    },
+  ].filter((chip) => {
+    if (chip.key === "area") return Boolean(currentFilters.area);
+    if (chip.key === "projeto") return Boolean(currentFilters.projeto);
+    if (chip.key === "evento") return Boolean(currentFilters.evento);
+    if (chip.key === "etiqueta") return Boolean(currentFilters.etiqueta);
+    if (chip.key === "responsavel") return Boolean(currentFilters.responsavel);
+    return Boolean(currentFilters.status);
+  });
+
+  const activeCount = activeChips.length;
+
+  const triggerClassName =
+    "min-h-14 w-full rounded-lg border border-zinc-400 bg-white px-4 text-lg text-zinc-900";
+
+  const selectControl = (
+    ariaLabel: string,
+    value: string | undefined,
+    allValue: string,
+    allLabel: string,
+    onChange: (value: string | undefined) => void,
+    children: ReactNode
+  ) => (
+    <Select
+      value={value ?? allValue}
+      onValueChange={(next) =>
+        onChange(next === allValue ? undefined : next)
+      }
+    >
+      <SelectTrigger aria-label={ariaLabel} className={triggerClassName}>
+        <SelectValue placeholder={allLabel} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={allValue}>{allLabel}</SelectItem>
+        {children}
+      </SelectContent>
+    </Select>
+  );
 
   return (
-    <div className="flex flex-col gap-4">
-      <span className="sr-only">Filtrar demandas</span>
+    <section
+      aria-label="Filtrar demandas"
+      className="flex w-full flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={toggleOpen}
+          aria-expanded={open}
+          className="flex min-h-12 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        >
+          <SlidersHorizontal size={20} aria-hidden="true" />
+          Filtros
+          {activeCount > 0 && (
+            <span className="rounded-full bg-blue-700 px-2 py-0.5 text-base font-semibold text-white">
+              {activeCount}
+            </span>
+          )}
+          {open ? (
+            <ChevronUp size={20} aria-hidden="true" />
+          ) : (
+            <ChevronDown size={20} aria-hidden="true" />
+          )}
+        </button>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="filtro-area" className={labelClassName}>
-            Área
-          </Label>
-          <Select
-            value={currentFilters.area ?? ALL_VALUE}
-            onValueChange={(value) =>
-              navigateWith({ area: value === ALL_VALUE ? undefined : value })
-            }
-          >
-            <SelectTrigger id="filtro-area" className={filterClassName}>
-              <SelectValue placeholder="Todas as áreas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Todas as áreas</SelectItem>
-              {areaOptions.map((area) => (
-                <SelectItem key={area} value={area}>
-                  {area}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          {activeChips.map((chip) => (
+            <span
+              key={chip.key}
+              className="flex max-w-[16rem] items-center gap-1 truncate rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700"
+              title={chip.title}
+            >
+              <span className="truncate">{chip.label}</span>
+              <button
+                type="button"
+                onClick={() => removeFilter(chip.key)}
+                aria-label={`Remover filtro de ${chip.title.toLowerCase()}`}
+                className="shrink-0"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="filtro-projeto" className={labelClassName}>
-            Projeto
-          </Label>
-          <Select
-            value={currentFilters.projeto ?? ALL_VALUE}
-            onValueChange={(value) =>
-              navigateWith({ projeto: value === ALL_VALUE ? undefined : value })
-            }
-          >
-            <SelectTrigger id="filtro-projeto" className={filterClassName}>
-              <SelectValue placeholder="Todos os projetos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Todos os projetos</SelectItem>
-              {projetoOptions.map((projeto) => (
-                <SelectItem key={projeto} value={projeto}>
-                  {projeto}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="filtro-evento" className={labelClassName}>
-            Evento
-          </Label>
-          <Select
-            value={currentFilters.evento ?? ALL_VALUE}
-            onValueChange={(value) =>
-              navigateWith({ evento: value === ALL_VALUE ? undefined : value })
-            }
-          >
-            <SelectTrigger id="filtro-evento" className={filterClassName}>
-              <SelectValue placeholder="Todos os eventos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Todos os eventos</SelectItem>
-              {eventoOptions.map((evento) => (
-                <SelectItem key={evento.id} value={String(evento.id)}>
-                  {evento.titulo}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="filtro-etiqueta" className={labelClassName}>
-            Etiqueta
-          </Label>
-          <Select
-            value={currentFilters.etiqueta ?? ALL_VALUE}
-            onValueChange={(value) =>
-              navigateWith({ etiqueta: value === ALL_VALUE ? undefined : value })
-            }
-          >
-            <SelectTrigger id="filtro-etiqueta" className={filterClassName}>
-              <SelectValue placeholder="Todas as etiquetas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Todas as etiquetas</SelectItem>
-              {etiquetaOptions.map((etiqueta) => (
-                <SelectItem key={etiqueta.id} value={String(etiqueta.id)}>
-                  {etiqueta.nome} ({etiqueta.area})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="filtro-responsavel" className={labelClassName}>
-            Voluntário
-          </Label>
-          <Select
-            value={currentFilters.responsavel ?? ALL_VALUE}
-            onValueChange={(value) =>
-              navigateWith({
-                responsavel: value === ALL_VALUE ? undefined : value,
-              })
-            }
-          >
-            <SelectTrigger id="filtro-responsavel" className={filterClassName}>
-              <SelectValue placeholder="Todos os voluntários" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Todos os voluntários</SelectItem>
-              {responsavelOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="filtro-status" className={labelClassName}>
-            Status
-          </Label>
-          <Select
-            value={currentFilters.status ?? ALL_VALUE}
-            onValueChange={(value) =>
-              navigateWith({ status: value === ALL_VALUE ? undefined : value })
-            }
-          >
-            <SelectTrigger id="filtro-status" className={filterClassName}>
-              <SelectValue placeholder="Todos os status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Todos os status</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
-              <SelectItem value="em_andamento">Em andamento</SelectItem>
-              <SelectItem value="concluida">Concluída</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="filtro-agrupar" className={labelClassName}>
-            Agrupar por
-          </Label>
-          <Select
-            value={currentFilters.agrupar ?? NO_GROUPING_VALUE}
-            onValueChange={(value) =>
-              navigateWith({
-                agrupar: value === NO_GROUPING_VALUE ? undefined : value,
-              })
-            }
-          >
-            <SelectTrigger id="filtro-agrupar" className={filterClassName}>
-              <SelectValue placeholder="Sem agrupamento" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_GROUPING_VALUE}>Sem agrupamento</SelectItem>
-              <SelectItem value="area">Área</SelectItem>
-              <SelectItem value="responsavel">Responsável</SelectItem>
-            </SelectContent>
-          </Select>
+          {hasActiveFilter && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="min-h-11 rounded-full border border-zinc-400 bg-white px-4 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 
-      {hasActiveFilter && (
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            {
-              key: "area" as const,
-              label: `Área: ${currentFilters.area}`,
-              title: `Área: ${currentFilters.area}`,
-            },
-            {
-              key: "projeto" as const,
-              label: `Projeto: ${currentFilters.projeto}`,
-              title: `Projeto: ${currentFilters.projeto}`,
-            },
-            {
-              key: "evento" as const,
-              label: `Evento: ${
-                eventoOptions.find(
-                  (e) => String(e.id) === currentFilters.evento
-                )?.titulo ?? currentFilters.evento
-              }`,
-              title: "Evento",
-            },
-            {
-              key: "etiqueta" as const,
-              label: `Etiqueta: ${
-                etiquetaOptions.find(
-                  (e) => String(e.id) === currentFilters.etiqueta
-                )?.nome ?? currentFilters.etiqueta
-              }`,
-              title: "Etiqueta",
-            },
-            {
-              key: "responsavel" as const,
-              label: `Voluntário: ${
-                responsavelLabelById.get(currentFilters.responsavel ?? "") ??
-                currentFilters.responsavel
-              }`,
-              title: "Voluntário",
-            },
-            {
-              key: "status" as const,
-              label: `Status: ${
-                currentFilters.status === "em_andamento"
-                  ? "Em andamento"
-                  : currentFilters.status === "concluida"
-                    ? "Concluída"
-                    : "Pendente"
-              }`,
-              title: "Status",
-            },
-          ]
-            .filter((chip) => {
-              if (chip.key === "area") return Boolean(currentFilters.area);
-              if (chip.key === "projeto") return Boolean(currentFilters.projeto);
-              if (chip.key === "evento") return Boolean(currentFilters.evento);
-              if (chip.key === "etiqueta") return Boolean(currentFilters.etiqueta);
-              if (chip.key === "responsavel")
-                return Boolean(currentFilters.responsavel);
-              return Boolean(currentFilters.status);
-            })
-            .map((chip) => (
-              <span
-                key={chip.key}
-                className="flex max-w-[14rem] items-center gap-1 truncate rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700"
-                title={chip.title}
-              >
-                <span className="truncate">{chip.label}</span>
-                <button
-                  type="button"
-                  onClick={() => removeFilter(chip.key)}
-                  aria-label={`Remover filtro de ${chip.title.toLowerCase()}`}
-                  className="shrink-0"
-                >
-                  <X size={14} aria-hidden="true" />
-                </button>
-              </span>
-            ))}
+      {open && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {selectControl(
+            "Filtrar por área",
+            currentFilters.area,
+            ALL_VALUE,
+            "Todas as áreas",
+            (value) => navigateWith({ area: value }),
+            areaOptions.map((area) => (
+              <SelectItem key={area} value={area}>
+                {area}
+              </SelectItem>
+            ))
+          )}
 
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="min-h-11 rounded-full border border-zinc-400 bg-white px-4 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          >
-            Limpar filtros
-          </button>
+          {selectControl(
+            "Filtrar por projeto",
+            currentFilters.projeto,
+            ALL_VALUE,
+            "Todos os projetos",
+            (value) => navigateWith({ projeto: value }),
+            projetoOptions.map((projeto) => (
+              <SelectItem key={projeto} value={projeto}>
+                {projeto}
+              </SelectItem>
+            ))
+          )}
+
+          {selectControl(
+            "Filtrar por evento",
+            currentFilters.evento,
+            ALL_VALUE,
+            "Todos os eventos",
+            (value) => navigateWith({ evento: value }),
+            eventoOptions.map((evento) => (
+              <SelectItem key={evento.id} value={String(evento.id)}>
+                {evento.titulo}
+              </SelectItem>
+            ))
+          )}
+
+          {selectControl(
+            "Filtrar por etiqueta",
+            currentFilters.etiqueta,
+            ALL_VALUE,
+            "Todas as etiquetas",
+            (value) => navigateWith({ etiqueta: value }),
+            etiquetaOptions.map((etiqueta) => (
+              <SelectItem key={etiqueta.id} value={String(etiqueta.id)}>
+                {etiqueta.nome} ({etiqueta.area})
+              </SelectItem>
+            ))
+          )}
+
+          {selectControl(
+            "Filtrar por voluntário",
+            currentFilters.responsavel,
+            ALL_VALUE,
+            "Todos os voluntários",
+            (value) => navigateWith({ responsavel: value }),
+            responsavelOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))
+          )}
+
+          {selectControl(
+            "Filtrar por status",
+            currentFilters.status,
+            ALL_VALUE,
+            "Todos os status",
+            (value) => navigateWith({ status: value }),
+            <>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="em_andamento">Em andamento</SelectItem>
+              <SelectItem value="concluida">Concluída</SelectItem>
+            </>
+          )}
+
+          {selectControl(
+            "Agrupar por",
+            currentFilters.agrupar,
+            NO_GROUPING_VALUE,
+            "Sem agrupamento",
+            (value) => navigateWith({ agrupar: value }),
+            <>
+              <SelectItem value="area">Área</SelectItem>
+              <SelectItem value="responsavel">Responsável</SelectItem>
+            </>
+          )}
         </div>
       )}
-    </div>
+    </section>
   );
 }
