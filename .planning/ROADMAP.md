@@ -174,12 +174,17 @@ Plans:
   2. Overdue demandas across the whole institution are highlighted in this dashboard.
   3. Dashboard shows counts of demandas grouped by área and by volunteer.
 
-**Plans**: TBD
+**Plans**: 0/2 plans executed
 **UI hint**: yes
 
 Plans:
+**Wave 1**
 
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md — TRACER: /painel end-to-end — shadcn card, stat cards, área/voluntário breakdowns, overdue panel, access states (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 06-02-PLAN.md — Coordenador-only "Painel do coordenador" entry-point link on / (wave 2)
 
 ### Phase 7: Email Reminders
 
