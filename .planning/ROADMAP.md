@@ -68,7 +68,7 @@ Plans:
   1. Every user account is assigned exactly one of 4 roles (Coordenador geral, Líder de área/projeto, Voluntário comum, Financeiro).
   2. A user without the Financeiro or Coordenador role cannot retrieve financial data even via direct API/database query, not just via a hidden UI element.
 
-**Plans**: 1/4 plans executed
+**Plans**: 3/4 plans executed
 
 Plans:
 **Wave 1**
@@ -77,8 +77,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Full role coverage: default role, backfill proof, per-role has_role() matrix, Phase 10 financial predicate, anon lockdown (wave 2)
-- [ ] 02-03-PLAN.md — Role assignment path: validated --role flag on the invite script + docs/roles.md runbook (wave 2)
+- [x] 02-02-PLAN.md — Full role coverage: default role, backfill proof, per-role has_role() matrix, Phase 10 financial predicate, anon lockdown (wave 2)
+- [x] 02-03-PLAN.md — Role assignment path: validated --role flag on the invite script + docs/roles.md runbook (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -240,7 +240,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold & Institutional Login | 4/4 | Complete    | 2026-08-03 |
-| 2. Role-Based Access Control | 1/4 | In Progress|  |
+| 2. Role-Based Access Control | 3/4 | In Progress|  |
 | 3. Accessible UI Foundation | 0/TBD | Not started | - |
 | 4. Demandas CRUD & Overdue Tracking | 0/TBD | Not started | - |
 | 5. Demandas Filtering & Role-Scoped Access | 0/TBD | Not started | - |
