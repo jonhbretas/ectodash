@@ -16,6 +16,8 @@ export type DemandaCardProps = {
   status: DemandaStatus;
   atrasada: boolean;
   area: string | null;
+  projeto?: string | null;
+  eventoNome?: string | null;
 };
 
 export default function DemandaCard({
@@ -26,6 +28,8 @@ export default function DemandaCard({
   status,
   atrasada,
   area,
+  projeto,
+  eventoNome,
 }: DemandaCardProps) {
   const prazoFormatada = format(new Date(`${prazo}T00:00:00`), "dd/MM/yyyy", {
     locale: ptBR,
@@ -70,6 +74,16 @@ export default function DemandaCard({
         ) : (
           <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-500">
             Sem área definida
+          </span>
+        )}
+        {projeto && (
+          <span className="w-fit rounded-full bg-blue-50 px-2 py-0.5 text-base font-medium text-blue-800">
+            {projeto}
+          </span>
+        )}
+        {eventoNome && (
+          <span className="w-fit rounded-full bg-purple-50 px-2 py-0.5 text-base font-medium text-purple-800">
+            {eventoNome}
           </span>
         )}
       </Link>

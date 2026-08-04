@@ -61,7 +61,7 @@ export default async function ExtrairDemandasPage() {
   // responsável select, reused by SuggestionReviewList (Task 2).
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, email")
+    .select("id, email, full_name")
     .order("email");
 
   // Tactiq recorded meetings (MCP-equivalent bridge) — fetched server-side

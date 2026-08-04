@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { displayName } from "@/lib/display-name";
 import DemandaList from "./demandas/demanda-list";
 import DemandaFilters from "./demandas/demanda-filters";
 import DemandaViewToggle, {
@@ -20,14 +21,10 @@ import { parseDemandaFilters } from "./demandas/demanda-filter-schema";
 export default async function DashboardPage({
   searchParams,
 }: {
-  // Next.js 16's documented shape (node_modules/next/dist/docs/01-app/
-  // 01-getting-started/03-layouts-and-pages.md, "Rendering with search
-  // params") — a Promise, read exclusively via this Server Component prop.
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   // searchParams is untrusted URL input — zod-validated before any value
-  // reaches a Supabase query, the same boundary-validation discipline
-  // already applied to formData (05-RESEARCH.md Pattern 5).
+  // reaches a Supabase query (05-RESEARCH.md Pattern 5).
   const filters = parseDemandaFilters(await searchParams);
 
   const supabase = await createClient();
@@ -35,19 +32,16 @@ export default async function DashboardPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Middleware already guards this route, but a defensive null-check keeps
-  // this Server Component correct if it's ever rendered without middleware.
   if (!user) {
     return null;
   }
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("email, role")
+    .select("email, full_name, role")
     .eq("id", user.id)
     .single();
 
-  const email = profile?.email ?? user.email;
   const role = profile?.role;
 
   // Only read when the caller is a lider_area.
@@ -73,75 +67,96 @@ export default async function DashboardPage({
       scopedViewNotice = `Mostrando as demandas das áreas ${allButLast} e ${last}.`;
     }
   } else {
-    // coordenador/financeiro/unknown — no notice (the unrestricted case
-    // gets no UI, per the "don't add UI for the unrestricted case" rule).
     scopedViewNotice = null;
   }
 
-  // Base role-scoped query (RLS already narrows this to whatever the
-  // caller is allowed to see). demandas_com_status, not the bare demandas
-  // table, is the read source — atrasada is read directly from this view's
-  // server-computed column, never recomputed client-side (plan 04-01).
+  // Base role-scoped query (RLS narrows it). demandas_com_status is the
+  // read source — atrasada and evento_id come from the view directly.
   let query = supabase
     .from("demandas_com_status")
-    .select("id, titulo, prazo, status, area, atrasada")
+    .select("id, titulo, prazo, status, area, projeto, evento_id, atrasada")
     .order("prazo", { ascending: true });
 
+  // All five filter dimensions, combined with AND, each applied as a query
+  // modifier BEFORE data reaches the client.
   if (filters.area) {
     query = query.ilike("area", filters.area);
   }
+  if (filters.projeto) {
+    query = query.ilike("projeto", filters.projeto);
+  }
+  if (filters.evento) {
+    query = query.eq("evento_id", Number(filters.evento));
+  }
+  if (filters.status) {
+    query = query.eq("status", filters.status);
+  }
 
-  // Second query grouped client-side — the accepted N+1-adjacent tradeoff
-  // documented in plan 04-04 (small expected data volume). The base read
-  // feeds both the filter dropdown options AND, combined with the área
-  // filter above, the actual filtered rows.
+  // Base read for dropdown options — same role-scoped source, unfiltered,
+  // so a filter never disappears an option it isn't filtering on.
   const { data: baseDemandas } = await supabase
     .from("demandas_com_status")
-    .select("id, area")
+    .select("id, area, projeto, status, atrasada, evento_id")
     .order("prazo", { ascending: true });
+
+  const baseRows = baseDemandas ?? [];
 
   const areaOptions = [
     ...new Set(
-      (baseDemandas ?? [])
-        .map((demanda) => demanda.area)
+      baseRows
+        .map((d) => d.area)
         .filter((area): area is string => Boolean(area && area.trim()))
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+
+  const projetoOptions = [
+    ...new Set(
+      baseRows
+        .map((d) => d.projeto)
+        .filter((projeto): projeto is string => Boolean(projeto && projeto.trim()))
     ),
   ].sort((a, b) => a.localeCompare(b));
 
   const { data: demandas } = await query;
 
   const demandaIds = (demandas ?? []).map((demanda) => demanda.id);
-  const baseDemandaIds = (baseDemandas ?? []).map((demanda) => demanda.id);
+  const baseDemandaIds = baseRows.map((demanda) => demanda.id);
 
-  const { data: responsaveis } =
+  const [responsaveisResult, eventosResult] = await Promise.all([
     baseDemandaIds.length > 0
-      ? await supabase
+      ? supabase
           .from("demanda_responsaveis")
-          .select("demanda_id, profile_id, profiles(email)")
+          .select("demanda_id, profile_id, profiles(email, full_name)")
           .in("demanda_id", baseDemandaIds)
-      : {
+      : Promise.resolve({
           data: [] as {
             demanda_id: number;
             profile_id: string;
-            profiles: { email: string } | null;
+            profiles: { email: string; full_name: string | null } | null;
           }[],
-        };
+        }),
+    supabase.from("eventos").select("id, titulo").order("data_evento", { ascending: true }),
+  ]);
+
+  const responsaveis = responsaveisResult.data ?? [];
+  const eventoById = new Map(
+    (eventosResult.data ?? []).map((evento) => [evento.id, evento.titulo])
+  );
 
   const responsaveisPorDemanda = new Map<number, string[]>();
   const responsavelOptionById = new Map<string, string>();
-  for (const row of responsaveis ?? []) {
+  for (const row of responsaveis) {
     const profileRow = Array.isArray(row.profiles)
       ? row.profiles[0]
       : row.profiles;
-    if (profileRow?.email) {
-      responsavelOptionById.set(row.profile_id, profileRow.email);
-    }
-    if (demandaIds.includes(row.demanda_id)) {
-      const emails = responsaveisPorDemanda.get(row.demanda_id) ?? [];
-      if (profileRow?.email) {
-        emails.push(profileRow.email);
+    if (profileRow) {
+      const label = displayName(profileRow);
+      responsavelOptionById.set(row.profile_id, label);
+      if (demandaIds.includes(row.demanda_id)) {
+        const labels = responsaveisPorDemanda.get(row.demanda_id) ?? [];
+        labels.push(label);
+        responsaveisPorDemanda.set(row.demanda_id, labels);
       }
-      responsaveisPorDemanda.set(row.demanda_id, emails);
     }
   }
 
@@ -155,13 +170,17 @@ export default async function DashboardPage({
     prazo: demanda.prazo,
     status: demanda.status,
     area: demanda.area,
+    projeto: demanda.projeto,
     atrasada: demanda.atrasada,
+    eventoNome: demanda.evento_id
+      ? (eventoById.get(demanda.evento_id) ?? null)
+      : null,
     responsavelEmails: responsaveisPorDemanda.get(demanda.id) ?? [],
   }));
 
   if (filters.responsavel) {
     const matchingDemandaIds = new Set(
-      (responsaveis ?? [])
+      responsaveis
         .filter((row) => row.profile_id === filters.responsavel)
         .map((row) => row.demanda_id)
     );
@@ -170,16 +189,16 @@ export default async function DashboardPage({
     );
   }
 
-  const filtersActive = Boolean(filters.area || filters.responsavel);
+  const filtersActive = Boolean(
+    filters.area ||
+      filters.projeto ||
+      filters.evento ||
+      filters.responsavel ||
+      filters.status
+  );
 
-  // View persistence (?view=kanban|calendario) — "lista" is the default,
-  // validated by the same zod schema as every other search param.
   const view: DemandaView = filters.view ?? "lista";
 
-  // Personal stats strip — computed from the SAME demandaList already
-  // fetched for the list, zero additional queries. Every user sees their
-  // own numbers (the list is role-scoped by RLS), which turns the home
-  // page into a mini-dashboard instead of a bare list.
   const stats = {
     total: demandaList.length,
     atrasadas: demandaList.filter((d) => d.atrasada).length,
@@ -188,19 +207,15 @@ export default async function DashboardPage({
     concluidas: demandaList.filter((d) => d.status === "concluida").length,
   };
 
-  // Server-side snapshot key for the kanban board: whenever the underlying
-  // rows change (a move's router.refresh(), filter changes), the key
-  // changes and the board's optimistic local state resets to the server
-  // truth instead of drifting.
   const boardKey = demandaList
     .map((d) => `${d.id}:${d.status}`)
     .join("|");
 
   return (
     <PageContainer>
-      <section className="flex w-full max-w-4xl flex-col gap-1">
+      <section className="flex w-full max-w-7xl flex-col gap-1">
         <h1 className="text-3xl font-semibold text-zinc-900">
-          Olá, {email}
+          Olá, {displayName(profile ?? { email: user.email ?? "" })}
         </h1>
         <p className="text-xl text-zinc-700">
           Acompanhe suas demandas e prazos por aqui.
@@ -208,7 +223,7 @@ export default async function DashboardPage({
       </section>
 
       {demandaList.length > 0 && (
-        <div className="grid w-full max-w-4xl grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid w-full max-w-7xl grid-cols-2 gap-4 lg:grid-cols-5">
           <StatCard
             label="Suas demandas"
             value={stats.total}
@@ -241,13 +256,15 @@ export default async function DashboardPage({
         </div>
       )}
 
-      <div className="flex w-full max-w-4xl flex-col gap-4">
+      <div className="flex w-full max-w-7xl flex-col gap-4">
         {scopedViewNotice && (
           <p className="text-base text-zinc-700">{scopedViewNotice}</p>
         )}
 
         <DemandaFilters
           areaOptions={areaOptions}
+          projetoOptions={projetoOptions}
+          eventoOptions={eventosResult.data ?? []}
           responsavelOptions={responsavelOptions}
           currentFilters={filters}
         />

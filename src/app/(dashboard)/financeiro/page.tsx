@@ -16,6 +16,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import StatCard from "@/components/stat-card";
+import ImportFinanceiroForm from "./import-form";
 import SheetSyncPanel, {
   type SheetSyncRunRow,
 } from "../painel/sheet-sync-panel";
@@ -119,16 +120,16 @@ export default async function FinanceiroPage() {
   if (entries.length === 0) {
     return (
       <PageContainer>
-        
         <Header />
+        <ImportFinanceiroForm />
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Wallet size={48} className="text-zinc-400" aria-hidden="true" />
           <h2 className="text-3xl font-semibold text-zinc-900">
             Nenhum dado financeiro sincronizado ainda
           </h2>
           <p className="max-w-md text-xl text-zinc-700">
-            Os lançamentos da planilha de fluxo de caixa aparecem aqui
-            automaticamente após a primeira sincronização.
+            Importe a planilha acima ou aguarde a sincronização automática
+            com o Google Sheets.
           </p>
           <SheetSyncPanel runs={syncRuns} />
         </div>

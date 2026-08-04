@@ -165,7 +165,7 @@ async function PainelContent({
   // coordenador branch. ONE batched query, never a per-volunteer loop
   // (06-RESEARCH.md Pattern 1b, Pitfall 3).
   const { data: responsaveisRows } = await supabase.from("demanda_responsaveis")
-    .select("demanda_id, profile_id, profiles(email)");
+    .select("demanda_id, profile_id, profiles(email, full_name)");
 
   const countsByResponsavel = new Map<
     string,
@@ -179,9 +179,12 @@ async function PainelContent({
       : row.profiles;
     const email = profileRow?.email;
     if (!email) continue;
+    // Display label is the full name when set, email otherwise — the same
+    // displayName fallback used everywhere else.
+    const label = profileRow.full_name?.trim() || email;
     const existing =
       countsByResponsavel.get(row.profile_id) ?? {
-        email,
+        email: label,
         count: 0,
         overdueCount: 0,
       };
@@ -210,8 +213,9 @@ async function PainelContent({
       ? row.profiles[0]
       : row.profiles;
     if (!profileRow?.email) continue;
+    const label = profileRow.full_name?.trim() || profileRow.email;
     const emails = emailsByDemandaId.get(row.demanda_id) ?? [];
-    emails.push(profileRow.email);
+    emails.push(label);
     emailsByDemandaId.set(row.demanda_id, emails);
   }
 

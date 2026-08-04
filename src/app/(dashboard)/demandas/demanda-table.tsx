@@ -26,6 +26,8 @@ export type DemandaTableRow = {
   status: DemandaStatus;
   atrasada: boolean;
   area: string | null;
+  projeto?: string | null;
+  eventoNome?: string | null;
 };
 
 export type DemandaTableProps = {
@@ -95,15 +97,27 @@ export default function DemandaTable({ demandas }: DemandaTableProps) {
                 <StatusBadge status={demanda.status} />
               </TableCell>
               <TableCell className="whitespace-normal px-4 py-3">
-                {demanda.area ? (
-                  <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700">
-                    {demanda.area}
-                  </span>
-                ) : (
-                  <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-500">
-                    Sem área definida
-                  </span>
-                )}
+                <div className="flex flex-wrap gap-1">
+                  {demanda.area ? (
+                    <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700">
+                      {demanda.area}
+                    </span>
+                  ) : (
+                    <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-500">
+                      Sem área definida
+                    </span>
+                  )}
+                  {demanda.projeto && (
+                    <span className="w-fit rounded-full bg-blue-50 px-2 py-0.5 text-base font-medium text-blue-800">
+                      {demanda.projeto}
+                    </span>
+                  )}
+                  {demanda.eventoNome && (
+                    <span className="w-fit rounded-full bg-purple-50 px-2 py-0.5 text-base font-medium text-purple-800">
+                      {demanda.eventoNome}
+                    </span>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           );

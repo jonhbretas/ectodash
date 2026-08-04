@@ -15,6 +15,22 @@ export const demandaSchema = z.object({
   prazo: z.string().date("Escolha uma data de prazo."),
   status: z.enum(["pendente", "em_andamento", "concluida"]),
   area: z.string().trim().optional(),
+  // Projeto is a second free-text dimension, distinct from área (user
+  // decision: filters Área + Projeto), optional like area.
+  projeto: z.string().trim().optional(),
 });
+
+// Evento link (vínculo evento -> demanda). Kept OUT of demandaSchema on
+// purpose: it is a native-select optional value, not managed by
+// react-hook-form, so it is validated separately here — the Server Actions
+// run this on formData.get("eventoId") and the form's select shows the
+// current value via its own defaultValue.
+export const eventoIdSchema = z.preprocess(
+  (value) =>
+    value === "" || value === undefined || value === null
+      ? undefined
+      : Number(value),
+  z.number().int().positive().optional()
+);
 
 export type DemandaFormValues = z.infer<typeof demandaSchema>;

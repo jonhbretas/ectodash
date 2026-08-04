@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Lock, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { displayName } from "@/lib/display-name";
 import PageContainer from "../page-container";
 
 // Role labels — the four fixed institutional roles (0002_profiles_role.sql)
@@ -56,7 +57,7 @@ export default async function VoluntariosPage() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("email, role, created_at")
+    .select("id, email, full_name, role, created_at")
     .order("email");
 
   const rows = profiles ?? [];
@@ -87,19 +88,25 @@ export default async function VoluntariosPage() {
       ) : (
         <div className="flex w-full max-w-4xl flex-col rounded-xl border border-zinc-200 bg-white shadow-sm">
           {rows.map((row, index) => (
-            <div
+            <Link
               key={row.email}
-              className={`flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${
+              href={`/voluntarios/${row.id}`}
+              className={`flex flex-col gap-1 px-5 py-4 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:flex-row sm:items-center sm:justify-between ${
                 index > 0 ? "border-t border-zinc-200" : ""
               }`}
             >
-              <span className="truncate text-xl text-zinc-900">
-                {row.email}
-              </span>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate text-xl font-medium text-zinc-900">
+                  {displayName(row)}
+                </span>
+                <span className="truncate text-base text-zinc-700">
+                  {row.email}
+                </span>
+              </div>
               <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
                 {ROLE_LABELS[row.role] ?? row.role}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       )}

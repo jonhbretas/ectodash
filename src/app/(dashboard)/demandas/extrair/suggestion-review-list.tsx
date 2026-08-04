@@ -36,6 +36,7 @@ export type Suggestion = {
 type Profile = {
   id: string;
   email: string;
+  full_name?: string | null;
 };
 
 type CardStatus = "pending" | "confirming" | "created" | "rejected";
@@ -438,7 +439,7 @@ function SuggestionCard({
               <SelectContent>
                 {profiles.map((profile) => (
                   <SelectItem key={profile.id} value={profile.id}>
-                    {profile.email}
+                    {profile.full_name?.trim() || profile.email}
                   </SelectItem>
                 ))}
               </SelectContent>

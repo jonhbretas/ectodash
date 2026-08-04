@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { matchResponsavel } from "@/lib/ai/match-responsavel";
+import { chatCompletion } from "@/lib/ai/ai-client";
 import { extractionResponseSchema } from "./extraction-schema";
 import { obterTranscricao } from "@/lib/meetings";
 
@@ -42,25 +43,7 @@ const MEETING_TEXT_MAX = 60000;
 // Provider decision (2026-08-04, user): extraction runs on DeepSeek V4
 // Flash through the OpenCode API (the OpenCode Go subscription's model
 // gateway) — the same model powering the development workflow — instead of
-// Google's Gemini. The gateway's chat completions endpoint is
-// OpenAI-compatible, so the call is a plain fetch, no SDK dependency. The
-// endpoint and model are env-overridable (AI_API_URL / AI_MODEL) so the
-// same code can point at any OpenAI-compatible provider without a code
-// change; defaults are the gateway's documented values.
-const DEFAULT_AI_API_URL = "https://opencode.ai/zen/v1/chat/completions";
-const DEFAULT_AI_MODEL = "deepseek-v4-flash";
-
-function aiConfig() {
-  const apiKey = process.env.OPENCODE_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENCODE_API_KEY não configurada no servidor");
-  }
-  return {
-    apiKey,
-    url: process.env.AI_API_URL ?? DEFAULT_AI_API_URL,
-    model: process.env.AI_MODEL ?? DEFAULT_AI_MODEL,
-  };
-}
+// Google's Gemini. The shared client lives in src/lib/ai/ai-client.ts.
 
 // DeepSeek/Zen json mode requires a top-level JSON OBJECT (never a bare
 // array), so the prompt asks for the array wrapped under a "demandas" key
@@ -71,51 +54,15 @@ const responseEnvelopeSchema = z.object({
   demandas: extractionResponseSchema,
 });
 
-// Single server-side call to the AI provider. Returns the raw content
-// string; every failure mode (missing key, non-2xx status, empty response)
-// throws a message-able error that the action's catch block turns into the
-// user-facing friendly error.
+// Single server-side call to the AI provider (shared client). JSON mode
+// requires the word "json" in the messages — it is present in the system
+// prompt below.
 async function extractWithAi(texto: string): Promise<string> {
-  const { apiKey, url, model } = aiConfig();
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      // JSON mode requires the word "json" to appear in the messages — it
-      // is present in the system prompt below.
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            'Você extrai tarefas de transcrições de reunião. Responda APENAS com JSON no formato {"demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string}]}. Se nenhuma tarefa for encontrada, retorne {"demandas": []}. Não escreva nada fora do JSON.',
-        },
-        {
-          role: "user",
-          content: `Hoje é ${new Date().toISOString().slice(0, 10)}. Extraia uma lista de tarefas mencionadas na transcrição a seguir. Para cada tarefa: titulo (o que precisa ser feito), responsavel_texto (nome da pessoa responsável exatamente como mencionado), prazo_texto (qualquer prazo mencionado, exatamente como no texto), prazo_sugerido (a data concreta yyyy-MM-dd calculada a partir de HOJE quando o prazo for relativo como "sexta", "fim do mês", "amanhã", ou a data absoluta quando mencionada; deixe "" quando não houver prazo claro).\n\nTranscrição:\n"""\n${texto}\n"""`,
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`API de IA retornou status ${response.status}`);
-  }
-
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: unknown } }>;
-  };
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || content.length === 0) {
-    throw new Error("API de IA retornou resposta vazia");
-  }
-  return content;
+  return chatCompletion(
+    'Você extrai tarefas de transcrições de reunião. Responda APENAS com JSON no formato {"demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string}]}. Se nenhuma tarefa for encontrada, retorne {"demandas": []}. Não escreva nada fora do JSON.',
+    `Hoje é ${new Date().toISOString().slice(0, 10)}. Extraia uma lista de tarefas mencionadas na transcrição a seguir. Para cada tarefa: titulo (o que precisa ser feito), responsavel_texto (nome da pessoa responsável exatamente como mencionado), prazo_texto (qualquer prazo mencionado, exatamente como no texto), prazo_sugerido (a data concreta yyyy-MM-dd calculada a partir de HOJE quando o prazo for relativo como "sexta", "fim do mês", "amanhã", ou a data absoluta quando mencionada; deixe "" quando não houver prazo claro).\n\nTranscrição:\n"""\n${texto}\n"""`,
+    { jsonMode: true }
+  );
 }
 
 export async function extractDemandas(

@@ -23,6 +23,12 @@ const initialState: CreateDemandaState | UpdateDemandaState = {
 type Profile = {
   id: string;
   email: string;
+  full_name?: string | null;
+};
+
+export type EventoOption = {
+  id: number;
+  titulo: string;
 };
 
 function SubmitButton({ mode }: { mode: "create" | "edit" }) {
@@ -43,13 +49,15 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
 
 type DemandaFormProps = {
   profiles: Profile[];
+  eventos: EventoOption[];
   mode?: "create" | "edit";
   demandaId?: number;
-  defaultValues?: Partial<DemandaFormValues>;
+  defaultValues?: Partial<DemandaFormValues> & { eventoId?: number };
 };
 
 export default function DemandaForm({
   profiles,
+  eventos,
   mode = "create",
   demandaId,
   defaultValues,
@@ -131,7 +139,7 @@ export default function DemandaForm({
         >
           {profiles.map((profile) => (
             <option key={profile.id} value={profile.id}>
-              {profile.email}
+              {profile.full_name?.trim() || profile.email}
             </option>
           ))}
         </select>
@@ -176,7 +184,7 @@ export default function DemandaForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="area" className="text-xl font-medium text-zinc-900">
-          Área ou projeto
+          Área
         </Label>
         <Input
           id="area"
@@ -185,6 +193,41 @@ export default function DemandaForm({
           className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
           {...register("area")}
         />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="projeto" className="text-xl font-medium text-zinc-900">
+          Projeto
+        </Label>
+        <Input
+          id="projeto"
+          type="text"
+          placeholder="Ex: Projeto Horta Comunitária"
+          className="rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
+          {...register("projeto")}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="eventoId" className="text-xl font-medium text-zinc-900">
+          Evento (opcional)
+        </label>
+        {/* Uncontrolled native select — not registered with react-hook-form
+            (eventoId is validated separately server-side via eventoIdSchema);
+            the initial value comes from defaultValues when editing. */}
+        <select
+          id="eventoId"
+          name="eventoId"
+          defaultValue={String(defaultValues?.eventoId ?? "")}
+          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        >
+          <option value="">Nenhum evento</option>
+          {eventos.map((evento) => (
+            <option key={evento.id} value={evento.id}>
+              {evento.titulo}
+            </option>
+          ))}
+        </select>
       </div>
 
       <SubmitButton mode={mode} />

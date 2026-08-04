@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { demandaSchema } from "./demanda-schema";
+import { demandaSchema, eventoIdSchema } from "./demanda-schema";
 
 export type CreateDemandaState = {
   ok: boolean;
@@ -34,9 +34,11 @@ export async function createDemanda(
     prazo: formData.get("prazo"),
     status: formData.get("status"),
     area: typeof rawArea === "string" && rawArea.length > 0 ? rawArea : undefined,
+    projeto: formData.get("projeto") ?? undefined,
   });
+  const eventoId = eventoIdSchema.safeParse(formData.get("eventoId") ?? undefined);
 
-  if (!parsed.success) {
+  if (!parsed.success || !eventoId.success) {
     return { ok: false, message: "Verifique os campos destacados." };
   }
 
@@ -51,6 +53,8 @@ export async function createDemanda(
       prazo: parsed.data.prazo,
       status: parsed.data.status,
       area: parsed.data.area,
+      projeto: parsed.data.projeto,
+      evento_id: eventoId.data ?? null,
     })
     .select("id")
     .single();
@@ -121,9 +125,11 @@ export async function updateDemanda(
     prazo: formData.get("prazo"),
     status: formData.get("status"),
     area: typeof rawArea === "string" && rawArea.length > 0 ? rawArea : undefined,
+    projeto: formData.get("projeto") ?? undefined,
   });
+  const eventoId = eventoIdSchema.safeParse(formData.get("eventoId") ?? undefined);
 
-  if (!parsed.success) {
+  if (!parsed.success || !eventoId.success) {
     return { ok: false, message: "Verifique os campos destacados." };
   }
 
@@ -136,6 +142,8 @@ export async function updateDemanda(
       prazo: parsed.data.prazo,
       status: parsed.data.status,
       area: parsed.data.area,
+      projeto: parsed.data.projeto,
+      evento_id: eventoId.data ?? null,
     })
     .eq("id", id);
 

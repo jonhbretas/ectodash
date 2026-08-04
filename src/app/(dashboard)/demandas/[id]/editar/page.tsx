@@ -39,7 +39,7 @@ export default async function EditarDemandaPage({
   // truth rather than forking a second query shape.
   const { data: demanda } = await supabase
     .from("demandas_com_status")
-    .select("id, titulo, prazo, status, area")
+    .select("id, titulo, prazo, status, area, projeto, evento_id")
     .eq("id", id)
     .single();
 
@@ -57,20 +57,32 @@ export default async function EditarDemandaPage({
     );
   }
 
-  const [{ data: responsaveis }, { data: profiles }] = await Promise.all([
+  const [
+    { data: responsaveis },
+    { data: profiles },
+    { data: eventos },
+  ] = await Promise.all([
     supabase
       .from("demanda_responsaveis")
       .select("profile_id")
       .eq("demanda_id", id),
-    supabase.from("profiles").select("id, email").order("email"),
+    supabase.from("profiles").select("id, email, full_name").order("email"),
+    supabase
+      .from("eventos")
+      .select("id, titulo")
+      .gte("data_evento", new Date().toISOString().slice(0, 10))
+      .order("data_evento", { ascending: true })
+      .limit(100),
   ]);
 
-  const defaultValues: Partial<DemandaFormValues> = {
+  const defaultValues: Partial<DemandaFormValues> & { eventoId?: number } = {
     titulo: demanda.titulo,
     responsavelIds: (responsaveis ?? []).map((row) => row.profile_id as string),
     prazo: demanda.prazo,
     status: demanda.status,
     area: demanda.area ?? undefined,
+    projeto: demanda.projeto ?? undefined,
+    eventoId: demanda.evento_id ?? undefined,
   };
 
   return (
@@ -81,6 +93,7 @@ export default async function EditarDemandaPage({
         demandaId={id}
         defaultValues={defaultValues}
         profiles={profiles ?? []}
+        eventos={eventos ?? []}
       />
 
       {/* Separated from Cancelar/Salvar by extra gap-6 (24px) spacing to

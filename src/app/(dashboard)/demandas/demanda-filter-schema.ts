@@ -21,12 +21,30 @@ import { z } from "zod";
 // the existing card/table layout) is the ABSENCE of this param, so
 // ?view=kanban / ?view=calendario opt in explicitly and the URL never
 // carries a redundant ?view=lista.
+//
+// User decision (2026-08-04): the filter bar must offer Área, Projeto,
+// Evento, Voluntário and Status — five independent dimensions, all
+// optional, combinable with AND.
 export const demandaFilterSchema = z.object({
   area: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().trim().min(1).optional()
   ),
+  projeto: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().trim().min(1).optional()
+  ),
+  // evento: a numeric string id (eventos.id is bigint) — validated as a
+  // positive integer string, never raw text.
+  evento: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^\d+$/, "evento deve ser um id numérico")
+      .optional()
+  ),
   responsavel: z.string().uuid().optional(),
+  status: z.enum(["pendente", "em_andamento", "concluida"]).optional(),
   agrupar: z.enum(["area", "responsavel"]).optional(),
   view: z.enum(["lista", "kanban", "calendario"]).optional(),
 });
@@ -43,8 +61,11 @@ export function parseDemandaFilters(raw: {
 }): DemandaFilters {
   return demandaFilterSchema.parse({
     area: typeof raw.area === "string" ? raw.area : undefined,
+    projeto: typeof raw.projeto === "string" ? raw.projeto : undefined,
+    evento: typeof raw.evento === "string" ? raw.evento : undefined,
     responsavel: typeof raw.responsavel === "string" ? raw.responsavel : undefined,
     agrupar: typeof raw.agrupar === "string" ? raw.agrupar : undefined,
+    status: typeof raw.status === "string" ? raw.status : undefined,
     view: typeof raw.view === "string" ? raw.view : undefined,
   });
 }

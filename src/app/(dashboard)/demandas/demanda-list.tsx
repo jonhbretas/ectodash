@@ -17,6 +17,8 @@ export type Demanda = {
   status: DemandaStatus;
   atrasada: boolean;
   area: string | null;
+  projeto?: string | null;
+  eventoNome?: string | null;
 };
 
 export type DemandaListProps = {
