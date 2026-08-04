@@ -14,9 +14,9 @@
 
 ### Demandas
 
-- [ ] **DEM-01**: Usuário cria demanda com título, responsável, prazo, status e área/projeto
-- [ ] **DEM-02**: Usuário edita e conclui demanda
-- [ ] **DEM-03**: Demanda com prazo vencido é sinalizada visualmente como atrasada
+- [x] **DEM-01**: Usuário cria demanda com título, responsável, prazo, status e área/projeto
+- [x] **DEM-02**: Usuário edita e conclui demanda
+- [x] **DEM-03**: Demanda com prazo vencido é sinalizada visualmente como atrasada
 - [ ] **DEM-04**: Usuário filtra/agrupa demandas por área, projeto ou responsável
 - [ ] **DEM-05**: Voluntário comum vê e edita só suas próprias demandas; líder de área vê as da sua área; coordenador vê tudo
 
@@ -95,9 +95,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-03 | Phase 2 | Complete |
 | UX-01 | Phase 3 | Pending |
 | UX-03 | Phase 3 | Pending |
-| DEM-01 | Phase 4 | Pending |
-| DEM-02 | Phase 4 | Pending |
-| DEM-03 | Phase 4 | Pending |
+| DEM-01 | Phase 4 | Complete |
+| DEM-02 | Phase 4 | Complete |
+| DEM-03 | Phase 4 | Complete |
 | DEM-04 | Phase 5 | Pending |
 | DEM-05 | Phase 5 | Pending |
 | UX-02 | Phase 5 | Pending |
