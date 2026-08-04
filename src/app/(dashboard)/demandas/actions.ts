@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { demandaSchema } from "./demanda-schema";
 
@@ -242,4 +243,42 @@ export async function concludeDemanda(
 
   revalidatePath("/");
   return { ok: true, message: "Demanda concluída." };
+}
+
+const statusSchema = z.enum(["pendente", "em_andamento", "concluida"]);
+
+// Kanban view's per-card status change — same narrow single-field mutation
+// shape as concludeDemanda, generalized to any target status. The target
+// comes from a closed zod enum (never raw input) and the id is a function
+// parameter bound server-side, never read from client-controlled fields.
+export async function updateDemandaStatus(
+  id: number,
+  status: string
+): Promise<ConcludeDemandaState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada." };
+  }
+
+  const parsed = statusSchema.safeParse(status);
+  if (!parsed.success) {
+    return { ok: false, message: "Status inválido." };
+  }
+
+  const { error } = await supabase
+    .from("demandas")
+    .update({ status: parsed.data })
+    .eq("id", id);
+
+  if (error) {
+    console.error("updateDemandaStatus: update failed", error);
+    return { ok: false, message: "Não foi possível mover a demanda." };
+  }
+
+  revalidatePath("/");
+  return { ok: true, message: "Demanda atualizada." };
 }

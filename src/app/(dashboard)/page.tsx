@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import AppHeader from "./app-header";
 import DemandaList from "./demandas/demanda-list";
 import DemandaFilters from "./demandas/demanda-filters";
+import DemandaViewToggle, {
+  type DemandaView,
+} from "./demandas/demanda-view-toggle";
+import KanbanBoard from "./demandas/kanban-board";
+import CalendarioView from "./demandas/calendario-view";
 import PageContainer from "./page-container";
 import StatCard from "@/components/stat-card";
 import {
@@ -45,15 +49,6 @@ export default async function DashboardPage({
 
   const email = profile?.email ?? user.email;
   const role = profile?.role;
-
-  // Role flags threaded to AppHeader — computed from the SAME profiles.role
-  // read above, never separate queries. Purely UX-hiding decisions; every
-  // destination keeps its own server-side role gate + RLS as the real
-  // authorization boundary.
-  const isCoordenador = role === "coordenador_geral";
-  const isFinanceiro = role === "financeiro";
-  const canExtractDemandas =
-    role === "coordenador_geral" || role === "lider_area";
 
   // Only read when the caller is a lider_area.
   const { data: liderAreasRows } =
@@ -177,6 +172,10 @@ export default async function DashboardPage({
 
   const filtersActive = Boolean(filters.area || filters.responsavel);
 
+  // View persistence (?view=kanban|calendario) — "lista" is the default,
+  // validated by the same zod schema as every other search param.
+  const view: DemandaView = filters.view ?? "lista";
+
   // Personal stats strip — computed from the SAME demandaList already
   // fetched for the list, zero additional queries. Every user sees their
   // own numbers (the list is role-scoped by RLS), which turns the home
@@ -189,14 +188,16 @@ export default async function DashboardPage({
     concluidas: demandaList.filter((d) => d.status === "concluida").length,
   };
 
+  // Server-side snapshot key for the kanban board: whenever the underlying
+  // rows change (a move's router.refresh(), filter changes), the key
+  // changes and the board's optimistic local state resets to the server
+  // truth instead of drifting.
+  const boardKey = demandaList
+    .map((d) => `${d.id}:${d.status}`)
+    .join("|");
+
   return (
     <PageContainer>
-      <AppHeader
-        isCoordenador={isCoordenador}
-        isFinanceiro={isFinanceiro}
-        canExtractDemandas={canExtractDemandas}
-      />
-
       <section className="flex w-full max-w-4xl flex-col gap-1">
         <h1 className="text-3xl font-semibold text-zinc-900">
           Olá, {email}
@@ -251,7 +252,19 @@ export default async function DashboardPage({
           currentFilters={filters}
         />
 
-        <DemandaList demandas={demandaList} groupBy={filters.agrupar} filtersActive={filtersActive} />
+        <DemandaViewToggle currentView={view} />
+
+        {view === "kanban" ? (
+          <KanbanBoard key={boardKey} demandas={demandaList} />
+        ) : view === "calendario" ? (
+          <CalendarioView demandas={demandaList} />
+        ) : (
+          <DemandaList
+            demandas={demandaList}
+            groupBy={filters.agrupar}
+            filtersActive={filtersActive}
+          />
+        )}
       </div>
     </PageContainer>
   );

@@ -8,7 +8,7 @@ status: executing
 stopped_at: Phase 9 code shipped (migration 0006 + cron route); awaiting human setup (service account + spreadsheet share)
 last_updated: "2026-08-04T17:30:00.000Z"
 last_activity: 2026-08-04
-last_activity_desc: Phases 9-10 code shipped in one pass; Phase 8-03 awaits GEMINI_API_KEY
+last_activity_desc: Phases 9-10 shipped; Phase 8 provider swapped to OpenCode API (DeepSeek V4 Flash); sidebar + kanban/calendário shipped
 progress:
   total_phases: 8
   completed_phases: 6
@@ -36,7 +36,7 @@ Phase: 10 (Financial Dashboard) — /financeiro SHIPPED
 Plan: 10-01 — executed lean (no PLAN/SUMMARY ceremony per user decision to accelerate)
 Status: Implemented (role-gated UI, RLS-backed reads, empty states); final verification pending real synced data
 
-Phase: 08 (AI Task Extraction) — 08-03 pending human GEMINI_API_KEY checkpoint
+Phase: 08 (AI Task Extraction) — 08-03 pending human OPENCODE_API_KEY checkpoint (DeepSeek V4 Flash via OpenCode API)
 
 Progress: [█████████░] 90%
 

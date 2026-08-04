@@ -13,6 +13,7 @@ describe("demandaFilterSchema", () => {
       area: undefined,
       responsavel: undefined,
       agrupar: undefined,
+      view: undefined,
     });
   });
 
@@ -44,13 +45,22 @@ describe("demandaFilterSchema", () => {
       area: "Pesquisa",
       responsavel: uuid,
       agrupar: "responsavel",
+      view: "kanban",
     });
 
     expect(result).toEqual({
       area: "Pesquisa",
       responsavel: uuid,
       agrupar: "responsavel",
+      view: "kanban",
     });
+  });
+
+  it("accepts view values of exactly lista, kanban or calendario, and rejects anything else", () => {
+    expect(() => demandaFilterSchema.parse({ view: "lista" })).not.toThrow();
+    expect(() => demandaFilterSchema.parse({ view: "kanban" })).not.toThrow();
+    expect(() => demandaFilterSchema.parse({ view: "calendario" })).not.toThrow();
+    expect(() => demandaFilterSchema.parse({ view: "tabela" })).toThrow();
   });
 });
 

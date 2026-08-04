@@ -16,6 +16,11 @@ import { z } from "zod";
 //
 // agrupar: a closed two-value enum — "Sem agrupamento" is the ABSENCE of
 // this param, not a third enum value (05-UI-SPEC.md Copywriting Contract).
+//
+// view: which visualization renders below the filters — "lista" (default,
+// the existing card/table layout) is the ABSENCE of this param, so
+// ?view=kanban / ?view=calendario opt in explicitly and the URL never
+// carries a redundant ?view=lista.
 export const demandaFilterSchema = z.object({
   area: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -23,6 +28,7 @@ export const demandaFilterSchema = z.object({
   ),
   responsavel: z.string().uuid().optional(),
   agrupar: z.enum(["area", "responsavel"]).optional(),
+  view: z.enum(["lista", "kanban", "calendario"]).optional(),
 });
 
 export type DemandaFilters = z.infer<typeof demandaFilterSchema>;
@@ -39,5 +45,6 @@ export function parseDemandaFilters(raw: {
     area: typeof raw.area === "string" ? raw.area : undefined,
     responsavel: typeof raw.responsavel === "string" ? raw.responsavel : undefined,
     agrupar: typeof raw.agrupar === "string" ? raw.agrupar : undefined,
+    view: typeof raw.view === "string" ? raw.view : undefined,
   });
 }

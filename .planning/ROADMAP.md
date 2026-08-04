@@ -242,7 +242,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 08-03-PLAN.md — Vercel Production GEMINI_API_KEY checkpoint + real end-to-end verification against the live Gemini API (wave 3)
+- [ ] 08-03-PLAN.md — Vercel Production OPENCODE_API_KEY checkpoint + real end-to-end verification against the live OpenCode API (DeepSeek V4 Flash) (wave 3)
 
 ### Phase 9: Google Sheets Sync
 

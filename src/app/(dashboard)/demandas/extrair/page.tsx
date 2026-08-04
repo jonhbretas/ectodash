@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import AppHeader from "../../app-header";
 import PageContainer from "../../page-container";
 import ImportForm from "./import-form";
 
@@ -36,7 +35,6 @@ export default async function ExtrairDemandasPage() {
   if (!canExtractDemandas) {
     return (
       <PageContainer>
-        <AppHeader />
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Lock size={48} className="text-zinc-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-zinc-900">
@@ -67,7 +65,6 @@ export default async function ExtrairDemandasPage() {
 
   return (
     <PageContainer>
-      <AppHeader canExtractDemandas />
       <ImportForm profiles={profiles ?? []} />
     </PageContainer>
   );

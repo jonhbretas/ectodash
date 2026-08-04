@@ -14,7 +14,6 @@ import {
   FileText,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import AppHeader from "../app-header";
 import PageContainer from "../page-container";
 import StatCard from "@/components/stat-card";
 import SheetSyncPanel, {
@@ -59,15 +58,10 @@ export default async function FinanceiroPage() {
   const allowed =
     profile?.role === "coordenador_geral" || profile?.role === "financeiro";
 
-  // Role flags for AppHeader, computed from the same role read above — a
-  // coordenador visiting /financeiro still sees the coordinator nav link.
-  const isCoordenador = profile?.role === "coordenador_geral";
-  const isFinanceiro = profile?.role === "financeiro";
-
   if (!allowed) {
     return (
       <PageContainer>
-        <AppHeader />
+        
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Lock size={48} className="text-zinc-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-zinc-900">
@@ -125,7 +119,7 @@ export default async function FinanceiroPage() {
   if (entries.length === 0) {
     return (
       <PageContainer>
-        <AppHeader isCoordenador={isCoordenador} isFinanceiro={isFinanceiro} />
+        
         <Header />
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Wallet size={48} className="text-zinc-400" aria-hidden="true" />
@@ -165,7 +159,7 @@ export default async function FinanceiroPage() {
 
   return (
     <PageContainer>
-      <AppHeader isCoordenador={isCoordenador} isFinanceiro={isFinanceiro} />
+      
       <Header />
 
       <div className="grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

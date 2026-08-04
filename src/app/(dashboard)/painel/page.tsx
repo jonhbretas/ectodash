@@ -2,7 +2,6 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ClipboardList, Clock, Circle, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import StatCard from "@/components/stat-card";
-import AppHeader from "../app-header";
 import PageContainer from "../page-container";
 import type { DemandaTableRow } from "../demandas/demanda-table";
 import AreaSummary, { type AreaSummaryRow } from "./area-summary";
@@ -46,8 +45,7 @@ export default async function PainelPage() {
   if (profile?.role !== "coordenador_geral") {
     return (
       <PageContainer>
-        <AppHeader />
-        <div className="flex flex-col items-center gap-4 py-16 text-center">
+          <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Lock size={48} className="text-zinc-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-zinc-900">
             Este painel é exclusivo do coordenador
@@ -77,7 +75,6 @@ export default async function PainelPage() {
 
   return (
     <PageContainer>
-      <AppHeader isCoordenador />
 
       <div className="flex w-full max-w-4xl flex-col gap-2">
         <h1 className="text-2xl font-semibold text-zinc-900">
