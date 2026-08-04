@@ -27,6 +27,27 @@ export async function importarFinanceiro(
   prevState: ImportarFinanceiroState,
   formData: FormData
 ): Promise<ImportarFinanceiroState> {
+  // Top-level safety net (same pattern as importarEventos): no file —
+  // however malformed — may ever escape to the global error boundary.
+  // SheetJS can still throw on deeply corrupt workbooks even with
+  // cellFormula:false (e.g. "ERROR 2179011101@E352"); a throw here would
+  // otherwise blank the whole page instead of showing the inline message.
+  try {
+    return await importarFinanceiroInner(prevState, formData);
+  } catch (err) {
+    console.error("importarFinanceiro: unhandled error", err);
+    return {
+      ...initialState,
+      message:
+        "Não foi possível ler o arquivo. Se for XLSX, verifique se não há fórmulas corrompidas (células com #REF! ou erros) — salve como .csv e tente novamente.",
+    };
+  }
+}
+
+async function importarFinanceiroInner(
+  prevState: ImportarFinanceiroState,
+  formData: FormData
+): Promise<ImportarFinanceiroState> {
   const supabase = await createClient();
   const {
     data: { user },
