@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 05
 current_phase_name: Demandas Filtering & Role-Scoped Access
-status: executing
-stopped_at: Completed 05-01-PLAN.md (lider_areas join table + narrowed demandas/demanda_responsaveis RLS, applied live)
-last_updated: "2026-08-04T12:45:25.764Z"
+status: verifying
+stopped_at: Completed 05-02-PLAN.md (filter/group UI, role-scoped-view notice, conclude-confirmation)
+last_updated: "2026-08-04T13:11:25.441Z"
 last_activity: 2026-08-04
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 
 Phase: 05 (Demandas Filtering & Role-Scoped Access) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-04 — Phase 05 execution started
 
 Progress: [█████████░] 88%
@@ -71,6 +71,7 @@ Progress: [█████████░] 88%
 | Phase 3 P3 | 20m | 2 tasks | 4 files |
 | Phase 03 P02 | 25min | 2 tasks | 6 files |
 | Phase 05 P01 | 62min | 1 tasks | 4 files |
+| Phase 05 P02 | 55min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 05-01] lider_areas many-to-many join table (lider_id, area composite PK) built instead of a single profiles.area_liderada column, per the locked user decision that a lider can lead multiple areas simultaneously, overriding 05-RESEARCH.md's own assumed single-column design
 - [Phase ?]: [Phase 05-01] demandas SELECT and UPDATE/WITH CHECK predicates are byte-identical (copy-pasted, not abstracted) as the simplest guarantee against the SELECT-gates-UPDATE trap silently reappearing
 - [Phase ?]: [Phase 05-01] Disabled vitest fileParallelism globally after the extended live-integration RLS test suites collectively exceeded Supabase Auth's free-tier 30-sign-ins-per-5-minutes rate limit when run in parallel
+- [Phase ?]: [Phase 05-02] Grouping by responsável: a demanda with multiple responsáveis appears once per group (one bucket per responsável), documented since 05-UI-SPEC.md left this tiebreaker unresolved
+- [Phase ?]: [Phase 05-02] Multi-área role-scoped-view notice for a líder with 2+ áreas uses best-effort natural PT-BR phrasing (comma-joined, final 'e') since no locked copy existed beyond the single-área example; a líder with zero lider_areas rows falls back to the voluntário-comum notice string rather than a broken empty interpolation
+- [Phase ?]: [Phase 05-02] Extended vitest.config.ts's include glob to also cover src/**/*.test.ts, since the TDD task's colocated unit test file lived outside the previous tests/**/*.test.ts-only scope
 
 ### Pending Todos
 
@@ -133,6 +137,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T12:45:25.752Z
-Stopped at: Completed 05-01-PLAN.md (lider_areas join table + narrowed demandas/demanda_responsaveis RLS, applied live)
+Last session: 2026-08-04T13:11:25.395Z
+Stopped at: Completed 05-02-PLAN.md (filter/group UI, role-scoped-view notice, conclude-confirmation)
 Resume file: None

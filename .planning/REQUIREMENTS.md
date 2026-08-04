@@ -17,7 +17,7 @@
 - [x] **DEM-01**: Usuário cria demanda com título, responsável, prazo, status e área/projeto
 - [x] **DEM-02**: Usuário edita e conclui demanda
 - [x] **DEM-03**: Demanda com prazo vencido é sinalizada visualmente como atrasada
-- [ ] **DEM-04**: Usuário filtra/agrupa demandas por área, projeto ou responsável
+- [x] **DEM-04**: Usuário filtra/agrupa demandas por área, projeto ou responsável
 - [x] **DEM-05**: Voluntário comum vê e edita só suas próprias demandas; líder de área vê as da sua área; coordenador vê tudo
 
 ### Lembretes por E-mail
@@ -49,7 +49,7 @@
 ### UX Acessível
 
 - [x] **UX-01**: Interface usa fontes, contraste e toques grandes o suficiente para público de terceira idade
-- [ ] **UX-02**: Formulários são curtos, com poucos campos por tela e confirmação clara em ações importantes
+- [x] **UX-02**: Formulários são curtos, com poucos campos por tela e confirmação clara em ações importantes
 - [x] **UX-03**: Sistema é responsivo (funciona bem em celular e desktop)
 
 ## v2 Requirements
@@ -98,9 +98,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEM-01 | Phase 4 | Complete |
 | DEM-02 | Phase 4 | Complete |
 | DEM-03 | Phase 4 | Complete |
-| DEM-04 | Phase 5 | Pending |
+| DEM-04 | Phase 5 | Complete |
 | DEM-05 | Phase 5 | Complete |
-| UX-02 | Phase 5 | Pending |
+| UX-02 | Phase 5 | Complete |
 | COORD-01 | Phase 6 | Pending |
 | COORD-02 | Phase 6 | Pending |
 | COORD-03 | Phase 6 | Pending |
