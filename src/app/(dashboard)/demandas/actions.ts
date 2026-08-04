@@ -98,7 +98,7 @@ export type UpdateDemandaState = {
 // id is bound server-side via DemandaForm's `updateDemanda.bind(null, demandaId)`
 // (mode="edit") — it is a function parameter, never read from `formData`,
 // matching the same anti-spoofing discipline createDemanda already applies
-// to `criado_por` (RESEARCH.md Pitfall 4 / Code Examples comment).
+// to the authorship column (RESEARCH.md Pitfall 4 / Code Examples comment).
 export async function updateDemanda(
   id: number,
   prevState: UpdateDemandaState,
@@ -126,7 +126,7 @@ export async function updateDemanda(
     return { ok: false, message: "Verifique os campos destacados." };
   }
 
-  // criado_por is deliberately absent from this update payload — it is set
+  // The authorship column is deliberately absent from this update payload — it is set
   // once at creation time and never changed.
   const { error: demandaError } = await supabase
     .from("demandas")
