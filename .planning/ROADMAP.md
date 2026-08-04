@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Project Scaffold & Institutional Login** - Volunteers log in with institutional email and stay signed in across sessions
 - [ ] **Phase 2: Role-Based Access Control** - Every account gets one of 4 fixed roles, enforced via RLS at the database level
 - [ ] **Phase 3: Accessible UI Foundation** - Base interface is legible, touch-friendly, and responsive for an elderly-inclusive audience
-- [ ] **Phase 4: Demandas CRUD & Overdue Tracking** - Users create, edit, and conclude demandas, with overdue ones flagged automatically
+- [x] **Phase 4: Demandas CRUD & Overdue Tracking** - Users create, edit, and conclude demandas, with overdue ones flagged automatically
 - [ ] **Phase 5: Demandas Filtering & Role-Scoped Access** - Users filter/group demandas and see only what their role permits, via short accessible forms
 - [ ] **Phase 6: Coordinator Overview Dashboard** - Coordenador sees one dashboard with status of every demanda/project/volunteer, including overdue items and counts
 - [ ] **Phase 7: Email Reminders** - Approaching and overdue demandas trigger deduplicated email reminders with a visible run log
@@ -116,7 +116,7 @@ Plans:
   2. User can edit an existing demanda and mark it as concluded.
   3. A demanda whose prazo has passed is visually flagged as atrasada automatically.
 
-**Plans**: 2/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -129,8 +129,8 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-03-PLAN.md — Edit form, responsável diffing, and one-tap conclude action (wave 3)
-- [ ] 04-04-PLAN.md — Responsive demandas list: status/overdue badges, card/table layouts, empty state (wave 3)
+- [x] 04-03-PLAN.md — Edit form, responsável diffing, and one-tap conclude action (wave 3)
+- [x] 04-04-PLAN.md — Responsive demandas list: status/overdue badges, card/table layouts, empty state (wave 3)
 
 ### Phase 5: Demandas Filtering & Role-Scoped Access
 
@@ -254,7 +254,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Project Scaffold & Institutional Login | 4/4 | Complete    | 2026-08-03 |
 | 2. Role-Based Access Control | 3/4 | In Progress|  |
 | 3. Accessible UI Foundation | 0/TBD | Not started | - |
-| 4. Demandas CRUD & Overdue Tracking | 2/4 | In Progress|  |
+| 4. Demandas CRUD & Overdue Tracking | 4/4 | Complete |  |
 | 5. Demandas Filtering & Role-Scoped Access | 0/TBD | Not started | - |
 | 6. Coordinator Overview Dashboard | 0/TBD | Not started | - |
 | 7. Email Reminders | 0/TBD | Not started | - |
