@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { parseCsv } from "@/lib/financeiro/parse-file";
+import { parseCsv, parseXlsx } from "@/lib/financeiro/parse-file";
 
 export type ImportarEventosState = {
   ok: boolean;
@@ -117,43 +117,49 @@ async function importarEventosInner(
 
   const arquivo = formData.get("arquivo");
   if (!(arquivo instanceof File) || arquivo.size === 0) {
-    return { ...initialState, message: "Escolha um arquivo .csv." };
+    return { ...initialState, message: "Escolha um arquivo .csv ou .xlsx." };
   }
   if (arquivo.size > MAX_FILE_BYTES) {
     return { ...initialState, message: "O arquivo é grande demais (máx. 1MB)." };
   }
-  if (!arquivo.name.toLowerCase().endsWith(".csv")) {
-    return { ...initialState, message: "Envie um arquivo no formato .csv." };
-  }
-
-  let texto: string;
-  try {
-    texto = await arquivo.text();
-  } catch {
-    return { ...initialState, message: "Não foi possível ler o arquivo." };
-  }
-
-  // Detect binary files (XLSX saved as .csv) — CSV text should never
-  // contain null bytes in the first 512 characters. SheetJS error codes
-  // like "ERROR 3240671882@E352" appear when binary XLSX is fed to CSV
-  // parsing.
-  const probe = texto.slice(0, 512);
-  if (/\0/.test(probe)) {
-    return {
-      ...initialState,
-      message:
-        "Este arquivo parece ser XLSX (binário), não CSV. Salve como .csv no Excel/Google Sheets e tente novamente, ou envie o .xlsx diretamente.",
-    };
+  const lowerName = arquivo.name.toLowerCase();
+  const isXlsx = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+  const isCsv = lowerName.endsWith(".csv");
+  if (!isXlsx && !isCsv) {
+    return { ...initialState, message: "Envie um arquivo no formato .csv ou .xlsx." };
   }
 
   let allRows: unknown[][];
   try {
-    allRows = parseCsv(texto);
+    if (isXlsx) {
+      const buffer = await arquivo.arrayBuffer();
+      allRows = parseXlsx(buffer);
+    } else {
+      let texto: string;
+      try {
+        texto = await arquivo.text();
+      } catch {
+        return { ...initialState, message: "Não foi possível ler o arquivo." };
+      }
+
+      // Detect binary files (XLSX saved as .csv) — CSV text should never
+      // contain null bytes in the first 512 characters.
+      const probe = texto.slice(0, 512);
+      if (/\0/.test(probe)) {
+        return {
+          ...initialState,
+          message:
+            "Este arquivo parece ser XLSX (binário), não CSV. Envie como .xlsx ou salve como .csv no Excel/Google Sheets.",
+        };
+      }
+
+      allRows = parseCsv(texto);
+    }
   } catch {
     return {
       ...initialState,
       message:
-        "Não foi possível interpretar o CSV. Verifique se o arquivo está salvo como texto (não binário) e tente novamente.",
+        "Não foi possível interpretar o arquivo. Verifique se não há fórmulas corrompidas e tente novamente.",
     };
   }
 

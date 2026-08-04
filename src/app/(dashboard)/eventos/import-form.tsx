@@ -35,7 +35,7 @@ export default function ImportEventosForm() {
         Cadastrar eventos por planilha
       </h2>
       <p className="text-base text-zinc-700">
-        Envie um arquivo <strong>.csv</strong> com pelo menos as colunas{" "}
+        Envie um arquivo <strong>.csv</strong> ou <strong>.xlsx</strong> com pelo menos as colunas{" "}
         <span className="font-medium text-zinc-900">
           Data
         </span>{" "}
@@ -56,7 +56,7 @@ export default function ImportEventosForm() {
           id="arquivo"
           name="arquivo"
           type="file"
-          accept=".csv"
+          accept=".csv,.xlsx,.xls"
           required
           className="block w-full cursor-pointer rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 file:mr-4 file:min-h-12 file:rounded-lg file:border-0 file:bg-blue-700 file:px-4 file:text-lg file:font-medium file:text-white file:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
         />
