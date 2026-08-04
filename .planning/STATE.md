@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 08
 current_phase_name: AI Task Extraction & Review
 status: executing
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-08-04T16:42:33.182Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-08-04T16:51:53.845Z"
 last_activity: 2026-08-04
 last_activity_desc: Phase 08 execution started
 progress:
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 ## Current Position
 
 Phase: 08 (AI Task Extraction & Review) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 08
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-08-04 — Phase 08 execution started
 
-Progress: [█████████░] 91%
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [█████████░] 91%
 | Phase 07 P01 | 9min | 2 tasks | 8 files |
 | Phase 07 P02 | ~50min | 1 tasks | 8 files |
 | Phase 07 P03 | ~40min | 2 tasks | 2 files |
+| Phase 08 P01 | 1h | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Recent decisions affecting current work:
 - [Phase ?]: src/proxy.ts's isPublicPath() gate exempts /api/cron/* — a Vercel Cron invocation has no end-user session, so without this exemption the proxy redirected every cron request to /login before the route's own CRON_SECRET check ever ran (Rule 1 bug found via manual curl verification).
 - [Phase ?]: Task 1 (Vercel Production secrets + deployed cron route verification) was already performed and approved by the human in the orchestrating conversation before Task 2 execution began — recorded as approved, not re-run
 - [Phase ?]: reminder-runs-panel.tsx adds zero role check of its own — relies entirely on page.tsx's existing coordenador_geral branch plus reminder_runs' own coordenador-only RLS SELECT policy (migration 0005), matching the must_haves truth explicitly
+- [Phase ?]: Verified gemini-3.1-flash-lite live against ai.google.dev/gemini-api/docs/models (2026-08-04) instead of copying CLAUDE.md's older gemini-2.5-flash-lite (announced shutdown ~Oct 2026)
+- [Phase ?]: @google/genai install approved via human-verify checkpoint before Task 2 ran (package legitimacy confirmed: official googleapis/js-genai org, registered 2025-03-11, no deprecation)
 
 ### Pending Todos
 
@@ -152,6 +155,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T16:03:55.365Z
-Stopped at: Completed 07-03-PLAN.md
+Last session: 2026-08-04T16:51:53.829Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None

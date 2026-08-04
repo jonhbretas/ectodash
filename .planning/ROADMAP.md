@@ -228,13 +228,13 @@ Plans:
   3. User reviews each AI-suggested demanda on a confirmation screen and can edit or reject it before it becomes a real demanda.
   4. No demanda is ever created directly from AI extraction without passing through this review step.
 
-**Plans**: 3/3 plans planned
+**Plans**: 1/3 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — @google/genai package-legitimacy checkpoint + install, matchResponsavel(), extraction-schema.ts, extractDemandas Server Action proven to never write to the database (wave 1)
+- [x] 08-01-PLAN.md — @google/genai package-legitimacy checkpoint + install, matchResponsavel(), extraction-schema.ts, extractDemandas Server Action proven to never write to the database (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -293,7 +293,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Demandas Filtering & Role-Scoped Access | 2/2 | In Progress|  |
 | 6. Coordinator Overview Dashboard | 2/2 | In Progress|  |
 | 7. Email Reminders | 3/3 | In Progress|  |
-| 8. AI Task Extraction & Review | 0/3 | Not started | - |
+| 8. AI Task Extraction & Review | 1/3 | In Progress|  |
 | 9. Google Sheets Sync | 0/TBD | Not started | - |
 | 10. Financial Dashboard | 0/TBD | Not started | - |
 

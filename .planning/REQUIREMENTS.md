@@ -29,9 +29,9 @@
 
 ### Extração de Demandas via IA
 
-- [ ] **IA-01**: Usuário cola resumo de reunião já pronto (gerado por Fireflies/tl;dv) no sistema
-- [ ] **IA-03**: Sistema extrai do resumo colado uma lista de demandas sugeridas (título, responsável, prazo)
-- [ ] **IA-04**: Demandas extraídas por IA passam por tela de revisão/confirmação humana antes de virarem demandas reais no sistema — nunca criação automática sem revisão
+- [x] **IA-01**: Usuário cola resumo de reunião já pronto (gerado por Fireflies/tl;dv) no sistema
+- [x] **IA-03**: Sistema extrai do resumo colado uma lista de demandas sugeridas (título, responsável, prazo)
+- [x] **IA-04**: Demandas extraídas por IA passam por tela de revisão/confirmação humana antes de virarem demandas reais no sistema — nunca criação automática sem revisão
 
 ### Dashboard Financeiro
 
@@ -108,9 +108,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEMB-02 | Phase 7 | Complete |
 | LEMB-03 | Phase 7 | Complete |
 | LEMB-04 | Phase 7 | Complete |
-| IA-01 | Phase 8 | Pending |
-| IA-03 | Phase 8 | Pending |
-| IA-04 | Phase 8 | Pending |
+| IA-01 | Phase 8 | Complete |
+| IA-03 | Phase 8 | Complete |
+| IA-04 | Phase 8 | Complete |
 | FIN-01 | Phase 9 | Pending |
 | FIN-03 | Phase 9 | Pending |
 | FIN-02 | Phase 10 | Pending |
