@@ -1,9 +1,16 @@
+// /eventos/[id] — event management screen, modernized in the demandas
+// visual language: full-width header with meta pills, action toolbar,
+// stat pills for task counts, and the kanban board spanning the whole
+// width.
 import Link from "next/link";
 import {
+  ArrowLeft,
   CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
   MapPin,
   PlusCircle,
-  Sparkles,
   Tag,
   CalendarPlus,
 } from "lucide-react";
@@ -107,67 +114,101 @@ export default async function EventoPage({ params }: EventoPageProps) {
   const concluidas = demandas.filter((d) => d.status === "concluida").length;
   const pendentes = demandas.filter((d) => d.status !== "concluida").length;
 
+  const dataLabel = format(
+    new Date(`${evento.data_evento}T00:00:00`),
+    "EEEE, dd 'de' MMMM 'de' yyyy",
+    { locale: ptBR }
+  );
+
   return (
     <PageContainer>
-      <div className="flex w-full max-w-5xl flex-col gap-2">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-          <CalendarDays size={28} aria-hidden="true" />
-          {evento.titulo}
-        </h1>
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-base text-zinc-700">
-          <span>
-            {format(new Date(`${evento.data_evento}T00:00:00`), "dd/MM/yyyy", {
-              locale: ptBR,
-            })}
-          </span>
-          {evento.local && (
-            <span className="flex items-center gap-1">
-              <MapPin size={16} aria-hidden="true" />
-              {evento.local}
+      <header className="flex w-full flex-wrap items-start justify-between gap-6">
+        <div className="flex min-w-0 flex-col gap-2">
+          <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
+            <CalendarDays size={30} aria-hidden="true" />
+            {evento.titulo}
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-lg text-zinc-600">
+            <span className="flex items-center gap-1.5">
+              <CalendarDays size={18} aria-hidden="true" />
+              {dataLabel}
             </span>
+            {evento.local && (
+              <span className="flex items-center gap-1.5">
+                <MapPin size={18} aria-hidden="true" />
+                {evento.local}
+              </span>
+            )}
+            {evento.tipo_evento_id && (
+              <TipoBadge tipoId={evento.tipo_evento_id} supabase={supabase} />
+            )}
+          </div>
+          {evento.descricao && (
+            <p className="max-w-3xl text-xl leading-relaxed text-zinc-600">
+              {evento.descricao}
+            </p>
           )}
-          {evento.tipo_evento_id && (
-            <TipoBadge tipoId={evento.tipo_evento_id} supabase={supabase} />
-          )}
-        </p>
-        {evento.descricao && (
-          <p className="text-base leading-relaxed text-zinc-700">
-            {evento.descricao}
-          </p>
-        )}
-      </div>
+        </div>
+        <Link
+          href="/eventos"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        >
+          <ArrowLeft size={22} aria-hidden="true" />
+          Voltar aos eventos
+        </Link>
+      </header>
 
-      <div className="flex w-full max-w-5xl flex-wrap items-center gap-3">
+      <div className="flex w-full flex-wrap items-start gap-3">
         <AdicionarTarefasButton eventoId={id} />
         <Link
           href="/demandas/nova"
-          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
         >
           <PlusCircle size={22} aria-hidden="true" />
           Nova demanda manual
         </Link>
-        <Link
-          href="/eventos"
-          className="flex min-h-14 items-center justify-center rounded-xl border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-        >
-          Voltar aos eventos
-        </Link>
       </div>
 
-      <div className="flex w-full max-w-5xl flex-wrap gap-2">
-        <span className="rounded-full bg-zinc-100 px-3 py-1 text-base text-zinc-700">
-          {total} {total === 1 ? "tarefa" : "tarefas"}
-        </span>
-        <span className="rounded-full bg-amber-100 px-3 py-1 text-base text-amber-900">
-          {pendentes} pendentes
-        </span>
-        <span className="rounded-full bg-green-100 px-3 py-1 text-base text-green-900">
-          {concluidas} concluídas
-        </span>
+      {/* Stats — modern pills with semantic grouping, like the demandas
+          screen. */}
+      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+        <div
+          role="group"
+          aria-label={`${total} ${total === 1 ? "tarefa" : "tarefas"} no total`}
+          className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
+        >
+          <ClipboardList size={24} className="text-zinc-500" aria-hidden="true" />
+          <div className="flex flex-col">
+            <span className="text-base font-medium text-zinc-500">Tarefas</span>
+            <span className="text-2xl font-semibold text-zinc-900">{total}</span>
+          </div>
+        </div>
+        <div
+          role="group"
+          aria-label={`${pendentes} ${pendentes === 1 ? "tarefa pendente" : "tarefas pendentes"}`}
+          className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
+        >
+          <Clock size={24} className="text-amber-500" aria-hidden="true" />
+          <div className="flex flex-col">
+            <span className="text-base font-medium text-zinc-500">Pendentes</span>
+            <span className="text-2xl font-semibold text-zinc-900">{pendentes}</span>
+          </div>
+        </div>
+        <div
+          role="group"
+          aria-label={`${concluidas} ${concluidas === 1 ? "tarefa concluída" : "tarefas concluídas"}`}
+          className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
+        >
+          <CheckCircle2 size={24} className="text-green-500" aria-hidden="true" />
+          <div className="flex flex-col">
+            <span className="text-base font-medium text-zinc-500">Concluídas</span>
+            <span className="text-2xl font-semibold text-zinc-900">{concluidas}</span>
+          </div>
+        </div>
       </div>
 
       {total === 0 ? (
-        <div className="flex w-full max-w-5xl flex-col items-center gap-4 py-16 text-center">
+        <div className="flex w-full flex-col items-center gap-4 rounded-2xl bg-white px-6 py-16 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
           <CalendarPlus size={48} className="text-zinc-400" aria-hidden="true" />
           <h2 className="text-3xl font-semibold text-zinc-900">
             Nenhuma tarefa neste evento ainda
@@ -201,7 +242,7 @@ async function TipoBadge({
 
   if (!data) return null;
   return (
-    <span className="flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-base font-medium text-purple-900">
+    <span className="flex items-center gap-1 rounded-full bg-purple-50 px-3 py-1 text-base font-medium text-purple-800 ring-1 ring-purple-200/60">
       <Tag size={14} aria-hidden="true" />
       {data.nome}
     </span>
