@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 04
-current_phase_name: Demandas CRUD & Overdue Tracking
+current_phase: 03
+current_phase_name: Accessible UI Foundation
 status: executing
-stopped_at: Completed 04-04-PLAN.md — responsive demandas list with status/overdue badges, card/table layouts, empty state
-last_updated: "2026-08-04T02:00:00.000Z"
-last_activity: 2026-08-04
-last_activity_desc: Phase 04 execution complete (04-01 through 04-04)
+stopped_at: Completed 03-01-PLAN.md — shadcn/ui foundation scaffold, globals.css reconciliation, skip-link
+last_updated: "2026-08-04T02:37:32.038Z"
+last_activity: 2026-08-03
+last_activity_desc: Phase 03 execution started
 progress:
-  total_phases: 3
-  completed_phases: 1
-  total_plans: 12
-  completed_plans: 11
+  total_phases: 4
+  completed_phases: 2
+  total_plans: 15
+  completed_plans: 12
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-02)
 
 **Core value:** Coordenador consegue ver, num só lugar, o andamento real de todas as demandas/projetos da instituição — quem é responsável, qual o prazo, o que está atrasado — sem precisar cobrar manualmente ou vasculhar planilhas e grupos.
-**Current focus:** Phase 04 — Demandas CRUD & Overdue Tracking
+**Current focus:** Phase 03 — Accessible UI Foundation
 
 ## Current Position
 
-Phase: 04 (Demandas CRUD & Overdue Tracking) — COMPLETE
-Plan: 4 of 4
-Status: Phase complete, ready for next phase
-Last activity: 2026-08-04 — 04-04 (responsive demandas list) executed
+Phase: 03 (Accessible UI Foundation) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-08-03 — Phase 03 execution started
 
-Progress: [█████████░] 92%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████████░] 92%
 | Phase 04 P02 | 40min | 1 tasks | 8 files |
 | Phase 04 P03 | 6min | 1 tasks | 4 files |
 | Phase 04 P04 | 30min | 2 tasks | 6 files |
+| Phase 03 P01 | 5min | 1 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Wrapped concludeDemanda(id) in a local async closure before binding to <form action>, since <form action> requires (formData) => void|Promise<void> but concludeDemanda returns a typed state object
 - [Phase ?]: Removed hardcoded defaultValue="pendente" DOM attribute from status select now that DemandaForm accepts defaultValues from the caller (edit mode)
 - [Phase 04-04]: Responsive demandas list built with StatusBadge/OverdueBadge as the sole components rendering demanda status/overdue state (reused by later phases). Single sort comparator in DemandaList (atrasada-first, prazo-ascending, concluida-last) reads only the server-computed `atrasada` boolean — never recomputes it client-side. CSS-only lg: breakpoint switch for card/table layouts, no shadcn/ui introduced.
+- [Phase ?]: [Phase 03-01] shadcn/ui initialized via current preset CLI (-p vega -b radix -y); globals.css reconciled to locked hex palette, no OKLCH defaults remain; button.tsx/input.tsx default size edited to min-h-14/text-xl floor; fixed two CLI-introduced regressions (self-referencing --font-sans var, unplanned Inter font addition to layout.tsx) before commit
 
 ### Pending Todos
 
@@ -122,6 +124,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T02:00:00.000Z
-Stopped at: Completed 04-04-PLAN.md — Phase 4 (Demandas CRUD & Overdue Tracking) complete
+Last session: 2026-08-04T02:37:32.028Z
+Stopped at: Completed 03-01-PLAN.md — shadcn/ui foundation scaffold, globals.css reconciliation, skip-link
 Resume file: None

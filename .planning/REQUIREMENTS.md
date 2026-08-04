@@ -48,7 +48,7 @@
 
 ### UX Acessível
 
-- [ ] **UX-01**: Interface usa fontes, contraste e toques grandes o suficiente para público de terceira idade
+- [x] **UX-01**: Interface usa fontes, contraste e toques grandes o suficiente para público de terceira idade
 - [ ] **UX-02**: Formulários são curtos, com poucos campos por tela e confirmação clara em ações importantes
 - [ ] **UX-03**: Sistema é responsivo (funciona bem em celular e desktop)
 
@@ -93,7 +93,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-04 | Phase 1 | Complete |
 | AUTH-02 | Phase 2 | Complete |
 | AUTH-03 | Phase 2 | Complete |
-| UX-01 | Phase 3 | Pending |
+| UX-01 | Phase 3 | Complete |
 | UX-03 | Phase 3 | Pending |
 | DEM-01 | Phase 4 | Complete |
 | DEM-02 | Phase 4 | Complete |

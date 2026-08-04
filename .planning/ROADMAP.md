@@ -96,13 +96,13 @@ Plans:
   1. Text, buttons, and touch targets are large enough and contrast is high enough to read and tap comfortably for older users.
   2. The application layout adapts and remains fully usable on both mobile phones and desktop browsers.
 
-**Plans**: 0/3 plans executed
+**Plans**: 1/3 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — TRACER: shadcn/ui init, globals.css token reconciliation, component scaffold, skip-link (wave 1)
+- [x] 03-01-PLAN.md — TRACER: shadcn/ui init, globals.css token reconciliation, component scaffold, skip-link (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -259,7 +259,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold & Institutional Login | 4/4 | Complete    | 2026-08-03 |
 | 2. Role-Based Access Control | 3/4 | In Progress|  |
-| 3. Accessible UI Foundation | 0/3 | Not started | - |
+| 3. Accessible UI Foundation | 1/3 | In Progress|  |
 | 4. Demandas CRUD & Overdue Tracking | 4/4 | Complete |  |
 | 5. Demandas Filtering & Role-Scoped Access | 0/TBD | Not started | - |
 | 6. Coordinator Overview Dashboard | 0/TBD | Not started | - |
