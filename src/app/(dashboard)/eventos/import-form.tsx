@@ -35,11 +35,19 @@ export default function ImportEventosForm() {
         Cadastrar eventos por planilha
       </h2>
       <p className="text-base text-zinc-700">
-        Envie um arquivo <strong>.csv</strong> com as colunas{" "}
+        Envie um arquivo <strong>.csv</strong> com pelo menos as colunas{" "}
         <span className="font-medium text-zinc-900">
-          Data; Título; Local; Descrição
+          Data
         </span>{" "}
-        (com cabeçalho na primeira linha). A data pode ser no formato
+        e{" "}
+        <span className="font-medium text-zinc-900">
+          Título
+        </span>{" "}
+        (com cabeçalho na primeira linha). Colunas opcionais:{" "}
+        <span className="font-medium text-zinc-900">
+          Local, Descrição
+        </span>
+        . O mapeamento é feito por nome — aceita qualquer ordem e colunas extras. A data pode ser no formato
         dd/mm/aaaa ou aaaa-mm-dd.
       </p>
 

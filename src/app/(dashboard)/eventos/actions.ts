@@ -26,8 +26,9 @@ const adicionarTarefasInitialState: AdicionarTarefasState = {
 
 export { adicionarTarefasInitialState };
 
-// CSV row: Data;Título;Local;Descrição — header row skipped, dates in
-// dd/MM/yyyy or yyyy-MM-dd.
+// CSV row: parsed by header name (not position) — supports any column
+// order and extra columns. Required headers: Data, Título. Optional: Local,
+// Descrição. Dates in dd/MM/yyyy or yyyy-MM-dd.
 const eventoRowSchema = z.object({
   data: z
     .string()
@@ -36,6 +37,22 @@ const eventoRowSchema = z.object({
   local: z.string().trim().max(200).optional(),
   descricao: z.string().trim().max(2000).optional(),
 });
+
+// Normalize header name: lowercase, strip accents, trim.
+function normHeader(s: string): string {
+  return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+// Find the column index for a header by normalized name. Returns -1 if not
+// found. Handles BOM-prefixed headers and common spelling variations.
+function findCol(headers: string[], ...targets: string[]): number {
+  const normalized = headers.map(normHeader);
+  for (const target of targets) {
+    const idx = normalized.indexOf(normHeader(target));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
 
 function parseData(raw: string): string | null {
   const trimmed = raw.trim();
@@ -100,7 +117,28 @@ export async function importarEventos(
     return { ...initialState, message: "Não foi possível ler o arquivo." };
   }
 
-  const rows = parseCsv(texto).slice(1); // skip header
+  const allRows = parseCsv(texto);
+  if (allRows.length < 2) {
+    return { ...initialState, message: "O arquivo está vazio ou não tem dados." };
+  }
+
+  // Header-aware column mapping — find columns by name instead of position.
+  const headers = allRows[0].map(String);
+  const colData = findCol(headers, "Data", "Data do evento", "Date");
+  const colTitulo = findCol(headers, "Título", "Titulo", "Title", "Nome");
+  const colLocal = findCol(headers, "Local", "Endereço", "Endereco", "Lugar", "Address");
+  const colDescricao = findCol(headers, "Descrição", "Descricao", "Description", "Sobre");
+
+  if (colData === -1 || colTitulo === -1) {
+    return {
+      ...initialState,
+      message:
+        'Cabeçalho inválido. O CSV precisa ter pelo menos as colunas "Data" e "Título". Colunas encontradas: ' +
+        headers.join(", "),
+    };
+  }
+
+  const rows = allRows.slice(1); // skip header
   const eventos: Array<{
     data_evento: string;
     titulo: string;
@@ -110,10 +148,10 @@ export async function importarEventos(
 
   for (const row of rows) {
     if (row.every((cell) => String(cell).trim() === "")) continue;
-    const data = parseData(String(row[0] ?? ""));
-    const titulo = String(row[1] ?? "").trim();
-    const local = String(row[2] ?? "").trim();
-    const descricao = String(row[3] ?? "").trim();
+    const data = parseData(String(row[colData] ?? ""));
+    const titulo = String(row[colTitulo] ?? "").trim();
+    const local = colLocal !== -1 ? String(row[colLocal] ?? "").trim() : "";
+    const descricao = colDescricao !== -1 ? String(row[colDescricao] ?? "").trim() : "";
 
     const parsed = eventoRowSchema.safeParse({
       data: data ?? "",
@@ -122,10 +160,10 @@ export async function importarEventos(
       descricao: descricao || undefined,
     });
     if (!parsed.success) {
+      const issues = parsed.error.issues.map((i) => i.message).join("; ");
       return {
         ...initialState,
-        message:
-          "Linha inválida no CSV: Data;Título;Local;Descrição (com cabeçalho na primeira linha).",
+        message: `Linha inválida: ${issues}`,
       };
     }
     eventos.push({

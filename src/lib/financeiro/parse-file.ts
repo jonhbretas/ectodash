@@ -15,8 +15,15 @@ export type ParseFileResult =
 // Minimal RFC-4180-ish CSV tokenizer: handles quoted fields (with embedded
 // separators/newlines) and detects ";" vs "," by counting each on the first
 // non-comment line.
+// Strip UTF-8 BOM (U+FEFF) that some tools prepend — prevents the first
+// header cell from becoming "﻿Data" instead of "Data".
+function stripBom(text: string): string {
+  return text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
+}
+
 export function parseCsv(texto: string): unknown[][] {
-  const lines = texto.replace(/\r\n/g, "\n").split("\n");
+  const clean = stripBom(texto);
+  const lines = clean.replace(/\r\n/g, "\n").split("\n");
   const firstDataLine = lines.find((line) => line.trim() !== "") ?? "";
   const semicolons = (firstDataLine.match(/;/g) ?? []).length;
   const commas = (firstDataLine.match(/,/g) ?? []).length;
