@@ -89,6 +89,7 @@ Plans:
 **Goal**: The application's base interface is legible, touch-friendly, and responsive enough for an elderly-inclusive volunteer audience to use without friction.
 **Mode:** mvp
 **Depends on**: Phase 1
+**Sequencing note (2026-08-04, user decision)**: Deferred to run AFTER Phase 4. The user wanted visible screens sooner, and Phase 4 (Demandas CRUD) is the first phase that ships real UI. Phase 3 becomes a polish pass over the login, dashboard, and demandas screens rather than a foundation laid before them — it applies the accessible design system to more surfaces at once. Phase 4's own accessibility floor (large text, big touch targets, AA contrast, pt-BR copy) carries forward from Phase 1's established baseline in the meantime.
 **Requirements**: UX-01, UX-03
 **Success Criteria** (what must be TRUE):
 
@@ -106,7 +107,8 @@ Plans:
 
 **Goal**: Users can create, edit, and track the status of demandas (tasks), with overdue items flagged automatically without manual marking.
 **Mode:** mvp
-**Depends on**: Phase 2, Phase 3
+**Depends on**: Phase 2
+**UI hint**: yes
 **Requirements**: DEM-01, DEM-02, DEM-03
 **Success Criteria** (what must be TRUE):
 
