@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SignOutButton from "./sign-out-button";
-import DemandaCard from "./demandas/demanda-card";
+import DemandaList from "./demandas/demanda-list";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -26,12 +25,12 @@ export default async function DashboardPage() {
 
   const email = profile?.email ?? user.email;
 
-  // demandas_com_status, not the bare demandas table, is the read source
-  // every later plan in this phase reuses — even though this plan does not
-  // yet render the atrasada value (that's Plan 04-04's job).
+  // demandas_com_status, not the bare demandas table, is the read source —
+  // atrasada is read directly from this view's server-computed column, never
+  // recomputed client-side (plan 04-01).
   const { data: demandas } = await supabase
     .from("demandas_com_status")
-    .select("id, titulo, prazo")
+    .select("id, titulo, prazo, status, area, atrasada")
     .order("prazo", { ascending: true });
 
   const demandaIds = (demandas ?? []).map((demanda) => demanda.id);
@@ -63,39 +62,25 @@ export default async function DashboardPage() {
     responsaveisPorDemanda.set(row.demanda_id, emails);
   }
 
+  const demandaList = (demandas ?? []).map((demanda) => ({
+    id: demanda.id,
+    titulo: demanda.titulo,
+    prazo: demanda.prazo,
+    status: demanda.status,
+    area: demanda.area,
+    atrasada: demanda.atrasada,
+    responsavelEmails: responsaveisPorDemanda.get(demanda.id) ?? [],
+  }));
+
   return (
     <main className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-16">
       <div className="flex w-full max-w-md flex-col items-center gap-4 text-center">
-        <h1 className="text-3xl font-semibold text-zinc-900">Olá, {email}</h1>
+        <h2 className="text-3xl font-semibold text-zinc-900">Olá, {email}</h2>
         <SignOutButton />
       </div>
 
-      <div className="flex w-full max-w-md flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-zinc-900">Demandas</h2>
-        </div>
-
-        <Link
-          href="/demandas/nova"
-          className="min-h-14 flex w-full items-center justify-center rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-        >
-          Nova demanda
-        </Link>
-
-        {demandas && demandas.length > 0 ? (
-          <ul className="flex flex-col gap-4">
-            {demandas.map((demanda) => (
-              <DemandaCard
-                key={demanda.id}
-                titulo={demanda.titulo}
-                prazo={demanda.prazo}
-                responsavelEmails={responsaveisPorDemanda.get(demanda.id) ?? []}
-              />
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xl text-zinc-700">Nenhuma demanda ainda.</p>
-        )}
+      <div className="flex w-full max-w-4xl flex-col gap-4">
+        <DemandaList demandas={demandaList} />
       </div>
     </main>
   );
