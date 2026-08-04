@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 07
 current_phase_name: Email Reminders
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-08-04T15:22:26.551Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-08-04T15:42:04.007Z"
 last_activity: 2026-08-04
 last_activity_desc: Phase 07 execution started
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 22
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 ## Current Position
 
 Phase: 07 (Email Reminders) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-04 — Phase 07 execution started
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [████████░░] 82%
 | Phase 06 P02 | 3min | 1 tasks | 2 files |
 | Phase 07 P01 | 31536581s | 2 tasks | 8 files |
 | Phase 07 P01 | 9min | 2 tasks | 8 files |
+| Phase 07 P02 | ~50min | 1 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Recent decisions affecting current work:
 - [Phase ?]: reminder_runs and demanda_reminders_log shipped as two separate tables (not one) — a crashed-before-sending cron run has no per-reminder row to attach run-level metadata to
 - [Phase ?]: resend/react-email package-legitimacy checkpoint approved by human in the orchestrating conversation (registration dates 2016/2017, resend GitHub org, 9.3M/3.3M weekly downloads — [SUS] flag was a too-new-latest-version false positive)
 - [Phase ?]: reminderTipoFor() uses date-fns parseISO instead of new Date() to avoid a UTC-parsing off-by-one day-count bug discovered locally in a UTC-3 timezone
+- [Phase ?]: Cron route auth failure lifecycle (LEMB-04) proven via a spied PostgrestFilterBuilder.or() rejection against the live project, not a synthetic mock — confirms reminder_runs never remains 'running' on a real mid-run crash.
+- [Phase ?]: src/proxy.ts's isPublicPath() gate exempts /api/cron/* — a Vercel Cron invocation has no end-user session, so without this exemption the proxy redirected every cron request to /login before the route's own CRON_SECRET check ever ran (Rule 1 bug found via manual curl verification).
 
 ### Pending Todos
 
@@ -146,6 +149,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T15:22:26.539Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-08-04T15:42:03.995Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
