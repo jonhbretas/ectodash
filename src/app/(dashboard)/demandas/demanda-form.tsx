@@ -158,10 +158,256 @@ export default function DemandaForm({
     }
   };
 
+  const cardClass =
+    "flex flex-col gap-5 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60";
+  const sectionTitleClass = "text-base font-semibold text-zinc-400 uppercase tracking-wider";
+
+  if (wide) {
+    return (
+      <form onSubmit={handleSubmit(onValid)} className="flex w-full flex-col gap-8">
+        <p className="text-base text-zinc-500">
+          Campos com * são obrigatórios.
+        </p>
+
+        {/* === Primário: Título e Prazo === */}
+        <div className={cardClass}>
+          <h3 className={sectionTitleClass}>Informações básicas</h3>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="titulo" className={fieldLabelClass}>
+                Título *
+              </Label>
+              <Input
+                id="titulo"
+                type="text"
+                placeholder="Ex: Revisar relatório mensal"
+                className={fieldInputClass}
+                {...register("titulo")}
+              />
+              {errors.titulo && (
+                <span className={errorClass}>{errors.titulo.message}</span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="prazo" className={fieldLabelClass}>
+                Prazo *
+              </Label>
+              <Input
+                id="prazo"
+                type="date"
+                className={fieldInputClass}
+                {...register("prazo")}
+              />
+              {errors.prazo && (
+                <span className={errorClass}>{errors.prazo.message}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* === Responsáveis e Membros === */}
+        <div className={cardClass}>
+          <h3 className={sectionTitleClass}>Pessoas</h3>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="responsavelIds" className={fieldLabelClass}>
+                Responsável *
+              </label>
+              <select
+                id="responsavelIds"
+                multiple
+                size={5}
+                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                {...register("responsavelIds")}
+              >
+                {profiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.full_name?.trim() || profile.email}
+                  </option>
+                ))}
+              </select>
+              {errors.responsavelIds && (
+                <span className={errorClass}>{errors.responsavelIds.message}</span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="membroIds" className={fieldLabelClass}>
+                Membros / acompanhantes (opcional)
+              </label>
+              <select
+                id="membroIds"
+                multiple
+                size={5}
+                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                {...register("membroIds")}
+              >
+                {profiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.full_name?.trim() || profile.email}
+                  </option>
+                ))}
+              </select>
+              <p className="text-base text-zinc-500">
+                Acompanhantes acompanham a demanda e recebem os mesmos
+                lembretes por e-mail.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* === Classificação === */}
+        <div className={cardClass}>
+          <h3 className={sectionTitleClass}>Classificação</h3>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="area" className={fieldLabelClass}>
+                Área
+              </Label>
+              <Input
+                id="area"
+                type="text"
+                placeholder="Ex: Pesquisa de Campo"
+                className={fieldInputClass}
+                {...register("area")}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="projeto" className={fieldLabelClass}>
+                Projeto
+              </Label>
+              <Input
+                id="projeto"
+                type="text"
+                placeholder="Ex: Projeto Horta Comunitária"
+                className={fieldInputClass}
+                {...register("projeto")}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="eventoId" className={fieldLabelClass}>
+                Evento (opcional)
+              </label>
+              <select
+                id="eventoId"
+                name="eventoId"
+                defaultValue={String(defaultValues?.eventoId ?? "")}
+                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              >
+                <option value="">Nenhum evento</option>
+                {eventos.map((evento) => (
+                  <option key={evento.id} value={evento.id}>
+                    {evento.titulo}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="etiquetaId" className={fieldLabelClass}>
+                  Etiqueta (opcional)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setCriandoEtiqueta((v) => !v)}
+                  className="text-base font-medium text-blue-700 transition-colors hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                >
+                  {criandoEtiqueta ? "Cancelar" : "+ Nova etiqueta"}
+                </button>
+              </div>
+              <select
+                id="etiquetaId"
+                name="etiquetaId"
+                value={etiquetaId}
+                onChange={(e) => setEtiquetaId(e.target.value)}
+                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              >
+                <option value="">Nenhuma etiqueta</option>
+                {etiquetaOptions.map((etiqueta) => (
+                  <option key={etiqueta.id} value={etiqueta.id}>
+                    {etiqueta.nome} ({etiqueta.area})
+                  </option>
+                ))}
+              </select>
+
+              {criandoEtiqueta && (
+                <div className="mt-1 flex flex-col gap-3 rounded-xl bg-zinc-50 p-4 ring-1 ring-zinc-200/60">
+                  <p className="text-base text-zinc-600">
+                    Toda etiqueta pertence a uma área — escolha a área e dê
+                    um nome (ex.: Comunicação, Vendas, Artes).
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <input
+                      value={novaEtiquetaArea}
+                      onChange={(e) => setNovaEtiquetaArea(e.target.value)}
+                      placeholder="Área (ex.: Pesquisa)"
+                      className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                    />
+                    <input
+                      value={novaEtiquetaNome}
+                      onChange={(e) => setNovaEtiquetaNome(e.target.value)}
+                      placeholder="Nome da etiqueta (ex.: Comunicação)"
+                      className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                    />
+                  </div>
+                  {etiquetaError && (
+                    <p className="text-base text-red-600">{etiquetaError}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleCriarEtiqueta}
+                    className="min-h-12 self-start rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                  >
+                    Criar etiqueta
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* === Status === */}
+        <div className={cardClass}>
+          <h3 className={sectionTitleClass}>Status</h3>
+          <div className="max-w-xs">
+            <select
+              id="status"
+              className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              {...register("status")}
+            >
+              <option value="pendente">Pendente</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="concluida">Concluída</option>
+            </select>
+          </div>
+        </div>
+
+        {/* === Ações === */}
+        <div className={cardClass}>
+          <SubmitButton mode={mode} />
+          <Link
+            href="/"
+            className="flex min-h-14 items-center justify-center rounded-xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          >
+            Cancelar
+          </Link>
+        </div>
+
+        <div aria-live="polite" className="min-h-7 text-lg text-zinc-700">
+          {state.message}
+        </div>
+      </form>
+    );
+  }
+
   return (
     <form
       onSubmit={handleSubmit(onValid)}
-      className={`flex w-full flex-col gap-6 ${wide ? "" : "max-w-md"}`}
+      className="flex w-full flex-col gap-6 max-w-md"
     >
       <p className="text-base text-zinc-500">
         Campos com * são obrigatórios.
