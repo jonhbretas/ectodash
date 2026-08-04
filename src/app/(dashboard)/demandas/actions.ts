@@ -89,3 +89,157 @@ export async function createDemanda(
   revalidatePath("/");
   return { ok: true, message: "Demanda criada com sucesso." };
 }
+
+export type UpdateDemandaState = {
+  ok: boolean;
+  message: string;
+};
+
+// id is bound server-side via DemandaForm's `updateDemanda.bind(null, demandaId)`
+// (mode="edit") — it is a function parameter, never read from `formData`,
+// matching the same anti-spoofing discipline createDemanda already applies
+// to `criado_por` (RESEARCH.md Pitfall 4 / Code Examples comment).
+export async function updateDemanda(
+  id: number,
+  prevState: UpdateDemandaState,
+  formData: FormData
+): Promise<UpdateDemandaState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  const rawArea = formData.get("area");
+  const parsed = demandaSchema.safeParse({
+    titulo: formData.get("titulo"),
+    responsavelIds: formData.getAll("responsavelIds"),
+    prazo: formData.get("prazo"),
+    status: formData.get("status"),
+    area: typeof rawArea === "string" && rawArea.length > 0 ? rawArea : undefined,
+  });
+
+  if (!parsed.success) {
+    return { ok: false, message: "Verifique os campos destacados." };
+  }
+
+  // criado_por is deliberately absent from this update payload — it is set
+  // once at creation time and never changed.
+  const { error: demandaError } = await supabase
+    .from("demandas")
+    .update({
+      titulo: parsed.data.titulo,
+      prazo: parsed.data.prazo,
+      status: parsed.data.status,
+      area: parsed.data.area,
+    })
+    .eq("id", id);
+
+  if (demandaError) {
+    console.error("updateDemanda: update failed", demandaError);
+    return { ok: false, message: "Não foi possível salvar as alterações." };
+  }
+
+  // Responsável diffing: re-query the row's actual current set server-side
+  // rather than trusting whatever the client last rendered as "current" —
+  // the client's form state only expresses the *desired* end state
+  // (T-04-12 mitigation). Only the real delta is written: additions are
+  // inserted, removals are deleted, and either call is skipped entirely
+  // when its list is empty rather than issuing a no-op insert/delete.
+  const { data: currentRows, error: currentError } = await supabase
+    .from("demanda_responsaveis")
+    .select("profile_id")
+    .eq("demanda_id", id);
+
+  if (currentError) {
+    console.error(
+      "updateDemanda: reading current responsaveis failed",
+      currentError
+    );
+    return { ok: false, message: "Não foi possível salvar as alterações." };
+  }
+
+  const currentIds = new Set(
+    (currentRows ?? []).map((row) => row.profile_id as string)
+  );
+  const desiredIds = new Set(parsed.data.responsavelIds);
+
+  const idsToAdd = [...desiredIds].filter((id) => !currentIds.has(id));
+  const idsToRemove = [...currentIds].filter((id) => !desiredIds.has(id));
+
+  if (idsToAdd.length > 0) {
+    const { error: insertError } = await supabase
+      .from("demanda_responsaveis")
+      .insert(
+        idsToAdd.map((profileId) => ({
+          demanda_id: id,
+          profile_id: profileId,
+        }))
+      );
+
+    if (insertError) {
+      console.error(
+        "updateDemanda: demanda_responsaveis insert failed",
+        insertError
+      );
+      return { ok: false, message: "Não foi possível salvar as alterações." };
+    }
+  }
+
+  if (idsToRemove.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("demanda_responsaveis")
+      .delete()
+      .eq("demanda_id", id)
+      .in("profile_id", idsToRemove);
+
+    if (deleteError) {
+      console.error(
+        "updateDemanda: demanda_responsaveis delete failed",
+        deleteError
+      );
+      return { ok: false, message: "Não foi possível salvar as alterações." };
+    }
+  }
+
+  revalidatePath("/");
+  return { ok: true, message: "Demanda atualizada." };
+}
+
+export type ConcludeDemandaState = {
+  ok: boolean;
+  message: string;
+};
+
+// A narrower, separate action rather than a call into updateDemanda — a
+// smaller, more auditable mutation surface for a single-field status change
+// (RESEARCH.md Code Examples rationale), and the one-tap conclude UX (DEM-02)
+// stays independent of whatever else is currently typed into the edit form.
+export async function concludeDemanda(
+  id: number
+): Promise<ConcludeDemandaState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada." };
+  }
+
+  const { error } = await supabase
+    .from("demandas")
+    .update({ status: "concluida" })
+    .eq("id", id);
+
+  if (error) {
+    console.error("concludeDemanda: update failed", error);
+    return { ok: false, message: "Não foi possível concluir a demanda." };
+  }
+
+  revalidatePath("/");
+  return { ok: true, message: "Demanda concluída." };
+}

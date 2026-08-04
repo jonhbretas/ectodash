@@ -5,18 +5,28 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createDemanda, type CreateDemandaState } from "./actions";
+import {
+  createDemanda,
+  updateDemanda,
+  type CreateDemandaState,
+  type UpdateDemandaState,
+} from "./actions";
 import { demandaSchema, type DemandaFormValues } from "./demanda-schema";
 
-const initialState: CreateDemandaState = { ok: false, message: "" };
+const initialState: CreateDemandaState | UpdateDemandaState = {
+  ok: false,
+  message: "",
+};
 
 type Profile = {
   id: string;
   email: string;
 };
 
-function SubmitButton() {
+function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   const { pending } = useFormStatus();
+  const pendingLabel = mode === "edit" ? "Salvando..." : "Criando...";
+  const idleLabel = mode === "edit" ? "Salvar alterações" : "Criar demanda";
 
   return (
     <button
@@ -24,13 +34,30 @@ function SubmitButton() {
       disabled={pending}
       className="min-h-14 w-full rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
     >
-      {pending ? "Criando..." : "Criar demanda"}
+      {pending ? pendingLabel : idleLabel}
     </button>
   );
 }
 
-export default function DemandaForm({ profiles }: { profiles: Profile[] }) {
-  const [state, formAction] = useActionState(createDemanda, initialState);
+type DemandaFormProps = {
+  profiles: Profile[];
+  mode?: "create" | "edit";
+  demandaId?: number;
+  defaultValues?: Partial<DemandaFormValues>;
+};
+
+export default function DemandaForm({
+  profiles,
+  mode = "create",
+  demandaId,
+  defaultValues,
+}: DemandaFormProps) {
+  // One DemandaForm handles both modes via props — mode="edit" binds the
+  // update action to a server-trusted demandaId via .bind(null, demandaId),
+  // rather than forking a second form component (RESEARCH.md Pattern 5's
+  // shared-schema intent extended to both mutation paths).
+  const action = mode === "edit" ? updateDemanda.bind(null, demandaId!) : createDemanda;
+  const [state, formAction] = useActionState(action, initialState);
 
   const {
     register,
@@ -40,6 +67,7 @@ export default function DemandaForm({ profiles }: { profiles: Profile[] }) {
     resolver: zodResolver(demandaSchema),
     defaultValues: {
       status: "pendente",
+      ...defaultValues,
     },
   });
 
@@ -135,7 +163,6 @@ export default function DemandaForm({ profiles }: { profiles: Profile[] }) {
         </label>
         <select
           id="status"
-          defaultValue="pendente"
           className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           {...register("status")}
         >
@@ -158,7 +185,7 @@ export default function DemandaForm({ profiles }: { profiles: Profile[] }) {
         />
       </div>
 
-      <SubmitButton />
+      <SubmitButton mode={mode} />
 
       <Link
         href="/"
