@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import DemandaForm from "../demanda-form";
+import PageContainer from "../../page-container";
 
 export default async function NovaDemandaPage() {
   const supabase = await createClient();
@@ -13,9 +14,9 @@ export default async function NovaDemandaPage() {
     .order("email");
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-16">
+    <PageContainer>
       <h1 className="text-2xl font-semibold text-zinc-900">Nova demanda</h1>
       <DemandaForm profiles={profiles ?? []} />
-    </main>
+    </PageContainer>
   );
 }

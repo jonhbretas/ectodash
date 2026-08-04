@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import SignOutButton from "./sign-out-button";
 import DemandaList from "./demandas/demanda-list";
+import PageContainer from "./page-container";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -73,7 +74,7 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-16">
+    <PageContainer>
       <div className="flex w-full max-w-md flex-col items-center gap-4 text-center">
         <h2 className="text-3xl font-semibold text-zinc-900">Olá, {email}</h2>
         <SignOutButton />
@@ -82,6 +83,6 @@ export default async function DashboardPage() {
       <div className="flex w-full max-w-4xl flex-col gap-4">
         <DemandaList demandas={demandaList} />
       </div>
-    </main>
+    </PageContainer>
   );
 }

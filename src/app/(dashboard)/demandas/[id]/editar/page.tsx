@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import DemandaForm from "../../demanda-form";
 import ConcludeButton from "../../conclude-button";
 import type { DemandaFormValues } from "../../demanda-schema";
+import PageContainer from "../../../page-container";
 
 type EditarDemandaPageProps = {
   // Next.js 16: params is a Promise, must be awaited before reading route
@@ -20,7 +21,7 @@ export default async function EditarDemandaPage({
 
   if (!Number.isFinite(id)) {
     return (
-      <main className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-16">
+      <PageContainer>
         <p className="text-xl text-zinc-700">Demanda não encontrada.</p>
         <Link
           href="/"
@@ -28,7 +29,7 @@ export default async function EditarDemandaPage({
         >
           Voltar para a lista
         </Link>
-      </main>
+      </PageContainer>
     );
   }
 
@@ -44,7 +45,7 @@ export default async function EditarDemandaPage({
 
   if (!demanda) {
     return (
-      <main className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-16">
+      <PageContainer>
         <p className="text-xl text-zinc-700">Demanda não encontrada.</p>
         <Link
           href="/"
@@ -52,7 +53,7 @@ export default async function EditarDemandaPage({
         >
           Voltar para a lista
         </Link>
-      </main>
+      </PageContainer>
     );
   }
 
@@ -73,7 +74,7 @@ export default async function EditarDemandaPage({
   };
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-16">
+    <PageContainer>
       <h1 className="text-2xl font-semibold text-zinc-900">Editar demanda</h1>
       <DemandaForm
         mode="edit"
@@ -94,6 +95,6 @@ export default async function EditarDemandaPage({
           <ConcludeButton demandaId={id} />
         </div>
       )}
-    </main>
+    </PageContainer>
   );
 }
