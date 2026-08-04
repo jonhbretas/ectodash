@@ -199,11 +199,21 @@ Plans:
   3. A user never receives more than one reminder for the same demanda within the same day/cycle.
   4. Coordenador can see a log of reminder job runs showing success/failure and how many emails were sent.
 
-**Plans**: TBD
+**Plans**: 0/3 plans executed
+**UI hint**: no (a small addition to the existing /painel dashboard, not a new user-facing screen)
 
 Plans:
+**Wave 1**
 
-- [ ] 07-01: TBD
+- [ ] 07-01-PLAN.md — Reminder-log schema (demanda_reminders_log dedup + reminder_runs), resend/react-email package-legitimacy checkpoint + install, eligibility classifier (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 07-02-PLAN.md — CRON_SECRET-gated cron route: admin client, email template, dedup+send loop, run-log lifecycle (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 07-03-PLAN.md — Vercel Production env var checkpoint (SUPABASE_SERVICE_ROLE_KEY/RESEND_API_KEY/CRON_SECRET) + coordenador-visible reminder-runs panel on /painel (wave 3)
 
 ### Phase 8: AI Task Extraction & Review
 
@@ -273,7 +283,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. Demandas CRUD & Overdue Tracking | 4/4 | Complete |  |
 | 5. Demandas Filtering & Role-Scoped Access | 2/2 | In Progress|  |
 | 6. Coordinator Overview Dashboard | 2/2 | In Progress|  |
-| 7. Email Reminders | 0/TBD | Not started | - |
+| 7. Email Reminders | 0/3 | Planned    |  |
 | 8. AI Task Extraction & Review | 0/TBD | Not started | - |
 | 9. Google Sheets Sync | 0/TBD | Not started | - |
 | 10. Financial Dashboard | 0/TBD | Not started | - |

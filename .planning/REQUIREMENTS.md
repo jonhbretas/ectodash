@@ -22,10 +22,10 @@
 
 ### Lembretes por E-mail
 
-- [ ] **LEMB-01**: Sistema envia lembrete por e-mail (Resend) para demandas com prazo próximo
-- [ ] **LEMB-02**: Sistema envia lembrete por e-mail para demandas já atrasadas
-- [ ] **LEMB-03**: Envio é idempotente — não manda lembrete duplicado no mesmo dia/ciclo
-- [ ] **LEMB-04**: Execução do job de lembrete fica registrada e visível (sucesso/falha, quantidade enviada)
+- [x] **LEMB-01**: Sistema envia lembrete por e-mail (Resend) para demandas com prazo próximo
+- [x] **LEMB-02**: Sistema envia lembrete por e-mail para demandas já atrasadas
+- [x] **LEMB-03**: Envio é idempotente — não manda lembrete duplicado no mesmo dia/ciclo
+- [x] **LEMB-04**: Execução do job de lembrete fica registrada e visível (sucesso/falha, quantidade enviada)
 
 ### Extração de Demandas via IA
 
@@ -104,10 +104,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COORD-01 | Phase 6 | Complete |
 | COORD-02 | Phase 6 | Complete |
 | COORD-03 | Phase 6 | Complete |
-| LEMB-01 | Phase 7 | Pending |
-| LEMB-02 | Phase 7 | Pending |
-| LEMB-03 | Phase 7 | Pending |
-| LEMB-04 | Phase 7 | Pending |
+| LEMB-01 | Phase 7 | Complete |
+| LEMB-02 | Phase 7 | Complete |
+| LEMB-03 | Phase 7 | Complete |
+| LEMB-04 | Phase 7 | Complete |
 | IA-01 | Phase 8 | Pending |
 | IA-03 | Phase 8 | Pending |
 | IA-04 | Phase 8 | Pending |

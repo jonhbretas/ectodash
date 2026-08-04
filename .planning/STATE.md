@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 06
-current_phase_name: Coordinator Overview Dashboard
-status: verifying
-stopped_at: Completed 06-02-PLAN.md (coordenador entry-point link) — Phase 6 complete
-last_updated: "2026-08-04T14:12:22.994Z"
+current_phase: 07
+current_phase_name: Email Reminders
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-08-04T15:22:26.551Z"
 last_activity: 2026-08-04
-last_activity_desc: Phase 06 execution started
+last_activity_desc: Phase 07 execution started
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
-  total_plans: 19
+  total_plans: 22
   completed_plans: 18
 ---
 
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-02)
 
 **Core value:** Coordenador consegue ver, num só lugar, o andamento real de todas as demandas/projetos da instituição — quem é responsável, qual o prazo, o que está atrasado — sem precisar cobrar manualmente ou vasculhar planilhas e grupos.
-**Current focus:** Phase 06 — Coordinator Overview Dashboard
+**Current focus:** Phase 07 — Email Reminders
 
 ## Current Position
 
-Phase: 06 (Coordinator Overview Dashboard) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
-Last activity: 2026-08-04 — Phase 06 execution started
+Phase: 07 (Email Reminders) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-08-04 — Phase 07 execution started
 
-Progress: [██████████] 95%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
@@ -74,6 +74,8 @@ Progress: [██████████] 95%
 | Phase 05 P02 | 55min | 3 tasks | 7 files |
 | Phase 06 P01 | 45min | 1 tasks | 5 files |
 | Phase 06 P02 | 3min | 1 tasks | 2 files |
+| Phase 07 P01 | 31536581s | 2 tasks | 8 files |
+| Phase 07 P01 | 9min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -115,6 +117,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 05-02] Extended vitest.config.ts's include glob to also cover src/**/*.test.ts, since the TDD task's colocated unit test file lived outside the previous tests/**/*.test.ts-only scope
 - [Phase ?]: Phase 06-01: /painel coordinator dashboard built entirely on migration 0004's already-live RLS grant, zero new migrations; adopted 06-UI-SPEC.md's /painel route + same-URL access-denied state over 06-RESEARCH.md's /coordenador + redirect() recommendation
 - [Phase ?]: [Phase 06-02] Coordenador-only 'Painel do coordenador' entry-point link added to /'s header row, threaded from page.tsx's existing profiles.role read (isCoordenador prop, no new query); reused demanda-filters.tsx's exact 'Limpar filtros' secondary/outline className. Plan's bg-blue-700 acceptance criterion expected count 1 but file already had 2 pre-existing occurrences (header + empty-state Nova demanda buttons) before this plan — documented as a plan-authoring discrepancy, not an implementation defect.
+- [Phase ?]: reminder_runs and demanda_reminders_log shipped as two separate tables (not one) — a crashed-before-sending cron run has no per-reminder row to attach run-level metadata to
+- [Phase ?]: resend/react-email package-legitimacy checkpoint approved by human in the orchestrating conversation (registration dates 2016/2017, resend GitHub org, 9.3M/3.3M weekly downloads — [SUS] flag was a too-new-latest-version false positive)
+- [Phase ?]: reminderTipoFor() uses date-fns parseISO instead of new Date() to avoid a UTC-parsing off-by-one day-count bug discovered locally in a UTC-3 timezone
 
 ### Pending Todos
 
@@ -141,6 +146,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T14:12:22.970Z
-Stopped at: Completed 06-02-PLAN.md (coordenador entry-point link) — Phase 6 complete
+Last session: 2026-08-04T15:22:26.539Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
