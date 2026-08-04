@@ -174,13 +174,13 @@ Plans:
   2. Overdue demandas across the whole institution are highlighted in this dashboard.
   3. Dashboard shows counts of demandas grouped by área and by volunteer.
 
-**Plans**: 0/2 plans executed
+**Plans**: 1/2 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 06-01-PLAN.md — TRACER: /painel end-to-end — shadcn card, stat cards, área/voluntário breakdowns, overdue panel, access states (wave 1)
+- [x] 06-01-PLAN.md — TRACER: /painel end-to-end — shadcn card, stat cards, área/voluntário breakdowns, overdue panel, access states (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -272,7 +272,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Accessible UI Foundation | 3/3 | In Progress|  |
 | 4. Demandas CRUD & Overdue Tracking | 4/4 | Complete |  |
 | 5. Demandas Filtering & Role-Scoped Access | 2/2 | In Progress|  |
-| 6. Coordinator Overview Dashboard | 0/TBD | Not started | - |
+| 6. Coordinator Overview Dashboard | 1/2 | In Progress|  |
 | 7. Email Reminders | 0/TBD | Not started | - |
 | 8. AI Task Extraction & Review | 0/TBD | Not started | - |
 | 9. Google Sheets Sync | 0/TBD | Not started | - |

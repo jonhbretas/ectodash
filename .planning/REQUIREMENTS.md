@@ -42,9 +42,9 @@
 
 ### Painel do Coordenador
 
-- [ ] **COORD-01**: Coordenador vê painel único com status de projetos/pesquisas/tarefas por voluntário
-- [ ] **COORD-02**: Painel destaca demandas atrasadas em toda a instituição
-- [ ] **COORD-03**: Painel resume contagem de demandas por área e por voluntário
+- [x] **COORD-01**: Coordenador vê painel único com status de projetos/pesquisas/tarefas por voluntário
+- [x] **COORD-02**: Painel destaca demandas atrasadas em toda a instituição
+- [x] **COORD-03**: Painel resume contagem de demandas por área e por voluntário
 
 ### UX Acessível
 
@@ -101,9 +101,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEM-04 | Phase 5 | Complete |
 | DEM-05 | Phase 5 | Complete |
 | UX-02 | Phase 5 | Complete |
-| COORD-01 | Phase 6 | Pending |
-| COORD-02 | Phase 6 | Pending |
-| COORD-03 | Phase 6 | Pending |
+| COORD-01 | Phase 6 | Complete |
+| COORD-02 | Phase 6 | Complete |
+| COORD-03 | Phase 6 | Complete |
 | LEMB-01 | Phase 7 | Pending |
 | LEMB-02 | Phase 7 | Pending |
 | LEMB-03 | Phase 7 | Pending |

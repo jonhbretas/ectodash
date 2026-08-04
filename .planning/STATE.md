@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 05
-current_phase_name: Demandas Filtering & Role-Scoped Access
-status: verifying
-stopped_at: Completed 05-02-PLAN.md (filter/group UI, role-scoped-view notice, conclude-confirmation)
-last_updated: "2026-08-04T13:11:25.441Z"
+current_phase: 06
+current_phase_name: Coordinator Overview Dashboard
+status: executing
+stopped_at: Completed 06-01-PLAN.md (painel coordinator dashboard tracer)
+last_updated: "2026-08-04T14:05:39.293Z"
 last_activity: 2026-08-04
-last_activity_desc: Phase 05 execution started
+last_activity_desc: Phase 06 execution started
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 4
-  total_plans: 17
-  completed_plans: 16
+  total_plans: 19
+  completed_plans: 17
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-02)
 
 **Core value:** Coordenador consegue ver, num só lugar, o andamento real de todas as demandas/projetos da instituição — quem é responsável, qual o prazo, o que está atrasado — sem precisar cobrar manualmente ou vasculhar planilhas e grupos.
-**Current focus:** Phase 05 — Demandas Filtering & Role-Scoped Access
+**Current focus:** Phase 06 — Coordinator Overview Dashboard
 
 ## Current Position
 
-Phase: 05 (Demandas Filtering & Role-Scoped Access) — EXECUTING
+Phase: 06 (Coordinator Overview Dashboard) — EXECUTING
 Plan: 2 of 2
-Status: Phase complete — ready for verification
-Last activity: 2026-08-04 — Phase 05 execution started
+Status: Ready to execute
+Last activity: 2026-08-04 — Phase 06 execution started
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [█████████░] 88%
 | Phase 03 P02 | 25min | 2 tasks | 6 files |
 | Phase 05 P01 | 62min | 1 tasks | 4 files |
 | Phase 05 P02 | 55min | 3 tasks | 7 files |
+| Phase 06 P01 | 45min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 05-02] Grouping by responsável: a demanda with multiple responsáveis appears once per group (one bucket per responsável), documented since 05-UI-SPEC.md left this tiebreaker unresolved
 - [Phase ?]: [Phase 05-02] Multi-área role-scoped-view notice for a líder with 2+ áreas uses best-effort natural PT-BR phrasing (comma-joined, final 'e') since no locked copy existed beyond the single-área example; a líder with zero lider_areas rows falls back to the voluntário-comum notice string rather than a broken empty interpolation
 - [Phase ?]: [Phase 05-02] Extended vitest.config.ts's include glob to also cover src/**/*.test.ts, since the TDD task's colocated unit test file lived outside the previous tests/**/*.test.ts-only scope
+- [Phase ?]: Phase 06-01: /painel coordinator dashboard built entirely on migration 0004's already-live RLS grant, zero new migrations; adopted 06-UI-SPEC.md's /painel route + same-URL access-denied state over 06-RESEARCH.md's /coordenador + redirect() recommendation
 
 ### Pending Todos
 
@@ -137,6 +139,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-04T13:11:25.395Z
-Stopped at: Completed 05-02-PLAN.md (filter/group UI, role-scoped-view notice, conclude-confirmation)
+Last session: 2026-08-04T14:05:39.276Z
+Stopped at: Completed 06-01-PLAN.md (painel coordinator dashboard tracer)
 Resume file: None
