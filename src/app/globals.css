@@ -1,26 +1,105 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Fixed: shadcn init overwrote this to a self-referencing var(--font-sans)
+     (broken); restored to the project's actual Geist Sans font variable,
+     set via next/font/google in layout.tsx (Rule 1 — CLI-introduced bug). */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  /* Project-local success/warning tokens (RESEARCH.md Open Question 3) */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Reconciled per 03-UI-SPEC.md's Color table / 03-RESEARCH.md Pattern 1 —
+     this project's locked hex palette, not shadcn's stock OKLCH neutral
+     defaults. No .dark block exists: no dark-mode requirement is in scope
+     (ROADMAP.md/PROJECT.md make no mention of it, RESEARCH.md Assumption A4). */
+  --background: #FAFAFA;      /* zinc-50 */
+  --foreground: #171717;      /* zinc-900 */
+  --card: #FFFFFF;
+  --card-foreground: #171717;
+  --popover: #FFFFFF;
+  --popover-foreground: #171717;
+  --primary: #1D4ED8;         /* blue-700 — UI-SPEC accent role */
+  --primary-foreground: #FFFFFF;
+  --secondary: #FFFFFF;
+  --secondary-foreground: #171717;
+  --muted: #F4F4F5;           /* zinc-100 */
+  --muted-foreground: #3F3F46; /* zinc-700 */
+  --accent: #F4F4F5;          /* zinc-100 */
+  --accent-foreground: #171717;
+  --destructive: #B91C1C;     /* red-700 — UI-SPEC destructive role */
+  --destructive-foreground: #FFFFFF;
+  --border: #D4D4D8;          /* zinc-300, matches existing card/input borders */
+  --input: #A1A1AA;           /* zinc-400, matches existing input borders */
+  --ring: #1D4ED8;            /* blue-700 — matches existing focus-visible outline color */
+  --radius: 0.5rem;
+
+  /* success/warning are NOT stock shadcn tokens — added as project-local
+     custom tokens (RESEARCH.md Open Question 3's recommendation), not by
+     hijacking an existing shadcn slot. */
+  --success: #15803D;         /* green-700 */
+  --warning: #B45309;         /* amber-700 */
+
+  /* Spacing scale — promotes 03-UI-SPEC.md's Spacing Scale table into real
+     @theme tokens (RESEARCH.md Pattern 2). Tailwind v4's default numeric
+     scale already maps 1:1 to these values; existing utility classes
+     (gap-4, py-16, etc.) are not required to be rewritten. */
+  --spacing-xs: 0.25rem;    /* 4px */
+  --spacing-sm: 0.5rem;     /* 8px */
+  --spacing-md: 1rem;       /* 16px */
+  --spacing-lg: 1.5rem;     /* 24px */
+  --spacing-xl: 2rem;       /* 32px */
+  --spacing-2xl: 3rem;      /* 48px */
+  --spacing-3xl: 4rem;      /* 64px */
+
+  /* Typography scale — promotes 03-UI-SPEC.md's Typography table. */
+  --text-body: 1.25rem;      /* 20px, matches existing text-xl usage */
+  --text-meta: 1rem;         /* 16px, matches existing text-base usage */
+  --text-heading: 1.5rem;    /* 24px, matches existing text-2xl usage */
+  --text-display: 1.875rem;  /* 30px, matches existing text-3xl usage */
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
