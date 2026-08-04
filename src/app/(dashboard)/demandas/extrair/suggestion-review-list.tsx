@@ -1,5 +1,12 @@
 "use client";
 
+// Review screen for AI-suggested demandas. Editable per-card state lives
+// HERE (lifted from the card) so a single "Confirmar todas" button can
+// validate and create every still-pending card at once — the MCP-flow
+// speed-up (user decision, 2026-08-04): with responsável and prazo
+// pre-filled by the AI, one click creates everything. The human-review
+// gate (IA-04) is unchanged: nothing is ever created without this screen's
+// explicit Confirmar click, and each card remains independently editable.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, UserX } from "lucide-react";
@@ -23,6 +30,7 @@ export type Suggestion = {
   responsavelId: string | null;
   responsavelTexto: string;
   prazoTexto: string;
+  prazoSugerido: string | null;
 };
 
 type Profile = {
@@ -37,24 +45,184 @@ export type SuggestionReviewListProps = {
   profiles: Profile[];
 };
 
+type FieldErrors = { titulo?: string; responsavel?: string; prazo?: string };
+
+function validateCard(
+  titulo: string,
+  responsavelId: string | null,
+  prazo: string
+): FieldErrors {
+  const errors: FieldErrors = {};
+  if (titulo.trim().length === 0) {
+    errors.titulo = "Digite um título para a demanda.";
+  }
+  if (!responsavelId) {
+    errors.responsavel = "Escolha quem é o responsável.";
+  }
+  if (!prazo) {
+    errors.prazo = "Escolha uma data de prazo.";
+  }
+  return errors;
+}
+
 export default function SuggestionReviewList({
   suggestions,
   profiles,
 }: SuggestionReviewListProps) {
   const router = useRouter();
+
+  // Editable state for every card, lifted from the card itself — the
+  // source of truth for both per-card and bulk "Confirmar todas".
+  const [titulos, setTitulos] = useState<Record<string, string>>(() =>
+    Object.fromEntries(suggestions.map((s) => [s.key, s.titulo]))
+  );
+  const [responsavelIds, setResponsavelIds] = useState<Record<string, string | null>>(
+    () =>
+      Object.fromEntries(suggestions.map((s) => [s.key, s.responsavelId]))
+  );
+  const [prazos, setPrazos] = useState<Record<string, string>>(() =>
+    Object.fromEntries(suggestions.map((s) => [s.key, s.prazoSugerido ?? ""]))
+  );
+  const [fieldErrors, setFieldErrors] = useState<Record<string, FieldErrors>>({});
+  const [confirmErrors, setConfirmErrors] = useState<Record<string, string>>({});
   const [cardStates, setCardStates] = useState<Record<string, CardStatus>>(
     () =>
       Object.fromEntries(suggestions.map((s) => [s.key, "pending" as const]))
   );
+  const [bulkPending, setBulkPending] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState("");
 
   const total = suggestions.length;
   const resolvedCount = Object.values(cardStates).filter(
     (status) => status === "created" || status === "rejected"
   ).length;
   const allResolved = total > 0 && resolvedCount === total;
+  const pendingCount = total - resolvedCount;
 
   function setStatus(key: string, status: CardStatus) {
     setCardStates((prev) => ({ ...prev, [key]: status }));
+  }
+
+  // Creates one card. Returns true on success — shared by the per-card
+  // Confirmar and the bulk loop.
+  async function createOne(
+    key: string,
+    titulo: string,
+    responsavelId: string | null,
+    prazo: string
+  ): Promise<boolean> {
+    const formData = new FormData();
+    formData.set("titulo", titulo);
+    if (responsavelId) formData.append("responsavelIds", responsavelId);
+    formData.set("prazo", prazo);
+    formData.set("status", "pendente");
+
+    const result = await createDemanda({ ok: false, message: "" }, formData);
+
+    if (result.ok) {
+      setStatus(key, "created");
+      return true;
+    }
+    setStatus(key, "pending");
+    setConfirmErrors((prev) => ({
+      ...prev,
+      [key]:
+        result.message ||
+        "Não foi possível criar essa demanda agora. Tente novamente.",
+    }));
+    return false;
+  }
+
+  async function handleConfirmar(key: string) {
+    const titulo = titulos[key] ?? "";
+    const responsavelId = responsavelIds[key] ?? null;
+    const prazo = prazos[key] ?? "";
+
+    const errors = validateCard(titulo, responsavelId, prazo);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors((prev) => ({ ...prev, [key]: errors }));
+      return;
+    }
+    setFieldErrors((prev) => ({ ...prev, [key]: {} }));
+    setConfirmErrors((prev) => ({ ...prev, [key]: "" }));
+    setStatus(key, "confirming");
+    await createOne(key, titulo, responsavelId, prazo);
+  }
+
+  // Bulk "Confirmar todas" — validates every still-pending card first;
+  // if any lacks required fields, only those get inline errors and nothing
+  // is created (no partial surprise). When all are valid, creates them all.
+  async function handleConfirmarTodas() {
+    const pendingKeys = suggestions
+      .filter((s) => (cardStates[s.key] ?? "pending") === "pending")
+      .map((s) => s.key);
+
+    const newErrors: Record<string, FieldErrors> = {};
+    let allValid = true;
+    for (const key of pendingKeys) {
+      const errors = validateCard(
+        titulos[key] ?? "",
+        responsavelIds[key] ?? null,
+        prazos[key] ?? ""
+      );
+      newErrors[key] = errors;
+      if (Object.keys(errors).length > 0) allValid = false;
+    }
+
+    setFieldErrors(newErrors);
+    if (!allValid) {
+      setBulkMessage(
+        "Alguns cartões precisam de preenchimento — veja os campos destacados."
+      );
+      return;
+    }
+
+    setBulkMessage("");
+    setBulkPending(true);
+    // Mark every pending card confirming while the batch runs.
+    setCardStates((prev) => {
+      const next = { ...prev };
+      for (const key of pendingKeys) next[key] = "confirming";
+      return next;
+    });
+
+    let created = 0;
+    await Promise.all(
+      pendingKeys.map(async (key) => {
+        const ok = await createOne(
+          key,
+          titulos[key] ?? "",
+          responsavelIds[key] ?? null,
+          prazos[key] ?? ""
+        );
+        if (ok) created += 1;
+      })
+    );
+
+    setBulkPending(false);
+    if (created === pendingKeys.length) {
+      setBulkMessage("Todas as demandas foram criadas!");
+    } else if (created > 0) {
+      setBulkMessage(
+        `${created} de ${pendingKeys.length} demandas criadas — verifique os cartões restantes.`
+      );
+    } else {
+      setBulkMessage(
+        "Não foi possível criar as demandas agora. Tente novamente."
+      );
+    }
+  }
+
+  function handleRejeitar(key: string) {
+    // Pure client-state change — no network/server call at all, nothing was
+    // ever persisted (IA-04, 08-RESEARCH.md Validation Architecture).
+    setStatus(key, "rejected");
+  }
+
+  function handleDesfazer(key: string) {
+    // Restores the card to its previous editable state — título/
+    // responsavelId/prazo were never cleared, only the status flag changed.
+    setStatus(key, "pending");
   }
 
   return (
@@ -65,8 +233,8 @@ export default function SuggestionReviewList({
         </h1>
         <p className="text-base text-zinc-700">
           A IA sugeriu{" "}
-          {total === 1 ? "1 demanda" : `${total} demandas`} a partir do
-          resumo. Revise, edite se precisar, e confirme cada uma antes que
+          {total === 1 ? "1 demanda" : `${total} demandas`} a partir da
+          reunião. Revise, edite se precisar, e confirme cada uma antes que
           ela seja criada.
         </p>
       </div>
@@ -80,20 +248,63 @@ export default function SuggestionReviewList({
             total={total}
             profiles={profiles}
             status={cardStates[suggestion.key] ?? "pending"}
-            onStatusChange={(status) => setStatus(suggestion.key, status)}
+            titulo={titulos[suggestion.key] ?? ""}
+            responsavelId={responsavelIds[suggestion.key] ?? null}
+            prazo={prazos[suggestion.key] ?? ""}
+            errors={fieldErrors[suggestion.key] ?? {}}
+            confirmError={confirmErrors[suggestion.key] ?? ""}
+            onTituloChange={(value) =>
+              setTitulos((prev) => ({ ...prev, [suggestion.key]: value }))
+            }
+            onResponsavelChange={(value) =>
+              setResponsavelIds((prev) => ({
+                ...prev,
+                [suggestion.key]: value,
+              }))
+            }
+            onPrazoChange={(value) =>
+              setPrazos((prev) => ({ ...prev, [suggestion.key]: value }))
+            }
+            onConfirmar={() => handleConfirmar(suggestion.key)}
+            onRejeitar={() => handleRejeitar(suggestion.key)}
+            onDesfazer={() => handleDesfazer(suggestion.key)}
           />
         ))}
       </div>
 
-      <div className="sticky bottom-0 flex flex-col gap-4 border-t border-zinc-300 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="sticky bottom-0 flex flex-col gap-3 border-t border-zinc-300 bg-white p-4">
         <p className="text-base text-zinc-700">
           {resolvedCount} de {total} revisadas
         </p>
+        {pendingCount > 0 && (
+          <button
+            type="button"
+            onClick={handleConfirmarTodas}
+            disabled={bulkPending}
+            className="min-h-14 w-full rounded-lg bg-green-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {bulkPending
+              ? "Criando demandas..."
+              : `Confirmar todas (${pendingCount})`}
+          </button>
+        )}
+        {bulkMessage && (
+          <p
+            aria-live="polite"
+            className={`text-base ${
+              bulkMessage.includes("criadas")
+                ? "text-green-800"
+                : "text-red-700"
+            }`}
+          >
+            {bulkMessage}
+          </p>
+        )}
         <button
           type="button"
           disabled={!allResolved}
           onClick={() => router.push("/")}
-          className="min-h-14 w-full rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+          className="min-h-14 w-full rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
         >
           Concluir revisão
         </button>
@@ -108,93 +319,44 @@ type SuggestionCardProps = {
   total: number;
   profiles: Profile[];
   status: CardStatus;
-  onStatusChange: (status: CardStatus) => void;
+  titulo: string;
+  responsavelId: string | null;
+  prazo: string;
+  errors: FieldErrors;
+  confirmError: string;
+  onTituloChange: (value: string) => void;
+  onResponsavelChange: (value: string) => void;
+  onPrazoChange: (value: string) => void;
+  onConfirmar: () => void;
+  onRejeitar: () => void;
+  onDesfazer: () => void;
 };
 
+// Controlled card — all editable values come from the parent (the source
+// of truth for "Confirmar todas"); this component only renders them.
 function SuggestionCard({
   suggestion,
   index,
   total,
   profiles,
   status,
-  onStatusChange,
+  titulo,
+  responsavelId,
+  prazo,
+  errors,
+  confirmError,
+  onTituloChange,
+  onResponsavelChange,
+  onPrazoChange,
+  onConfirmar,
+  onRejeitar,
+  onDesfazer,
 }: SuggestionCardProps) {
-  // Own local editable state, initialized from the suggestion prop —
-  // independent once rendered, edits never propagate back to the original
-  // suggestion object. prazo starts "" since prazoTexto is a raw unparsed
-  // phrase, never auto-resolved into a date (08-RESEARCH.md Common
-  // Pitfall 5).
-  const [titulo, setTitulo] = useState(suggestion.titulo);
-  const [responsavelId, setResponsavelId] = useState<string | null>(
-    suggestion.responsavelId
-  );
-  const [prazo, setPrazo] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<{
-    titulo?: string;
-    responsavel?: string;
-    prazo?: string;
-  }>({});
-  const [confirmError, setConfirmError] = useState("");
-
   const isResolved = status === "created" || status === "rejected";
   const isConfirming = status === "confirming";
 
-  async function handleConfirmar() {
-    const errors: typeof fieldErrors = {};
-    if (titulo.trim().length === 0) {
-      errors.titulo = "Digite um título para a demanda.";
-    }
-    if (!responsavelId) {
-      errors.responsavel = "Escolha quem é o responsável.";
-    }
-    if (!prazo) {
-      errors.prazo = "Escolha uma data de prazo.";
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
-
-    setFieldErrors({});
-    setConfirmError("");
-    onStatusChange("confirming");
-
-    const formData = new FormData();
-    formData.set("titulo", titulo);
-    formData.append("responsavelIds", responsavelId as string);
-    formData.set("prazo", prazo);
-    formData.set("status", "pendente");
-
-    const result = await createDemanda({ ok: false, message: "" }, formData);
-
-    if (result.ok) {
-      onStatusChange("created");
-    } else {
-      onStatusChange("pending");
-      setConfirmError(
-        result.message ||
-          "Não foi possível criar essa demanda agora. Tente novamente."
-      );
-    }
-  }
-
-  function handleRejeitar() {
-    // Pure client-state change — no network/server call at all, nothing was
-    // ever persisted (IA-04, 08-RESEARCH.md Validation Architecture).
-    onStatusChange("rejected");
-  }
-
-  function handleDesfazer() {
-    // Restores the card to its previous editable state — título/
-    // responsavelId/prazo were never cleared, only the status flag changed.
-    onStatusChange("pending");
-  }
-
   return (
-    <Card
-      className={`p-6 ${isResolved ? "bg-zinc-50" : "bg-white"}`}
-    >
+    <Card className={`p-6 ${isResolved ? "bg-zinc-50" : "bg-white"}`}>
       <h2 className="text-xl font-semibold text-zinc-900">
         Sugestão {index} de {total}
       </h2>
@@ -213,7 +375,7 @@ function SuggestionCard({
           <span className="text-xl text-zinc-600">Sugestão rejeitada</span>
           <button
             type="button"
-            onClick={handleDesfazer}
+            onClick={onDesfazer}
             className="text-base text-blue-700 underline"
           >
             Desfazer
@@ -232,14 +394,12 @@ function SuggestionCard({
               id={`titulo-${suggestion.key}`}
               type="text"
               value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
+              onChange={(e) => onTituloChange(e.target.value)}
               disabled={isConfirming}
               className="min-h-14 text-xl rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
             />
-            {fieldErrors.titulo && (
-              <span className="text-base text-red-700">
-                {fieldErrors.titulo}
-              </span>
+            {errors.titulo && (
+              <span className="text-base text-red-700">{errors.titulo}</span>
             )}
           </div>
 
@@ -266,7 +426,7 @@ function SuggestionCard({
             )}
             <Select
               value={responsavelId ?? undefined}
-              onValueChange={(value) => setResponsavelId(value)}
+              onValueChange={onResponsavelChange}
               disabled={isConfirming}
             >
               <SelectTrigger
@@ -283,32 +443,37 @@ function SuggestionCard({
                 ))}
               </SelectContent>
             </Select>
-            {fieldErrors.responsavel && (
+            {errors.responsavel && (
               <span className="text-base text-red-700">
-                {fieldErrors.responsavel}
+                {errors.responsavel}
               </span>
             )}
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label
-              htmlFor={`prazo-${suggestion.key}`}
-              className="text-xl font-medium text-zinc-900"
-            >
-              Prazo *
-            </Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Label
+                htmlFor={`prazo-${suggestion.key}`}
+                className="text-xl font-medium text-zinc-900"
+              >
+                Prazo *
+              </Label>
+              {suggestion.prazoTexto && (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700">
+                  mencionado: {suggestion.prazoTexto}
+                </span>
+              )}
+            </div>
             <Input
               id={`prazo-${suggestion.key}`}
               type="date"
               value={prazo}
-              onChange={(e) => setPrazo(e.target.value)}
+              onChange={(e) => onPrazoChange(e.target.value)}
               disabled={isConfirming}
               className="min-h-14 text-xl rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0"
             />
-            {fieldErrors.prazo && (
-              <span className="text-base text-red-700">
-                {fieldErrors.prazo}
-              </span>
+            {errors.prazo && (
+              <span className="text-base text-red-700">{errors.prazo}</span>
             )}
           </div>
 
@@ -319,7 +484,7 @@ function SuggestionCard({
           <div className="mt-4 flex gap-4">
             <button
               type="button"
-              onClick={handleRejeitar}
+              onClick={onRejeitar}
               disabled={isConfirming}
               className="min-h-14 flex-1 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
@@ -327,7 +492,7 @@ function SuggestionCard({
             </button>
             <button
               type="button"
-              onClick={handleConfirmar}
+              onClick={onConfirmar}
               disabled={!responsavelId || isConfirming}
               className="min-h-14 flex-1 rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
             >

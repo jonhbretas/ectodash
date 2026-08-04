@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { matchResponsavel } from "@/lib/ai/match-responsavel";
 import { extractionResponseSchema } from "./extraction-schema";
+import { obterTranscricao } from "@/lib/meetings";
 
 export type ExtractDemandasState = {
   ok: boolean;
@@ -14,6 +15,9 @@ export type ExtractDemandasState = {
     responsavelId: string | null;
     responsavelTexto: string;
     prazoTexto: string;
+    // Pre-filled, editable date (yyyy-MM-dd) resolved by the AI against
+    // today's reference date — still gated by the human Confirmar click.
+    prazoSugerido: string | null;
   }>;
 };
 
@@ -28,6 +32,12 @@ const pasteSchema = z.object({
     .min(1, "Cole o resumo da reunião antes de continuar.")
     .max(20000),
 });
+
+// Transcripts from Tactiq can be far longer than a manual paste — the cap
+// here only bounds cost, never rejects the meeting (a very long transcript
+// is truncated to the first N characters, which still covers the meeting's
+// opening/decisions).
+const MEETING_TEXT_MAX = 60000;
 
 // Provider decision (2026-08-04, user): extraction runs on DeepSeek V4
 // Flash through the OpenCode API (the OpenCode Go subscription's model
@@ -84,11 +94,11 @@ async function extractWithAi(texto: string): Promise<string> {
         {
           role: "system",
           content:
-            'Você extrai tarefas de resumos de reunião. Responda APENAS com JSON no formato {"demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string}]}. Se nenhuma tarefa for encontrada, retorne {"demandas": []}. Não escreva nada fora do JSON.',
+            'Você extrai tarefas de transcrições de reunião. Responda APENAS com JSON no formato {"demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string}]}. Se nenhuma tarefa for encontrada, retorne {"demandas": []}. Não escreva nada fora do JSON.',
         },
         {
           role: "user",
-          content: `Extraia uma lista de tarefas mencionadas no resumo de reunião a seguir. Para cada tarefa: titulo (o que precisa ser feito), responsavel_texto (nome da pessoa responsável exatamente como mencionado), prazo_texto (qualquer prazo mencionado, exatamente como no texto — NÃO calcule datas).\n\nResumo:\n"""\n${texto}\n"""`,
+          content: `Hoje é ${new Date().toISOString().slice(0, 10)}. Extraia uma lista de tarefas mencionadas na transcrição a seguir. Para cada tarefa: titulo (o que precisa ser feito), responsavel_texto (nome da pessoa responsável exatamente como mencionado), prazo_texto (qualquer prazo mencionado, exatamente como no texto), prazo_sugerido (a data concreta yyyy-MM-dd calculada a partir de HOJE quando o prazo for relativo como "sexta", "fim do mês", "amanhã", ou a data absoluta quando mencionada; deixe "" quando não houver prazo claro).\n\nTranscrição:\n"""\n${texto}\n"""`,
         },
       ],
     }),
@@ -125,15 +135,37 @@ export async function extractDemandas(
     };
   }
 
-  const parsed = pasteSchema.safeParse({ texto: formData.get("texto") });
-  if (!parsed.success) {
-    // Never calls the AI on this path — an empty/whitespace-only paste is
-    // rejected purely by local validation.
-    return {
-      ok: false,
-      message: "Cole o resumo da reunião antes de continuar.",
-      suggestions: [],
-    };
+  // Source resolution: a Tactiq meeting id wins over pasted text. The
+  // transcript is fetched SERVER-side (the Tactiq key never reaches the
+  // browser) and treated as untrusted input like any paste.
+  const reuniaoId = formData.get("reuniaoId");
+  let texto: string;
+
+  if (typeof reuniaoId === "string" && reuniaoId.trim().length > 0) {
+    try {
+      const transcricao = await obterTranscricao(reuniaoId);
+      texto = transcricao.texto.slice(0, MEETING_TEXT_MAX);
+    } catch (err) {
+      console.error("extractDemandas: Tactiq transcript fetch failed", err);
+      return {
+        ok: false,
+        message:
+          "Não foi possível buscar a transcrição dessa reunião no Tactiq. Tente novamente.",
+        suggestions: [],
+      };
+    }
+  } else {
+    const parsed = pasteSchema.safeParse({ texto: formData.get("texto") });
+    if (!parsed.success) {
+      // Never calls the AI on this path — an empty/whitespace-only paste is
+      // rejected purely by local validation.
+      return {
+        ok: false,
+        message: "Cole o resumo da reunião antes de continuar.",
+        suggestions: [],
+      };
+    }
+    texto = parsed.data.texto;
   }
 
   // Ordinary session-bound client only — same query shape nova/page.tsx
@@ -148,7 +180,7 @@ export async function extractDemandas(
     // JSON.parse is inside the same try/catch as the API call — a
     // malformed/truncated response is caught by the same catch block below,
     // never propagating an unhandled exception (08-RESEARCH.md Pitfall 4).
-    const rawJson = JSON.parse(await extractWithAi(parsed.data.texto));
+    const rawJson = JSON.parse(await extractWithAi(texto));
     const validated = responseEnvelopeSchema.safeParse(rawJson);
 
     if (!validated.success) {
@@ -162,7 +194,7 @@ export async function extractDemandas(
     if (validated.data.demandas.length === 0) {
       return {
         ok: true,
-        message: "Nenhuma demanda encontrada no texto colado.",
+        message: "Nenhuma demanda encontrada na transcrição.",
         suggestions: [],
       };
     }
@@ -176,6 +208,11 @@ export async function extractDemandas(
       ),
       responsavelTexto: suggestion.responsavel_texto,
       prazoTexto: suggestion.prazo_texto,
+      // Normalized: an empty string from the AI becomes null, so the
+      // review card only pre-fills real dates.
+      prazoSugerido: suggestion.prazo_sugerido
+        ? suggestion.prazo_sugerido
+        : null,
     }));
 
     return { ok: true, message: "", suggestions };
@@ -184,7 +221,7 @@ export async function extractDemandas(
     return {
       ok: false,
       message:
-        "Algo deu errado ao processar o texto com a IA. Verifique sua internet e tente novamente.",
+        "Algo deu errado ao processar a transcrição com a IA. Verifique sua internet e tente novamente.",
       suggestions: [],
     };
   }

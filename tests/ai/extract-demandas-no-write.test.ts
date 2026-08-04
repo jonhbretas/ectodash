@@ -101,7 +101,7 @@ describe("extractDemandas — zero-database-write invariant (IA-04)", () => {
 
     expect(result.ok).toBe(true);
     expect(result.suggestions).toHaveLength(0);
-    expect(result.message).toBe("Nenhuma demanda encontrada no texto colado.");
+    expect(result.message).toBe("Nenhuma demanda encontrada na transcrição.");
     expect(insertSpy).not.toHaveBeenCalled();
   });
 

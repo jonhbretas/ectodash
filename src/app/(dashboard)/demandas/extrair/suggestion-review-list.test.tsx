@@ -43,6 +43,7 @@ function makeSuggestions(count: number): Suggestion[] {
       i === 0 ? profiles[0].id : null, // first suggestion matched, rest unmatched
     responsavelTexto: i === 0 ? "Maria" : "Nome Desconhecido",
     prazoTexto: "próxima sexta",
+    prazoSugerido: null,
   }));
 }
 
@@ -80,6 +81,7 @@ describe("SuggestionReviewList", () => {
         responsavelId: null,
         responsavelTexto: "Alguém",
         prazoTexto: "sexta",
+        prazoSugerido: null,
       },
     ];
     render(<SuggestionReviewList suggestions={suggestions} profiles={profiles} />);
@@ -134,6 +136,7 @@ describe("SuggestionReviewList", () => {
         responsavelId: profiles[0].id,
         responsavelTexto: "Maria",
         prazoTexto: "sexta",
+        prazoSugerido: null,
       },
     ];
     render(<SuggestionReviewList suggestions={suggestions} profiles={profiles} />);
@@ -168,6 +171,7 @@ describe("SuggestionReviewList", () => {
         responsavelId: profiles[0].id,
         responsavelTexto: "Maria",
         prazoTexto: "sexta",
+        prazoSugerido: null,
       },
     ];
     render(<SuggestionReviewList suggestions={suggestions} profiles={profiles} />);

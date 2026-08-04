@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { listarReunioes } from "@/lib/meetings";
 import PageContainer from "../../page-container";
 import ImportForm from "./import-form";
 
@@ -63,9 +64,20 @@ export default async function ExtrairDemandasPage() {
     .select("id, email")
     .order("email");
 
+  // Tactiq recorded meetings (MCP-equivalent bridge) — fetched server-side
+  // so the Tactiq API key never reaches the browser. Missing config or a
+  // provider failure degrades to a hidden selector + clear notice, never a
+  // broken page.
+  const meetingsResult = await listarReunioes();
+
   return (
     <PageContainer>
-      <ImportForm profiles={profiles ?? []} />
+      <ImportForm
+        profiles={profiles ?? []}
+        meetings={meetingsResult.meetings}
+        meetingsError={meetingsResult.error}
+        meetingsConfigured={meetingsResult.configured}
+      />
     </PageContainer>
   );
 }
