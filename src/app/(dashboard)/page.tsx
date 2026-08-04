@@ -56,6 +56,14 @@ export default async function DashboardPage({
   // authorization boundary regardless of what this computes.
   const isCoordenador = role === "coordenador_geral";
 
+  // Gates the "Extrair demandas de reunião" entry-point link rendered by
+  // DemandaList below — reuses the SAME role read above, no second query
+  // (08-UI-SPEC.md's Entry Point contract). Purely a UX-hiding decision;
+  // /demandas/extrair's own page-level role check (plan 08-02, Task 1) is
+  // the real authorization boundary regardless of what this computes.
+  const canExtractDemandas =
+    role === "coordenador_geral" || role === "lider_area";
+
   // Only read when the caller is a lider_area — a coordenador/voluntario/
   // financeiro account has no lider_areas rows and no use for this read.
   const { data: liderAreasRows } =
@@ -246,6 +254,7 @@ export default async function DashboardPage({
           groupBy={filters.agrupar}
           filtersActive={filtersActive}
           isCoordenador={isCoordenador}
+          canExtractDemandas={canExtractDemandas}
         />
       </div>
     </PageContainer>

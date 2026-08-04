@@ -40,6 +40,14 @@ export type DemandaListProps = {
   // boundary (06-UI-SPEC.md's Entry Point contract; RLS on /painel's own
   // queries from plan 06-01 is what actually matters).
   isCoordenador?: boolean;
+  // canExtractDemandas: threaded from page.tsx's existing profiles.role
+  // read (no new query) — gates the "Extrair demandas de reunião"
+  // entry-point link below, visible to coordenador_geral AND lider_area
+  // (unlike isCoordenador above, which is coordenador-only). Purely a
+  // UX-hiding decision; /demandas/extrair's own page-level role check
+  // (plan 08-02, Task 1) is what actually matters
+  // (08-UI-SPEC.md's Entry Point contract).
+  canExtractDemandas?: boolean;
 };
 
 const SEM_AREA_DEFINIDA = "Sem área definida";
@@ -109,6 +117,7 @@ export default function DemandaList({
   groupBy,
   filtersActive = false,
   isCoordenador = false,
+  canExtractDemandas = false,
 }: DemandaListProps) {
   const sorted = [...demandas].sort(compareDemandas);
   const count = demandas.length;
@@ -130,6 +139,15 @@ export default function DemandaList({
               className="flex min-h-14 w-full items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
             >
               Painel do coordenador
+            </Link>
+          )}
+
+          {canExtractDemandas && (
+            <Link
+              href="/demandas/extrair"
+              className="flex min-h-14 w-full items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
+            >
+              Extrair demandas de reunião
             </Link>
           )}
 
