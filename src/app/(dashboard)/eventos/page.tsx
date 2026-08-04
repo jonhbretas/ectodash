@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, Settings2, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +12,7 @@ type EventoRow = {
   descricao: string | null;
   data_evento: string;
   local: string | null;
+  tipo_nome: string | null;
 };
 
 function formatDate(iso: string): string {
@@ -29,37 +30,54 @@ export default async function EventosPage() {
   }
 
   const today = new Date().toISOString().slice(0, 10);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const isCoordenador = profile?.role === "coordenador_geral";
 
   // RLS (migration 0008): every authenticated volunteer reads every event.
-  const [proximosResult, anterioresResult] = await Promise.all([
+  const [proximosResult, anterioresResult, tiposResult] = await Promise.all([
     supabase
       .from("eventos")
-      .select("id, titulo, descricao, data_evento, local")
+      .select("id, titulo, descricao, data_evento, local, tipo_evento_id")
       .gte("data_evento", today)
       .order("data_evento", { ascending: true })
       .limit(200),
     supabase
       .from("eventos")
-      .select("id, titulo, descricao, data_evento, local")
+      .select("id, titulo, descricao, data_evento, local, tipo_evento_id")
       .lt("data_evento", today)
       .order("data_evento", { ascending: false })
       .limit(50),
+    supabase.from("evento_tipos").select("id, nome"),
   ]);
 
-  const proximos: EventoRow[] = (proximosResult.data ?? []).map((row) => ({
+  const tipoNomeById = new Map(
+    (tiposResult.data ?? []).map((tipo) => [tipo.id, tipo.nome])
+  );
+
+  const toRow = (row: {
+    id: number;
+    titulo: string;
+    descricao: string | null;
+    data_evento: string;
+    local: string | null;
+    tipo_evento_id: number | null;
+  }): EventoRow => ({
     id: row.id,
     titulo: row.titulo,
     descricao: row.descricao,
     data_evento: row.data_evento,
     local: row.local,
-  }));
-  const anteriores: EventoRow[] = (anterioresResult.data ?? []).map((row) => ({
-    id: row.id,
-    titulo: row.titulo,
-    descricao: row.descricao,
-    data_evento: row.data_evento,
-    local: row.local,
-  }));
+    tipo_nome: row.tipo_evento_id
+      ? (tipoNomeById.get(row.tipo_evento_id) ?? null)
+      : null,
+  });
+
+  const proximos: EventoRow[] = (proximosResult.data ?? []).map(toRow);
+  const anteriores: EventoRow[] = (anterioresResult.data ?? []).map(toRow);
 
   return (
     <PageContainer>
@@ -74,6 +92,16 @@ export default async function EventosPage() {
       </div>
 
       <ImportEventosForm />
+
+      {isCoordenador && (
+        <Link
+          href="/eventos/modelos"
+          className="flex min-h-14 w-full max-w-4xl items-center justify-center gap-2 rounded-xl border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:w-auto"
+        >
+          <Settings2 size={22} aria-hidden="true" />
+          Configurar modelos de eventos
+        </Link>
+      )}
 
       {proximos.length === 0 && anteriores.length === 0 ? (
         <div className="flex w-full max-w-4xl flex-col items-center gap-4 py-16 text-center">
@@ -105,9 +133,10 @@ export default async function EventosPage() {
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {proximos.map((evento) => (
-                  <article
+                  <Link
                     key={evento.id}
-                    className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
+                    href={`/eventos/${evento.id}`}
+                    className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-xl font-semibold text-zinc-900">
@@ -117,6 +146,12 @@ export default async function EventosPage() {
                         {formatDate(evento.data_evento)}
                       </span>
                     </div>
+                    {evento.tipo_nome && (
+                      <span className="flex w-fit items-center gap-1 rounded-full bg-purple-50 px-2 py-0.5 text-base font-medium text-purple-800">
+                        <Tag size={14} aria-hidden="true" />
+                        {evento.tipo_nome}
+                      </span>
+                    )}
                     {evento.local && (
                       <p className="flex items-center gap-1 text-base text-zinc-700">
                         <MapPin size={16} aria-hidden="true" />
@@ -128,7 +163,10 @@ export default async function EventosPage() {
                         {evento.descricao}
                       </p>
                     )}
-                  </article>
+                    <span className="text-base font-medium text-blue-700 underline">
+                      Gerenciar evento
+                    </span>
+                  </Link>
                 ))}
               </div>
             )}

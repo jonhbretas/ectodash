@@ -43,6 +43,14 @@ export const demandaFilterSchema = z.object({
       .regex(/^\d+$/, "evento deve ser um id numérico")
       .optional()
   ),
+  // etiqueta: sub-área label (etiquetas.id), same numeric-string rule.
+  etiqueta: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^\d+$/, "etiqueta deve ser um id numérico")
+      .optional()
+  ),
   responsavel: z.string().uuid().optional(),
   status: z.enum(["pendente", "em_andamento", "concluida"]).optional(),
   agrupar: z.enum(["area", "responsavel"]).optional(),
@@ -63,6 +71,7 @@ export function parseDemandaFilters(raw: {
     area: typeof raw.area === "string" ? raw.area : undefined,
     projeto: typeof raw.projeto === "string" ? raw.projeto : undefined,
     evento: typeof raw.evento === "string" ? raw.evento : undefined,
+    etiqueta: typeof raw.etiqueta === "string" ? raw.etiqueta : undefined,
     responsavel: typeof raw.responsavel === "string" ? raw.responsavel : undefined,
     agrupar: typeof raw.agrupar === "string" ? raw.agrupar : undefined,
     status: typeof raw.status === "string" ? raw.status : undefined,

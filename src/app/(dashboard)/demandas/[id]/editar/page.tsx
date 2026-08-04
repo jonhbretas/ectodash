@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { displayName } from "@/lib/display-name";
 import DemandaForm from "../../demanda-form";
 import ConcludeButton from "../../conclude-button";
+import DemandaChecklist from "../../demanda-checklist";
+import DemandaComentarios from "../../demanda-comentarios";
 import type { DemandaFormValues } from "../../demanda-schema";
 import PageContainer from "../../../page-container";
 
@@ -34,12 +37,10 @@ export default async function EditarDemandaPage({
   }
 
   // demandas_com_status, not the bare table, stays the canonical read
-  // source shared with the list view (plan 04-02's precedent) — this page
-  // doesn't need atrasada, but reading the same view keeps one source of
-  // truth rather than forking a second query shape.
+  // source shared with the list view (plan 04-02's precedent).
   const { data: demanda } = await supabase
     .from("demandas_com_status")
-    .select("id, titulo, prazo, status, area, projeto, evento_id")
+    .select("id, titulo, prazo, status, area, projeto, evento_id, etiqueta_id")
     .eq("id", id)
     .single();
 
@@ -59,11 +60,19 @@ export default async function EditarDemandaPage({
 
   const [
     { data: responsaveis },
+    { data: membros },
     { data: profiles },
     { data: eventos },
+    { data: etiquetas },
+    { data: checklistItems },
+    { data: comentariosRaw },
   ] = await Promise.all([
     supabase
       .from("demanda_responsaveis")
+      .select("profile_id")
+      .eq("demanda_id", id),
+    supabase
+      .from("demanda_membros")
       .select("profile_id")
       .eq("demanda_id", id),
     supabase.from("profiles").select("id, email, full_name").order("email"),
@@ -73,9 +82,24 @@ export default async function EditarDemandaPage({
       .gte("data_evento", new Date().toISOString().slice(0, 10))
       .order("data_evento", { ascending: true })
       .limit(100),
+    supabase.from("etiquetas").select("id, area, nome").order("area").order("nome"),
+    supabase
+      .from("demanda_checklist")
+      .select("id, item, concluido")
+      .eq("demanda_id", id)
+      .order("id", { ascending: true }),
+    supabase
+      .from("demanda_comentarios")
+      .select("id, conteudo, created_at, autor_id, profiles(full_name, email)")
+      .eq("demanda_id", id)
+      .order("created_at", { ascending: true }),
   ]);
 
-  const defaultValues: Partial<DemandaFormValues> & { eventoId?: number } = {
+  const defaultValues: Partial<DemandaFormValues> & {
+    eventoId?: number;
+    etiquetaId?: number;
+    membroIds?: string[];
+  } = {
     titulo: demanda.titulo,
     responsavelIds: (responsaveis ?? []).map((row) => row.profile_id as string),
     prazo: demanda.prazo,
@@ -83,7 +107,19 @@ export default async function EditarDemandaPage({
     area: demanda.area ?? undefined,
     projeto: demanda.projeto ?? undefined,
     eventoId: demanda.evento_id ?? undefined,
+    etiquetaId: demanda.etiqueta_id ?? undefined,
+    membroIds: (membros ?? []).map((row) => row.profile_id as string),
   };
+
+  const comentarios = (comentariosRaw ?? []).map((row) => {
+    const profileRow = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      id: row.id,
+      autorNome: profileRow ? displayName(profileRow) : "Voluntário",
+      conteudo: row.conteudo,
+      createdAt: row.created_at,
+    };
+  });
 
   return (
     <PageContainer>
@@ -94,15 +130,27 @@ export default async function EditarDemandaPage({
         defaultValues={defaultValues}
         profiles={profiles ?? []}
         eventos={eventos ?? []}
+        etiquetas={etiquetas ?? []}
+      />
+
+      <DemandaChecklist
+        demandaId={id}
+        items={(checklistItems ?? []).map((item) => ({
+          id: item.id,
+          item: item.item,
+          concluido: item.concluido,
+        }))}
+      />
+
+      <DemandaComentarios
+        demandaId={String(id)}
+        comentarios={comentarios}
       />
 
       {/* Separated from Cancelar/Salvar by extra gap-6 (24px) spacing to
           signal a distinct action, not a third form button in the same row
           (04-UI-SPEC.md Screen Inventory -> 4. Edit form). Hidden — not
-          disabled — when the demanda is already concluída, since there is
-          no reason to offer "mark as concluded" on an already-concluded
-          demanda and a disabled button with no visible reason is worse for
-          this audience than not showing it at all. */}
+          disabled — when the demanda is already concluída. */}
       {demanda.status !== "concluida" && (
         <div className="flex w-full max-w-md flex-col gap-6">
           <ConcludeButton demandaId={id} />

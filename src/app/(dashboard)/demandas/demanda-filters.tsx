@@ -24,10 +24,13 @@ const NO_GROUPING_VALUE = "__sem_agrupamento__";
 
 export type EventoFilterOption = { id: number; titulo: string };
 
+export type EtiquetaFilterOption = { id: number; area: string; nome: string };
+
 export type DemandaFiltersProps = {
   areaOptions: string[];
   projetoOptions: string[];
   eventoOptions: EventoFilterOption[];
+  etiquetaOptions: EtiquetaFilterOption[];
   responsavelOptions: { id: string; label: string }[];
   currentFilters: DemandaFilters;
 };
@@ -36,6 +39,7 @@ export default function DemandaFilters({
   areaOptions,
   projetoOptions,
   eventoOptions,
+  etiquetaOptions,
   responsavelOptions,
   currentFilters,
 }: DemandaFiltersProps) {
@@ -55,7 +59,9 @@ export default function DemandaFilters({
     router.push(query ? `/?${query}` : "/");
   }
 
-  function removeFilter(key: "area" | "projeto" | "evento" | "responsavel" | "status") {
+  function removeFilter(
+    key: "area" | "projeto" | "evento" | "etiqueta" | "responsavel" | "status"
+  ) {
     navigateWith({ [key]: undefined });
   }
 
@@ -71,6 +77,7 @@ export default function DemandaFilters({
     currentFilters.area ||
       currentFilters.projeto ||
       currentFilters.evento ||
+      currentFilters.etiqueta ||
       currentFilters.responsavel ||
       currentFilters.status
   );
@@ -150,6 +157,30 @@ export default function DemandaFilters({
               {eventoOptions.map((evento) => (
                 <SelectItem key={evento.id} value={String(evento.id)}>
                   {evento.titulo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="filtro-etiqueta" className={labelClassName}>
+            Etiqueta
+          </Label>
+          <Select
+            value={currentFilters.etiqueta ?? ALL_VALUE}
+            onValueChange={(value) =>
+              navigateWith({ etiqueta: value === ALL_VALUE ? undefined : value })
+            }
+          >
+            <SelectTrigger id="filtro-etiqueta" className={filterClassName}>
+              <SelectValue placeholder="Todas as etiquetas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE}>Todas as etiquetas</SelectItem>
+              {etiquetaOptions.map((etiqueta) => (
+                <SelectItem key={etiqueta.id} value={String(etiqueta.id)}>
+                  {etiqueta.nome} ({etiqueta.area})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -251,6 +282,15 @@ export default function DemandaFilters({
               title: "Evento",
             },
             {
+              key: "etiqueta" as const,
+              label: `Etiqueta: ${
+                etiquetaOptions.find(
+                  (e) => String(e.id) === currentFilters.etiqueta
+                )?.nome ?? currentFilters.etiqueta
+              }`,
+              title: "Etiqueta",
+            },
+            {
               key: "responsavel" as const,
               label: `Voluntário: ${
                 responsavelLabelById.get(currentFilters.responsavel ?? "") ??
@@ -274,6 +314,7 @@ export default function DemandaFilters({
               if (chip.key === "area") return Boolean(currentFilters.area);
               if (chip.key === "projeto") return Boolean(currentFilters.projeto);
               if (chip.key === "evento") return Boolean(currentFilters.evento);
+              if (chip.key === "etiqueta") return Boolean(currentFilters.etiqueta);
               if (chip.key === "responsavel")
                 return Boolean(currentFilters.responsavel);
               return Boolean(currentFilters.status);

@@ -19,6 +19,9 @@ export type Demanda = {
   area: string | null;
   projeto?: string | null;
   eventoNome?: string | null;
+  etiquetaNome?: string | null;
+  checklistTotal?: number;
+  checklistFeitos?: number;
 };
 
 export type DemandaListProps = {

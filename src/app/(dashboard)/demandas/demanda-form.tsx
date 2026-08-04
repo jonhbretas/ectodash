@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import {
   createDemanda,
   updateDemanda,
+  criarEtiqueta,
   type CreateDemandaState,
   type UpdateDemandaState,
 } from "./actions";
@@ -31,6 +32,12 @@ export type EventoOption = {
   titulo: string;
 };
 
+export type EtiquetaOption = {
+  id: number;
+  area: string;
+  nome: string;
+};
+
 function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   const { pending } = useFormStatus();
   const pendingLabel = mode === "edit" ? "Salvando..." : "Criando...";
@@ -50,14 +57,20 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
 type DemandaFormProps = {
   profiles: Profile[];
   eventos: EventoOption[];
+  etiquetas: EtiquetaOption[];
   mode?: "create" | "edit";
   demandaId?: number;
-  defaultValues?: Partial<DemandaFormValues> & { eventoId?: number };
+  defaultValues?: Partial<DemandaFormValues> & {
+    eventoId?: number;
+    etiquetaId?: number;
+    membroIds?: string[];
+  };
 };
 
 export default function DemandaForm({
   profiles,
   eventos,
+  etiquetas,
   mode = "create",
   demandaId,
   defaultValues,
@@ -69,6 +82,45 @@ export default function DemandaForm({
   const action = mode === "edit" ? updateDemanda.bind(null, demandaId!) : createDemanda;
   const [state, formAction] = useActionState(action, initialState);
 
+  // Inline etiqueta creation: local option list seeded from the server
+  // props; a created label is appended and selected immediately (no page
+  // reload). The native etiquetaId select reads from this list.
+  const [etiquetaOptions, setEtiquetaOptions] = useState(etiquetas);
+  const [etiquetaId, setEtiquetaId] = useState(defaultValues?.etiquetaId ?? "");
+  const [criandoEtiqueta, setCriandoEtiqueta] = useState(false);
+  const [novaEtiquetaArea, setNovaEtiquetaArea] = useState("");
+  const [novaEtiquetaNome, setNovaEtiquetaNome] = useState("");
+  const [etiquetaError, setEtiquetaError] = useState("");
+
+  async function handleCriarEtiqueta() {
+    if (!novaEtiquetaArea.trim() || !novaEtiquetaNome.trim()) {
+      setEtiquetaError("Preencha a área e o nome da etiqueta.");
+      return;
+    }
+    setEtiquetaError("");
+    const formData = new FormData();
+    formData.set("area", novaEtiquetaArea.trim());
+    formData.set("nome", novaEtiquetaNome.trim());
+    const result = await criarEtiqueta(
+      { ok: false, message: "", id: null },
+      formData
+    );
+    if (result.ok && result.id) {
+      const nova: EtiquetaOption = {
+        id: result.id,
+        area: novaEtiquetaArea.trim(),
+        nome: novaEtiquetaNome.trim(),
+      };
+      setEtiquetaOptions((current) => [...current, nova]);
+      setEtiquetaId(String(result.id));
+      setCriandoEtiqueta(false);
+      setNovaEtiquetaArea("");
+      setNovaEtiquetaNome("");
+    } else {
+      setEtiquetaError(result.message);
+    }
+  }
+
   const {
     register,
     handleSubmit,
@@ -77,6 +129,7 @@ export default function DemandaForm({
     resolver: zodResolver(demandaSchema),
     defaultValues: {
       status: "pendente",
+      membroIds: defaultValues?.membroIds ?? [],
       ...defaultValues,
     },
   });
@@ -228,6 +281,95 @@ export default function DemandaForm({
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label
+            htmlFor="etiquetaId"
+            className="text-xl font-medium text-zinc-900"
+          >
+            Etiqueta (opcional)
+          </label>
+          <button
+            type="button"
+            onClick={() => setCriandoEtiqueta((v) => !v)}
+            className="text-base font-medium text-blue-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          >
+            {criandoEtiqueta ? "Cancelar" : "+ Nova etiqueta"}
+          </button>
+        </div>
+        <select
+          id="etiquetaId"
+          name="etiquetaId"
+          value={etiquetaId}
+          onChange={(e) => setEtiquetaId(e.target.value)}
+          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        >
+          <option value="">Nenhuma etiqueta</option>
+          {etiquetaOptions.map((etiqueta) => (
+            <option key={etiqueta.id} value={etiqueta.id}>
+              {etiqueta.nome} ({etiqueta.area})
+            </option>
+          ))}
+        </select>
+
+        {criandoEtiqueta && (
+          <div className="flex flex-col gap-2 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3">
+            <p className="text-base text-zinc-700">
+              Toda etiqueta pertence a uma área — escolha a área e dê um
+              nome (ex.: Comunicação, Vendas, Artes).
+            </p>
+            <input
+              value={novaEtiquetaArea}
+              onChange={(e) => setNovaEtiquetaArea(e.target.value)}
+              placeholder="Área (ex.: Pesquisa)"
+              className="min-h-12 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            />
+            <input
+              value={novaEtiquetaNome}
+              onChange={(e) => setNovaEtiquetaNome(e.target.value)}
+              placeholder="Nome da etiqueta (ex.: Comunicação)"
+              className="min-h-12 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            />
+            {etiquetaError && (
+              <p className="text-base text-red-700">{etiquetaError}</p>
+            )}
+            <button
+              type="button"
+              onClick={handleCriarEtiqueta}
+              className="min-h-12 rounded-lg bg-blue-700 px-4 text-lg font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              Criar etiqueta
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label
+          htmlFor="membroIds"
+          className="text-xl font-medium text-zinc-900"
+        >
+          Membros / acompanhantes (opcional)
+        </label>
+        <select
+          id="membroIds"
+          multiple
+          size={4}
+          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          {...register("membroIds")}
+        >
+          {profiles.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {profile.full_name?.trim() || profile.email}
+            </option>
+          ))}
+        </select>
+        <p className="text-base text-zinc-700">
+          Acompanhantes acompanham a demanda e recebem os mesmos lembretes
+          por e-mail.
+        </p>
       </div>
 
       <SubmitButton mode={mode} />

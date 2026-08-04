@@ -101,25 +101,41 @@ export async function GET(request: NextRequest) {
       const tipo = reminderTipoFor(demanda);
       if (!tipo) continue;
 
-      const { data: responsaveis, error: responsaveisError } = await supabase
-        .from("demanda_responsaveis")
-        .select("profile_id, profiles(email)")
-        .eq("demanda_id", demanda.id);
+      const [responsaveisResult, membrosResult] = await Promise.all([
+        supabase
+          .from("demanda_responsaveis")
+          .select("profile_id, profiles(email)")
+          .eq("demanda_id", demanda.id),
+        supabase
+          .from("demanda_membros")
+          .select("profile_id, profiles(email)")
+          .eq("demanda_id", demanda.id),
+      ]);
 
-      if (responsaveisError) {
-        throw new Error(responsaveisError.message);
-      }
+      const responsaveis = responsaveisResult.data ?? [];
+      const membros = membrosResult.data ?? [];
 
-      // A demanda with zero responsáveis is explicitly tracked, never
-      // silently dropped (07-RESEARCH.md Pitfall 4).
-      if (!responsaveis || responsaveis.length === 0) {
+      // A demanda with zero responsáveis AND zero membros is explicitly
+      // tracked, never silently dropped (07-RESEARCH.md Pitfall 4).
+      if (responsaveis.length === 0 && membros.length === 0) {
         skippedNoResponsavel++;
         continue;
       }
 
-      // Loop over (demanda, responsável) PAIRS — LEMB-03's dedup granularity
-      // is per-recipient, not per-demanda (07-RESEARCH.md Anti-Patterns).
-      for (const responsavel of responsaveis as ResponsavelRow[]) {
+      // Union responsáveis + membros, deduped by profile_id — an
+      // acompanhante who is also responsável gets exactly one reminder,
+      // and the LEMB-03 dedup granularity stays per-recipient.
+      const destinatarios = new Map<string, ResponsavelRow>();
+      for (const row of [...responsaveis, ...membros] as ResponsavelRow[]) {
+        if (!destinatarios.has(row.profile_id)) {
+          destinatarios.set(row.profile_id, row);
+        }
+      }
+
+      // Loop over (demanda, destinatário) PAIRS — LEMB-03's dedup
+      // granularity is per-recipient, not per-demanda
+      // (07-RESEARCH.md Anti-Patterns).
+      for (const responsavel of destinatarios.values()) {
         // 4. Dedup check IS the atomic insert-with-conflict-handling below —
         // never a separate SELECT-then-conditional-INSERT (07-RESEARCH.md
         // Pattern 2, Anti-Patterns). This insert claims today's slot before

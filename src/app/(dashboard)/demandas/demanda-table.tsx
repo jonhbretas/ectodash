@@ -28,6 +28,9 @@ export type DemandaTableRow = {
   area: string | null;
   projeto?: string | null;
   eventoNome?: string | null;
+  etiquetaNome?: string | null;
+  checklistTotal?: number;
+  checklistFeitos?: number;
 };
 
 export type DemandaTableProps = {
@@ -115,6 +118,16 @@ export default function DemandaTable({ demandas }: DemandaTableProps) {
                   {demanda.eventoNome && (
                     <span className="w-fit rounded-full bg-purple-50 px-2 py-0.5 text-base font-medium text-purple-800">
                       {demanda.eventoNome}
+                    </span>
+                  )}
+                  {demanda.etiquetaNome && (
+                    <span className="w-fit rounded-full bg-amber-50 px-2 py-0.5 text-base font-medium text-amber-900">
+                      {demanda.etiquetaNome}
+                    </span>
+                  )}
+                  {(demanda.checklistTotal ?? 0) > 0 && (
+                    <span className="w-fit rounded-full bg-zinc-100 px-2 py-0.5 text-base text-zinc-700">
+                      Checklist {demanda.checklistFeitos ?? 0}/{demanda.checklistTotal}
                     </span>
                   )}
                 </div>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { demandaSchema, eventoIdSchema } from "./demanda-schema";
+import { demandaSchema, eventoIdSchema, etiquetaIdSchema } from "./demanda-schema";
 
 export type CreateDemandaState = {
   ok: boolean;
@@ -35,10 +35,14 @@ export async function createDemanda(
     status: formData.get("status"),
     area: typeof rawArea === "string" && rawArea.length > 0 ? rawArea : undefined,
     projeto: formData.get("projeto") ?? undefined,
+    membroIds: formData.getAll("membroIds"),
   });
   const eventoId = eventoIdSchema.safeParse(formData.get("eventoId") ?? undefined);
+  const etiquetaId = etiquetaIdSchema.safeParse(
+    formData.get("etiquetaId") ?? undefined
+  );
 
-  if (!parsed.success || !eventoId.success) {
+  if (!parsed.success || !eventoId.success || !etiquetaId.success) {
     return { ok: false, message: "Verifique os campos destacados." };
   }
 
@@ -55,6 +59,7 @@ export async function createDemanda(
       area: parsed.data.area,
       projeto: parsed.data.projeto,
       evento_id: eventoId.data ?? null,
+      etiqueta_id: etiquetaId.data ?? null,
     })
     .select("id")
     .single();
@@ -89,6 +94,22 @@ export async function createDemanda(
       "createDemanda: demanda_responsaveis insert failed",
       responsaveisError
     );
+  }
+
+  // Membros (acompanhantes) — same batched insert, no transaction.
+  if ((parsed.data.membroIds ?? []).length > 0) {
+    const { error: membrosError } = await supabase
+      .from("demanda_membros")
+      .insert(
+        (parsed.data.membroIds ?? []).map((profileId) => ({
+          demanda_id: demanda.id,
+          profile_id: profileId,
+        }))
+      );
+
+    if (membrosError) {
+      console.error("createDemanda: demanda_membros insert failed", membrosError);
+    }
   }
 
   revalidatePath("/");
@@ -126,10 +147,14 @@ export async function updateDemanda(
     status: formData.get("status"),
     area: typeof rawArea === "string" && rawArea.length > 0 ? rawArea : undefined,
     projeto: formData.get("projeto") ?? undefined,
+    membroIds: formData.getAll("membroIds"),
   });
   const eventoId = eventoIdSchema.safeParse(formData.get("eventoId") ?? undefined);
+  const etiquetaId = etiquetaIdSchema.safeParse(
+    formData.get("etiquetaId") ?? undefined
+  );
 
-  if (!parsed.success || !eventoId.success) {
+  if (!parsed.success || !eventoId.success || !etiquetaId.success) {
     return { ok: false, message: "Verifique os campos destacados." };
   }
 
@@ -144,6 +169,7 @@ export async function updateDemanda(
       area: parsed.data.area,
       projeto: parsed.data.projeto,
       evento_id: eventoId.data ?? null,
+      etiqueta_id: etiquetaId.data ?? null,
     })
     .eq("id", id);
 
@@ -211,6 +237,60 @@ export async function updateDemanda(
         deleteError
       );
       return { ok: false, message: "Não foi possível salvar as alterações." };
+    }
+  }
+
+  // Membros (acompanhantes) diffing — same shape as the responsável diff
+  // above: re-read the current set server-side, apply only the delta.
+  const desiredMembroIds = parsed.data.membroIds ?? [];
+  if (desiredMembroIds.length > 0 || true) {
+    const { data: currentMembros } = await supabase
+      .from("demanda_membros")
+      .select("profile_id")
+      .eq("demanda_id", id);
+
+    const currentMembroIds = new Set(
+      (currentMembros ?? []).map((row) => row.profile_id as string)
+    );
+    const desiredMembroSet = new Set(desiredMembroIds);
+    const membrosToAdd = [...desiredMembroSet].filter(
+      (profileId) => !currentMembroIds.has(profileId)
+    );
+    const membrosToRemove = [...currentMembroIds].filter(
+      (profileId) => !desiredMembroSet.has(profileId)
+    );
+
+    if (membrosToAdd.length > 0) {
+      const { error: membrosInsertError } = await supabase
+        .from("demanda_membros")
+        .insert(
+          membrosToAdd.map((profileId) => ({
+            demanda_id: id,
+            profile_id: profileId,
+          }))
+        );
+      if (membrosInsertError) {
+        console.error(
+          "updateDemanda: demanda_membros insert failed",
+          membrosInsertError
+        );
+        return { ok: false, message: "Não foi possível salvar as alterações." };
+      }
+    }
+
+    if (membrosToRemove.length > 0) {
+      const { error: membrosDeleteError } = await supabase
+        .from("demanda_membros")
+        .delete()
+        .eq("demanda_id", id)
+        .in("profile_id", membrosToRemove);
+      if (membrosDeleteError) {
+        console.error(
+          "updateDemanda: demanda_membros delete failed",
+          membrosDeleteError
+        );
+        return { ok: false, message: "Não foi possível salvar as alterações." };
+      }
     }
   }
 
@@ -289,4 +369,72 @@ export async function updateDemandaStatus(
 
   revalidatePath("/");
   return { ok: true, message: "Demanda atualizada." };
+}
+
+export type CriarEtiquetaState = {
+  ok: boolean;
+  message: string;
+  id: number | null;
+};
+
+const criarEtiquetaInitialState: CriarEtiquetaState = {
+  ok: false,
+  message: "",
+  id: null,
+};
+
+const etiquetaSchema = z.object({
+  area: z.string().trim().min(1, "Escolha a área da etiqueta.").max(200),
+  nome: z.string().trim().min(1, "Dê um nome à etiqueta.").max(100),
+});
+
+// Inline label creation from the demanda form ("cadastrado diretamente
+// pela seleção") — every label is bound to an área. Returns the new id so
+// the client can select it immediately without a page reload.
+export async function criarEtiqueta(
+  prevState: CriarEtiquetaState,
+  formData: FormData
+): Promise<CriarEtiquetaState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ...criarEtiquetaInitialState, message: "Sessão expirada." };
+  }
+
+  const parsed = etiquetaSchema.safeParse({
+    area: formData.get("area"),
+    nome: formData.get("nome"),
+  });
+
+  if (!parsed.success) {
+    return {
+      ...criarEtiquetaInitialState,
+      message: "Escolha a área e dê um nome à etiqueta.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("etiquetas")
+    .insert({
+      area: parsed.data.area,
+      nome: parsed.data.nome,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("criarEtiqueta: insert failed", error);
+    return {
+      ...criarEtiquetaInitialState,
+      message:
+        error?.code === "23505"
+          ? "Já existe uma etiqueta com esse nome nessa área."
+          : "Não foi possível criar a etiqueta.",
+    };
+  }
+
+  return { ok: true, message: "Etiqueta criada.", id: data.id as number };
 }

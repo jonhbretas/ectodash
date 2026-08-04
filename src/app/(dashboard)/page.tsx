@@ -74,10 +74,10 @@ export default async function DashboardPage({
   // read source — atrasada and evento_id come from the view directly.
   let query = supabase
     .from("demandas_com_status")
-    .select("id, titulo, prazo, status, area, projeto, evento_id, atrasada")
+    .select("id, titulo, prazo, status, area, projeto, evento_id, etiqueta_id, atrasada")
     .order("prazo", { ascending: true });
 
-  // All five filter dimensions, combined with AND, each applied as a query
+  // All filter dimensions, combined with AND, each applied as a query
   // modifier BEFORE data reaches the client.
   if (filters.area) {
     query = query.ilike("area", filters.area);
@@ -87,6 +87,9 @@ export default async function DashboardPage({
   }
   if (filters.evento) {
     query = query.eq("evento_id", Number(filters.evento));
+  }
+  if (filters.etiqueta) {
+    query = query.eq("etiqueta_id", Number(filters.etiqueta));
   }
   if (filters.status) {
     query = query.eq("status", filters.status);
@@ -122,26 +125,46 @@ export default async function DashboardPage({
   const demandaIds = (demandas ?? []).map((demanda) => demanda.id);
   const baseDemandaIds = baseRows.map((demanda) => demanda.id);
 
-  const [responsaveisResult, eventosResult] = await Promise.all([
-    baseDemandaIds.length > 0
-      ? supabase
-          .from("demanda_responsaveis")
-          .select("demanda_id, profile_id, profiles(email, full_name)")
-          .in("demanda_id", baseDemandaIds)
-      : Promise.resolve({
-          data: [] as {
-            demanda_id: number;
-            profile_id: string;
-            profiles: { email: string; full_name: string | null } | null;
-          }[],
-        }),
-    supabase.from("eventos").select("id, titulo").order("data_evento", { ascending: true }),
-  ]);
+  const [responsaveisResult, eventosResult, etiquetasResult, checklistResult] =
+    await Promise.all([
+      baseDemandaIds.length > 0
+        ? supabase
+            .from("demanda_responsaveis")
+            .select("demanda_id, profile_id, profiles(email, full_name)")
+            .in("demanda_id", baseDemandaIds)
+        : Promise.resolve({
+            data: [] as {
+              demanda_id: number;
+              profile_id: string;
+              profiles: { email: string; full_name: string | null } | null;
+            }[],
+          }),
+      supabase.from("eventos").select("id, titulo").order("data_evento", { ascending: true }),
+      supabase.from("etiquetas").select("id, area, nome").order("area").order("nome"),
+      baseDemandaIds.length > 0
+        ? supabase
+            .from("demanda_checklist")
+            .select("demanda_id, concluido")
+            .in("demanda_id", baseDemandaIds)
+        : Promise.resolve({ data: [] as { demanda_id: number; concluido: boolean }[] }),
+    ]);
 
   const responsaveis = responsaveisResult.data ?? [];
   const eventoById = new Map(
     (eventosResult.data ?? []).map((evento) => [evento.id, evento.titulo])
   );
+  const etiquetaById = new Map(
+    (etiquetasResult.data ?? []).map((etiqueta) => [etiqueta.id, etiqueta])
+  );
+
+  // Checklist progress per demanda — one batched read, counted client-side.
+  const checklistPorDemanda = new Map<number, { total: number; feitos: number }>();
+  for (const row of checklistResult.data ?? []) {
+    const current = checklistPorDemanda.get(row.demanda_id) ?? { total: 0, feitos: 0 };
+    current.total += 1;
+    if (row.concluido) current.feitos += 1;
+    checklistPorDemanda.set(row.demanda_id, current);
+  }
 
   const responsaveisPorDemanda = new Map<number, string[]>();
   const responsavelOptionById = new Map<string, string>();
@@ -164,19 +187,28 @@ export default async function DashboardPage({
     .map(([id, label]) => ({ id, label }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  let demandaList = (demandas ?? []).map((demanda) => ({
-    id: demanda.id,
-    titulo: demanda.titulo,
-    prazo: demanda.prazo,
-    status: demanda.status,
-    area: demanda.area,
-    projeto: demanda.projeto,
-    atrasada: demanda.atrasada,
-    eventoNome: demanda.evento_id
-      ? (eventoById.get(demanda.evento_id) ?? null)
-      : null,
-    responsavelEmails: responsaveisPorDemanda.get(demanda.id) ?? [],
-  }));
+  let demandaList = (demandas ?? []).map((demanda) => {
+    const etiqueta = demanda.etiqueta_id
+      ? (etiquetaById.get(demanda.etiqueta_id) ?? null)
+      : null;
+    const checklist = checklistPorDemanda.get(demanda.id);
+    return {
+      id: demanda.id,
+      titulo: demanda.titulo,
+      prazo: demanda.prazo,
+      status: demanda.status,
+      area: demanda.area,
+      projeto: demanda.projeto,
+      atrasada: demanda.atrasada,
+      eventoNome: demanda.evento_id
+        ? (eventoById.get(demanda.evento_id) ?? null)
+        : null,
+      etiquetaNome: etiqueta ? `${etiqueta.nome} (${etiqueta.area})` : null,
+      checklistTotal: checklist?.total ?? 0,
+      checklistFeitos: checklist?.feitos ?? 0,
+      responsavelEmails: responsaveisPorDemanda.get(demanda.id) ?? [],
+    };
+  });
 
   if (filters.responsavel) {
     const matchingDemandaIds = new Set(
@@ -193,6 +225,7 @@ export default async function DashboardPage({
     filters.area ||
       filters.projeto ||
       filters.evento ||
+      filters.etiqueta ||
       filters.responsavel ||
       filters.status
   );
@@ -265,6 +298,7 @@ export default async function DashboardPage({
           areaOptions={areaOptions}
           projetoOptions={projetoOptions}
           eventoOptions={eventosResult.data ?? []}
+          etiquetaOptions={etiquetasResult.data ?? []}
           responsavelOptions={responsavelOptions}
           currentFilters={filters}
         />

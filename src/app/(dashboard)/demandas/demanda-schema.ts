@@ -18,7 +18,20 @@ export const demandaSchema = z.object({
   // Projeto is a second free-text dimension, distinct from área (user
   // decision: filters Área + Projeto), optional like area.
   projeto: z.string().trim().optional(),
+  // Membros/acompanhantes: optional extra volunteers who follow the
+  // demanda and receive the same reminders (join table demanda_membros).
+  membroIds: z.array(z.string().uuid()).optional(),
 });
+
+// Etiqueta link — validated separately (native select, not RHF-managed),
+// same pattern as eventoIdSchema.
+export const etiquetaIdSchema = z.preprocess(
+  (value) =>
+    value === "" || value === undefined || value === null
+      ? undefined
+      : Number(value),
+  z.number().int().positive().optional()
+);
 
 // Evento link (vínculo evento -> demanda). Kept OUT of demandaSchema on
 // purpose: it is a native-select optional value, not managed by
