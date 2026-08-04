@@ -2,7 +2,18 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 function isPublicPath(pathname: string): boolean {
-  return pathname === "/login" || pathname.startsWith("/auth");
+  // /api/cron/* has NO end-user session by construction (a Vercel Cron
+  // invocation, not a browser request) — it authenticates the REQUEST
+  // itself via its own CRON_SECRET Bearer-token check inside the route
+  // handler (07-RESEARCH.md Security Domain V2). Without this exemption,
+  // this proxy would redirect every cron invocation to /login with a 307
+  // before the route's own 401 check ever runs, since no `user` session
+  // exists for a cron-triggered request.
+  return (
+    pathname === "/login" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/api/cron")
+  );
 }
 
 // Next.js 16 renamed the middleware.ts/middleware() convention to
