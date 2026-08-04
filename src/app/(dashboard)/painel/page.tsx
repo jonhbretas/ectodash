@@ -9,6 +9,9 @@ import ResponsavelSummary, {
   type ResponsavelSummaryRow,
 } from "./responsavel-summary";
 import OverduePanel from "./overdue-panel";
+import ReminderRunsPanel, {
+  type ReminderRunRow,
+} from "./reminder-runs-panel";
 
 // Matches demanda-list.tsx's SEM_AREA_DEFINIDA constant exactly, character
 // for character — the coordinator dashboard's área breakdown must never
@@ -278,6 +281,32 @@ async function PainelContent({
     area: row.area,
   }));
 
+  // Reminder-job run log (LEMB-04) — same ordinary authenticated `supabase`
+  // client already used for every other /painel query above; never an
+  // elevated-privilege admin client on this page. Coordenador-only via
+  // reminder_runs' own RLS SELECT policy (migration 0005) — this query
+  // naturally returns rows only because page.tsx has already confirmed the
+  // caller's role above (07-RESEARCH.md, 07-03-PLAN.md must_haves).
+  const { data: reminderRunRows } = await supabase.from("reminder_runs")
+    .select(
+      "id, started_at, finished_at, status, sent_count, failed_count, skipped_count, error_message"
+    )
+    .order("started_at", { ascending: false })
+    .limit(20);
+
+  const reminderRuns: ReminderRunRow[] = (reminderRunRows ?? []).map(
+    (row) => ({
+      id: row.id,
+      startedAt: row.started_at,
+      finishedAt: row.finished_at,
+      status: row.status,
+      sentCount: row.sent_count,
+      failedCount: row.failed_count,
+      skippedCount: row.skipped_count,
+      errorMessage: row.error_message,
+    })
+  );
+
   return (
     <>
       <div className="grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -316,6 +345,7 @@ async function PainelContent({
       <AreaSummary rows={areaRows} />
       <ResponsavelSummary rows={responsavelRows} />
       <OverduePanel demandas={overduePanelRows} />
+      <ReminderRunsPanel runs={reminderRuns} />
     </>
   );
 }
