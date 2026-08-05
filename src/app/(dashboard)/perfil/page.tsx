@@ -75,7 +75,7 @@ export default async function MeuPerfilPage() {
       <div className="flex w-full max-w-md flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
         <dl className="flex flex-col gap-3">
           <div className="flex flex-col gap-0.5">
-            <dt className="text-base text-zinc-600">E-mail institucional</dt>
+            <dt className="text-base text-zinc-600">E-mail principal</dt>
             <dd className="text-xl text-zinc-900">{profile.email}</dd>
           </div>
           <div className="flex flex-col gap-0.5">

@@ -64,8 +64,8 @@ export default async function LoginPage({
             Entrar no EctoDash
           </h1>
           <p className="text-xl text-zinc-700">
-            Digite seu e-mail institucional abaixo. Enviaremos um link de
-            acesso por e-mail — não é preciso criar ou digitar nenhuma senha.
+            Digite seu e-mail principal abaixo. Enviaremos um link de acesso
+            por e-mail — não é preciso criar ou digitar nenhuma senha.
             Na primeira vez, você escolherá seu nome na lista de voluntários
             para vincular o cadastro.
           </p>

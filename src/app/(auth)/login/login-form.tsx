@@ -38,7 +38,7 @@ export default function LoginForm() {
     <form action={formAction} className="flex w-full max-w-md flex-col gap-4">
       <div className="flex flex-col gap-2">
         <label htmlFor="email" className="text-xl font-medium text-zinc-900">
-          E-mail institucional
+          E-mail principal
         </label>
         <Input
           id="email"
