@@ -7,11 +7,12 @@
 // the functions are the real gate; the UI just decides what to show.
 // For a coordenador_area caller the papel/áreas fields are hidden entirely
 // (the functions force voluntario_comum and pin the área to the caller's).
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Save, UserRoundPlus } from "lucide-react";
 import { criarVoluntario, atualizarVoluntario, type PerfilState } from "./actions";
+import { FormCombobox, FormSelect } from "@/components/ui/form-select";
 
 export type VoluntarioFormValues = {
   nome: string;
@@ -84,6 +85,9 @@ export default function VoluntarioForm({
     mode === "criar"
       ? criarVoluntario
       : atualizarVoluntario.bind(null, voluntarioId!);
+
+  const [areaAtuacao, setAreaAtuacao] = useState(values.area_atuacao ?? "");
+  const [papel, setPapel] = useState(values.papel ?? "voluntario_comum");
 
   const [state, formAction] = useActionState<
     PerfilState & { novoId?: number },
@@ -182,19 +186,14 @@ export default function VoluntarioForm({
 
         <div className="sm:col-span-2">
           <Field id="area_atuacao" label="Área de atuação">
-            <input
-              id="area_atuacao"
+            <FormCombobox
               name="area_atuacao"
-              list="areas-conhecidas"
-              defaultValue={values.area_atuacao ?? ""}
-              placeholder="Ex: Paratecnológico - DIP"
-              className={inputClassName}
+              value={areaAtuacao}
+              onChange={setAreaAtuacao}
+              options={areaOptions}
+              placeholder="Escolha a área ou digite outra"
+              ariaLabel="Área de atuação"
             />
-            <datalist id="areas-conhecidas">
-              {areaOptions.map((area) => (
-                <option key={area} value={area} />
-              ))}
-            </datalist>
           </Field>
         </div>
 
@@ -214,18 +213,19 @@ export default function VoluntarioForm({
         {showRoleFields && (
           <>
             <Field id="papel" label="Papel">
-              <select
-                id="papel"
+              <FormSelect
                 name="papel"
-                defaultValue={values.papel ?? "voluntario_comum"}
-                className={inputClassName}
-              >
-                <option value="voluntario_comum">Voluntário comum</option>
-                <option value="coordenador_area">Coordenador de área</option>
-                <option value="financeiro">Financeiro</option>
-                <option value="voluntariado">Voluntariado</option>
-                <option value="coordenador_geral">Coordenador geral</option>
-              </select>
+                value={papel}
+                onValueChange={setPapel}
+                placeholder="Escolha o papel"
+                options={[
+                  { value: "voluntario_comum", label: "Voluntário comum" },
+                  { value: "coordenador_area", label: "Coordenador de área" },
+                  { value: "financeiro", label: "Financeiro" },
+                  { value: "voluntariado", label: "Voluntariado" },
+                  { value: "coordenador_geral", label: "Coordenador geral" },
+                ]}
+              />
             </Field>
 
             <Field id="areas_lideradas" label="Áreas de coordenação">

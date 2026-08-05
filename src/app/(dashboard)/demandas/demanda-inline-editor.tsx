@@ -24,6 +24,19 @@ import OverdueBadge from "./overdue-badge";
 import VoluntarioPicker from "@/components/voluntario-picker";
 import { agruparEventosPorMes } from "@/lib/eventos-agrupados";
 import {
+  FormCombobox,
+  FormSelect,
+  formSelectTriggerClass,
+} from "@/components/ui/form-select";
+import {
+  SelectGroup,
+  SelectLabel,
+  SelectItem,
+} from "@/components/ui/select";
+
+// Trigger compacto para os pills de edição inline (o padrão é min-h-14).
+const pillSelectClass = `${formSelectTriggerClass} min-h-10 w-40 max-w-72 rounded-lg border-zinc-300 px-2 py-1 text-lg focus:ring-2 focus:ring-blue-500`;
+import {
   criarEtiqueta,
   updateDemandaTitulo,
   updateDemandaPrazo,
@@ -543,16 +556,16 @@ export default function DemandaInlineEditor({
         {/* Status */}
         {editingPill === "status" ? (
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
-            <select
-              ref={editingRef as any}
+            <FormSelect
               value={localStatus}
-              onChange={(e) => setLocalStatus(e.target.value as DemandaStatus)}
-              className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none"
-            >
-              <option value="pendente">Pendente</option>
-              <option value="em_andamento">Em andamento</option>
-              <option value="concluida">Concluída</option>
-            </select>
+              onValueChange={(v) => setLocalStatus(v as DemandaStatus)}
+              options={[
+                { value: "pendente", label: "Pendente" },
+                { value: "em_andamento", label: "Em andamento" },
+                { value: "concluida", label: "Concluída" },
+              ]}
+              className={pillSelectClass}
+            />
             <button type="button" onClick={async () => { const ok = await saveStatus(localStatus); if (ok) setEditingPill(null); }}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-green-600 hover:bg-green-50" aria-label="Salvar status">
               <Check size={16} aria-hidden="true" />
@@ -578,15 +591,21 @@ export default function DemandaInlineEditor({
         {/* Área */}
         {editingPill === "area" ? (
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
-            <input ref={editingRef as any} value={localArea ?? ""} onChange={(e) => setLocalArea(e.target.value)}
-              placeholder="Área" list="areas-institucionais" onBlur={async () => { await saveArea(localArea ?? ""); setEditingPill(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { saveArea(localArea ?? ""); setEditingPill(null); } if (e.key === "Escape") { setLocalArea(demanda.area); setEditingPill(null); } }}
-              className="min-h-10 w-40 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500" />
-            <datalist id="areas-institucionais">
-              {areas.map((area) => (
-                <option key={area} value={area} />
-              ))}
-            </datalist>
+            <FormCombobox
+              value={localArea ?? ""}
+              onChange={setLocalArea}
+              options={areas}
+              placeholder="Área"
+              className={pillSelectClass}
+            />
+            <button type="button" onClick={async () => { await saveArea(localArea ?? ""); setEditingPill(null); }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-green-600 hover:bg-green-50" aria-label="Salvar área">
+              <Check size={16} aria-hidden="true" />
+            </button>
+            <button type="button" onClick={() => { setLocalArea(demanda.area); setEditingPill(null); }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100" aria-label="Cancelar">
+              <X size={16} aria-hidden="true" />
+            </button>
           </div>
         ) : (
           <button type="button" onClick={() => setEditingPill("area")}
@@ -603,15 +622,21 @@ export default function DemandaInlineEditor({
         {/* Projeto */}
         {editingPill === "projeto" ? (
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
-            <input ref={editingRef as any} value={localProjeto ?? ""} onChange={(e) => setLocalProjeto(e.target.value)}
-              placeholder="Projeto" list="projetos-cadastrados" onBlur={async () => { await saveProjeto(localProjeto ?? ""); setEditingPill(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { saveProjeto(localProjeto ?? ""); setEditingPill(null); } if (e.key === "Escape") { setLocalProjeto(demanda.projeto); setEditingPill(null); } }}
-              className="min-h-10 w-40 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500" />
-            <datalist id="projetos-cadastrados">
-              {projetos.map((projeto) => (
-                <option key={projeto} value={projeto} />
-              ))}
-            </datalist>
+            <FormCombobox
+              value={localProjeto ?? ""}
+              onChange={setLocalProjeto}
+              options={projetos}
+              placeholder="Projeto"
+              className={pillSelectClass}
+            />
+            <button type="button" onClick={async () => { await saveProjeto(localProjeto ?? ""); setEditingPill(null); }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-green-600 hover:bg-green-50" aria-label="Salvar projeto">
+              <Check size={16} aria-hidden="true" />
+            </button>
+            <button type="button" onClick={() => { setLocalProjeto(demanda.projeto); setEditingPill(null); }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100" aria-label="Cancelar">
+              <X size={16} aria-hidden="true" />
+            </button>
           </div>
         ) : (
           <button type="button" onClick={() => setEditingPill("projeto")}
@@ -628,11 +653,12 @@ export default function DemandaInlineEditor({
         {/* Evento */}
         {editingPill === "evento" ? (
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
-            <select ref={editingRef as any} value={String(localEventoId ?? "")}
-              onChange={(e) => setLocalEventoId(e.target.value ? Number(e.target.value) : null)}
-              className="min-h-10 max-w-72 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none"
+            <FormSelect
+              value={String(localEventoId ?? "")}
+              onValueChange={(v) => setLocalEventoId(v ? Number(v) : null)}
+              placeholder="Nenhum evento"
+              className={pillSelectClass}
             >
-              <option value="">Nenhum evento</option>
               {agruparEventosPorMes(
                 eventos.map((ev) => ({
                   id: ev.id,
@@ -641,20 +667,27 @@ export default function DemandaInlineEditor({
                   local: ev.local ?? null,
                 }))
               ).map((grupo) => (
-                <optgroup key={grupo.label} label={grupo.label}>
+                <SelectGroup key={grupo.label}>
+                  <SelectLabel className="px-2 py-1.5 text-base font-semibold text-zinc-500">
+                    {grupo.label}
+                  </SelectLabel>
                   {grupo.eventos.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
+                    <SelectItem
+                      key={ev.id}
+                      value={String(ev.id)}
+                      className="rounded-lg py-2.5 text-lg data-[highlighted]:bg-zinc-100"
+                    >
                       {eventoLabel({
                         id: ev.id,
                         titulo: ev.titulo,
                         dataEvento: ev.data_evento,
                         local: ev.local ?? null,
                       })}
-                    </option>
+                    </SelectItem>
                   ))}
-                </optgroup>
+                </SelectGroup>
               ))}
-            </select>
+            </FormSelect>
             <button type="button" onClick={async () => { await saveEvento(String(localEventoId ?? "")); setEditingPill(null); }}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-green-600 hover:bg-green-50" aria-label="Salvar evento">
               <Check size={16} aria-hidden="true" />
@@ -680,13 +713,16 @@ export default function DemandaInlineEditor({
         {editingPill === "etiqueta" ? (
           <div className="flex flex-col gap-2 rounded-xl bg-white p-3 ring-1 ring-zinc-200/60">
             <div className="flex items-center gap-2">
-              <select ref={editingRef as any} value={String(localEtiquetaId ?? "")}
-                onChange={(e) => setLocalEtiquetaId(e.target.value ? Number(e.target.value) : null)}
-                className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none"
-              >
-                <option value="">Nenhuma etiqueta</option>
-                {localEtiquetas.map((et) => <option key={et.id} value={et.id}>{et.nome} ({et.area})</option>)}
-              </select>
+              <FormSelect
+                value={String(localEtiquetaId ?? "")}
+                onValueChange={(v) => setLocalEtiquetaId(v ? Number(v) : null)}
+                placeholder="Nenhuma etiqueta"
+                className={`${pillSelectClass} max-w-56`}
+                options={localEtiquetas.map((et) => ({
+                  value: String(et.id),
+                  label: `${et.nome} (${et.area})`,
+                }))}
+              />
               <button type="button" onClick={async () => { await saveEtiqueta(String(localEtiquetaId ?? "")); setEditingPill(null); }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-green-600 hover:bg-green-50" aria-label="Salvar etiqueta">
                 <Check size={16} aria-hidden="true" />

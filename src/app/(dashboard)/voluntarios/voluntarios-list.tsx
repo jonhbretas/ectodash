@@ -2,7 +2,7 @@
 
 import { useState, useActionState } from "react";
 import Link from "next/link";
-import { Users, UserRoundCheck, Pencil, ShieldCheck, CalendarClock, Settings2, X, CheckSquare, Square, Sparkles, CheckCircle2, Plus, Minus, MoonStar } from "lucide-react";
+import { Users, UserRoundCheck, Pencil, ShieldCheck, CalendarClock, Settings2, X, CheckSquare, Square, Sparkles, CheckCircle2, Plus, Minus, MoonStar, UserX } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { roleLabel } from "@/lib/role-labels";
@@ -53,6 +53,7 @@ export default function VoluntariosListClient({
   afastados,
   vinculados,
   equipeDip,
+  desligados,
   totalEctolab,
   totalDip,
   canManage,
@@ -68,6 +69,8 @@ export default function VoluntariosListClient({
   // Voluntários da equipe DIP (org_depto com "DIP") — seção separada das
   // áreas institucionais, com contagem própria.
   equipeDip: VoluntarioRow[];
+  // Desativados (ativo = false) — seção própria "Desligados" no fim.
+  desligados: VoluntarioRow[];
   // Voluntários institucionais (ECTOLAB) vs equipe DIP — contagens
   // separadas ao lado do total geral.
   totalEctolab: number;
@@ -76,7 +79,8 @@ export default function VoluntariosListClient({
   areaOptions: string[];
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  // Todas as áreas começam recolhidas, exceto a primeira da árvore.
+  // Todas as áreas começam recolhidas, exceto a primeira da árvore
+  // (Desligados também começa recolhida).
   const [collapsedAreas, setCollapsedAreas] = useState<Set<string>>(() => {
     const nomes: string[] = [];
     function coletar(nos: AreaNode[]) {
@@ -86,6 +90,7 @@ export default function VoluntariosListClient({
       }
     }
     coletar(areas);
+    nomes.push("Desligados");
     return new Set(nomes.slice(1));
   });
   const [showBulkPanel, setShowBulkPanel] = useState(false);
@@ -196,7 +201,7 @@ export default function VoluntariosListClient({
 
   return (
     <>
-      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-8">
         <StatPill icon={<Users size={22} className="text-zinc-500" />} label="Total geral" value={all.length} />
         <StatPill icon={<ShieldCheck size={22} className="text-blue-600" />} label="Voluntários ECTOLAB" value={totalEctolab} />
         <StatPill icon={<Sparkles size={22} className="text-purple-600" />} label="Voluntários DIP" value={totalDip} />
@@ -204,6 +209,7 @@ export default function VoluntariosListClient({
         <StatPill icon={<MoonStar size={22} className="text-amber-500" />} label="Ociosos" value={ociosos} />
         <StatPill icon={<CalendarClock size={22} className="text-amber-500" />} label="Com saída marcada" value={afastados} />
         <StatPill icon={<UserRoundCheck size={22} className="text-blue-500" />} label="Vinculados" value={vinculados} />
+        <StatPill icon={<UserX size={22} className="text-red-500" />} label="Desligados" value={desligados.length} />
       </div>
 
       {selectedIdsArr.length > 0 && (
@@ -311,6 +317,8 @@ export default function VoluntariosListClient({
       <div className="flex w-full flex-col gap-6">
         {equipeDip.length > 0 && renderNo({ nome: "Equipe DIP", rows: equipeDip, subAreas: [] }, 0)}
         {areas.map((no) => renderNo(no, 0))}
+        {desligados.length > 0 &&
+          renderNo({ nome: "Desligados", rows: desligados, subAreas: [] }, 0)}
       </div>
     </>
   );

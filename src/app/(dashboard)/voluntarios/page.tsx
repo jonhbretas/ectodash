@@ -156,13 +156,18 @@ export default async function VoluntariosPage({
     return Boolean(linked);
   }).length;
 
+  // Desligados (ativo = false) vão para a seção própria no fim da lista;
+  // a equipe DIP e as áreas mostram apenas os ativos.
+  const desligados = all.filter((row) => !row.ativo);
+  const ativosRows = all.filter((row) => row.ativo);
+
   // Equipe DIP = voluntários cujo departamento é da Dinâmica DIP
   // (ex.: "ECTOLAB \ Paratecnológico \ DIP") — exibidos em seção própria,
   // separados dos voluntários das áreas institucionais.
-  const equipeDip = all.filter((row) =>
+  const equipeDip = ativosRows.filter((row) =>
     row.org_depto?.toLowerCase().includes("dip")
   );
-  const demais = all.filter((row) => !row.org_depto?.toLowerCase().includes("dip"));
+  const demais = ativosRows.filter((row) => !row.org_depto?.toLowerCase().includes("dip"));
   const totalEctolab = demais.length;
   const totalDip = equipeDip.length;
 
@@ -306,6 +311,7 @@ export default async function VoluntariosPage({
             afastados={afastados}
             vinculados={vinculados}
             equipeDip={equipeDip}
+            desligados={desligados}
             totalEctolab={totalEctolab}
             totalDip={totalDip}
             canManage={canManage}

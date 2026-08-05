@@ -7,6 +7,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormCombobox, FormSelect } from "@/components/ui/form-select";
+import {
+  SelectGroup,
+  SelectLabel,
+  SelectItem,
+} from "@/components/ui/select";
+import { agruparEventosPorMes } from "@/lib/eventos-agrupados";
 import {
   createDemanda,
   updateDemanda,
@@ -15,7 +22,6 @@ import {
   type UpdateDemandaState,
 } from "./actions";
 import { demandaSchema, type DemandaFormValues } from "./demanda-schema";
-import { agruparEventosPorMes } from "@/lib/eventos-agrupados";
 
 const initialState: CreateDemandaState | UpdateDemandaState = {
   ok: false,
@@ -118,7 +124,7 @@ export default function DemandaForm({
   // props; a created label is appended and selected immediately (no page
   // reload). The native etiquetaId select reads from this list.
   const [etiquetaOptions, setEtiquetaOptions] = useState(etiquetas);
-  const [etiquetaId, setEtiquetaId] = useState(defaultValues?.etiquetaId ?? "");
+  const [etiquetaId, setEtiquetaId] = useState(String(defaultValues?.etiquetaId ?? ""));
   const [criandoEtiqueta, setCriandoEtiqueta] = useState(false);
   const [novaEtiquetaArea, setNovaEtiquetaArea] = useState("");
   const [novaEtiquetaNome, setNovaEtiquetaNome] = useState("");
@@ -156,6 +162,7 @@ export default function DemandaForm({
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<DemandaFormValues>({
     resolver: zodResolver(demandaSchema),
@@ -165,6 +172,16 @@ export default function DemandaForm({
       ...defaultValues,
     },
   });
+
+  // Estado dos campos com dropdown padrão (Radix) — o hidden input
+  // correspondente alimenta o FormData; o setValue mantém o
+  // react-hook-form sincronizado para a validação do schema.
+  const [eventoId, setEventoId] = useState(String(defaultValues?.eventoId ?? ""));
+  const [area, setArea] = useState(defaultValues?.area ?? "");
+  const [projeto, setProjeto] = useState(defaultValues?.projeto ?? "");
+  const [status, setStatus] = useState<DemandaFormValues["status"]>(
+    defaultValues?.status ?? "pendente"
+  );
 
   // Client-side validation runs first (react-hook-form + the shared zod
   // schema); only once it passes do we hand the native FormData off to the
@@ -288,61 +305,58 @@ export default function DemandaForm({
               <Label htmlFor="area" className={fieldLabelClass}>
                 Área
               </Label>
-              <Input
-                id="area"
-                type="text"
-                list="areas-institucionais"
+              <FormCombobox
+                name="area"
+                value={area}
+                onChange={(v) => setValue("area", v)}
+                options={areas}
                 placeholder="Ex: Pesquisa de Campo"
-                className={fieldInputClass}
-                {...register("area")}
+                ariaLabel="Área"
               />
-              <datalist id="areas-institucionais">
-                {areas.map((area) => (
-                  <option key={area} value={area} />
-                ))}
-              </datalist>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="projeto" className={fieldLabelClass}>
                 Projeto
               </Label>
-              <Input
-                id="projeto"
-                type="text"
-                list="projetos-cadastrados"
+              <FormCombobox
+                name="projeto"
+                value={projeto}
+                onChange={(v) => setValue("projeto", v)}
+                options={projetos}
                 placeholder="Ex: Projeto Horta Comunitária"
-                className={fieldInputClass}
-                {...register("projeto")}
+                ariaLabel="Projeto"
               />
-              <datalist id="projetos-cadastrados">
-                {projetos.map((projeto) => (
-                  <option key={projeto} value={projeto} />
-                ))}
-              </datalist>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="eventoId" className={fieldLabelClass}>
                 Evento (opcional)
               </label>
-              <select
-                id="eventoId"
+              <FormSelect
                 name="eventoId"
-                defaultValue={String(defaultValues?.eventoId ?? "")}
-                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                value={eventoId}
+                onValueChange={setEventoId}
+                placeholder="Nenhum evento"
+                ariaLabel="Evento"
               >
-                <option value="">Nenhum evento</option>
                 {agruparEventosPorMes(eventos).map((grupo) => (
-                  <optgroup key={grupo.label} label={grupo.label}>
+                  <SelectGroup key={grupo.label}>
+                    <SelectLabel className="px-2 py-1.5 text-base font-semibold text-zinc-500">
+                      {grupo.label}
+                    </SelectLabel>
                     {grupo.eventos.map((evento) => (
-                      <option key={evento.id} value={evento.id}>
+                      <SelectItem
+                        key={evento.id}
+                        value={String(evento.id)}
+                        className="rounded-lg py-2.5 text-lg data-[highlighted]:bg-zinc-100"
+                      >
                         {eventoLabel(evento)}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </optgroup>
+                  </SelectGroup>
                 ))}
-              </select>
+              </FormSelect>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -358,20 +372,17 @@ export default function DemandaForm({
                   {criandoEtiqueta ? "Cancelar" : "+ Nova etiqueta"}
                 </button>
               </div>
-              <select
-                id="etiquetaId"
+              <FormSelect
                 name="etiquetaId"
                 value={etiquetaId}
-                onChange={(e) => setEtiquetaId(e.target.value)}
-                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-              >
-                <option value="">Nenhuma etiqueta</option>
-                {etiquetaOptions.map((etiqueta) => (
-                  <option key={etiqueta.id} value={etiqueta.id}>
-                    {etiqueta.nome} ({etiqueta.area})
-                  </option>
-                ))}
-              </select>
+                onValueChange={setEtiquetaId}
+                placeholder="Nenhuma etiqueta"
+                ariaLabel="Etiqueta"
+                options={etiquetaOptions.map((etiqueta) => ({
+                  value: String(etiqueta.id),
+                  label: `${etiqueta.nome} (${etiqueta.area})`,
+                }))}
+              />
 
               {criandoEtiqueta && (
                 <div className="mt-1 flex flex-col gap-3 rounded-xl bg-zinc-50 p-4 ring-1 ring-zinc-200/60">
@@ -413,15 +424,17 @@ export default function DemandaForm({
         <div className={cardClass}>
           <h3 className={sectionTitleClass}>Status</h3>
           <div className="max-w-xs">
-            <select
-              id="status"
-              className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-              {...register("status")}
-            >
-              <option value="pendente">Pendente</option>
-              <option value="em_andamento">Em andamento</option>
-              <option value="concluida">Concluída</option>
-            </select>
+            <FormSelect
+              name="status"
+              value={status}
+              onValueChange={(v) => { const s = v as DemandaFormValues["status"]; setStatus(s); setValue("status", s); }}
+              placeholder="Status"
+              options={[
+                { value: "pendente", label: "Pendente" },
+                { value: "em_andamento", label: "Em andamento" },
+                { value: "concluida", label: "Concluída" },
+              ]}
+            />
           </div>
         </div>
 
@@ -541,61 +554,58 @@ export default function DemandaForm({
             <Label htmlFor="area" className={fieldLabelClass}>
               Área
             </Label>
-            <Input
-              id="area"
-              type="text"
-              list="areas-institucionais"
+            <FormCombobox
+              name="area"
+              value={area}
+              onChange={(v) => setValue("area", v)}
+              options={areas}
               placeholder="Ex: Pesquisa de Campo"
-              className={fieldInputClass}
-              {...register("area")}
+              ariaLabel="Área"
             />
-            <datalist id="areas-institucionais">
-              {areas.map((area) => (
-                <option key={area} value={area} />
-              ))}
-            </datalist>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="projeto" className={fieldLabelClass}>
               Projeto
             </Label>
-            <Input
-              id="projeto"
-              type="text"
-              list="projetos-cadastrados"
+            <FormCombobox
+              name="projeto"
+              value={projeto}
+              onChange={(v) => setValue("projeto", v)}
+              options={projetos}
               placeholder="Ex: Projeto Horta Comunitária"
-              className={fieldInputClass}
-              {...register("projeto")}
+              ariaLabel="Projeto"
             />
-            <datalist id="projetos-cadastrados">
-              {projetos.map((projeto) => (
-                <option key={projeto} value={projeto} />
-              ))}
-            </datalist>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="eventoId" className={fieldLabelClass}>
               Evento (opcional)
             </label>
-            <select
-              id="eventoId"
+            <FormSelect
               name="eventoId"
-              defaultValue={String(defaultValues?.eventoId ?? "")}
-              className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              value={eventoId}
+              onValueChange={setEventoId}
+              placeholder="Nenhum evento"
+              ariaLabel="Evento"
             >
-              <option value="">Nenhum evento</option>
               {agruparEventosPorMes(eventos).map((grupo) => (
-                <optgroup key={grupo.label} label={grupo.label}>
+                <SelectGroup key={grupo.label}>
+                  <SelectLabel className="px-2 py-1.5 text-base font-semibold text-zinc-500">
+                    {grupo.label}
+                  </SelectLabel>
                   {grupo.eventos.map((evento) => (
-                    <option key={evento.id} value={evento.id}>
+                    <SelectItem
+                      key={evento.id}
+                      value={String(evento.id)}
+                      className="rounded-lg py-2.5 text-lg data-[highlighted]:bg-zinc-100"
+                    >
                       {eventoLabel(evento)}
-                    </option>
+                    </SelectItem>
                   ))}
-                </optgroup>
+                </SelectGroup>
               ))}
-            </select>
+            </FormSelect>
           </div>
         </div>
       </div>
@@ -605,15 +615,17 @@ export default function DemandaForm({
         <label htmlFor="status" className={fieldLabelClass}>
           Status
         </label>
-        <select
-          id="status"
-          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          {...register("status")}
-        >
-          <option value="pendente">Pendente</option>
-          <option value="em_andamento">Em andamento</option>
-          <option value="concluida">Concluída</option>
-        </select>
+        <FormSelect
+          name="status"
+          value={status}
+          onValueChange={(v) => { const s = v as DemandaFormValues["status"]; setStatus(s); setValue("status", s); }}
+          placeholder="Status"
+          options={[
+            { value: "pendente", label: "Pendente" },
+            { value: "em_andamento", label: "Em andamento" },
+            { value: "concluida", label: "Concluída" },
+          ]}
+        />
       </div>
 
       {/* === Etiqueta === */}
@@ -630,20 +642,17 @@ export default function DemandaForm({
             {criandoEtiqueta ? "Cancelar" : "+ Nova etiqueta"}
           </button>
         </div>
-        <select
-          id="etiquetaId"
+        <FormSelect
           name="etiquetaId"
           value={etiquetaId}
-          onChange={(e) => setEtiquetaId(e.target.value)}
-          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-        >
-          <option value="">Nenhuma etiqueta</option>
-          {etiquetaOptions.map((etiqueta) => (
-            <option key={etiqueta.id} value={etiqueta.id}>
-              {etiqueta.nome} ({etiqueta.area})
-            </option>
-          ))}
-        </select>
+          onValueChange={setEtiquetaId}
+          placeholder="Nenhuma etiqueta"
+          ariaLabel="Etiqueta"
+          options={etiquetaOptions.map((etiqueta) => ({
+            value: String(etiqueta.id),
+            label: `${etiqueta.nome} (${etiqueta.area})`,
+          }))}
+        />
 
         {criandoEtiqueta && (
           <div className="mt-1 flex flex-col gap-3 rounded-xl bg-zinc-50 p-4 ring-1 ring-zinc-200/60">
