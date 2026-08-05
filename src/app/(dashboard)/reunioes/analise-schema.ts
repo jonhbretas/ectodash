@@ -14,10 +14,29 @@
 //   dips       — DIP mentions, one record per mention (localidade, pais,
 //                data, participantes, observacoes).
 import { z } from "zod";
-import { extractionResponseSchema } from "../demandas/extrair/extraction-schema";
 
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+// Demanda suggestion from the ata analysis: the extrair fields (titulo,
+// responsavel_texto, prazo_*) plus the contextual dimensions the AI must
+// always identify for navigation — area, projeto and the related event.
+// All three are free text from the transcript; the review screen resolves
+// them into selects/datalists and the save maps evento_texto to an
+// evento_id (existing or created in the same analysis).
+const ataDemandaSchema = z.object({
+  titulo: z.string().trim().min(1).max(200),
+  responsavel_texto: z.string().trim().max(200),
+  prazo_texto: z.string().trim().max(200),
+  prazo_sugerido: z
+    .string()
+    .regex(dataRegex, "prazo_sugerido deve ser yyyy-MM-dd")
+    .optional()
+    .or(z.literal("")),
+  area_texto: z.string().trim().max(200).optional().or(z.literal("")),
+  projeto_texto: z.string().trim().max(200).optional().or(z.literal("")),
+  evento_texto: z.string().trim().max(200).optional().or(z.literal("")),
+});
 
 export const ataAnaliseSchema = z.object({
   ata: z.object({
@@ -38,7 +57,7 @@ export const ataAnaliseSchema = z.object({
     deliberacoes: z.array(z.string().trim().min(1).max(2000)).max(100),
     resumo: z.string().trim().min(1).max(10000),
   }),
-  demandas: extractionResponseSchema,
+  demandas: z.array(ataDemandaSchema).max(50),
   eventos: z
     .array(
       z.object({
@@ -94,10 +113,16 @@ export const ataAnaliseEnvelopeSchema = z.object({
 // The saved analysis's flowable form: demandas carry the resolved
 // responsavel id (or null) and the human-approved prazo; dips keep their
 // fields; atualizacoes carry the target demanda id resolved at save time.
+// area/projeto are the review-approved free texts; eventoRef is one of
+// "" (nenhum), "novo:<index>" (evento criado nesta análise) or
+// "existente:<id>" (evento já cadastrado) — resolved to evento_id at save.
 export type AtaSalvarDemanda = {
   titulo: string;
   responsavelId: string | null;
   prazo: string | null;
+  area: string | null;
+  projeto: string | null;
+  eventoRef: string | null;
 };
 
 export type AtaSalvarAtualizacao = {

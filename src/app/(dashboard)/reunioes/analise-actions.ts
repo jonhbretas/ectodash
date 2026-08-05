@@ -66,8 +66,9 @@ const pasteSchema = z.object({
 
 const AI_SYSTEM_PROMPT =
   "Você analisa transcrições de reunião e responde APENAS com JSON. " +
-  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}]}}. ' +
+  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}]}}. ' +
   "Regras: demandas = deliberações NOVAS com responsável e prazo claros. " +
+  "Para CADA demanda, identifique SEMPRE também: area_texto = a área institucional relacionada à demanda (ex.: Paratecnológico, Comunicação, Financeiro), projeto_texto = o projeto relacionado quando mencionado, evento_texto = o evento relacionado quando mencionado (use o MESMO título do evento da seção eventos quando aplicável). Use \"\" quando não houver menção. " +
   "eventos = eventos institucionais mencionados (ex.: qualificações, encontros, DIPs comemorativas, cursos, workshops, lives). Extraia titulo, data, local e descricao quando disponíveis. " +
   "atualizacoes = menções a demandas JÁ EXISTENTES (ex.: 'atualizar demanda X', 'a demanda Y avançou'); titulo deve ser o título da demanda existente; comentario descreve o que mudou. " +
   "dips = menções à Dinâmica DIP (localidades, países, datas, quantos participantes). " +
@@ -225,6 +226,10 @@ const salvarDemandasSchema = z
         .regex(/^\d+$/, "responsável inválido")
         .nullable(),
       prazo: z.string().regex(dataRegex).nullable(),
+      area: z.string().trim().max(200).nullable(),
+      projeto: z.string().trim().max(200).nullable(),
+      // "" | "novo:<index>" | "existente:<id>"
+      eventoRef: z.string().trim().max(50).nullable(),
     })
   )
   .max(50);
@@ -401,8 +406,47 @@ export async function salvarAtaAnalise(
     }
   }
 
+  // Event records — created FIRST so the new demandas can link their
+  // evento_id to an event from this same analysis ("novo:<index>" refs).
+  // Same filter the review applies: only included events with titulo+data.
+  const eventosRevisados = (eventos.data as AtaSalvarEvento[]).filter(
+    (evento) => evento.titulo.trim() && evento.data
+  );
+  const novoEventoIdPorIndice = new Map<number, number>();
+  for (const [indice, evento] of eventosRevisados.entries()) {
+    const { data: criado, error: eventoError } = await supabase
+      .from("eventos")
+      .insert({
+        titulo: evento.titulo,
+        data_evento: evento.data,
+        local: evento.local || null,
+        descricao: evento.descricao || null,
+      })
+      .select("id")
+      .single();
+    if (eventoError || !criado) {
+      console.error("salvarAtaAnalise: evento insert failed", eventoError);
+      continue;
+    }
+    novoEventoIdPorIndice.set(indice, criado.id);
+  }
+
+  function resolverEventoId(eventoRef: string | null): number | null {
+    if (!eventoRef) return null;
+    if (eventoRef.startsWith("novo:")) {
+      const indice = Number(eventoRef.slice(5));
+      return Number.isInteger(indice) ? (novoEventoIdPorIndice.get(indice) ?? null) : null;
+    }
+    if (eventoRef.startsWith("existente:")) {
+      const id = Number(eventoRef.slice(10));
+      return Number.isInteger(id) ? id : null;
+    }
+    return null;
+  }
+
   // New demandas from deliberations — same batched-insert shape as
-  // createDemanda, without the form layer.
+  // createDemanda, without the form layer. area/projeto persist the
+  // review-approved free texts; evento_id resolves the selected event.
   for (const demanda of demandas.data as AtaSalvarDemanda[]) {
     const { data: criada, error: demandaError } = await supabase
       .from("demandas")
@@ -410,8 +454,9 @@ export async function salvarAtaAnalise(
         titulo: demanda.titulo,
         prazo: demanda.prazo,
         status: "pendente",
-        area: null,
-        projeto: null,
+        area: demanda.area || null,
+        projeto: demanda.projeto || null,
+        evento_id: resolverEventoId(demanda.eventoRef),
       })
       .select("id")
       .single();
@@ -464,23 +509,6 @@ export async function salvarAtaAnalise(
       });
     if (comentarioError) {
       console.error("salvarAtaAnalise: comentario insert failed", comentarioError);
-    }
-  }
-
-  // Event records — one row per event mentioned in the meeting.
-  const eventoRows = (eventos.data as AtaSalvarEvento[])
-    .filter((evento) => evento.titulo.trim() && evento.data)
-    .map((evento) => ({
-      titulo: evento.titulo,
-      data_evento: evento.data,
-      local: evento.local || null,
-      descricao: evento.descricao || null,
-    }));
-
-  if (eventoRows.length > 0) {
-    const { error: eventosError } = await supabase.from("eventos").insert(eventoRows);
-    if (eventosError) {
-      console.error("salvarAtaAnalise: eventos insert failed", eventosError);
     }
   }
 

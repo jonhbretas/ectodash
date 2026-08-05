@@ -23,7 +23,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
+import { matchResponsavelRoster, normalize } from "@/lib/ai/match-responsavel";
 import {
   analisarTranscricao,
   salvarAtaAnalise,
@@ -57,6 +57,9 @@ export type VoluntarioOption = {
 
 type AnaliseFormProps = {
   voluntarios: VoluntarioOption[];
+  areas: string[];
+  projetos: string[];
+  eventosExistentes: { id: number; titulo: string; dataEvento: string }[];
   meetings: Meeting[];
   meetingsError: string | null;
   meetingsConfigured: boolean;
@@ -77,6 +80,9 @@ function formatMeetingDate(iso: string): string {
 
 export default function AnaliseForm({
   voluntarios,
+  areas,
+  projetos,
+  eventosExistentes,
   meetings,
   meetingsError,
   meetingsConfigured,
@@ -102,6 +108,9 @@ export default function AnaliseForm({
         arquivoNome={analiseState.arquivoNome}
         texto={analiseState.texto ?? ""}
         voluntarios={voluntarios}
+        areas={areas}
+        projetos={projetos}
+        eventosExistentes={eventosExistentes}
         salvarState={salvarState}
         salvarAction={salvarAction}
         onBack={() => setResetKey((key) => key + 1)}
@@ -258,6 +267,9 @@ type ReviewScreenProps = {
   arquivoNome: string | null;
   texto: string;
   voluntarios: VoluntarioOption[];
+  areas: string[];
+  projetos: string[];
+  eventosExistentes: { id: number; titulo: string; dataEvento: string }[];
   salvarState: SalvarAtaState;
   // useActionState-wrapped action: one FormData argument, state bound.
   salvarAction: (formData: FormData) => void;
@@ -271,6 +283,10 @@ type DemandaReview = {
   titulo: string;
   responsavelId: string | null;
   prazo: string | null;
+  area: string;
+  projeto: string;
+  // "" | "novo:<index>" | "existente:<id>"
+  eventoRef: string;
 };
 
 type DipReview = {
@@ -300,6 +316,9 @@ function ReviewScreen({
   arquivoNome,
   texto,
   voluntarios,
+  areas,
+  projetos,
+  eventosExistentes,
   salvarState,
   salvarAction,
   onBack,
@@ -316,8 +335,32 @@ function ReviewScreen({
     analise.ata.deliberacoes.join("\n")
   );
   const [resumo, setResumo] = useState(analise.ata.resumo);
-  const [demandas, setDemandas] = useState<DemandaReview[]>(() =>
-    analise.demandas.map((demanda, index) => {
+  const [demandas, setDemandas] = useState<DemandaReview[]>(() => {
+    // Eventos desta análise que serão criados de fato — mesmo filtro do
+    // save (titulo+data), na mesma ordem — usado para resolver evento_texto
+    // e para o índice do ref "novo:<index>".
+    const novosEventos = analise.eventos.filter(
+      (evento) => evento.titulo.trim() && evento.data
+    );
+
+    function resolverEvento(texto: string): string {
+      const needle = normalize(texto);
+      if (!needle) return "";
+      const novoIndex = novosEventos.findIndex(
+        (evento) =>
+          normalize(evento.titulo).includes(needle) ||
+          needle.includes(normalize(evento.titulo))
+      );
+      if (novoIndex >= 0) return `novo:${novoIndex}`;
+      const existente = eventosExistentes.find(
+        (evento) =>
+          normalize(evento.titulo).includes(needle) ||
+          needle.includes(normalize(evento.titulo))
+      );
+      return existente ? `existente:${existente.id}` : "";
+    }
+
+    return analise.demandas.map((demanda, index) => {
       // Roster-based match: returns the volunteer id when the name found a
       // roster row (linked account or not) — same rule as /analisar.
       const match = matchResponsavelRoster(
@@ -332,9 +375,12 @@ function ReviewScreen({
         responsavelId:
           match.rosterId !== null ? String(match.rosterId) : null,
         prazo: demanda.prazo_sugerido || null,
+        area: demanda.area_texto || "",
+        projeto: demanda.projeto_texto || "",
+        eventoRef: resolverEvento(demanda.evento_texto || ""),
       };
-    })
-  );
+    });
+  });
   const [dips, setDips] = useState<DipReview[]>(() =>
     analise.dips.map((dip, index) => ({
       id: index,
@@ -362,6 +408,9 @@ function ReviewScreen({
       titulo: d.titulo,
       responsavelId: d.responsavelId,
       prazo: d.prazo,
+      area: d.area.trim() || null,
+      projeto: d.projeto.trim() || null,
+      eventoRef: d.eventoRef || null,
     }));
 
   const salvarDips = dips
@@ -385,6 +434,16 @@ function ReviewScreen({
       local: e.local || null,
       descricao: e.descricao || null,
     }));
+
+  // Eventos desta análise disponíveis para vincular às demandas — mesmo
+  // predicado do save (incluído + título + data), mesma ordem, para que o
+  // índice do ref "novo:<index>" bata com o índice no servidor.
+  const novosEventosSelecionaveis = eventos
+    .map((evento, index) => ({ evento, index }))
+    .filter(
+      ({ evento }) =>
+        evento.incluido && evento.titulo.trim() && evento.data
+    );
 
   function buildFormData(): FormData {
     const formData = new FormData();
@@ -665,6 +724,109 @@ function ReviewScreen({
                         disabled={!demanda.incluida}
                         className={`${fieldClassName} disabled:cursor-not-allowed`}
                       />
+                    </div>
+                  </div>
+                  <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5">
+                      <label
+                        htmlFor={`demanda-area-${demanda.id}`}
+                        className={labelClassName}
+                      >
+                        Área
+                      </label>
+                      <input
+                        id={`demanda-area-${demanda.id}`}
+                        list={`demanda-areas-${demanda.id}`}
+                        value={demanda.area}
+                        onChange={(e) =>
+                          setDemandas((prev) =>
+                            prev.map((d) =>
+                              d.id === demanda.id
+                                ? { ...d, area: e.target.value }
+                                : d
+                            )
+                          )
+                        }
+                        disabled={!demanda.incluida}
+                        placeholder="Ex: Paratecnológico"
+                        className={`${fieldClassName} disabled:cursor-not-allowed`}
+                      />
+                      <datalist id={`demanda-areas-${demanda.id}`}>
+                        {areas.map((area) => (
+                          <option key={area} value={area} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label
+                        htmlFor={`demanda-projeto-${demanda.id}`}
+                        className={labelClassName}
+                      >
+                        Projeto
+                      </label>
+                      <input
+                        id={`demanda-projeto-${demanda.id}`}
+                        list={`demanda-projetos-${demanda.id}`}
+                        value={demanda.projeto}
+                        onChange={(e) =>
+                          setDemandas((prev) =>
+                            prev.map((d) =>
+                              d.id === demanda.id
+                                ? { ...d, projeto: e.target.value }
+                                : d
+                            )
+                          )
+                        }
+                        disabled={!demanda.incluida}
+                        placeholder="Ex: Projeto Horta Comunitária"
+                        className={`${fieldClassName} disabled:cursor-not-allowed`}
+                      />
+                      <datalist id={`demanda-projetos-${demanda.id}`}>
+                        {projetos.map((projeto) => (
+                          <option key={projeto} value={projeto} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                      <label
+                        htmlFor={`demanda-evento-${demanda.id}`}
+                        className={labelClassName}
+                      >
+                        Evento relacionado
+                      </label>
+                      <select
+                        id={`demanda-evento-${demanda.id}`}
+                        value={demanda.eventoRef}
+                        onChange={(e) =>
+                          setDemandas((prev) =>
+                            prev.map((d) =>
+                              d.id === demanda.id
+                                ? { ...d, eventoRef: e.target.value }
+                                : d
+                            )
+                          )
+                        }
+                        disabled={!demanda.incluida}
+                        className={`${fieldClassName} disabled:cursor-not-allowed`}
+                      >
+                        <option value="">Nenhum evento</option>
+                        {novosEventosSelecionaveis.map(({ evento, index }) => (
+                          <option key={`novo-${index}`} value={`novo:${index}`}>
+                            Novo: {evento.titulo}
+                          </option>
+                        ))}
+                        {eventosExistentes.map((evento) => (
+                          <option
+                            key={`existente-${evento.id}`}
+                            value={`existente:${evento.id}`}
+                          >
+                            {evento.titulo}
+                            {evento.dataEvento
+                              ? ` — ${evento.dataEvento.slice(8, 10)}/${evento.dataEvento.slice(5, 7)}/${evento.dataEvento.slice(0, 4)}`
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>

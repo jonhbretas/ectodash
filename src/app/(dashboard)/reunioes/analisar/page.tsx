@@ -60,10 +60,27 @@ export default async function AnalisarReuniaoPage() {
   // demanda (same rule as demandas/nova): every registered volunteer is
   // assignable, "mesmo que não estejam cadastrados" (sem conta ativada
   // ainda). temConta marca quem já ativou o acesso pelo vínculo.
-  const [voluntariosResult, perfisResult, meetingsResult] = await Promise.all([
+  // Áreas/projetos/eventos existentes alimentam os campos que a revisão
+  // auto-seleciona para cada demanda (área, projeto, evento relacionado).
+  const [
+    voluntariosResult,
+    perfisResult,
+    meetingsResult,
+    areasResult,
+    projetosResult,
+    eventosResult,
+  ] = await Promise.all([
     supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
     supabase.from("profiles").select("voluntario_id").not("voluntario_id", "is", null),
     listarReunioes(),
+    supabase.from("areas_institucionais").select("nome").order("nome"),
+    supabase.from("projetos").select("nome").order("nome"),
+    supabase
+      .from("eventos")
+      .select("id, titulo, data_evento")
+      .gte("data_evento", new Date().toISOString().slice(0, 10))
+      .order("data_evento", { ascending: true })
+      .limit(100),
   ]);
 
   const comConta = new Set(
@@ -78,10 +95,21 @@ export default async function AnalisarReuniaoPage() {
     temConta: comConta.has(v.id),
   }));
 
+  const areas = (areasResult.data ?? []).map((a) => a.nome);
+  const projetos = (projetosResult.data ?? []).map((p) => p.nome);
+  const eventosExistentes = (eventosResult.data ?? []).map((e) => ({
+    id: e.id,
+    titulo: e.titulo,
+    dataEvento: e.data_evento,
+  }));
+
   return (
     <PageContainer>
       <AnaliseForm
         voluntarios={voluntarios}
+        areas={areas}
+        projetos={projetos}
+        eventosExistentes={eventosExistentes}
         meetings={meetingsResult.meetings}
         meetingsError={meetingsResult.error}
         meetingsConfigured={meetingsResult.configured}
