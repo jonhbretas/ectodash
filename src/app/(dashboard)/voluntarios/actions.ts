@@ -69,7 +69,12 @@ const papelSchema = z.enum([
 const dataIsoSchema = z
   .string()
   .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.");
+  .transform((value) => (value === "" ? null : value))
+  .refine(
+    (value) => value === null || /^\d{4}-\d{2}-\d{2}$/.test(value),
+    "Data inválida."
+  )
+  .nullish();
 
 const campoTexto = (max: number) =>
   z
@@ -88,8 +93,8 @@ const voluntarioDadosSchema = z.object({
   unidade: campoTexto(120),
   org_depto: campoTexto(200),
   funcao: campoTexto(200),
-  data_inicio: dataIsoSchema.nullish(),
-  data_saida: dataIsoSchema.nullish(),
+  data_inicio: dataIsoSchema,
+  data_saida: dataIsoSchema,
   obs: campoTexto(2000),
   area_atuacao: campoTexto(200),
   papel: papelSchema.optional(),

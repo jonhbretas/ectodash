@@ -291,6 +291,8 @@ describe.skipIf(!canRun)(
           p_area_atuacao: myArea,
           p_papel: "coordenador_geral", // ignored — manager is not geral
           p_areas_lideradas: [],
+          p_telefone1: null,
+          p_telefone2: null,
         }
       );
       expect(managerErr).toBeNull();
@@ -318,6 +320,8 @@ describe.skipIf(!canRun)(
           p_area_atuacao: myArea,
           p_papel: null,
           p_areas_lideradas: [],
+          p_telefone1: null,
+          p_telefone2: null,
         }
       );
       expect(deniedErr).toBeNull();
@@ -341,6 +345,8 @@ describe.skipIf(!canRun)(
           p_area_atuacao: "Outra área qualquer",
           p_papel: null,
           p_areas_lideradas: [],
+          p_telefone1: null,
+          p_telefone2: null,
         }
       );
       expect(deniedAreaErr).toBeNull();
@@ -361,6 +367,8 @@ describe.skipIf(!canRun)(
           p_area_atuacao: myArea,
           p_papel: "financeiro", // must be ignored
           p_areas_lideradas: ["x"],
+          p_telefone1: null,
+          p_telefone2: null,
         }
       );
       expect(areaErr).toBeNull();
@@ -400,6 +408,8 @@ describe.skipIf(!canRun)(
           p_papel: "coordenador_geral", // must be ignored for non-geral
           p_areas_lideradas: ["Tentativa"],
           p_ativo: true,
+          p_telefone1: null,
+          p_telefone2: null,
         }
       );
       expect(err1).toBeNull();
@@ -431,6 +441,8 @@ describe.skipIf(!canRun)(
           p_papel: "financeiro",
           p_areas_lideradas: [],
           p_ativo: true,
+          p_telefone1: null,
+          p_telefone2: null,
         }
       );
       expect(err2).toBeNull();
