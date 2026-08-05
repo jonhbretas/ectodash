@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Phone, Mail } from "lucide-react";
 import { roleLabel } from "@/lib/role-labels";
 import PageContainer from "../page-container";
 
@@ -16,11 +17,33 @@ type VoluntarioRow = {
   area_atuacao: string | null;
   role: string | null;
   ativo: boolean;
+  telefone1: string | null;
+  telefone2: string | null;
   profiles:
     | { email: string; role: string }[]
     | { email: string; role: string }
     | null;
 };
+
+function phoneToWhatsApp(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+function PhoneLink({ phone, label }: { phone: string; label: string }) {
+  const digits = phoneToWhatsApp(phone);
+  if (!digits || digits.length < 8) return null;
+  return (
+    <a
+      href={`https://wa.me/${digits}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1.5 text-lg text-[#d4883a] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+    >
+      <Phone size={14} aria-hidden="true" />
+      {label}: {phone}
+    </a>
+  );
+}
 
 function formatData(iso: string | null): string | null {
   if (!iso) return null;
@@ -57,6 +80,22 @@ export default function MeuCadastroCard({ row, role }: { row: VoluntarioRow; rol
                 <dd className="text-xl text-zinc-900">{value ?? "—"}</dd>
               </div>
             ))}
+            {row.telefone1 && (
+              <div className="flex flex-col gap-0.5">
+                <dt className="text-base text-zinc-500">Telefone 1</dt>
+                <dd className="text-xl">
+                  <PhoneLink phone={row.telefone1} label="Tel 1" />
+                </dd>
+              </div>
+            )}
+            {row.telefone2 && (
+              <div className="flex flex-col gap-0.5">
+                <dt className="text-base text-zinc-500">Telefone 2</dt>
+                <dd className="text-xl">
+                  <PhoneLink phone={row.telefone2} label="Tel 2" />
+                </dd>
+              </div>
+            )}
           </dl>
           {row.obs && <p className="text-base text-zinc-600">Obs: {row.obs}</p>}
         </div>

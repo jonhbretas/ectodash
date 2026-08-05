@@ -16,7 +16,7 @@ export default async function LoginPage({
         className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-[#1a5a6a] via-[#1a7a8e] to-[#2b9eb3] p-12 text-white lg:flex"
       >
         <div className="flex items-center gap-3">
-          <img src="/logo-ectolab.svg" alt="EctoLab" className="h-12" />
+            <img src="/logo-ectolab.png" alt="EctoLab" className="h-12" />
         </div>
 
         <div className="flex flex-col gap-6">
@@ -47,7 +47,7 @@ export default async function LoginPage({
       <section className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-16">
         <div className="flex w-full max-w-md flex-col items-center gap-4 text-center">
           <div className="flex items-center gap-3 lg:hidden">
-            <img src="/logo-ectolab.svg" alt="EctoLab" className="h-12" />
+          <img src="/logo-ectolab.png" alt="EctoLab" className="h-12" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Entrar no EctoDash

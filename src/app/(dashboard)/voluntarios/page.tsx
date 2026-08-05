@@ -33,6 +33,9 @@ type VoluntarioRow = {
   role: string | null;
   ativo: boolean;
   situacao: string | null;
+  email: string | null;
+  telefone1: string | null;
+  telefone2: string | null;
   profiles:
     | { email: string; role: string }[]
     | { email: string; role: string }
@@ -88,7 +91,7 @@ export default async function VoluntariosPage({
     const { data: meu } = await supabase
       .from("voluntarios")
       .select(
-        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, profiles(email, role)"
+        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, telefone1, telefone2, profiles(email, role)"
       )
       .eq("id", profile.voluntario_id)
       .maybeSingle();
@@ -163,7 +166,7 @@ export default async function VoluntariosPage({
   let query = supabase
     .from("voluntarios")
     .select(
-      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, situacao, profiles(email, role)"
+      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, situacao, telefone1, telefone2, profiles(email, role)"
     )
     .order("nome", { ascending: true });
 

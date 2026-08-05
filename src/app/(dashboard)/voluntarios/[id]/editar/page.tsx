@@ -62,7 +62,7 @@ export default async function EditarVoluntarioPage({
     supabase
       .from("voluntarios")
       .select(
-        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo"
+        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, telefone1, telefone2, profiles(email)"
       )
       .eq("id", Number(id))
       .maybeSingle(),
@@ -124,6 +124,8 @@ export default async function EditarVoluntarioPage({
     }
   }
 
+  const linkedProfile = Array.isArray(voluntario.profiles) ? voluntario.profiles[0] : voluntario.profiles;
+
   const values: VoluntarioFormValues = {
     nome: voluntario.nome,
     codigo_pf: voluntario.codigo_pf,
@@ -138,6 +140,9 @@ export default async function EditarVoluntarioPage({
     areasLideradas: [],
     ativo: voluntario.ativo,
     areas: areasExtras,
+    email: voluntario.email ?? null,
+    telefone1: voluntario.telefone1 ?? null,
+    telefone2: voluntario.telefone2 ?? null,
   };
 
   return (

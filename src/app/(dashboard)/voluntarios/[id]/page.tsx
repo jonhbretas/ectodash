@@ -13,6 +13,9 @@ import {
   CalendarClock,
   NotebookPen,
   MoonStar,
+  MessageCircle,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -31,6 +34,62 @@ type VoluntarioPageProps = {
 function formatData(iso: string | null | undefined): string | null {
   if (!iso) return null;
   return format(new Date(`${iso}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
+}
+
+// Format phone number to only digits for WhatsApp link
+function phoneToDigits(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+// Format phone for display
+function formatPhoneDisplay(phone: string): string {
+  const digits = phoneToDigits(phone);
+  if (digits.length <= 2) return phone;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  // International or long numbers
+  return phone;
+}
+
+function normalizePhoneForWhatsApp(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("55")) return digits;
+  return "55" + digits;
+}
+
+function WhatsAppLink({ phone, label }: { phone: string; label: string }) {
+  const normalized = normalizePhoneForWhatsApp(phone);
+  return (
+    <a
+      href={`https://wa.me/${normalized}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-xl text-[#d4883a] underline decoration-[#d4883a]/30 transition-colors hover:text-[#c07828] hover:decoration-[#c07828]/50"
+    >
+      {label}
+    </a>
+  );
+}
+
+function phoneToWhatsApp(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  return digits;
+}
+
+function PhoneLink({ phone, label }: { phone: string; label: string }) {
+  const digits = phoneToWhatsApp(phone);
+  if (!digits || digits.length < 8) return null;
+  return (
+    <a
+      href={`https://wa.me/${digits}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1.5 text-lg text-[#d4883a] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+    >
+      <Phone size={14} aria-hidden="true" />
+      {label}: {phone}
+    </a>
+  );
 }
 
 type DemandaRow = {
@@ -66,7 +125,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
   const { data: voluntario } = await supabase
     .from("voluntarios")
     .select(
-      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, situacao, profiles(id, email, role)"
+      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, situacao, telefone1, telefone2, profiles(id, email, role)"
     )
     .eq("id", Number(id))
     .maybeSingle();
@@ -215,6 +274,16 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
               </div>
               {linked?.email && (
                 <p className="text-base text-zinc-600">{linked.email}</p>
+              )}
+              {(voluntario.telefone1 || voluntario.telefone2) && (
+                <div className="flex flex-col gap-1">
+                  {voluntario.telefone1 && (
+                    <PhoneLink phone={voluntario.telefone1} label="Tel 1" />
+                  )}
+                  {voluntario.telefone2 && (
+                    <PhoneLink phone={voluntario.telefone2} label="Tel 2" />
+                  )}
+                </div>
               )}
             </div>
             {canManage && (

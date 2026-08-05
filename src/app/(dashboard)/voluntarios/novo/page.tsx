@@ -1,4 +1,4 @@
-// /voluntarios/novo — register a new volunteer in the institutional roster
+﻿// /voluntarios/novo — register a new volunteer in the institutional roster
 // (public.voluntarios). The volunteer does NOT need an account: the roster
 // row is the "base" that a future sign-in links to via /vincular.
 // Gate (RLS 0017 + the criar_voluntario function are the real boundary):
@@ -25,6 +25,8 @@ const emptyValues: VoluntarioFormValues = {
   areasLideradas: [],
   ativo: true,
   areas: [],
+  telefone_1: null,
+  telefone_2: null,
 };
 
 export default async function NovoVoluntarioPage() {
@@ -68,8 +70,6 @@ export default async function NovoVoluntarioPage() {
     );
   }
 
-  // Known areas for the datalist — derived from the roster the caller can
-  // already see (RLS-scoped for a coordenador_area).
   const [rowsResult, areasRegistroResult, localidadesResult] = await Promise.all([
     supabase.from("voluntarios").select("area_atuacao"),
     supabase
@@ -93,7 +93,6 @@ export default async function NovoVoluntarioPage() {
   );
   const unidadeOptions = (localidadesResult.data ?? []).map((l) => l.nome);
 
-  // Gerar caminhos org_depto a partir da hierarquia de áreas.
   const areasReg = areasRegistroResult.data ?? [];
   const subPorPai = new Map<string, string[]>();
   for (const a of areasReg) {

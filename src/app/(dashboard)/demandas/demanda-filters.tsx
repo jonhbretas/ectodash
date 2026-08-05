@@ -13,7 +13,19 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { SlidersHorizontal, X } from "lucide-react";
+import {
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Circle,
+  Clock,
+  FolderOpen,
+  LayoutGrid,
+  SlidersHorizontal,
+  Tag,
+  Users,
+  X,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -32,10 +44,14 @@ const NO_GROUPING_VALUE = "__sem_agrupamento__";
 
 // Status multi-select — canonical order is the URL order, so toggling
 // always rebuilds the param in this sequence.
-const STATUS_OPTIONS: Array<{ value: "pendente" | "em_andamento" | "concluida"; label: string }> = [
-  { value: "pendente", label: "Pendente" },
-  { value: "em_andamento", label: "Em andamento" },
-  { value: "concluida", label: "Concluída" },
+const STATUS_OPTIONS: Array<{
+  value: "pendente" | "em_andamento" | "concluida";
+  label: string;
+  Icon: typeof Circle;
+}> = [
+  { value: "pendente", label: "Pendente", Icon: Circle },
+  { value: "em_andamento", label: "Em andamento", Icon: Clock },
+  { value: "concluida", label: "Concluída", Icon: CheckCircle2 },
 ];
 
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(
@@ -206,7 +222,8 @@ export default function DemandaFilters({
     allValue: string,
     allLabel: string,
     onChange: (value: string | undefined) => void,
-    children: ReactNode
+    children: ReactNode,
+    allIcon?: ReactNode
   ) => (
     <Select
       value={value ?? allValue}
@@ -218,7 +235,12 @@ export default function DemandaFilters({
         <SelectValue placeholder={allLabel} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={allValue}>{allLabel}</SelectItem>
+        <SelectItem value={allValue}>
+          <span className="flex items-center gap-2">
+            {allIcon}
+            {allLabel}
+          </span>
+        </SelectItem>
         {children}
       </SelectContent>
     </Select>
@@ -315,7 +337,8 @@ export default function DemandaFilters({
                   <SelectItem key={area} value={area}>
                     {area}
                   </SelectItem>
-                ))
+                )),
+                <Building2 size={16} aria-hidden="true" />
               )}
 
               {selectControl(
@@ -328,7 +351,8 @@ export default function DemandaFilters({
                   <SelectItem key={projeto} value={projeto}>
                     {projeto}
                   </SelectItem>
-                ))
+                )),
+                <FolderOpen size={16} aria-hidden="true" />
               )}
 
               {selectControl(
@@ -353,7 +377,8 @@ export default function DemandaFilters({
                       </SelectItem>
                     ))}
                   </SelectGroup>
-                ))
+                )),
+                <Calendar size={16} aria-hidden="true" />
               )}
 
               {selectControl(
@@ -366,7 +391,8 @@ export default function DemandaFilters({
                   <SelectItem key={etiqueta.id} value={String(etiqueta.id)}>
                     {etiqueta.nome} ({etiqueta.area})
                   </SelectItem>
-                ))
+                )),
+                <Tag size={16} aria-hidden="true" />
               )}
 
               {selectControl(
@@ -379,11 +405,13 @@ export default function DemandaFilters({
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
                   </SelectItem>
-                ))
+                )),
+                <Users size={16} aria-hidden="true" />
               )}
 
               <div className="flex flex-col gap-1.5">
-                <span className="text-base font-medium text-zinc-500">
+                <span className="flex items-center gap-2 text-base font-medium text-zinc-500">
+                  <SlidersHorizontal size={16} aria-hidden="true" />
                   Filtrar por status
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
@@ -395,12 +423,13 @@ export default function DemandaFilters({
                         type="button"
                         aria-pressed={ativo}
                         onClick={() => toggleStatus(status.value)}
-                        className={`min-h-11 rounded-full px-4 text-base font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] ${
+                        className={`flex min-h-11 items-center gap-2 rounded-full px-4 text-base font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] ${
                           ativo
                             ? "bg-[#d4883a] text-white ring-[#d4883a]"
                             : "bg-white text-zinc-700 ring-zinc-300 hover:bg-zinc-50"
                         }`}
                       >
+                        <status.Icon size={16} aria-hidden="true" />
                         {status.label}
                       </button>
                     );
@@ -425,7 +454,8 @@ export default function DemandaFilters({
                 <>
                   <SelectItem value="area">Área</SelectItem>
                   <SelectItem value="responsavel">Responsável</SelectItem>
-                </>
+                </>,
+                <LayoutGrid size={16} aria-hidden="true" />
               )}
             </div>
           </div>

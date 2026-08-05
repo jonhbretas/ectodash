@@ -94,6 +94,8 @@ const voluntarioDadosSchema = z.object({
   area_atuacao: campoTexto(200),
   papel: papelSchema.optional(),
   areas_lideradas: campoTexto(2000),
+  telefone1: campoTexto(30),
+  telefone2: campoTexto(30),
 });
 
 type VoluntarioDados = z.infer<typeof voluntarioDadosSchema>;
@@ -111,6 +113,8 @@ function parseDados(formData: FormData): VoluntarioDados | null {
     area_atuacao: formData.get("area_atuacao") ?? undefined,
     papel: formData.get("papel") ?? undefined,
     areas_lideradas: formData.get("areas_lideradas") ?? undefined,
+    telefone1: formData.get("telefone1") ?? undefined,
+    telefone2: formData.get("telefone2") ?? undefined,
   });
   return parsed.success ? parsed.data : null;
 }
@@ -196,6 +200,8 @@ export async function criarVoluntario(
     p_area_atuacao: dados.area_atuacao ?? null,
     p_papel: dados.papel ?? null,
     p_areas_lideradas: areasArray(dados.areas_lideradas),
+    p_telefone1: dados.telefone1 ?? null,
+    p_telefone2: dados.telefone2 ?? null,
   });
 
   if (error || !novoId) {
@@ -248,6 +254,8 @@ export async function atualizarVoluntario(
     p_papel: dados.papel ?? null,
     p_areas_lideradas: areasArray(dados.areas_lideradas),
     p_ativo: ativo,
+    p_telefone1: dados.telefone1 ?? null,
+    p_telefone2: dados.telefone2 ?? null,
   });
 
   if (error || !ok) {
@@ -284,6 +292,8 @@ type VoluntarioBulkRow = {
   role: string | null;
   ativo: boolean;
   areas_lideradas: string[] | null;
+  telefone1: string | null;
+  telefone2: string | null;
 };
 
 // atualizar_voluntario() sobrescreve TODOS os campos (nome = trim(p_nome),
@@ -312,6 +322,8 @@ function paramsDaAcao(
     p_areas_lideradas: row.areas_lideradas ?? [],
     p_ativo:
       acao === "ativar" ? true : acao === "desativar" ? false : row.ativo,
+    p_telefone1: row.telefone1,
+    p_telefone2: row.telefone2,
   };
 }
 
@@ -351,7 +363,7 @@ export async function atualizarVoluntariosEmMassa(
   const { data: rows } = await supabase
     .from("voluntarios")
     .select(
-      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, areas_lideradas"
+      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, areas_lideradas, telefone1, telefone2"
     )
     .in("id", ids);
 

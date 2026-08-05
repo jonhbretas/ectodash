@@ -28,8 +28,9 @@ export type VoluntarioFormValues = {
   papel: string | null;
   areasLideradas: string[];
   ativo: boolean;
-  // Áreas ADICIONAIS além da principal (migration 0027).
   areas: string[];
+  telefone1: string | null;
+  telefone2: string | null;
 };
 
 const initialState = { ok: false, message: "" };
@@ -84,12 +85,8 @@ export default function VoluntarioForm({
   voluntarioId?: number;
   values: VoluntarioFormValues;
   areaOptions: string[];
-  // Áreas institucionais cadastradas (areas_institucionais) — opções das
-  // "Outras áreas".
   areasOptions?: string[];
-  // Localidades cadastradas (voluntario_localidades) — opções do campo unidade.
   unidadeOptions?: string[];
-  // Caminhos org_depto gerados a partir da hierarquia de áreas.
   orgDeptOptions?: string[];
   canAssignRole: boolean;
 }) {
@@ -209,6 +206,26 @@ export default function VoluntarioForm({
           <DateFieldBr
             name="data_saida"
             defaultValue={values.data_saida}
+            className={inputClassName}
+          />
+        </Field>
+
+        <Field id="telefone1" label="Telefone 1">
+          <input
+            id="telefone1"
+            name="telefone1"
+            defaultValue={values.telefone1 ?? ""}
+            placeholder="(45) 99999-9999"
+            className={inputClassName}
+          />
+        </Field>
+
+        <Field id="telefone2" label="Telefone 2">
+          <input
+            id="telefone2"
+            name="telefone2"
+            defaultValue={values.telefone2 ?? ""}
+            placeholder="(45) 99999-9999"
             className={inputClassName}
           />
         </Field>

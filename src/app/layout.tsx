@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   description:
     "Gestão de demandas, lembretes e finanças para voluntários da instituição.",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/favicon.png",
   },
 };
 
