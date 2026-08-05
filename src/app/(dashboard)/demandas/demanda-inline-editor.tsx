@@ -45,7 +45,12 @@ export type InlinePessoa = {
   temConta?: boolean;
 };
 
-export type InlineEvento = { id: number; titulo: string };
+export type InlineEvento = {
+  id: number;
+  titulo: string;
+  dataEvento: string;
+  local?: string | null;
+};
 export type InlineEtiqueta = { id: number; area: string; nome: string };
 
 export type InlineDemanda = {
@@ -79,6 +84,17 @@ function initials(name: string): string {
 
 function display(p: InlinePessoa): string {
   return p.nome;
+}
+
+function dataEventoLabel(data: string): string {
+  const [ano, mes, dia] = data.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function eventoLabel(ev: InlineEvento): string {
+  const data = ev.dataEvento ? ` — ${dataEventoLabel(ev.dataEvento)}` : "";
+  const local = ev.local ? ` · ${ev.local}` : "";
+  return `${ev.titulo}${data}${local}`;
 }
 
 function InlineText({
@@ -616,7 +632,7 @@ export default function DemandaInlineEditor({
               className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none"
             >
               <option value="">Nenhum evento</option>
-              {eventos.map((ev) => <option key={ev.id} value={ev.id}>{ev.titulo}</option>)}
+              {eventos.map((ev) => <option key={ev.id} value={ev.id}>{eventoLabel(ev)}</option>)}
             </select>
             <button type="button" onClick={async () => { await saveEvento(String(localEventoId ?? "")); setEditingPill(null); }}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-green-600 hover:bg-green-50" aria-label="Salvar evento">
@@ -634,7 +650,7 @@ export default function DemandaInlineEditor({
             title="Editar evento"
           >
             <span className="font-medium text-zinc-500">Evento:</span>
-            <span className="text-zinc-700">{eventoAtual?.titulo || "Nenhum"}</span>
+            <span className="text-zinc-700">{eventoAtual ? eventoLabel(eventoAtual) : "Nenhum"}</span>
             <Pencil size={13} className="text-zinc-400" aria-hidden="true" />
           </button>
         )}

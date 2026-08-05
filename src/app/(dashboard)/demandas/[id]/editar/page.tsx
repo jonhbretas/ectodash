@@ -66,7 +66,7 @@ export default async function EditarDemandaPage({
     supabase.from("demanda_membros").select("profile_id, voluntario_id").eq("demanda_id", id),
     supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
     supabase.from("profiles").select("id, voluntario_id").not("voluntario_id", "is", null),
-    supabase.from("eventos").select("id, titulo")
+    supabase.from("eventos").select("id, titulo, data_evento, local")
       .gte("data_evento", new Date().toISOString().slice(0, 10))
       .order("data_evento", { ascending: true }).limit(100),
     supabase.from("etiquetas").select("id, area, nome").order("area").order("nome"),
@@ -157,7 +157,12 @@ export default async function EditarDemandaPage({
           responsaveis={responsaveis}
           membros={membros}
           allVoluntarios={voluntarioOptions}
-          eventos={(eventos ?? []).map((e) => ({ id: e.id, titulo: e.titulo }))}
+          eventos={(eventos ?? []).map((e) => ({
+            id: e.id,
+            titulo: e.titulo,
+            dataEvento: e.data_evento,
+            local: e.local ?? null,
+          }))}
           etiquetas={(etiquetas ?? []).map((e) => ({
             id: e.id,
             area: e.area,

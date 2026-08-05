@@ -26,10 +26,26 @@ import type { DemandaFilters } from "./demanda-filter-schema";
 const ALL_VALUE = "__todas__";
 const NO_GROUPING_VALUE = "__sem_agrupamento__";
 
+function dataEventoLabel(data: string): string {
+  const [ano, mes, dia] = data.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function eventoLabel(evento: EventoFilterOption): string {
+  const data = evento.data_evento ? ` — ${dataEventoLabel(evento.data_evento)}` : "";
+  const local = evento.local ? ` · ${evento.local}` : "";
+  return `${evento.titulo}${data}${local}`;
+}
+
 // localStorage key — the expanded/collapsed preference, survives reloads.
 const OPEN_KEY = "ectodash:filtros-abertos";
 
-export type EventoFilterOption = { id: number; titulo: string };
+export type EventoFilterOption = {
+  id: number;
+  titulo: string;
+  data_evento: string;
+  local: string | null;
+};
 
 export type EtiquetaFilterOption = { id: number; area: string; nome: string };
 
@@ -109,8 +125,10 @@ export default function DemandaFilters({
     {
       key: "evento" as const,
       label: `Evento: ${
-        eventoOptions.find((e) => String(e.id) === currentFilters.evento)
-          ?.titulo ?? currentFilters.evento
+        (() => {
+          const ev = eventoOptions.find((e) => String(e.id) === currentFilters.evento);
+          return ev ? eventoLabel(ev) : currentFilters.evento;
+        })()
       }`,
       title: "Evento",
     },
@@ -272,7 +290,7 @@ export default function DemandaFilters({
             (value) => navigateWith({ evento: value }),
             eventoOptions.map((evento) => (
               <SelectItem key={evento.id} value={String(evento.id)}>
-                {evento.titulo}
+                {eventoLabel(evento)}
               </SelectItem>
             ))
           )}

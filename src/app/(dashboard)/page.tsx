@@ -138,7 +138,7 @@ export default async function DashboardPage({
               voluntarios: { nome: string } | null;
             }[],
           }),
-      supabase.from("eventos").select("id, titulo").order("data_evento", { ascending: true }),
+      supabase.from("eventos").select("id, titulo, data_evento, local").order("data_evento", { ascending: true }),
       supabase.from("etiquetas").select("id, area, nome").order("area").order("nome"),
       baseDemandaIds.length > 0
         ? supabase

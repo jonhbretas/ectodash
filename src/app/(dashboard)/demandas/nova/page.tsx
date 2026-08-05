@@ -24,7 +24,7 @@ export default async function NovaDemandaPage() {
         .not("voluntario_id", "is", null),
       supabase
         .from("eventos")
-        .select("id, titulo")
+        .select("id, titulo, data_evento, local")
         .gte("data_evento", new Date().toISOString().slice(0, 10))
         .order("data_evento", { ascending: true })
         .limit(100),

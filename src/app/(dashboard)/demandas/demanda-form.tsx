@@ -31,6 +31,8 @@ export type VoluntarioOption = {
 export type EventoOption = {
   id: number;
   titulo: string;
+  data_evento: string;
+  local: string | null;
 };
 
 export type EtiquetaOption = {
@@ -75,6 +77,17 @@ const fieldLabelClass = "text-xl font-medium text-zinc-900";
 const fieldInputClass =
   "min-h-14 rounded-xl border-zinc-200 bg-white text-zinc-900 shadow-none transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0";
 const errorClass = "text-base text-red-600";
+
+function dataEventoLabel(data: string): string {
+  const [ano, mes, dia] = data.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function eventoLabel(evento: EventoOption): string {
+  const data = evento.data_evento ? ` — ${dataEventoLabel(evento.data_evento)}` : "";
+  const local = evento.local ? ` · ${evento.local}` : "";
+  return `${evento.titulo}${data}${local}`;
+}
 
 export default function DemandaForm({
   voluntarios,
@@ -301,7 +314,7 @@ export default function DemandaForm({
                 <option value="">Nenhum evento</option>
                 {eventos.map((evento) => (
                   <option key={evento.id} value={evento.id}>
-                    {evento.titulo}
+                    {eventoLabel(evento)}
                   </option>
                 ))}
               </select>
@@ -538,7 +551,7 @@ export default function DemandaForm({
               <option value="">Nenhum evento</option>
               {eventos.map((evento) => (
                 <option key={evento.id} value={evento.id}>
-                  {evento.titulo}
+                  {eventoLabel(evento)}
                 </option>
               ))}
             </select>
