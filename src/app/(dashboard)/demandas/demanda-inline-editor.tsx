@@ -224,15 +224,23 @@ function PersonPicker({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [busca, setBusca] = useState("");
+  const buscaRef = useRef<HTMLInputElement>(null);
   const available = pessoas.filter((p) => !selectedIds.has(p.id));
 
+  useEffect(() => { if (open) buscaRef.current?.focus(); }, [open]);
+
   if (available.length === 0) return null;
+
+  const filtradas = available.filter((p) =>
+    display(p).toLowerCase().includes(busca.trim().toLowerCase())
+  );
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { setOpen((v) => !v); setBusca(""); }}
         className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
         aria-label={`Adicionar ${label}`}
         title={`Adicionar ${label}`}
@@ -246,25 +254,40 @@ function PersonPicker({
             onClick={() => setOpen(false)}
             aria-label="Fechar seletor"
           />
-          <div className="absolute bottom-full left-0 z-20 mb-2 max-h-56 w-64 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
-            {available.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => { onAdd(p.id); setOpen(false); }}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base text-zinc-900 transition-colors hover:bg-zinc-100"
-              >
-                <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                  {initials(display(p))}
-                </span>
-                <span className="truncate">{display(p)}</span>
-                {p.temConta === false && (
-                  <span className="shrink-0 text-xs text-zinc-400">
-                    sem acesso
+          <div className="absolute left-0 top-full z-20 mt-2 w-64 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
+            <input
+              ref={buscaRef}
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+              placeholder="Buscar nome..."
+              className="mb-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-base text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="max-h-56 overflow-y-auto">
+              {filtradas.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => { onAdd(p.id); setOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base text-zinc-900 transition-colors hover:bg-zinc-100"
+                >
+                  <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                    {initials(display(p))}
                   </span>
-                )}
-              </button>
-            ))}
+                  <span className="truncate">{display(p)}</span>
+                  {p.temConta === false && (
+                    <span className="shrink-0 text-xs text-zinc-400">
+                      sem acesso
+                    </span>
+                  )}
+                </button>
+              ))}
+              {filtradas.length === 0 && (
+                <p className="px-3 py-2 text-base text-zinc-400">
+                  Nenhum voluntário encontrado.
+                </p>
+              )}
+            </div>
           </div>
         </>
       )}
