@@ -59,8 +59,16 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
   const monthLabel = format(cursor, "MMMM yyyy", { locale: ptBR });
   const today = new Date();
 
+  // Grid always spans full Sunday-to-Saturday weeks, so chunking into rows
+  // of 7 is exact — each row is a flex-1 strip that stretches to fill the
+  // viewport height on desktop.
+  const weeks: Date[][] = [];
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7));
+  }
+
   return (
-    <div className="flex w-full max-w-5xl flex-col gap-3">
+    <div className="flex w-full flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-2xl font-semibold capitalize text-zinc-900">
           {monthLabel}
@@ -101,55 +109,61 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
             {weekday}
           </div>
         ))}
+      </div>
 
-        {days.map((day) => {
-          const dateKey = format(day, "yyyy-MM-dd");
-          const items = byDate.get(dateKey) ?? [];
-          const inMonth = isSameMonth(day, cursor);
-          const isToday = isSameDay(day, today);
+      <div className="flex flex-1 flex-col gap-1 lg:h-[calc(100dvh-24rem)]">
+        {weeks.map((week) => (
+          <div key={format(week[0], "yyyy-MM-dd")} className="grid flex-1 grid-cols-7 gap-1">
+            {week.map((day) => {
+              const dateKey = format(day, "yyyy-MM-dd");
+              const items = byDate.get(dateKey) ?? [];
+              const inMonth = isSameMonth(day, cursor);
+              const isToday = isSameDay(day, today);
 
-          return (
-            <div
-              key={dateKey}
-              className={`flex min-h-20 flex-col gap-1 rounded-xl border p-1 sm:min-h-28 sm:p-2 ${
-                inMonth ? "border-zinc-200 bg-white" : "border-zinc-100 bg-zinc-50/50"
-              }`}
-            >
-              <span
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-medium ${
-                  isToday
-                    ? "bg-blue-700 text-white"
-                    : inMonth
-                      ? "text-zinc-900"
-                      : "text-zinc-400"
-                }`}
-              >
-                {format(day, "d")}
-              </span>
+              return (
+                <div
+                  key={dateKey}
+                  className={`flex min-h-20 flex-col gap-1 overflow-hidden rounded-xl border p-1 sm:min-h-28 lg:min-h-0 sm:p-2 ${
+                    inMonth ? "border-zinc-200 bg-white" : "border-zinc-100 bg-zinc-50/50"
+                  }`}
+                >
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-medium ${
+                      isToday
+                        ? "bg-blue-700 text-white"
+                        : inMonth
+                          ? "text-zinc-900"
+                          : "text-zinc-400"
+                    }`}
+                  >
+                    {format(day, "d")}
+                  </span>
 
-              <div className="flex flex-col gap-1">
-                {items.map((demanda) => {
-                  const chip = STATUS_CHIP[demanda.status];
-                  return (
-                    <Link
-                      key={demanda.id}
-                      href={`/demandas/${demanda.id}/editar`}
-                      title={`${demanda.titulo} — ${chip.label}`}
-                      className={`block truncate rounded-lg px-1.5 py-0.5 text-sm font-medium transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:text-base ${
-                        chip.className
-                      } ${demanda.atrasada ? "ring-1 ring-red-400" : ""}`}
-                    >
-                      <span className="hidden lg:inline">{demanda.titulo}</span>
-                      <span className="lg:hidden">
-                        {demanda.atrasada ? "!" : "•"}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+                  <div className="flex flex-col gap-1">
+                    {items.map((demanda) => {
+                      const chip = STATUS_CHIP[demanda.status];
+                      return (
+                        <Link
+                          key={demanda.id}
+                          href={`/demandas/${demanda.id}/editar`}
+                          title={`${demanda.titulo} — ${chip.label}`}
+                          className={`block truncate rounded-lg px-1.5 py-0.5 text-sm font-medium transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:text-base ${
+                            chip.className
+                          } ${demanda.atrasada ? "ring-1 ring-red-400" : ""}`}
+                        >
+                          <span className="hidden lg:inline">{demanda.titulo}</span>
+                          <span className="lg:hidden">
+                            {demanda.atrasada ? "!" : "•"}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base text-zinc-700">

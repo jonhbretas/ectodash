@@ -320,7 +320,7 @@ export default async function DashboardPage({
         </div>
       </header>
 
-      {demandaList.length > 0 && (
+      {demandaList.length > 0 && view !== "calendario" && (
         <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
