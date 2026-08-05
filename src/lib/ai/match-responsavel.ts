@@ -42,3 +42,37 @@ export function matchResponsavel(
   return null; // No confident match — the review UI leaves the responsável
   // field empty and required, never auto-selecting a wrong guess.
 }
+
+// The institutional roster (public.voluntarios) is the source of truth for
+// volunteer NAMES — most roster rows have no linked auth account (profiles),
+// so matching against profiles alone misses everyone without an account
+// (or with an empty full_name). This matcher checks the roster first and
+// resolves the linked profile id when the roster volunteer has an account.
+export type RosterVoluntario = {
+  id: number;
+  nome: string;
+  profileId: string | null; // linked auth account, if any
+};
+
+export function matchResponsavelRoster(
+  responsavelTexto: string,
+  profiles: { id: string; email: string; full_name?: string | null }[],
+  roster: RosterVoluntario[]
+): { profileId: string | null; rosterId: number | null } {
+  const needle = normalize(responsavelTexto);
+  if (!needle) return { profileId: null, rosterId: null };
+
+  for (const entry of roster) {
+    const haystack = normalize(entry.nome);
+    if (haystack.includes(needle) || needle.includes(haystack)) {
+      return { profileId: entry.profileId, rosterId: entry.id };
+    }
+  }
+
+  // No roster hit — fall back to the account-based matcher (full_name /
+  // email local-part). A person found only here has no roster row yet.
+  return {
+    profileId: matchResponsavel(responsavelTexto, profiles),
+    rosterId: null,
+  };
+}

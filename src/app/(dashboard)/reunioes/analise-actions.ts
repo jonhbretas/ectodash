@@ -88,6 +88,27 @@ export async function analisarTranscricao(
   prevState: AnalisarTranscricaoState,
   formData: FormData
 ): Promise<AnalisarTranscricaoState> {
+  // Every known failure returns a friendly state; this blanket guard keeps
+  // anything unexpected (network hiccup on auth, provider timeout escaping
+  // a nested call) from reaching the global error boundary — the screen
+  // shows an inline message instead of the "Não foi possível carregar esta
+  // página" page (user report 2026-08-04, digest 157915985).
+  try {
+    return await analisarTranscricaoImpl(prevState, formData);
+  } catch (err) {
+    console.error("analisarTranscricao: unexpected error", err);
+    return {
+      ...initialState,
+      message:
+        "Algo deu errado ao processar a transcrição. Tente novamente em instantes.",
+    };
+  }
+}
+
+async function analisarTranscricaoImpl(
+  prevState: AnalisarTranscricaoState,
+  formData: FormData
+): Promise<AnalisarTranscricaoState> {
   const supabase = await createClient();
   const {
     data: { user },
