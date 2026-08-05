@@ -10,11 +10,6 @@ import KanbanBoard from "./demandas/kanban-board";
 import CalendarioView from "./demandas/calendario-view";
 import PageContainer from "./page-container";
 import {
-  AlertTriangle,
-  CheckCircle2,
-  Circle,
-  ClipboardList,
-  Clock,
   Plus,
   UserCheck,
 } from "lucide-react";
@@ -107,9 +102,14 @@ export default async function DashboardPage({
 
   const baseRows = baseDemandas ?? [];
 
+  const { data: areasInstitucionaisRows } = await supabase
+    .from("areas_institucionais")
+    .select("nome")
+    .order("nome");
+
   const areaOptions = [
     ...new Set([
-      ...(areasInstitucionaisResult.data ?? []).map((a) => a.nome),
+      ...(areasInstitucionaisRows ?? []).map((a) => a.nome),
       ...baseRows
         .map((d) => d.area)
         .filter((area): area is string => Boolean(area && area.trim())),
@@ -129,7 +129,7 @@ export default async function DashboardPage({
   const demandaIds = (demandas ?? []).map((demanda) => demanda.id);
   const baseDemandaIds = baseRows.map((demanda) => demanda.id);
 
-  const [responsaveisResult, eventosResult, etiquetasResult, checklistResult, areasInstitucionaisResult] =
+  const [responsaveisResult, eventosResult, etiquetasResult, checklistResult] =
     await Promise.all([
       baseDemandaIds.length > 0
         ? supabase
@@ -159,7 +159,6 @@ export default async function DashboardPage({
             .select("demanda_id, concluido")
             .in("demanda_id", baseDemandaIds)
         : Promise.resolve({ data: [] as { demanda_id: number; concluido: boolean }[] }),
-      supabase.from("areas_institucionais").select("nome").order("nome"),
     ]);
 
   const responsaveis = (responsaveisResult.data ?? []) as unknown as RowResponsavel[];
@@ -269,22 +268,14 @@ export default async function DashboardPage({
   // "kanban", or the Lista button would never take effect.
   const view: DemandaView = filters.view ?? "lista";
 
-  const stats = {
-    total: demandaList.length,
-    atrasadas: demandaList.filter((d) => d.atrasada).length,
-    pendentes: demandaList.filter((d) => d.status === "pendente").length,
-    emAndamento: demandaList.filter((d) => d.status === "em_andamento").length,
-    concluidas: demandaList.filter((d) => d.status === "concluida").length,
-  };
-
   const boardKey = demandaList
     .map((d) => `${d.id}:${d.status}`)
     .join("|");
 
   return (
     <PageContainer>
-      <header className="flex w-full flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-0.5">
+      <header className="flex w-full flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
             Olá, {displayName(profile ?? { email: user.email ?? "" })}
           </h1>
@@ -293,6 +284,17 @@ export default async function DashboardPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <DemandaFilters
+            areaOptions={areaOptions}
+            projetoOptions={projetoOptions}
+            eventoOptions={eventosResult.data ?? []}
+            etiquetaOptions={etiquetasResult.data ?? []}
+            responsavelOptions={responsavelOptions}
+            currentFilters={filters}
+          />
+
+          <DemandaViewToggle currentView={view} />
+
           {meuVoluntarioId !== null && (
             <Link
               href={minhasDemandasHref}
@@ -322,83 +324,12 @@ export default async function DashboardPage({
         </div>
       </header>
 
-      {demandaList.length > 0 && view !== "calendario" && (
-        <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-              <ClipboardList size={16} className="text-slate-500" aria-hidden="true" strokeWidth={1.75} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-slate-500">Demandas</span>
-              <span className="text-xl font-bold tracking-tight text-slate-900">{stats.total}</span>
-            </div>
-          </div>
-          <div className={`flex items-center gap-2.5 rounded-2xl p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${
-            stats.atrasadas > 0
-              ? "bg-red-50 ring-1 ring-red-200/60"
-              : "bg-white ring-1 ring-slate-200/60"
-          }`}>
-            <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stats.atrasadas > 0 ? "bg-red-100" : "bg-slate-100"}`}>
-              <AlertTriangle size={16} className={stats.atrasadas > 0 ? "text-red-600" : "text-slate-400"} aria-hidden="true" strokeWidth={1.75} />
-            </div>
-            <div className="flex flex-col">
-              <span className={`text-sm font-medium ${stats.atrasadas > 0 ? "text-red-600" : "text-slate-500"}`}>Atrasadas</span>
-              <span className={`text-xl font-bold tracking-tight ${stats.atrasadas > 0 ? "text-red-700" : "text-slate-900"}`}>{stats.atrasadas}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
-              <Circle size={16} className="text-amber-500" aria-hidden="true" strokeWidth={1.75} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-slate-500">Pendentes</span>
-              <span className="text-xl font-bold tracking-tight text-slate-900">{stats.pendentes}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
-              <Clock size={16} className="text-blue-500" aria-hidden="true" strokeWidth={1.75} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-slate-500">Em andamento</span>
-              <span className="text-xl font-bold tracking-tight text-slate-900">{stats.emAndamento}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
-              <CheckCircle2 size={16} className="text-green-500" aria-hidden="true" strokeWidth={1.75} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-slate-500">Concluídas</span>
-              <span className="text-xl font-bold tracking-tight text-slate-900">{stats.concluidas}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="flex w-full flex-col gap-5">
         {scopedViewNotice && (
           <p className="rounded-xl bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 ring-1 ring-blue-200/60">
             {scopedViewNotice}
           </p>
         )}
-
-        <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-start">
-          <div className="min-w-0 flex-1">
-            <DemandaFilters
-              areaOptions={areaOptions}
-              projetoOptions={projetoOptions}
-              eventoOptions={eventosResult.data ?? []}
-              etiquetaOptions={etiquetasResult.data ?? []}
-              responsavelOptions={responsavelOptions}
-              currentFilters={filters}
-            />
-          </div>
-
-          <div className="flex w-full lg:w-auto lg:shrink-0">
-            <DemandaViewToggle currentView={view} />
-          </div>
-        </div>
 
         {view === "kanban" ? (
           <KanbanBoard key={boardKey} demandas={demandaList} />

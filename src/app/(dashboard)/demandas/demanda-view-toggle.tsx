@@ -49,7 +49,7 @@ export default function DemandaViewToggle({
     <div
       role="group"
       aria-label="Modo de visualização"
-      className="inline-flex w-full items-center gap-1 rounded-2xl bg-zinc-100 p-1 sm:w-fit"
+      className="inline-flex w-full items-center gap-1 rounded-xl bg-zinc-100 p-0.5 sm:w-fit"
     >
       {OPTIONS.map((option) => {
         const active = option.value === currentView;
@@ -59,13 +59,13 @@ export default function DemandaViewToggle({
             type="button"
             onClick={() => selectView(option.value)}
             aria-pressed={active}
-            className={`flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-lg font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:flex-initial ${
+            className={`flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:flex-initial ${
               active
                 ? "bg-white text-blue-700 shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/60"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            <option.Icon size={19} aria-hidden="true" />
+            <option.Icon size={17} aria-hidden="true" />
             {option.label}
           </button>
         );

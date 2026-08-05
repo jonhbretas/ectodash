@@ -1,18 +1,19 @@
 "use client";
 
-// Compact collapsible filter bar — one row of controls (Área, Projeto,
-// Evento, Etiqueta, Voluntário, Status, Agrupar por), collapsed by default
-// to a single "Filtros" button so the work area below keeps nearly all the
-// screen. Active filters render as removable chips even while collapsed.
-// Every change navigates via router.push with an updated query string; this
-// component never holds the filtered *data* in client state, only the
-// momentary control state and the open/collapsed flag (05-UI-SPEC.md's
-// Filter State Pattern). The actual data-fetching read of these same params
-// happens exclusively server-side in page.tsx.
+// Compact filter trigger + right-side modal drawer — the trigger lives in
+// the header row (same height as the view toggle) and opening shows the
+// selects in a modal anchored to the right edge, so the top of the screen
+// keeps nearly all the space for the work area. Active filters render as
+// removable chips inside the drawer. Every change navigates via
+// router.push with an updated query string; this component never holds the
+// filtered *data* in client state, only the momentary control state and the
+// open/collapsed flag (05-UI-SPEC.md's Filter State Pattern). The actual
+// data-fetching read of these same params happens exclusively server-side
+// in page.tsx.
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { ChevronDown, ChevronUp, SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -171,7 +172,7 @@ export default function DemandaFilters({
   const activeCount = activeChips.length;
 
   const triggerClassName =
-    "min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
+    "min-h-12 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
 
   const selectControl = (
     ariaLabel: string,
@@ -198,155 +199,179 @@ export default function DemandaFilters({
   );
 
   return (
-    <section
-      aria-label="Filtrar demandas"
-      className="flex w-full flex-col gap-3 rounded-2xl bg-white p-3 ring-1 ring-zinc-200/60"
-    >
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={toggleOpen}
-          aria-expanded={open}
-          className="flex min-h-12 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-lg font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-        >
-          <SlidersHorizontal size={20} aria-hidden="true" />
-          Filtros
-          {activeCount > 0 && (
-            <span className="rounded-full bg-blue-700 px-2 py-0.5 text-base font-semibold text-white">
-              {activeCount}
-            </span>
-          )}
-          {open ? (
-            <ChevronUp size={20} aria-hidden="true" className="transition-transform duration-200" />
-          ) : (
-            <ChevronDown size={20} aria-hidden="true" className="transition-transform duration-200" />
-          )}
-        </button>
-
-        <div className="flex flex-1 flex-wrap items-center gap-2">
-          {activeChips.map((chip) => (
-            <span
-              key={chip.key}
-              className="flex max-w-[16rem] items-center gap-1 truncate rounded-full bg-zinc-100 px-2.5 py-1 text-base text-zinc-700 ring-1 ring-zinc-200/60"
-              title={chip.title}
-            >
-              <span className="truncate">{chip.label}</span>
-              <button
-                type="button"
-                onClick={() => removeFilter(chip.key)}
-                aria-label={`Remover filtro de ${chip.title.toLowerCase()}`}
-                className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-zinc-200"
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            </span>
-          ))}
-
-          {hasActiveFilter && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="min-h-11 rounded-full bg-white px-4 text-lg font-medium text-zinc-700 ring-1 ring-zinc-300 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-            >
-              Limpar filtros
-            </button>
-          )}
-        </div>
-      </div>
+    <>
+      <button
+        type="button"
+        onClick={toggleOpen}
+        aria-expanded={open}
+        aria-controls="demanda-filtros-painel"
+        className="flex min-h-10 items-center gap-2 rounded-xl bg-zinc-100 px-3.5 text-base font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+      >
+        <SlidersHorizontal size={18} aria-hidden="true" />
+        Filtros
+        {activeCount > 0 && (
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-700 px-1.5 text-sm font-semibold text-white">
+            {activeCount}
+          </span>
+        )}
+      </button>
 
       {open && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {selectControl(
-            "Filtrar por área",
-            currentFilters.area,
-            ALL_VALUE,
-            "Todas as áreas",
-            (value) => navigateWith({ area: value }),
-            areaOptions.map((area) => (
-              <SelectItem key={area} value={area}>
-                {area}
-              </SelectItem>
-            ))
-          )}
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-zinc-900/30"
+            onClick={() => setOpenRaw("0")}
+            aria-hidden="true"
+          />
+          <div
+            id="demanda-filtros-painel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filtrar demandas"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col gap-4 overflow-y-auto bg-white p-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
+                Filtros
+                {activeCount > 0 && (
+                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-100 px-1.5 text-sm font-semibold text-blue-800">
+                    {activeCount} ativo{activeCount === 1 ? "" : "s"}
+                  </span>
+                )}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setOpenRaw("0")}
+                aria-label="Fechar filtros"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              >
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
 
-          {selectControl(
-            "Filtrar por projeto",
-            currentFilters.projeto,
-            ALL_VALUE,
-            "Todos os projetos",
-            (value) => navigateWith({ projeto: value }),
-            projetoOptions.map((projeto) => (
-              <SelectItem key={projeto} value={projeto}>
-                {projeto}
-              </SelectItem>
-            ))
-          )}
+            {activeChips.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                {activeChips.map((chip) => (
+                  <span
+                    key={chip.key}
+                    className="flex max-w-[16rem] items-center gap-1 truncate rounded-full bg-zinc-100 px-2.5 py-1 text-base text-zinc-700 ring-1 ring-zinc-200/60"
+                    title={chip.title}
+                  >
+                    <span className="truncate">{chip.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFilter(chip.key)}
+                      aria-label={`Remover filtro de ${chip.title.toLowerCase()}`}
+                      className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-zinc-200"
+                    >
+                      <X size={14} aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="min-h-11 rounded-full bg-white px-4 text-base font-medium text-zinc-700 ring-1 ring-zinc-300 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                >
+                  Limpar filtros
+                </button>
+              </div>
+            )}
 
-          {selectControl(
-            "Filtrar por evento",
-            currentFilters.evento,
-            ALL_VALUE,
-            "Todos os eventos",
-            (value) => navigateWith({ evento: value }),
-            eventoOptions.map((evento) => (
-              <SelectItem key={evento.id} value={String(evento.id)}>
-                {eventoLabel(evento)}
-              </SelectItem>
-            ))
-          )}
+            <div className="grid grid-cols-1 gap-3">
+              {selectControl(
+                "Filtrar por área",
+                currentFilters.area,
+                ALL_VALUE,
+                "Todas as áreas",
+                (value) => navigateWith({ area: value }),
+                areaOptions.map((area) => (
+                  <SelectItem key={area} value={area}>
+                    {area}
+                  </SelectItem>
+                ))
+              )}
 
-          {selectControl(
-            "Filtrar por etiqueta",
-            currentFilters.etiqueta,
-            ALL_VALUE,
-            "Todas as etiquetas",
-            (value) => navigateWith({ etiqueta: value }),
-            etiquetaOptions.map((etiqueta) => (
-              <SelectItem key={etiqueta.id} value={String(etiqueta.id)}>
-                {etiqueta.nome} ({etiqueta.area})
-              </SelectItem>
-            ))
-          )}
+              {selectControl(
+                "Filtrar por projeto",
+                currentFilters.projeto,
+                ALL_VALUE,
+                "Todos os projetos",
+                (value) => navigateWith({ projeto: value }),
+                projetoOptions.map((projeto) => (
+                  <SelectItem key={projeto} value={projeto}>
+                    {projeto}
+                  </SelectItem>
+                ))
+              )}
 
-          {selectControl(
-            "Filtrar por voluntário",
-            currentFilters.responsavel,
-            ALL_VALUE,
-            "Todos os voluntários",
-            (value) => navigateWith({ responsavel: value }),
-            responsavelOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))
-          )}
+              {selectControl(
+                "Filtrar por evento",
+                currentFilters.evento,
+                ALL_VALUE,
+                "Todos os eventos",
+                (value) => navigateWith({ evento: value }),
+                eventoOptions.map((evento) => (
+                  <SelectItem key={evento.id} value={String(evento.id)}>
+                    {eventoLabel(evento)}
+                  </SelectItem>
+                ))
+              )}
 
-          {selectControl(
-            "Filtrar por status",
-            currentFilters.status,
-            ALL_VALUE,
-            "Todos os status",
-            (value) => navigateWith({ status: value }),
-            <>
-              <SelectItem value="pendente">Pendente</SelectItem>
-              <SelectItem value="em_andamento">Em andamento</SelectItem>
-              <SelectItem value="concluida">Concluída</SelectItem>
-            </>
-          )}
+              {selectControl(
+                "Filtrar por etiqueta",
+                currentFilters.etiqueta,
+                ALL_VALUE,
+                "Todas as etiquetas",
+                (value) => navigateWith({ etiqueta: value }),
+                etiquetaOptions.map((etiqueta) => (
+                  <SelectItem key={etiqueta.id} value={String(etiqueta.id)}>
+                    {etiqueta.nome} ({etiqueta.area})
+                  </SelectItem>
+                ))
+              )}
 
-          {selectControl(
-            "Agrupar por",
-            currentFilters.agrupar,
-            NO_GROUPING_VALUE,
-            "Sem agrupamento",
-            (value) => navigateWith({ agrupar: value }),
-            <>
-              <SelectItem value="area">Área</SelectItem>
-              <SelectItem value="responsavel">Responsável</SelectItem>
-            </>
-          )}
-        </div>
+              {selectControl(
+                "Filtrar por voluntário",
+                currentFilters.responsavel,
+                ALL_VALUE,
+                "Todos os voluntários",
+                (value) => navigateWith({ responsavel: value }),
+                responsavelOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))
+              )}
+
+              {selectControl(
+                "Filtrar por status",
+                currentFilters.status,
+                ALL_VALUE,
+                "Todos os status",
+                (value) => navigateWith({ status: value }),
+                <>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="em_andamento">Em andamento</SelectItem>
+                  <SelectItem value="concluida">Concluída</SelectItem>
+                </>
+              )}
+
+              {selectControl(
+                "Agrupar por",
+                currentFilters.agrupar,
+                NO_GROUPING_VALUE,
+                "Sem agrupamento",
+                (value) => navigateWith({ agrupar: value }),
+                <>
+                  <SelectItem value="area">Área</SelectItem>
+                  <SelectItem value="responsavel">Responsável</SelectItem>
+                </>
+              )}
+            </div>
+          </div>
+        </>
       )}
-    </section>
+    </>
   );
 }
