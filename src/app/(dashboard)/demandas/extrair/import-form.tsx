@@ -24,13 +24,17 @@ const initialState: ExtractDemandasState = {
 // empty-input validation message" carve-out for the genuine-error state.
 const EMPTY_PASTE_MESSAGE = "Cole o resumo da reunião antes de continuar.";
 
-type Profile = {
-  id: string;
-  email: string;
+// Same roster option shape as the demandas form (demanda-form.tsx): the
+// institutional roster is the source of truth for responsáveis; temConta
+// flags who has an activated account.
+export type VoluntarioOption = {
+  id: number;
+  nome: string;
+  temConta: boolean;
 };
 
 type ImportFormProps = {
-  profiles: Profile[];
+  voluntarios: VoluntarioOption[];
   meetings: Meeting[];
   meetingsError: string | null;
   meetingsConfigured: boolean;
@@ -64,7 +68,7 @@ function SubmitButton({ isRetry }: { isRetry: boolean }) {
 }
 
 export default function ImportForm({
-  profiles,
+  voluntarios,
   meetings,
   meetingsError,
   meetingsConfigured,
@@ -85,7 +89,7 @@ export default function ImportForm({
 
   if (hasSuggestions) {
     return (
-      <SuggestionReviewList suggestions={state.suggestions} profiles={profiles} />
+      <SuggestionReviewList suggestions={state.suggestions} voluntarios={voluntarios} />
     );
   }
 

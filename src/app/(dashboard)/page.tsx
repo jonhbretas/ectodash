@@ -24,8 +24,6 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // searchParams is untrusted URL input — zod-validated before any value
-  // reaches a Supabase query (05-RESEARCH.md Pattern 5).
   const filters = parseDemandaFilters(await searchParams);
 
   const supabase = await createClient();
@@ -45,7 +43,6 @@ export default async function DashboardPage({
 
   const role = profile?.role;
 
-  // Only read when the caller is a coordenador_area.
   const { data: liderAreasRows } =
     role === "coordenador_area"
       ? await supabase.from("lider_areas").select("area").eq("lider_id", user.id)
@@ -53,7 +50,6 @@ export default async function DashboardPage({
 
   const liderAreas = (liderAreasRows ?? []).map((row) => row.area);
 
-  // Role-scoped-view notice, computed once server-side.
   let scopedViewNotice: string | null = null;
   if (role === "voluntario_comum") {
     scopedViewNotice = "Mostrando apenas as demandas atribuídas a você.";
@@ -71,15 +67,11 @@ export default async function DashboardPage({
     scopedViewNotice = null;
   }
 
-  // Base role-scoped query (RLS narrows it). demandas_com_status is the
-  // read source — atrasada and evento_id come from the view directly.
   let query = supabase
     .from("demandas_com_status")
     .select("id, titulo, prazo, status, area, projeto, evento_id, etiqueta_id, atrasada")
     .order("prazo", { ascending: true });
 
-  // All filter dimensions, combined with AND, each applied as a query
-  // modifier BEFORE data reaches the client.
   if (filters.area) {
     query = query.ilike("area", filters.area);
   }
@@ -96,8 +88,6 @@ export default async function DashboardPage({
     query = query.eq("status", filters.status);
   }
 
-  // Base read for dropdown options — same role-scoped source, unfiltered,
-  // so a filter never disappears an option it isn't filtering on.
   const { data: baseDemandas } = await supabase
     .from("demandas_com_status")
     .select("id, area, projeto, status, atrasada, evento_id")
@@ -166,7 +156,6 @@ export default async function DashboardPage({
     (etiquetasResult.data ?? []).map((etiqueta) => [etiqueta.id, etiqueta])
   );
 
-  // Checklist progress per demanda — one batched read, counted client-side.
   const checklistPorDemanda = new Map<number, { total: number; feitos: number }>();
   for (const row of checklistResult.data ?? []) {
     const current = checklistPorDemanda.get(row.demanda_id) ?? { total: 0, feitos: 0 };
@@ -175,9 +164,6 @@ export default async function DashboardPage({
     checklistPorDemanda.set(row.demanda_id, current);
   }
 
-  // Each assignment row normalizes to the ROSTER volunteer id (profile rows
-  // resolve via profiles.voluntario_id) and its display name — the roster
-  // is the single vocabulary for who owns a demanda, account or not.
   type RowResponsavel = {
     demanda_id: number;
     profile_id: string | null;
@@ -264,9 +250,6 @@ export default async function DashboardPage({
       filters.status
   );
 
-  // Kanban is the default work view (the screen's centerpiece): the
-  // absence of the param means kanban, and lista/calendario opt in
-  // explicitly via ?view=...
   const view: DemandaView = filters.view ?? "kanban";
 
   const stats = {
@@ -283,65 +266,73 @@ export default async function DashboardPage({
 
   return (
     <PageContainer>
-      {/* Header — greeting + CTA, clear hierarchy. */}
-      <header className="flex w-full flex-wrap items-start justify-between gap-6">
+      <header className="flex w-full flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-semibold text-zinc-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Olá, {displayName(profile ?? { email: user.email ?? "" })}
           </h1>
-          <p className="text-xl text-zinc-500">
+          <p className="text-sm text-slate-500">
             Acompanhe suas demandas e prazos por aqui.
           </p>
         </div>
         <Link
           href="/demandas/nova"
-          className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 hover:shadow-[0_2px_6px_rgba(29,78,216,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600 hover:shadow-[0_4px_12px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
         >
-          <Plus size={22} aria-hidden="true" />
+          <Plus size={18} aria-hidden="true" />
           Nova demanda
         </Link>
       </header>
 
-      {/* Stats — compact pills with semantic grouping. */}
       {demandaList.length > 0 && (
         <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-            <ClipboardList size={22} className="text-zinc-500" aria-hidden="true" />
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+              <ClipboardList size={18} className="text-slate-500" aria-hidden="true" strokeWidth={1.75} />
+            </div>
             <div className="flex flex-col">
-              <span className="text-base font-medium text-zinc-500">Demandas</span>
-              <span className="text-2xl font-semibold text-zinc-900">{stats.total}</span>
+              <span className="text-sm font-medium text-slate-500">Demandas</span>
+              <span className="text-2xl font-bold tracking-tight text-slate-900">{stats.total}</span>
             </div>
           </div>
-          <div className={`flex items-center gap-3 rounded-2xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ${
+          <div className={`flex items-center gap-3 rounded-2xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${
             stats.atrasadas > 0
               ? "bg-red-50 ring-1 ring-red-200/60"
-              : "bg-white ring-1 ring-zinc-200/60"
+              : "bg-white ring-1 ring-slate-200/60"
           }`}>
-            <AlertTriangle size={22} className={stats.atrasadas > 0 ? "text-red-600" : "text-zinc-400"} aria-hidden="true" />
+            <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${stats.atrasadas > 0 ? "bg-red-100" : "bg-slate-100"}`}>
+              <AlertTriangle size={18} className={stats.atrasadas > 0 ? "text-red-600" : "text-slate-400"} aria-hidden="true" strokeWidth={1.75} />
+            </div>
             <div className="flex flex-col">
-              <span className={`text-base font-medium ${stats.atrasadas > 0 ? "text-red-600" : "text-zinc-500"}`}>Atrasadas</span>
-              <span className={`text-2xl font-semibold ${stats.atrasadas > 0 ? "text-red-700" : "text-zinc-900"}`}>{stats.atrasadas}</span>
+              <span className={`text-sm font-medium ${stats.atrasadas > 0 ? "text-red-600" : "text-slate-500"}`}>Atrasadas</span>
+              <span className={`text-2xl font-bold tracking-tight ${stats.atrasadas > 0 ? "text-red-700" : "text-slate-900"}`}>{stats.atrasadas}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-            <Circle size={22} className="text-amber-500" aria-hidden="true" />
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50">
+              <Circle size={18} className="text-amber-500" aria-hidden="true" strokeWidth={1.75} />
+            </div>
             <div className="flex flex-col">
-              <span className="text-base font-medium text-zinc-500">Pendentes</span>
-              <span className="text-2xl font-semibold text-zinc-900">{stats.pendentes}</span>
+              <span className="text-sm font-medium text-slate-500">Pendentes</span>
+              <span className="text-2xl font-bold tracking-tight text-slate-900">{stats.pendentes}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-            <Clock size={22} className="text-blue-500" aria-hidden="true" />
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+              <Clock size={18} className="text-blue-500" aria-hidden="true" strokeWidth={1.75} />
+            </div>
             <div className="flex flex-col">
-              <span className="text-base font-medium text-zinc-500">Em andamento</span>
-              <span className="text-2xl font-semibold text-zinc-900">{stats.emAndamento}</span>
+              <span className="text-sm font-medium text-slate-500">Em andamento</span>
+              <span className="text-2xl font-bold tracking-tight text-slate-900">{stats.emAndamento}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-            <CheckCircle2 size={22} className="text-green-500" aria-hidden="true" />
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50">
+              <CheckCircle2 size={18} className="text-green-500" aria-hidden="true" strokeWidth={1.75} />
+            </div>
             <div className="flex flex-col">
-              <span className="text-base font-medium text-zinc-500">Concluídas</span>
-              <span className="text-2xl font-semibold text-zinc-900">{stats.concluidas}</span>
+              <span className="text-sm font-medium text-slate-500">Concluídas</span>
+              <span className="text-2xl font-bold tracking-tight text-slate-900">{stats.concluidas}</span>
             </div>
           </div>
         </div>
@@ -349,7 +340,7 @@ export default async function DashboardPage({
 
       <div className="flex w-full flex-col gap-5">
         {scopedViewNotice && (
-          <p className="rounded-xl bg-zinc-100 px-4 py-2.5 text-base font-medium text-zinc-600">
+          <p className="rounded-xl bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 ring-1 ring-blue-200/60">
             {scopedViewNotice}
           </p>
         )}

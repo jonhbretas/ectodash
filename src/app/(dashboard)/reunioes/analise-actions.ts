@@ -17,6 +17,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { chatCompletion } from "@/lib/ai/ai-client";
+import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
 import { obterTranscricao } from "@/lib/meetings";
 import { parseArquivoFonte, ArquivoNaoSuportadoError, ArquivoVazioError } from "@/lib/atas/parse-file";
 import {
@@ -215,7 +216,13 @@ const salvarDemandasSchema = z
   .array(
     z.object({
       titulo: z.string().trim().min(1).max(200),
-      responsavelId: z.string().uuid().nullable(),
+      // Roster volunteer id (voluntarios.id) as a string — the review
+      // selects list the full roster, account or not; resolution to
+      // profile_id/voluntario_id happens at save time.
+      responsavelId: z
+        .string()
+        .regex(/^\d+$/, "responsável inválido")
+        .nullable(),
       prazo: z.string().regex(dataRegex).nullable(),
     })
   )
@@ -356,11 +363,20 @@ export async function salvarAtaAnalise(
       continue;
     }
     if (demanda.responsavelId) {
-      const { error: respError } = await supabase
-        .from("demanda_responsaveis")
-        .insert({ demanda_id: criada.id, profile_id: demanda.responsavelId });
-      if (respError) {
-        console.error("salvarAtaAnalise: demanda_responsaveis insert failed", respError);
+      // Roster volunteer id → effective destination (profile_id when the
+      // volunteer has a linked account, voluntario_id otherwise) — same
+      // rule as createDemanda (migration 0020).
+      const [destino] = await resolverDestinosVoluntario(
+        supabase,
+        [Number(demanda.responsavelId)]
+      );
+      if (destino) {
+        const { error: respError } = await supabase
+          .from("demanda_responsaveis")
+          .insert({ demanda_id: criada.id, ...destino });
+        if (respError) {
+          console.error("salvarAtaAnalise: demanda_responsaveis insert failed", respError);
+        }
       }
     }
   }

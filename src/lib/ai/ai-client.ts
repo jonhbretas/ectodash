@@ -52,7 +52,19 @@ export async function chatCompletion(
   });
 
   if (!response.ok) {
-    throw new Error(`API de IA retornou status ${response.status}`);
+    // Include the gateway's own error body when present (e.g. 429 quota,
+    // 504 upstream timeout) so server logs pin down the real failure
+    // instead of a bare status code.
+    let detail = "";
+    try {
+      const text = (await response.text()).slice(0, 400);
+      if (text) detail = ` — ${text}`;
+    } catch {
+      // body already consumed or unreadable; keep the status-only message
+    }
+    throw new Error(
+      `API de IA retornou status ${response.status}${detail}`
+    );
   }
 
   const data = (await response.json()) as {

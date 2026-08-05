@@ -33,17 +33,20 @@ export type Suggestion = {
   prazoSugerido: string | null;
 };
 
-type Profile = {
-  id: string;
-  email: string;
-  full_name?: string | null;
+// Same roster option shape as the demandas form (demanda-form.tsx): the
+// institutional roster is the source of truth for responsáveis; temConta
+// flags who has an activated account.
+export type VoluntarioOption = {
+  id: number;
+  nome: string;
+  temConta: boolean;
 };
 
 type CardStatus = "pending" | "confirming" | "created" | "rejected";
 
 export type SuggestionReviewListProps = {
   suggestions: Suggestion[];
-  profiles: Profile[];
+  voluntarios: VoluntarioOption[];
 };
 
 type FieldErrors = { titulo?: string; responsavel?: string; prazo?: string };
@@ -68,7 +71,7 @@ function validateCard(
 
 export default function SuggestionReviewList({
   suggestions,
-  profiles,
+  voluntarios,
 }: SuggestionReviewListProps) {
   const router = useRouter();
 
@@ -247,7 +250,7 @@ export default function SuggestionReviewList({
             suggestion={suggestion}
             index={index + 1}
             total={total}
-            profiles={profiles}
+            voluntarios={voluntarios}
             status={cardStates[suggestion.key] ?? "pending"}
             titulo={titulos[suggestion.key] ?? ""}
             responsavelId={responsavelIds[suggestion.key] ?? null}
@@ -318,7 +321,7 @@ type SuggestionCardProps = {
   suggestion: Suggestion;
   index: number;
   total: number;
-  profiles: Profile[];
+  voluntarios: VoluntarioOption[];
   status: CardStatus;
   titulo: string;
   responsavelId: string | null;
@@ -339,7 +342,7 @@ function SuggestionCard({
   suggestion,
   index,
   total,
-  profiles,
+  voluntarios,
   status,
   titulo,
   responsavelId,
@@ -437,9 +440,13 @@ function SuggestionCard({
                 <SelectValue placeholder="Escolha um responsável" />
               </SelectTrigger>
               <SelectContent>
-                {profiles.map((profile) => (
-                  <SelectItem key={profile.id} value={profile.id}>
-                    {profile.full_name?.trim() || profile.email}
+                {voluntarios.map((voluntario) => (
+                  <SelectItem
+                    key={voluntario.id}
+                    value={String(voluntario.id)}
+                  >
+                    {voluntario.nome}
+                    {!voluntario.temConta ? " (sem acesso)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

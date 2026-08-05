@@ -10,73 +10,70 @@ export default async function LoginPage({
   const erro = params.erro;
 
   return (
-    <main className="flex min-h-full flex-1 items-stretch bg-zinc-50">
-      {/* Brand panel — visual/descriptive side, hidden on small screens
-          where the form takes the full width. Decorative content carries
-          aria-hidden; the form below is the sole focusable content. */}
+    <main className="flex min-h-dvh flex-1 items-stretch bg-gradient-to-br from-slate-50 via-white to-blue-50/20">
       <aside
         aria-hidden="true"
-        className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-blue-800 via-blue-700 to-blue-600 p-12 text-white lg:flex"
+        className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-blue-700 via-indigo-700 to-indigo-800 p-12 text-white lg:flex"
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-2xl font-bold">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-2xl font-bold shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
             E
           </span>
-          <span className="text-3xl font-semibold">EctoDash</span>
+          <span className="text-3xl font-semibold tracking-tight">EctoDash</span>
         </div>
 
         <div className="flex flex-col gap-6">
-          <h2 className="text-4xl font-semibold leading-tight">
-            Tudo que a instituição precisa, em um só lugar.
+          <h2 className="text-4xl font-semibold leading-tight tracking-tight">
+            Tudo que a instituicao precisa, em um so lugar.
           </h2>
-          <ul className="flex flex-col gap-4 text-xl text-blue-50">
+          <ul className="flex flex-col gap-4 text-lg text-blue-100">
             <li className="flex items-center gap-3">
-              <CheckCircle2 size={24} className="shrink-0 text-blue-100" />
-              Demandas e prazos sem perseguição manual
+              <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
+              Demandas e prazos sem perseguicao manual
             </li>
             <li className="flex items-center gap-3">
-              <CheckCircle2 size={24} className="shrink-0 text-blue-100" />
-              Lembretes automáticos por e-mail
+              <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
+              Lembretes automaticos por e-mail
             </li>
             <li className="flex items-center gap-3">
-              <CheckCircle2 size={24} className="shrink-0 text-blue-100" />
-              Visão geral do coordenador e das finanças
+              <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
+              Visao geral do coordenador e das financas
             </li>
           </ul>
         </div>
 
-        <p className="text-base text-blue-100">
-          Acesso exclusivo para voluntários da instituição.
+        <p className="text-sm text-blue-200">
+          Acesso exclusivo para voluntarios da instituicao.
         </p>
       </aside>
 
       <section className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-16">
         <div className="flex w-full max-w-md flex-col items-center gap-4 text-center">
           <div className="flex items-center gap-3 lg:hidden">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-700 text-2xl font-bold text-white">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-2xl font-bold text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]">
               E
             </span>
-            <span className="text-3xl font-semibold text-zinc-900">
+            <span className="text-3xl font-semibold tracking-tight text-slate-900">
               EctoDash
             </span>
           </div>
-          <h1 className="text-3xl font-semibold text-zinc-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Entrar no EctoDash
           </h1>
-          <p className="text-xl text-zinc-700">
+          <p className="text-sm text-slate-600">
             Digite seu e-mail principal abaixo. Enviaremos um link de acesso
-            por e-mail — não é preciso criar ou digitar nenhuma senha.
-            Na primeira vez, você escolherá seu nome na lista de voluntários
+            por e-mail — nao e preciso criar ou digitar nenhuma senha.
+            Na primeira vez, voce escolhera seu nome na lista de voluntarios
             para vincular o cadastro.
           </p>
           {erro === "link_invalido" && (
-            <p className="text-xl font-medium text-red-700">
-              O link expirou ou já foi usado. Peça um novo link de acesso
+            <p className="text-sm font-medium text-red-600">
+              O link expirou ou ja foi usado. Peca um novo link de acesso
               abaixo.
             </p>
           )}
         </div>
-        <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60">
           <LoginForm />
         </div>
       </section>

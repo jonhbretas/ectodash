@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
+import DipActions from "./dip-actions";
 
 type DipRow = {
   id: number;
@@ -19,6 +20,7 @@ type DipRow = {
   ataId: number;
   ataTitulo: string;
   ataData: string;
+  criadoPor: string;
 };
 
 export default async function DipsPage({
@@ -33,13 +35,16 @@ export default async function DipsPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [dipsResult, atasResult] = await Promise.all([
+  const [dipsResult, atasResult, profileResult] = await Promise.all([
     supabase
       .from("dips")
-      .select("id, localidade, pais, data_dip, participantes, observacoes, ata_id")
+      .select("id, localidade, pais, data_dip, participantes, observacoes, ata_id, criado_por")
       .order("data_dip", { ascending: false }),
     supabase.from("reunioes").select("id, titulo, data_reuniao"),
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
   ]);
+
+  const isCoordenadorGeral = profileResult.data?.role === "coordenador_geral";
 
   const ataById = new Map((atasResult.data ?? []).map((ata) => [ata.id, ata]));
 
@@ -51,6 +56,7 @@ export default async function DipsPage({
       observacoes: dip.observacoes, ataId: dip.ata_id,
       ataTitulo: ata?.titulo ?? "Ata removida",
       ataData: ata?.data_reuniao ?? "",
+      criadoPor: dip.criado_por,
     };
   });
 
@@ -173,7 +179,14 @@ export default async function DipsPage({
                         </h4>
                         <div className="flex flex-col">
                           {local.futuros.map((r, i) => (
-                            <DipEntry key={r.id} registro={r} index={i} isLast={i === local.futuros.length - 1} highlight />
+                            <DipEntry
+                              key={r.id}
+                              registro={r}
+                              index={i}
+                              isLast={i === local.futuros.length - 1}
+                              highlight
+                              canManage={r.criadoPor === user.id || isCoordenadorGeral}
+                            />
                           ))}
                         </div>
                       </div>
@@ -187,7 +200,13 @@ export default async function DipsPage({
                         </h4>
                         <div className="flex flex-col">
                           {local.passados.map((r, i) => (
-                            <DipEntry key={r.id} registro={r} index={i} isLast={i === local.passados.length - 1} />
+                            <DipEntry
+                              key={r.id}
+                              registro={r}
+                              index={i}
+                              isLast={i === local.passados.length - 1}
+                              canManage={r.criadoPor === user.id || isCoordenadorGeral}
+                            />
                           ))}
                         </div>
                       </div>
@@ -216,9 +235,9 @@ function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 function DipEntry({
-  registro, index, isLast, highlight,
+  registro, index, isLast, highlight, canManage,
 }: {
-  registro: DipRow; index: number; isLast: boolean; highlight?: boolean;
+  registro: DipRow; index: number; isLast: boolean; highlight?: boolean; canManage?: boolean;
 }) {
   return (
     <div className={`flex flex-col gap-1 border-b border-zinc-100 py-3 last:border-b-0 ${index === 0 ? "pt-0" : ""} ${highlight ? "bg-blue-50/50 -mx-2 px-2 rounded-lg" : ""}`}>
@@ -237,15 +256,31 @@ function DipEntry({
       {registro.observacoes && (
         <p className="text-base leading-relaxed text-zinc-700">{registro.observacoes}</p>
       )}
-      <Link
-        href={`/reunioes/${registro.ataId}`}
-        className="w-fit text-base font-medium text-blue-700 underline decoration-blue-700/40 underline-offset-4"
-      >
-        {registro.ataTitulo}
-        {registro.ataData
-          ? ` — ${format(new Date(`${registro.ataData}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}`
-          : ""}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link
+          href={`/reunioes/${registro.ataId}`}
+          className="w-fit text-base font-medium text-blue-700 underline decoration-blue-700/40 underline-offset-4"
+        >
+          {registro.ataTitulo}
+          {registro.ataData
+            ? ` — ${format(new Date(`${registro.ataData}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}`
+            : ""}
+        </Link>
+        {canManage && (
+          <DipActions
+            dip={{
+              id: registro.id,
+              ataId: registro.ataId,
+              localidade: registro.localidade,
+              pais: registro.pais,
+              data: registro.data_dip,
+              participantes: registro.participantes,
+              observacoes: registro.observacoes,
+            }}
+            canManage
+          />
+        )}
+      </div>
     </div>
   );
 }

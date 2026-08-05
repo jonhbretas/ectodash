@@ -37,6 +37,10 @@ import { ptBR } from "date-fns/locale";
 
 export const metadata = { title: "Financeiro — EctoDash" };
 
+// AI didactic summary (importarFinanceiro) may run past the default 10s
+// function budget on long imports — give the page's server actions room.
+export const maxDuration = 60;
+
 type EntryRow = {
   id: number;
   tipo: "entrada" | "saida";

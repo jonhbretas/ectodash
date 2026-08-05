@@ -1,15 +1,11 @@
 import Link from "next/link";
-import { UserRound, Lock } from "lucide-react";
+import { UserRound, Lock, Mail, Shield, MapPin, Hash, Building2, Briefcase, Calendar, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
 import { roleLabel } from "@/lib/role-labels";
 import PageContainer from "../page-container";
 import MeuPerfilForm from "../voluntarios/meu-perfil-form";
 
-// /perfil — the caller's own profile. Name is self-editable; role and área
-// de atuação are coordinator-managed (migration 0014 enforces this at the
-// database level). When the account is linked to the institutional roster
-// (migration 0017), the linked data shows here too.
 export default async function MeuPerfilPage() {
   const supabase = await createClient();
   const {
@@ -30,18 +26,15 @@ export default async function MeuPerfilPage() {
     return null;
   }
 
-  // Disabled accounts get a clear screen instead of the app (the layout's
-  // own gate catches this before rendering, but a defensive branch here
-  // keeps the page correct standalone).
   if (!profile.ativo) {
     return (
       <PageContainer>
         <div className="flex flex-col items-center gap-4 py-16 text-center">
-          <Lock size={48} className="text-zinc-400" aria-hidden="true" />
-          <h1 className="text-3xl font-semibold text-zinc-900">
+          <Lock size={48} className="text-slate-400" aria-hidden="true" />
+          <h1 className="text-3xl font-semibold text-slate-900">
             Conta desativada
           </h1>
-          <p className="max-w-md text-xl text-zinc-700">
+          <p className="max-w-md text-lg text-slate-600">
             Sua conta foi desativada pelo coordenador. Fale com ele para
             saber mais.
           </p>
@@ -62,73 +55,115 @@ export default async function MeuPerfilPage() {
 
   return (
     <PageContainer>
-      <div className="flex w-full max-w-4xl flex-col gap-2">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-          <UserRound size={28} aria-hidden="true" />
-          Meu perfil
-        </h1>
-        <p className="text-base text-zinc-700">
-          Seus dados no EctoDash.
-        </p>
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-[0_4px_12px_rgba(37,99,235,0.3)]">
+            <UserRound size={26} className="text-white" aria-hidden="true" strokeWidth={1.75} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              {displayName(profile)}
+            </h1>
+            <p className="text-sm text-slate-500">Seu perfil no EctoDash</p>
+          </div>
+        </div>
+
+        <MeuPerfilForm nomeAtual={displayName(profile)} />
+
+        <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 overflow-hidden">
+          <div className="border-b border-slate-100 px-5 py-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Informações da conta
+            </span>
+          </div>
+          <div className="divide-y divide-slate-100">
+            <div className="flex items-center gap-3 px-5 py-3.5">
+              <Mail size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
+              <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                <span className="text-sm text-slate-500">E-mail principal</span>
+                <span className="truncate text-sm font-medium text-slate-900">{profile.email}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-5 py-3.5">
+              <Shield size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
+              <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                <span className="text-sm text-slate-500">Papel</span>
+                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-blue-200/60">
+                  {roleLabel(profile.role)}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-5 py-3.5">
+              <Lock size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
+              <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                <span className="text-sm text-slate-500">Área de atuação</span>
+                <span className="truncate text-sm font-medium text-slate-900">
+                  {profile.area_atuacao?.trim() || "Não definida"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {cadastro && (
+          <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 overflow-hidden">
+            <div className="border-b border-slate-100 px-5 py-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Cadastro institucional
+              </span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <Hash size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <span className="text-sm text-slate-500">Código PF</span>
+                  <span className="text-sm font-medium text-slate-900">{cadastro.codigo_pf || "—"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <Building2 size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <span className="text-sm text-slate-500">Unidade</span>
+                  <span className="text-sm font-medium text-slate-900">{cadastro.unidade || "—"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <Briefcase size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <span className="text-sm text-slate-500">Função</span>
+                  <span className="text-sm font-medium text-slate-900">{cadastro.funcao || "—"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <MapPin size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <span className="text-sm text-slate-500">Área de atuação</span>
+                  <span className="text-sm font-medium text-slate-900">{cadastro.area_atuacao || "—"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <Calendar size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <span className="text-sm text-slate-500">Data de início</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {cadastro.data_inicio
+                      ? new Date(`${cadastro.data_inicio}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <Link
+          href="/"
+          className="flex h-10 w-fit items-center gap-2 rounded-xl px-4 text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+        >
+          <ArrowLeft size={16} aria-hidden="true" strokeWidth={1.5} />
+          Voltar para as demandas
+        </Link>
       </div>
-
-      <div className="flex w-full max-w-md flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <dl className="flex flex-col gap-3">
-          <div className="flex flex-col gap-0.5">
-            <dt className="text-base text-zinc-600">E-mail principal</dt>
-            <dd className="text-xl text-zinc-900">{profile.email}</dd>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <dt className="text-base text-zinc-600">Papel</dt>
-            <dd className="text-xl text-zinc-900">
-              {roleLabel(profile.role)}
-            </dd>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <dt className="flex items-center gap-1 text-base text-zinc-600">
-              <Lock size={14} aria-hidden="true" />
-              Área de atuação
-            </dt>
-            <dd className="text-xl text-zinc-900">
-              {profile.area_atuacao?.trim() || "Não definida"}
-            </dd>
-            <dd className="text-base text-zinc-600">
-              Somente o coordenador pode alterar.
-            </dd>
-          </div>
-          {cadastro && (
-            <>
-              <div className="flex flex-col gap-0.5 border-t border-zinc-100 pt-3">
-                <dt className="text-base text-zinc-600">Código PF</dt>
-                <dd className="text-xl text-zinc-900">
-                  {cadastro.codigo_pf || "—"}
-                </dd>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <dt className="text-base text-zinc-600">Unidade</dt>
-                <dd className="text-xl text-zinc-900">
-                  {cadastro.unidade || "—"}
-                </dd>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <dt className="text-base text-zinc-600">Função</dt>
-                <dd className="text-xl text-zinc-900">
-                  {cadastro.funcao || "—"}
-                </dd>
-              </div>
-            </>
-          )}
-        </dl>
-      </div>
-
-      <MeuPerfilForm nomeAtual={displayName(profile)} />
-
-      <Link
-        href="/"
-        className="text-xl font-medium text-blue-700 underline"
-      >
-        Voltar para as demandas
-      </Link>
     </PageContainer>
   );
 }

@@ -195,7 +195,7 @@ function AtaAgendaRow({ ata }: { ata: AtaRow }) {
         </span>
         {ata.horario && (
           <span className="mt-1 rounded-full bg-zinc-100 px-2 py-0.5 text-sm font-medium text-zinc-700">
-            {ata.horario}
+            {ata.horario.slice(0, 5)}
           </span>
         )}
       </div>

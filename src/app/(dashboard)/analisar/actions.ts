@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { chatCompletion } from "@/lib/ai/ai-client";
 import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
+import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
 import { parseXlsx } from "@/lib/financeiro/parse-file";
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -138,12 +139,22 @@ export type AnalisarState = {
     observacoes: string;
   }> | null;
   atualizacoes: Array<{ titulo: string; comentario: string }> | null;
-  // Account list for the responsável selects on the review screen —
-  // RLS-open to any authenticated user (same query the demandas form runs).
-  profiles: Array<{
-    id: string;
-    email: string;
-    full_name: string | null;
+  // Possible duplicates against existing records, keyed by the item's
+  // client key (demandas/eventos/dips). The review screen asks the user
+  // what to do with each one (pular / mesclar / criar mesmo assim).
+  duplicados: {
+    demandas: Record<string, { id: number; titulo: string }>;
+    eventos: Record<string, { id: number; titulo: string }>;
+    dips: Record<string, { id: number; localidade: string; data: string | null }>;
+  };
+  // Account list for the responsável selects on the review screen. The
+  // ROSTER (public.voluntarios) is the source of truth: every registered
+  // volunteer is assignable — "mesmo que não estejam cadastrados" (sem
+  // conta ativada ainda). temConta marca quem já ativou o acesso.
+  voluntarios: Array<{
+    id: number;
+    nome: string;
+    temConta: boolean;
   }>;
 };
 
@@ -167,7 +178,8 @@ function erroState(message: string): AnalisarState {
     ata: null,
     dips: null,
     atualizacoes: null,
-    profiles: [],
+    duplicados: { demandas: {}, eventos: {}, dips: {} },
+    voluntarios: [],
   };
 }
 
@@ -270,14 +282,38 @@ export async function analisarComIA(
   // file's own import restriction. Profiles (linked accounts) AND the
   // institutional roster (public.voluntarios) are fetched: a volunteer is
   // matched by roster name first, then by account full_name/email.
-  const [profilesResult, voluntariosResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, email, full_name, voluntario_id")
-      .eq("ativo", true)
-      .not("email", "ilike", "%example.invalid%"),
-    supabase.from("voluntarios").select("id, nome"),
-  ]);
+  const [profilesResult, voluntariosResult, demandasExistentes, eventosExistentes, dipsExistentes] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, voluntario_id")
+        .eq("ativo", true)
+        .not("email", "ilike", "%example.invalid%"),
+      supabase.from("voluntarios").select("id, nome"),
+      supabase.from("demandas").select("id, titulo"),
+      supabase.from("eventos").select("id, titulo, data_evento"),
+      supabase.from("dips").select("id, localidade, pais, data_dip"),
+    ]);
+
+  const demandasExistentesRows = (demandasExistentes.data ?? []).map((d) => ({
+    id: d.id,
+    titulo: d.titulo,
+    norm: normalizeTexto(d.titulo),
+  }));
+  const eventosExistentesRows = (eventosExistentes.data ?? []).map((e) => ({
+    id: e.id,
+    titulo: e.titulo,
+    norm: normalizeTexto(e.titulo),
+    data: e.data_evento,
+  }));
+  const dipsExistentesRows = (dipsExistentes.data ?? []).map((d) => ({
+    id: d.id,
+    localidade: d.localidade,
+    pais: d.pais,
+    normLocalidade: normalizeTexto(d.localidade),
+    normPais: normalizeTexto(d.pais),
+    data: d.data_dip,
+  }));
 
   const profiles = (profilesResult.data ?? []).map((p) => ({
     id: p.id,
@@ -293,10 +329,21 @@ export async function analisarComIA(
       .map((p) => [p.voluntario_id, p.id] as const)
       .filter(([voluntarioId]) => voluntarioId !== null)
   );
+  const comConta = new Set(
+    (profilesResult.data ?? [])
+      .map((p) => p.voluntario_id)
+      .filter((id): id is number => typeof id === "number")
+  );
   const roster = (voluntariosResult.data ?? []).map((v) => ({
     id: v.id,
     nome: v.nome,
     profileId: profileByVoluntarioId.get(v.id) ?? null,
+  }));
+  // Full roster for the review selects, with the linked-account flag.
+  const voluntarios = (voluntariosResult.data ?? []).map((v) => ({
+    id: v.id,
+    nome: v.nome,
+    temConta: comConta.has(v.id),
   }));
 
   try {
@@ -310,6 +357,14 @@ export async function analisarComIA(
     }
 
     const data = parsed.data;
+
+    // Possible duplicates are keyed by the SAME crypto.randomUUID() keys the
+    // mapping below generates, so the review screen can look them up per item.
+    const duplicados: AnalisarState["duplicados"] = {
+      demandas: {},
+      eventos: {},
+      dips: {},
+    };
 
     return {
       ok: true,
@@ -328,17 +383,35 @@ export async function analisarComIA(
           }))
         : null,
       eventos: data.eventos
-        ? data.eventos.map((e) => ({
-            key: crypto.randomUUID(),
-            titulo: e.titulo,
-            data: e.data,
-            local: e.local ?? null,
-            descricao: e.descricao ?? null,
-          }))
+        ? data.eventos.map((e) => {
+            const key = crypto.randomUUID();
+            const norm = normalizeTexto(e.titulo);
+            const match = eventosExistentesRows.find(
+              (existing) =>
+                existing.data === e.data &&
+                (existing.norm === norm ||
+                  (norm.length >= 6 &&
+                    (existing.norm.includes(norm) || norm.includes(existing.norm))))
+            );
+            if (match) {
+              duplicados.eventos[key] = {
+                id: match.id,
+                titulo: match.titulo,
+              };
+            }
+            return {
+              key,
+              titulo: e.titulo,
+              data: e.data,
+              local: e.local ?? null,
+              descricao: e.descricao ?? null,
+            };
+          })
         : null,
       demandas: data.demandas
         ? await Promise.all(
             data.demandas.map(async (d) => {
+              const key = crypto.randomUUID();
               const texto = d.responsavel_texto ?? "";
               let match: { profileId: string | null; rosterId: number | null } =
                 { profileId: null, rosterId: null };
@@ -368,10 +441,29 @@ export async function analisarComIA(
                 match = matchResponsavelRoster(texto, profiles, roster);
               }
 
+              // 3. Possible duplicate against existing demandas.
+              const norm = normalizeTexto(d.titulo);
+              const dup = norm.length >= 4
+                ? demandasExistentesRows.find(
+                    (existing) =>
+                      existing.norm === norm ||
+                      (norm.length >= 8 && existing.norm.includes(norm))
+                  )
+                : undefined;
+              if (dup) {
+                duplicados.demandas[key] = {
+                  id: dup.id,
+                  titulo: dup.titulo,
+                };
+              }
+
               return {
-                key: crypto.randomUUID(),
+                key,
                 titulo: d.titulo,
-                responsavelId: match.profileId,
+                // The select lists ROSTER volunteer ids (voluntarios.id),
+                // linked-account or not — resolution to profile_id happens
+                // at save time via resolverDestinosVoluntario.
+                responsavelId: match.rosterId !== null ? String(match.rosterId) : null,
                 responsavelTexto: texto,
                 prazoTexto: d.prazo_texto ?? "",
                 prazoSugerido: d.prazo_sugerido?.length
@@ -395,20 +487,41 @@ export async function analisarComIA(
           }
         : null,
       dips: data.dips
-        ? data.dips.map((dip) => ({
-            key: crypto.randomUUID(),
-            localidade: dip.localidade,
-            pais: dip.pais,
-            data: dip.data || "",
-            participantes:
-              typeof dip.participantes === "number"
-                ? String(dip.participantes)
-                : "",
-            observacoes: dip.observacoes || "",
-          }))
+        ? data.dips.map((dip) => {
+            const key = crypto.randomUUID();
+            const normLocalidade = normalizeTexto(dip.localidade);
+            const normPais = normalizeTexto(dip.pais);
+            const dipData = dip.data || null;
+            const match = dipsExistentesRows.find(
+              (existing) =>
+                existing.normLocalidade === normLocalidade &&
+                existing.normPais === normPais &&
+                (existing.data === dipData ||
+                  (existing.data === null && dipData === null))
+            );
+            if (match) {
+              duplicados.dips[key] = {
+                id: match.id,
+                localidade: match.localidade,
+                data: match.data,
+              };
+            }
+            return {
+              key,
+              localidade: dip.localidade,
+              pais: dip.pais,
+              data: dip.data || "",
+              participantes:
+                typeof dip.participantes === "number"
+                  ? String(dip.participantes)
+                  : "",
+              observacoes: dip.observacoes || "",
+            };
+          })
         : null,
       atualizacoes: data.atualizacoes ?? null,
-      profiles,
+      duplicados,
+      voluntarios,
     };
   } catch (err) {
     console.error("analisarComIA: erro", err);
@@ -440,6 +553,10 @@ export type SalvarTudoInput = {
     data: string;
     local: string | null;
     descricao: string | null;
+    // "criar" (default) creates a new event; "pular" skips a possible
+    // duplicate the user confirmed as the same event.
+    acao?: "criar" | "pular";
+    eventoId?: number | null;
   }>;
   demandas?: Array<{
     titulo: string;
@@ -448,6 +565,12 @@ export type SalvarTudoInput = {
     // Original text from the AI — passed to save aliases when the user's
     // final selection differs from the automatic match.
     responsavelTexto?: string;
+    // "criar" (default) creates a new demanda; "pular" skips a possible
+    // duplicate; "comentar" attaches an update comment to the existing
+    // demanda (demandaId) instead of creating a new row.
+    acao?: "criar" | "pular" | "comentar";
+    demandaId?: number | null;
+    comentario?: string | null;
   }>;
   ata?: {
     titulo: string;
@@ -464,6 +587,10 @@ export type SalvarTudoInput = {
     data: string | null;
     participantes: number | null;
     observacoes: string;
+    // "criar" (default) creates a new DIP record; "pular" skips a possible
+    // duplicate the user confirmed as the same DIP meeting.
+    acao?: "criar" | "pular";
+    dipId?: number | null;
   }>;
   atualizacoes?: Array<{ titulo: string; comentario: string }>;
 };
@@ -549,17 +676,24 @@ async function salvarDips(
   supabase: Awaited<ReturnType<typeof createClient>>,
   ataId: number,
   dips: SalvarTudoInput["dips"]
-): Promise<{ salvos: number; erros: string[] }> {
+): Promise<{ salvos: number; ignorados: number; erros: string[] }> {
   if (!dips || dips.length === 0 || ataId === null) {
-    return { salvos: 0, erros: [] };
+    return { salvos: 0, ignorados: 0, erros: [] };
   }
 
   const parsed = salvarDipsSchema.safeParse(dips);
   if (!parsed.success) {
-    return { salvos: 0, erros: ["dips (dados inválidos)"] };
+    return { salvos: 0, ignorados: 0, erros: ["dips (dados inválidos)"] };
   }
 
-  const rows = parsed.data.map((dip) => ({
+  const aCriar = dips.filter((dip) => dip.acao !== "pular");
+  const ignorados = dips.length - aCriar.length;
+
+  if (aCriar.length === 0) {
+    return { salvos: 0, ignorados, erros: [] };
+  }
+
+  const rows = aCriar.map((dip) => ({
     ata_id: ataId,
     localidade: dip.localidade,
     pais: dip.pais,
@@ -571,10 +705,10 @@ async function salvarDips(
   const { error } = await supabase.from("dips").insert(rows);
   if (error) {
     console.error("salvarTudoDaAnalise: dips insert failed", error);
-    return { salvos: 0, erros: ["dips"] };
+    return { salvos: 0, ignorados, erros: ["dips"] };
   }
 
-  return { salvos: rows.length, erros: [] };
+  return { salvos: rows.length, ignorados, erros: [] };
 }
 
 // Updates land as comments on the matching EXISTING demanda (same rule as
@@ -659,11 +793,16 @@ async function salvarFinanceiro(
 async function salvarEventos(
   supabase: Awaited<ReturnType<typeof createClient>>,
   events: SalvarTudoInput["eventos"]
-): Promise<{ salvos: number; erros: string[] }> {
-  if (!events || events.length === 0) return { salvos: 0, erros: [] };
+): Promise<{ salvos: number; ignorados: number; erros: string[] }> {
+  if (!events || events.length === 0) return { salvos: 0, ignorados: 0, erros: [] };
+
+  const aCriar = events.filter((e) => e.acao !== "pular");
+  const ignorados = events.length - aCriar.length;
+
+  if (aCriar.length === 0) return { salvos: 0, ignorados, erros: [] };
 
   const { error } = await supabase.from("eventos").insert(
-    events.map((e) => ({
+    aCriar.map((e) => ({
       titulo: e.titulo,
       data_evento: e.data,
       local: e.local ?? null,
@@ -673,22 +812,56 @@ async function salvarEventos(
 
   if (error) {
     console.error("salvarTudoDaAnalise: eventos failed", error);
-    return { salvos: 0, erros: [`eventos (${error.message})`] };
+    return { salvos: 0, ignorados, erros: [`eventos (${error.message})`] };
   }
 
-  return { salvos: events.length, erros: [] };
+  return { salvos: aCriar.length, ignorados, erros: [] };
 }
 
 async function salvarDemandas(
   supabase: Awaited<ReturnType<typeof createClient>>,
   demands: SalvarTudoInput["demandas"]
-): Promise<{ salvos: number; erros: string[] }> {
-  if (!demands || demands.length === 0) return { salvos: 0, erros: [] };
+): Promise<{ salvos: number; ignorados: number; comentados: number; erros: string[] }> {
+  if (!demands || demands.length === 0) {
+    return { salvos: 0, ignorados: 0, comentados: 0, erros: [] };
+  }
 
   let salvos = 0;
+  let ignorados = 0;
+  let comentados = 0;
   const erros: string[] = [];
 
   for (const d of demands) {
+    // "pular": user confirmed this is a duplicate — nothing happens.
+    if (d.acao === "pular") {
+      ignorados++;
+      continue;
+    }
+
+    // "comentar": user said this is the SAME task already tracked — attach
+    // an update comment to the existing demanda instead of a new row.
+    if (d.acao === "comentar" && d.demandaId) {
+      const { error: comentarioError } = await supabase
+        .from("demanda_comentarios")
+        .insert({
+          demanda_id: d.demandaId,
+          conteudo:
+            d.comentario ??
+            `Mencionada novamente em análise (${d.titulo}).`,
+        });
+
+      if (comentarioError) {
+        console.error(
+          "salvarTudoDaAnalise: demanda merge comment failed",
+          comentarioError
+        );
+        erros.push(d.titulo);
+        continue;
+      }
+      comentados++;
+      continue;
+    }
+
     const { data: demanda, error: demandaError } = await supabase
       .from("demandas")
       .insert({
@@ -708,15 +881,27 @@ async function salvarDemandas(
     }
 
     if (d.responsavelId) {
-      const { error: linkError } = await supabase
-        .from("demanda_responsaveis")
-        .insert({ demanda_id: demanda.id, profile_id: d.responsavelId });
+      // The select submits a ROSTER volunteer id (voluntarios.id) — resolve
+      // it to the effective destination (profile_id when the volunteer has
+      // a linked account, voluntario_id otherwise), same rule as
+      // createDemanda (migration 0020).
+      const destinos = await resolverDestinosVoluntario(
+        supabase,
+        [Number(d.responsavelId)]
+      );
+      const destino = destinos[0];
 
-      if (linkError) {
-        console.error(
-          "salvarTudoDaAnalise: demandas responsavel link failed",
-          linkError
-        );
+      if (destino) {
+        const { error: linkError } = await supabase
+          .from("demanda_responsaveis")
+          .insert({ demanda_id: demanda.id, ...destino });
+
+        if (linkError) {
+          console.error(
+            "salvarTudoDaAnalise: demandas responsavel link failed",
+            linkError
+          );
+        }
       }
     }
 
@@ -726,25 +911,17 @@ async function salvarDemandas(
     if (d.responsavelTexto && d.responsavelId) {
       const texto = normalizeTexto(d.responsavelTexto);
       if (texto) {
-        const { data: profileRow } = await supabase
-          .from("profiles")
-          .select("voluntario_id")
-          .eq("id", d.responsavelId)
-          .maybeSingle();
-
-        if (profileRow?.voluntario_id) {
-          await supabase.from("alias_responsaveis").insert({
-            termo: texto,
-            voluntario_id: profileRow.voluntario_id,
-          });
-        }
+        await supabase.from("alias_responsaveis").insert({
+          termo: texto,
+          voluntario_id: Number(d.responsavelId),
+        });
       }
     }
 
     salvos++;
   }
 
-  return { salvos, erros };
+  return { salvos, ignorados, comentados, erros };
 }
 
 // ── Helpers ──
@@ -779,7 +956,7 @@ export async function salvarTudoDaAnalise(
       salvarEventos(supabase, input.eventos),
       salvarDemandas(supabase, input.demandas),
       ata.ataId === null
-        ? Promise.resolve({ salvos: 0, erros: [] as string[] })
+        ? Promise.resolve({ salvos: 0, ignorados: 0, erros: [] as string[] })
         : salvarDips(supabase, ata.ataId, input.dips),
       ata.ataId === null
         ? Promise.resolve({ salvos: 0, erros: [] as string[] })
@@ -807,12 +984,25 @@ export async function salvarTudoDaAnalise(
   if (demandas.salvos > 0) {
     partes.push(`${demandas.salvos} ${demandas.salvos === 1 ? "demanda" : "demandas"}`);
   }
+  if (demandas.comentados > 0) {
+    partes.push(
+      `${demandas.comentados} ${demandas.comentados === 1 ? "comentário" : "comentários"} em demandas existentes`
+    );
+  }
   if (dips.salvos > 0) {
     partes.push(`${dips.salvos} ${dips.salvos === 1 ? "registro DIP" : "registros DIP"}`);
   }
   if (atualizacoes.salvos > 0) {
     partes.push(
       `${atualizacoes.salvos} ${atualizacoes.salvos === 1 ? "atualização" : "atualizações"}`
+    );
+  }
+
+  const ignoradosTotal =
+    eventos.ignorados + demandas.ignorados + dips.ignorados;
+  if (ignoradosTotal > 0) {
+    partes.push(
+      `${ignoradosTotal} ${ignoradosTotal === 1 ? "duplicado ignorado" : "duplicados ignorados"}`
     );
   }
 
@@ -836,6 +1026,7 @@ export async function salvarTudoDaAnalise(
     financeiro.salvos +
     eventos.salvos +
     demandas.salvos +
+    demandas.comentados +
     (ata.ataId !== null && !ata.erro ? 1 : 0) +
     dips.salvos +
     atualizacoes.salvos;
@@ -850,7 +1041,9 @@ export async function salvarTudoDaAnalise(
 
   const base =
     totalSalvo === 0
-      ? "Nada para salvar."
+      ? ignoradosTotal > 0
+        ? `${ignoradosTotal} ${ignoradosTotal === 1 ? "duplicado ignorado" : "duplicados ignorados"}.`
+        : "Nada para salvar."
       : `Salvo: ${partes.join(" e ")}.`;
 
   return {

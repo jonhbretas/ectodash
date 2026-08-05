@@ -30,9 +30,9 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-const profiles = [
-  { id: "11111111-1111-1111-1111-111111111111", email: "maria.silva@ex.org" },
-  { id: "22222222-2222-2222-2222-222222222222", email: "joao@ex.org" },
+const voluntarios = [
+  { id: 1, nome: "Maria Silva", temConta: true },
+  { id: 2, nome: "João Souza", temConta: false },
 ];
 
 function makeSuggestions(count: number): Suggestion[] {
@@ -40,7 +40,7 @@ function makeSuggestions(count: number): Suggestion[] {
     key: `s${i + 1}`,
     titulo: `Tarefa ${i + 1}`,
     responsavelId:
-      i === 0 ? profiles[0].id : null, // first suggestion matched, rest unmatched
+      i === 0 ? String(voluntarios[0].id) : null, // first suggestion matched, rest unmatched
     responsavelTexto: i === 0 ? "Maria" : "Nome Desconhecido",
     prazoTexto: "próxima sexta",
     prazoSugerido: null,
@@ -64,7 +64,7 @@ function getFooterProgressText(): string {
 describe("SuggestionReviewList", () => {
   it("renders exactly one card per suggestion, headed 'Sugestão N de M'", () => {
     render(
-      <SuggestionReviewList suggestions={makeSuggestions(3)} profiles={profiles} />
+      <SuggestionReviewList suggestions={makeSuggestions(3)} voluntarios={voluntarios} />
     );
 
     expect(screen.getByText("Sugestão 1 de 3")).toBeTruthy();
@@ -84,7 +84,7 @@ describe("SuggestionReviewList", () => {
         prazoSugerido: null,
       },
     ];
-    render(<SuggestionReviewList suggestions={suggestions} profiles={profiles} />);
+    render(<SuggestionReviewList suggestions={suggestions} voluntarios={voluntarios} />);
 
     expect(screen.getByText(/não encontrou esse perfil cadastrado/i)).toBeTruthy();
     const confirmarButton = screen.getByRole("button", { name: "Confirmar" });
@@ -92,7 +92,7 @@ describe("SuggestionReviewList", () => {
 
     const trigger = screen.getByRole("combobox");
     await user.click(trigger);
-    const option = await screen.findByText("maria.silva@ex.org");
+    const option = await screen.findByText("Maria Silva");
     await user.click(option);
 
     expect(confirmarButton).toHaveProperty("disabled", false);
@@ -101,7 +101,7 @@ describe("SuggestionReviewList", () => {
   it("Rejeitar makes zero calls to createDemanda, shows 'Sugestão rejeitada' with a working Desfazer, and leaves other cards unaffected", async () => {
     const user = userEvent.setup();
     render(
-      <SuggestionReviewList suggestions={makeSuggestions(2)} profiles={profiles} />
+      <SuggestionReviewList suggestions={makeSuggestions(2)} voluntarios={voluntarios} />
     );
 
     const cards = screen.getAllByText(/Sugestão \d de 2/);
@@ -133,13 +133,13 @@ describe("SuggestionReviewList", () => {
       {
         key: "s1",
         titulo: "Título original da IA",
-        responsavelId: profiles[0].id,
+        responsavelId: String(voluntarios[0].id),
         responsavelTexto: "Maria",
         prazoTexto: "sexta",
         prazoSugerido: null,
       },
     ];
-    render(<SuggestionReviewList suggestions={suggestions} profiles={profiles} />);
+    render(<SuggestionReviewList suggestions={suggestions} voluntarios={voluntarios} />);
 
     const tituloInput = screen.getByDisplayValue("Título original da IA");
     await user.clear(tituloInput);
@@ -154,7 +154,7 @@ describe("SuggestionReviewList", () => {
     expect(mockCreateDemanda).toHaveBeenCalledTimes(1);
     const [, formData] = mockCreateDemanda.mock.calls[0] as [unknown, FormData];
     expect(formData.get("titulo")).toBe("Título editado pelo humano");
-    expect(formData.get("responsavelIds")).toBe(profiles[0].id);
+    expect(formData.get("responsavelIds")).toBe(String(voluntarios[0].id));
     expect(formData.get("prazo")).toBe("2026-09-01");
 
     expect(await screen.findByText("Criada")).toBeTruthy();
@@ -168,13 +168,13 @@ describe("SuggestionReviewList", () => {
       {
         key: "s1",
         titulo: "Tarefa",
-        responsavelId: profiles[0].id,
+        responsavelId: String(voluntarios[0].id),
         responsavelTexto: "Maria",
         prazoTexto: "sexta",
         prazoSugerido: null,
       },
     ];
-    render(<SuggestionReviewList suggestions={suggestions} profiles={profiles} />);
+    render(<SuggestionReviewList suggestions={suggestions} voluntarios={voluntarios} />);
 
     const prazoInput = screen.getByLabelText("Prazo *");
     await user.type(prazoInput, "2026-09-01");
@@ -193,7 +193,7 @@ describe("SuggestionReviewList", () => {
   it("footer count updates as cards resolve; Concluir revisão is disabled until all cards are resolved", async () => {
     const user = userEvent.setup();
     render(
-      <SuggestionReviewList suggestions={makeSuggestions(2)} profiles={profiles} />
+      <SuggestionReviewList suggestions={makeSuggestions(2)} voluntarios={voluntarios} />
     );
 
     expect(getFooterProgressText()).toBe("0 de 2 revisadas");

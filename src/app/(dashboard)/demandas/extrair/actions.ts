@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { matchResponsavel } from "@/lib/ai/match-responsavel";
+import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
 import { chatCompletion } from "@/lib/ai/ai-client";
 import { extractionResponseSchema } from "./extraction-schema";
 import { obterTranscricao } from "@/lib/meetings";
@@ -118,10 +118,35 @@ export async function extractDemandas(
   // Ordinary session-bound client only — same query shape nova/page.tsx
   // already runs, RLS-scoped to what this caller can see. The service-role
   // factory in src/lib/supabase/admin.ts is never imported here, per that
-  // file's own import restriction.
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email");
+  // file's own import restriction. Profiles (linked accounts) AND the
+  // institutional roster (public.voluntarios) are fetched: a volunteer is
+  // matched by roster name first, then by account full_name/email. The
+  // responsável select lists the FULL roster — account or not — and
+  // createDemanda resolves the roster id to profile_id|voluntario_id.
+  const [profilesResult, voluntariosResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, voluntario_id")
+      .eq("ativo", true)
+      .not("email", "ilike", "%example.invalid%"),
+    supabase.from("voluntarios").select("id, nome"),
+  ]);
+
+  const profiles = (profilesResult.data ?? []).map((p) => ({
+    id: p.id,
+    email: p.email,
+    full_name: p.full_name,
+  }));
+  const profileByVoluntarioId = new Map(
+    (profilesResult.data ?? [])
+      .map((p) => [p.voluntario_id, p.id] as const)
+      .filter(([voluntarioId]) => voluntarioId !== null)
+  );
+  const roster = (voluntariosResult.data ?? []).map((v) => ({
+    id: v.id,
+    nome: v.nome,
+    profileId: profileByVoluntarioId.get(v.id) ?? null,
+  }));
 
   try {
     // JSON.parse is inside the same try/catch as the API call — a
@@ -146,21 +171,27 @@ export async function extractDemandas(
       };
     }
 
-    const suggestions = validated.data.demandas.map((suggestion) => ({
-      key: crypto.randomUUID(),
-      titulo: suggestion.titulo,
-      responsavelId: matchResponsavel(
+    const suggestions = validated.data.demandas.map((suggestion) => {
+      // Roster-first name match (account or not) — the select lists the
+      // full roster, so the id below is always a selectable voluntario id.
+      const match = matchResponsavelRoster(
         suggestion.responsavel_texto,
-        profiles ?? []
-      ),
-      responsavelTexto: suggestion.responsavel_texto,
-      prazoTexto: suggestion.prazo_texto,
-      // Normalized: an empty string from the AI becomes null, so the
-      // review card only pre-fills real dates.
-      prazoSugerido: suggestion.prazo_sugerido
-        ? suggestion.prazo_sugerido
-        : null,
-    }));
+        profiles,
+        roster
+      );
+      return {
+        key: crypto.randomUUID(),
+        titulo: suggestion.titulo,
+        responsavelId: match.rosterId !== null ? String(match.rosterId) : null,
+        responsavelTexto: suggestion.responsavel_texto,
+        prazoTexto: suggestion.prazo_texto,
+        // Normalized: an empty string from the AI becomes null, so the
+        // review card only pre-fills real dates.
+        prazoSugerido: suggestion.prazo_sugerido
+          ? suggestion.prazo_sugerido
+          : null,
+      };
+    });
 
     return { ok: true, message: "", suggestions };
   } catch (err) {

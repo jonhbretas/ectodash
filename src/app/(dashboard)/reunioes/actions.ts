@@ -64,3 +64,32 @@ export async function criarAta(
   revalidatePath("/reunioes");
   return { ok: true, message: "Ata registrada com sucesso." };
 }
+
+export async function excluirAta(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  const rawId = formData.get("id");
+  const id = Number(rawId);
+  if (!Number.isFinite(id)) {
+    return;
+  }
+
+  // RLS (migration 0007) is the real boundary: only the creator or a
+  // coordenador_geral can delete. DIPs linked to the ata cascade away
+  // (dips.ata_id on delete cascade, migration 0015).
+  const { error } = await supabase.from("reunioes").delete().eq("id", id);
+  if (error) {
+    console.error("excluirAta: delete failed", error);
+    return;
+  }
+
+  revalidatePath("/reunioes");
+  revalidatePath("/dips");
+}

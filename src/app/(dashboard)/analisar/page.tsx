@@ -9,6 +9,8 @@
 import { useActionState, useState, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Sparkles,
   Upload,
@@ -44,7 +46,8 @@ const initialState: AnalisarState = {
   ata: null,
   dips: null,
   atualizacoes: null,
-  profiles: [],
+  duplicados: { demandas: {}, eventos: {}, dips: {} },
+  voluntarios: [],
 };
 
 const EMPTY_INPUT = "Cole um texto ou envie um arquivo antes de analisar.";
@@ -61,9 +64,9 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 hover:shadow-[0_4px_12px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-70 disabled:translate-y-0"
     >
-      <Sparkles size={22} aria-hidden="true" />
+      <Sparkles size={18} aria-hidden="true" />
       {pending ? "Analisando com IA..." : "Analisar com IA"}
     </button>
   );
@@ -73,8 +76,8 @@ function PendingHint() {
   const { pending } = useFormStatus();
   if (!pending) return null;
   return (
-    <p className="text-center text-base text-zinc-700">
-      A IA está lendo o conteúdo. Isso pode levar alguns segundos...
+    <p className="text-center text-sm text-slate-500">
+      A IA esta lendo o conteudo. Isso pode levar alguns segundos...
     </p>
   );
 }
@@ -94,6 +97,14 @@ const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
+
+// Datas vindas da IA em ISO (yyyy-MM-dd) → exibição brasileira dd/MM/yyyy.
+function formatarDataBR(iso: string): string {
+  if (!iso) return "";
+  const date = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return iso;
+  return format(date, "dd/MM/yyyy", { locale: ptBR });
+}
 
 export default function AnalisarPage() {
   // Bumping this key remounts the whole flow (action state included), which
@@ -139,19 +150,21 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
   return (
     <main
       id="main-content"
-      className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 pb-20 pt-8"
+      className="flex flex-1 flex-col items-center gap-6 px-6 py-8 overflow-y-auto"
     >
       <form
         key={resetKey}
         action={formAction}
-        className="flex w-full max-w-md flex-col gap-4"
+        className="flex w-full max-w-lg flex-col gap-5"
       >
         <div className="flex flex-col gap-2">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-            <Sparkles size={28} className="text-blue-700" aria-hidden="true" />
+          <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-[0_2px_8px_rgba(37,99,235,0.25)]">
+              <Sparkles size={20} className="text-white" aria-hidden="true" strokeWidth={1.75} />
+            </div>
             Analisar com IA
           </h1>
-          <p className="text-base text-zinc-700">
+          <p className="text-sm text-slate-500">
             Cole um texto ou envie um arquivo (.txt, .csv, .xlsx).
             A IA identifica automaticamente se e financeiro, eventos ou
             atas de reuniao e extrai os dados para voce revisar e salvar.
@@ -160,15 +173,13 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
 
         {/* File upload */}
         <div className="flex flex-col gap-2">
-          <span className="text-xl font-medium text-zinc-900">
-            Arquivo (opcional)
-          </span>
+          <span className="text-sm font-medium text-slate-700">Arquivo (opcional)</span>
           <div className="flex items-center gap-3">
             <label
               htmlFor="arquivo-input"
-              className="flex min-h-14 cursor-pointer items-center gap-2 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-700 transition-colors hover:bg-zinc-100 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-700"
+              className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-600"
             >
-              <Upload size={20} aria-hidden="true" />
+              <Upload size={16} aria-hidden="true" strokeWidth={1.5} />
               Escolher arquivo
               <input
                 ref={fileInputRef}
@@ -184,7 +195,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
               />
             </label>
             {arquivoNome ? (
-              <span className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-lg text-blue-800">
+              <span className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 ring-1 ring-blue-200/60">
                 {arquivoNome}
                 <button
                   type="button"
@@ -192,10 +203,10 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
                     setArquivoNome(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
-                  className="flex h-8 w-8 items-center justify-center rounded text-blue-600 hover:bg-blue-100"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-blue-500 hover:bg-blue-100 transition-colors"
                   aria-label="Remover arquivo"
                 >
-                  <X size={18} />
+                  <X size={14} />
                 </button>
               </span>
             ) : null}
@@ -204,37 +215,26 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
 
         {/* Textarea */}
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="texto"
-            className="text-xl font-medium text-zinc-900"
-          >
-            Ou cole o conteudo
-          </label>
+          <label htmlFor="texto" className="text-sm font-medium text-slate-700">Ou cole o conteudo</label>
           <textarea
             id="texto"
             name="texto"
             readOnly={false}
             placeholder="Cole aqui o conteudo para a IA analisar..."
-            className="min-h-40 w-full rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 placeholder:text-zinc-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="min-h-36 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           />
           {isEmpty && (
-            <span className="text-base text-red-700">{state.message}</span>
+            <span className="text-xs text-red-600">{state.message}</span>
           )}
         </div>
 
         {isError && (
-          <div className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50 p-4">
             <div className="flex items-center gap-2">
-              <AlertCircle
-                size={24}
-                className="text-red-700"
-                aria-hidden="true"
-              />
-              <h2 className="text-lg font-semibold text-red-800">
-                Nao foi possivel analisar
-              </h2>
+              <AlertCircle size={20} className="text-red-600" aria-hidden="true" strokeWidth={1.5} />
+              <h2 className="text-sm font-semibold text-red-800">Nao foi possivel analisar</h2>
             </div>
-            <p className="text-base text-red-700">{state.message}</p>
+            <p className="text-sm text-red-700">{state.message}</p>
           </div>
         )}
 
@@ -245,12 +245,11 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
         </div>
       </form>
 
-      {/* Info card about model */}
-      <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-white px-5 py-3 text-sm text-zinc-600">
+      <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-xs text-slate-500">
         <p>
           A IA classifica e extrai automaticamente dados financeiros, eventos
           e tarefas de reunioes. O modelo em uso e o configurado na variavel{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs">
+          <code className="rounded bg-slate-100 px-1 py-0.5 text-xs font-mono">
             AI_MODEL
           </code>{" "}
           no .env (atualmente: mimo-v2.5, gateway OpenCode Go).
@@ -291,7 +290,7 @@ type DipEdit = {
 };
 
 const fieldClassName =
-  "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
+  "min-h-9 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600";
 
 function ResultsScreen({
   state,
@@ -341,19 +340,69 @@ function ResultsScreen({
     (state.dips ?? []).map((d) => ({ ...d }))
   );
 
+  // Per-item decision for possible duplicates detected server-side:
+  // demandas → "pular" (same task), "comentar" (merge as comment) or
+  // "criar" (new task); eventos/dips → "pular" or "criar". Defaults to
+  // "pular" so re-uploading the same transcript never duplicates anything
+  // without an explicit user choice.
+  const [demandaAcoes, setDemandaAcoes] = useState<Record<string, "pular" | "comentar" | "criar">>(() => {
+    const map: Record<string, "pular" | "comentar" | "criar"> = {};
+    for (const d of state.demandas ?? []) {
+      map[d.key] = state.duplicados.demandas[d.key] ? "pular" : "criar";
+    }
+    return map;
+  });
+  const [eventoAcoes, setEventoAcoes] = useState<Record<string, "pular" | "criar">>(() => {
+    const map: Record<string, "pular" | "criar"> = {};
+    for (const e of state.eventos ?? []) {
+      map[e.key] = state.duplicados.eventos[e.key] ? "pular" : "criar";
+    }
+    return map;
+  });
+  const [dipAcoes, setDipAcoes] = useState<Record<string, "pular" | "criar">>(() => {
+    const map: Record<string, "pular" | "criar"> = {};
+    for (const d of state.dips ?? []) {
+      map[d.key] = state.duplicados.dips[d.key] ? "pular" : "criar";
+    }
+    return map;
+  });
+
+  const referencia = ataEdit.titulo.trim()
+    ? `${ataEdit.titulo}${ataEdit.data ? ` (${ataEdit.data})` : ""}`
+    : (state.titulo ?? "análise");
+
   async function salvarTudo() {
     setSaving(true);
     const result = await salvarTudoDaAnalise({
       financeiro: state.financeiro?.map(({ key: _, ...rest }) => rest),
-      eventos: state.eventos?.map(({ key: _, ...rest }) => rest),
+      eventos: state.eventos?.map((e) => {
+        const acao = eventoAcoes[e.key] ?? "criar";
+        return {
+          titulo: e.titulo,
+          data: e.data,
+          local: e.local,
+          descricao: e.descricao,
+          acao,
+          eventoId: state.duplicados.eventos[e.key]?.id ?? null,
+        };
+      }),
       demandas: demandaEdits
         .filter((d) => d.titulo.trim().length > 0)
-        .map((d) => ({
-          titulo: d.titulo,
-          responsavelId: d.responsavelId || null,
-          prazoSugerido: d.prazo,
-          responsavelTexto: d.responsavelTexto || undefined,
-        })),
+        .map((d) => {
+          const acao = demandaAcoes[d.key] ?? "criar";
+          return {
+            titulo: d.titulo,
+            responsavelId: d.responsavelId || null,
+            prazoSugerido: d.prazo,
+            responsavelTexto: d.responsavelTexto || undefined,
+            acao,
+            demandaId: state.duplicados.demandas[d.key]?.id ?? null,
+            comentario:
+              acao === "comentar"
+                ? `Mencionada novamente em "${referencia}".`
+                : null,
+          };
+        }),
       ata: temAta
         ? {
             titulo: ataEdit.titulo,
@@ -376,6 +425,8 @@ function ResultsScreen({
               ? null
               : Number.parseInt(d.participantes, 10),
           observacoes: d.observacoes,
+          acao: dipAcoes[d.key] ?? "criar",
+          dipId: state.duplicados.dips[d.key]?.id ?? null,
         })),
       atualizacoes: state.atualizacoes ?? undefined,
     });
@@ -389,36 +440,34 @@ function ResultsScreen({
   return (
     <main
       id="main-content"
-      className="flex flex-1 flex-col gap-6 bg-zinc-50 px-6 pb-24 pt-8"
+      className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-24 pt-8"
     >
       {/* Header */}
-      <header className="flex w-full flex-wrap items-start justify-between gap-6">
+      <header className="flex w-full flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Sparkles size={28} className="text-blue-700" aria-hidden="true" />
-            <h1 className="text-3xl font-semibold text-zinc-900">
-              Resultado da análise
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-[0_2px_8px_rgba(37,99,235,0.25)]">
+              <Sparkles size={20} className="text-white" aria-hidden="true" strokeWidth={1.75} />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Resultado da analise
             </h1>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-            <TIcon size={24} className="text-blue-700" aria-hidden="true" />
+          <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/60 px-4 py-2.5">
+            <TIcon size={20} className="text-blue-600" aria-hidden="true" strokeWidth={1.5} />
             <div>
-              <span className="text-sm font-medium text-blue-700">
-                {tipoMeta.label}
-              </span>
-              <h2 className="text-xl font-semibold text-blue-900">
-                {state.titulo}
-              </h2>
+              <span className="text-xs font-medium text-blue-600">{tipoMeta.label}</span>
+              <h2 className="text-sm font-semibold text-blue-800">{state.titulo}</h2>
             </div>
           </div>
         </div>
         <button
           type="button"
           onClick={onReset}
-          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
         >
-          <X size={22} aria-hidden="true" />
-          Analisar outro conteúdo
+          <X size={18} aria-hidden="true" strokeWidth={1.5} />
+          Analisar outro conteudo
         </button>
       </header>
 
@@ -439,8 +488,8 @@ function ResultsScreen({
               {temAta ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="ata-titulo" className="text-base font-medium text-zinc-900">
-                      Título
+                    <label htmlFor="ata-titulo" className="text-xs font-medium text-slate-700">
+                      Titulo
                     </label>
                     <input
                       id="ata-titulo"
@@ -453,7 +502,7 @@ function ResultsScreen({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor="ata-data" className="text-base font-medium text-zinc-900">
+                      <label htmlFor="ata-data" className="text-xs font-medium text-slate-700">
                         Data
                       </label>
                       <input
@@ -467,8 +516,8 @@ function ResultsScreen({
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor="ata-horario" className="text-base font-medium text-zinc-900">
-                        Horário
+                      <label htmlFor="ata-horario" className="text-xs font-medium text-slate-700">
+                        Horario
                       </label>
                       <input
                         id="ata-horario"
@@ -506,13 +555,13 @@ function ResultsScreen({
                     rows={5}
                     onChange={(v) => setAtaEdit((prev) => ({ ...prev, resumo: v }))}
                   />
-                  <p className="text-sm text-zinc-500">
-                    A ata será salva em Atas de Reuniões com as demandas, DIPs
-                    e atualizações abaixo.
+                  <p className="text-xs text-slate-400">
+                    A ata sera salva em Atas de Reunioes com as demandas, DIPs
+                    e atualizacoes abaixo.
                   </p>
                 </div>
               ) : (
-                <p className="whitespace-pre-line text-lg leading-relaxed text-zinc-800">
+                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">
                   {state.resumo}
                 </p>
               )}
@@ -526,29 +575,57 @@ function ResultsScreen({
             >
               {temEventos ? (
                 <div className="flex flex-col gap-3">
-                  {state.eventos!.map((e) => (
-                    <div
-                      key={e.key}
-                      className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-lg font-semibold text-zinc-900">
-                            {e.titulo}
-                          </p>
-                          {e.descricao && (
-                            <p className="mt-1 text-base text-zinc-700">
-                              {e.descricao}
+                  {state.eventos!.map((e) => {
+                    const dup = state.duplicados.eventos[e.key];
+                    return (
+                      <div
+                        key={e.key}
+                        className={`rounded-xl border p-4 ${
+                          dup ? "border-amber-200 bg-amber-50/60" : "border-slate-200 bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">
+                              {e.titulo}
                             </p>
-                          )}
+                            {e.descricao && (
+                              <p className="mt-1 text-xs text-slate-600">
+                                {e.descricao}
+                              </p>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right text-xs text-slate-600">
+                            <p className="font-medium">{e.data}</p>
+                            {e.local && <p className="mt-0.5">{e.local}</p>}
+                          </div>
                         </div>
-                        <div className="shrink-0 text-right text-base text-zinc-700">
-                          <p className="font-medium">{e.data}</p>
-                          {e.local && <p className="mt-0.5">{e.local}</p>}
-                        </div>
+                        {dup && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-amber-200 pt-2">
+                            <span className="text-xs font-medium text-amber-800">
+                              Possivel duplicado: &quot;{dup.titulo}&quot; ja cadastrado.
+                            </span>
+                            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                              Acao
+                              <select
+                                value={eventoAcoes[e.key] ?? "pular"}
+                                onChange={(ev) =>
+                                  setEventoAcoes((prev) => ({
+                                    ...prev,
+                                    [e.key]: ev.target.value as "pular" | "criar",
+                                  }))
+                                }
+                                className="min-h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"
+                              >
+                                <option value="pular">Pular (ja existe)</option>
+                                <option value="criar">Criar mesmo assim</option>
+                              </select>
+                            </label>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <EmptyColumn text="Nenhum evento identificado." />
@@ -563,26 +640,30 @@ function ResultsScreen({
             >
               {temDemandas ? (
                 <div className="flex flex-col gap-3">
-                  {demandaEdits.map((d) => (
-                    <div
-                      key={d.key}
-                      className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-4"
-                    >
-                      <p className="text-lg font-semibold text-zinc-900">
+                  {demandaEdits.map((d) => {
+                    const dup = state.duplicados.demandas[d.key];
+                    return (
+                      <div
+                        key={d.key}
+                        className={`flex flex-col gap-2 rounded-xl border p-4 ${
+                          dup ? "border-amber-200 bg-amber-50/60" : "border-zinc-200 bg-zinc-50"
+                        }`}
+                      >
+                      <p className="text-sm font-semibold text-slate-900">
                         {d.titulo}
                       </p>
                       {d.responsavelTexto && (
-                        <p className="text-base text-zinc-700">
+                        <p className="text-xs text-slate-600">
                           No texto:{" "}
                           <span className="font-medium">{d.responsavelTexto}</span>{" "}
                           {d.responsavelEncontrado ? (
-                            <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-sm font-medium text-green-700 ring-1 ring-green-200/60">
-                              <CheckCircle2 size={14} aria-hidden="true" />
+                            <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200/60">
+                              <CheckCircle2 size={12} aria-hidden="true" />
                               encontrado no cadastro
                             </span>
                           ) : (
-                            <span className="ml-1 text-amber-600">
-                              (não encontrado no cadastro)
+                            <span className="ml-1 text-xs text-amber-600">
+                              (nao encontrado no cadastro)
                             </span>
                           )}
                         </p>
@@ -590,9 +671,9 @@ function ResultsScreen({
                       <div className="flex flex-col gap-1.5">
                         <label
                           htmlFor={`resp-${d.key}`}
-                          className="text-base font-medium text-zinc-900"
+                          className="text-xs font-medium text-slate-700"
                         >
-                          Responsável
+                          Responsavel
                         </label>
                         <select
                           id={`resp-${d.key}`}
@@ -609,9 +690,13 @@ function ResultsScreen({
                           className={fieldClassName}
                         >
                           <option value="">Sem responsável definido</option>
-                          {state.profiles.map((profile) => (
-                            <option key={profile.id} value={profile.id}>
-                              {profile.full_name?.trim() || profile.email}
+                          {state.voluntarios.map((voluntario) => (
+                            <option
+                              key={voluntario.id}
+                              value={String(voluntario.id)}
+                            >
+                              {voluntario.nome}
+                              {!voluntario.temConta ? " (sem acesso)" : ""}
                             </option>
                           ))}
                         </select>
@@ -619,7 +704,7 @@ function ResultsScreen({
                       <div className="flex flex-col gap-1.5">
                         <label
                           htmlFor={`prazo-${d.key}`}
-                          className="text-base font-medium text-zinc-900"
+                          className="text-xs font-medium text-slate-700"
                         >
                           Prazo
                         </label>
@@ -639,8 +724,40 @@ function ResultsScreen({
                           className={fieldClassName}
                         />
                       </div>
+                      {dup && (
+                        <div className="flex flex-wrap items-center gap-2 border-t border-amber-200 pt-2">
+                          <span className="text-xs font-medium text-amber-800">
+                            Possivel duplicado: &quot;{dup.titulo}&quot; ja cadastrado.
+                          </span>
+                          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                            Acao
+                            <select
+                                value={demandaAcoes[d.key] ?? "pular"}
+                              onChange={(ev) =>
+                                setDemandaAcoes((prev) => ({
+                                  ...prev,
+                                  [d.key]: ev.target.value as "pular" | "comentar" | "criar",
+                                }))
+                              }
+                              className="min-h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"
+                            >
+                              <option value="pular">Pular (ja existe)</option>
+                              <option value="comentar">Mesma tarefa — anexar comentario</option>
+                              <option value="criar">Criar mesmo assim</option>
+                            </select>
+                          </label>
+                          <p className="w-full text-xs text-zinc-600">
+                            {demandaAcoes[d.key] === "comentar"
+                              ? "Nenhuma demanda nova será criada; um comentário com a menção desta análise será anexado à demanda existente."
+                              : demandaAcoes[d.key] === "pular"
+                                ? "A demanda existente não será alterada."
+                                : "Uma nova demanda será criada mesmo havendo um registro parecido."}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               ) : (
                 <EmptyColumn text="Nenhuma demanda identificada." />
@@ -655,43 +772,41 @@ function ResultsScreen({
                 count={state.financeiro!.length}
               >
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-lg">
+                  <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-zinc-200 text-base text-zinc-700">
-                        <th className="pb-2 pr-4 font-medium">Descrição</th>
+                      <tr className="border-b border-slate-200 text-xs text-slate-500">
+                        <th className="pb-2 pr-4 font-medium">Descricao</th>
                         <th className="pb-2 pr-4 font-medium">Tipo</th>
-                        <th className="pb-2 pr-4 text-right font-medium">
-                          Valor
-                        </th>
+                        <th className="pb-2 pr-4 text-right font-medium">Valor</th>
                         <th className="pb-2 font-medium">Data</th>
                       </tr>
                     </thead>
                     <tbody>
                       {state.financeiro!.map((e) => (
-                        <tr key={e.key} className="border-b border-zinc-100">
-                          <td className="py-2 pr-4 text-zinc-900">
+                        <tr key={e.key} className="border-b border-slate-100">
+                          <td className="py-2 pr-4 text-slate-900 text-sm">
                             {e.descricao}
                             {e.categoria && (
-                              <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-sm text-zinc-700">
+                              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
                                 {e.categoria}
                               </span>
                             )}
                           </td>
-                          <td className="py-2 pr-4">
+                          <td className="py-2 pr-4 text-sm">
                             <span
                               className={
                                 e.tipo === "entrada"
-                                  ? "text-green-700"
-                                  : "text-red-700"
+                                  ? "text-emerald-600 font-medium"
+                                  : "text-red-600 font-medium"
                               }
                             >
-                              {e.tipo === "entrada" ? "Entrada" : "Saída"}
+                              {e.tipo === "entrada" ? "Entrada" : "Saida"}
                             </span>
                           </td>
-                          <td className="py-2 pr-4 text-right text-zinc-900">
+                          <td className="py-2 pr-4 text-right text-slate-900 text-sm">
                             {brl.format(e.valor)}
                           </td>
-                          <td className="py-2 text-zinc-700">{e.data}</td>
+                          <td className="py-2 text-slate-600 text-sm">{formatarDataBR(e.data)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -704,24 +819,26 @@ function ResultsScreen({
           {/* Dinâmica DIP */}
           {temDips && (
             <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-              <header className="flex items-center gap-2 border-b border-zinc-100 pb-3">
-                <Users size={24} className="text-blue-700" aria-hidden="true" />
-                <h3 className="text-xl font-semibold text-zinc-900">
-                  Dinâmica DIP
-                </h3>
-                <span className="ml-auto rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
+              <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Users size={20} className="text-blue-600" aria-hidden="true" strokeWidth={1.75} />
+                <h3 className="text-sm font-semibold text-slate-900">Dinamica DIP</h3>
+                <span className="ml-auto rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-blue-200/60">
                   {dipEdits.length} {dipEdits.length === 1 ? "registro" : "registros"}
                 </span>
               </header>
               <div className="flex w-full flex-col gap-3">
-                {dipEdits.map((dip) => (
+                {dipEdits.map((dip) => {
+                  const dup = state.duplicados.dips[dip.key];
+                  return (
                   <div
                     key={dip.key}
-                    className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-4"
+                    className={`flex flex-col gap-3 rounded-xl border p-4 ${
+                      dup ? "border-amber-200 bg-amber-50/60" : "border-zinc-200"
+                    }`}
                   >
                     <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-4">
                       <div className="flex flex-col gap-1.5">
-                        <label htmlFor={`dip-localidade-${dip.key}`} className="text-base font-medium text-zinc-900">
+                        <label htmlFor={`dip-localidade-${dip.key}`} className="text-xs font-medium text-slate-700">
                           Localidade
                         </label>
                         <input
@@ -740,7 +857,7 @@ function ResultsScreen({
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label htmlFor={`dip-pais-${dip.key}`} className="text-base font-medium text-zinc-900">
+                        <label htmlFor={`dip-pais-${dip.key}`} className="text-xs font-medium text-slate-700">
                           País
                         </label>
                         <input
@@ -759,7 +876,7 @@ function ResultsScreen({
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label htmlFor={`dip-data-${dip.key}`} className="text-base font-medium text-zinc-900">
+                        <label htmlFor={`dip-data-${dip.key}`} className="text-xs font-medium text-slate-700">
                           Data da DIP
                         </label>
                         <input
@@ -779,7 +896,7 @@ function ResultsScreen({
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label htmlFor={`dip-participantes-${dip.key}`} className="text-base font-medium text-zinc-900">
+                        <label htmlFor={`dip-participantes-${dip.key}`} className="text-xs font-medium text-slate-700">
                           Participantes
                         </label>
                         <input
@@ -801,7 +918,7 @@ function ResultsScreen({
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor={`dip-obs-${dip.key}`} className="text-base font-medium text-zinc-900">
+                      <label htmlFor={`dip-obs-${dip.key}`} className="text-xs font-medium text-slate-700">
                         Observações
                       </label>
                       <input
@@ -819,8 +936,33 @@ function ResultsScreen({
                         className={fieldClassName}
                       />
                     </div>
+                    {dup && (
+                      <div className="flex flex-wrap items-center gap-2 border-t border-amber-200 pt-2">
+                        <span className="text-sm font-medium text-amber-800">
+                          Possível duplicado: &quot;{dup.localidade}&quot; já cadastrado
+                          {dup.data ? ` em ${dup.data}` : ""}.
+                        </span>
+                        <label className="flex items-center gap-1.5 text-sm text-zinc-700">
+                          Ação
+                          <select
+                            value={dipAcoes[dip.key] ?? "pular"}
+                            onChange={(ev) =>
+                              setDipAcoes((prev) => ({
+                                ...prev,
+                                [dip.key]: ev.target.value as "pular" | "criar",
+                              }))
+                            }
+                            className="min-h-9 rounded-lg border border-zinc-300 bg-white px-2 text-sm text-zinc-900"
+                          >
+                            <option value="pular">Pular (já existe)</option>
+                            <option value="criar">Criar mesmo assim</option>
+                          </select>
+                        </label>
+                      </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
@@ -828,26 +970,26 @@ function ResultsScreen({
           {/* Atualizações de demandas existentes */}
           {temAtualizacoes && (
             <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-              <header className="flex items-center gap-2 border-b border-zinc-100 pb-3">
-                <MessageSquareText size={24} className="text-blue-700" aria-hidden="true" />
-                <h3 className="text-xl font-semibold text-zinc-900">
-                  Atualizações de demandas existentes
+              <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <MessageSquareText size={20} className="text-blue-600" aria-hidden="true" strokeWidth={1.75} />
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Atualizacoes de demandas existentes
                 </h3>
               </header>
               <div className="flex w-full flex-col gap-3">
                 {state.atualizacoes!.map((atualizacao, index) => (
                   <div
                     key={index}
-                    className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-4"
+                    className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 p-4"
                   >
-                    <span className="text-lg font-semibold text-zinc-900">
+                    <span className="text-sm font-semibold text-slate-900">
                       {atualizacao.titulo}
                     </span>
-                    <span className="text-base leading-relaxed text-zinc-700">
+                    <span className="text-xs leading-relaxed text-slate-600">
                       {atualizacao.comentario}
                     </span>
-                    <span className="text-sm text-zinc-500">
-                      Será anexado como comentário na demanda existente
+                    <span className="text-xs text-slate-400">
+                      Sera anexado como comentario na demanda existente
                       correspondente.
                     </span>
                   </div>
@@ -858,65 +1000,52 @@ function ResultsScreen({
 
           {/* Sticky save footer */}
           <footer className="sticky bottom-0 z-10 mt-auto w-full">
-            <div className="flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/95 p-4 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/60 backdrop-blur">
+            <div className="flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/95 p-4 shadow-[0_-2px_16px_rgba(0,0,0,0.06)] ring-1 ring-slate-200/60 backdrop-blur-xl">
               <div className="flex min-w-0 flex-col gap-0.5">
                 {saved?.ok ? (
                   <>
-                    <p className="flex items-center gap-2 text-xl font-semibold text-green-800">
-                      <CheckCircle2 size={22} aria-hidden="true" />
+                    <p className="flex items-center gap-2 text-base font-semibold text-green-700">
+                      <CheckCircle2 size={18} aria-hidden="true" strokeWidth={1.5} />
                       Tudo salvo!
                     </p>
-                    <p className="text-base text-zinc-600">{saved.message}</p>
+                    <p className="text-sm text-slate-500">{saved.message}</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-xl font-medium text-zinc-900">
+                    <p className="text-sm font-medium text-slate-900">
                       Revise as colunas e salve tudo de uma vez
                     </p>
-                    <p className="text-base text-zinc-600">
-                      Ata, eventos, demandas, DIPs e atualizações serão criados
-                      juntos.
+                    <p className="text-xs text-slate-500">
+                      Ata, eventos, demandas, DIPs e atualizacoes serao criados juntos.
                     </p>
                   </>
                 )}
               </div>
 
               {saved?.ok ? (
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   {saved.ataId !== null && (
                     <Link
                       href={`/reunioes/${saved.ataId}`}
-                      className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-colors hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                      className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600"
                     >
-                      <NotebookPen size={20} aria-hidden="true" />
+                      <NotebookPen size={16} aria-hidden="true" strokeWidth={1.5} />
                       Ver ata
                     </Link>
                   )}
                   {temEventos && (
-                    <Link
-                      href="/eventos"
-                      className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-                    >
-                      <CalendarDays size={20} aria-hidden="true" />
-                      Ver eventos
+                    <Link href="/eventos" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50">
+                      <CalendarDays size={16} aria-hidden="true" strokeWidth={1.5} /> Ver eventos
                     </Link>
                   )}
                   {temDemandas && (
-                    <Link
-                      href="/"
-                      className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-                    >
-                      <ClipboardList size={20} aria-hidden="true" />
-                      Ver demandas
+                    <Link href="/" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50">
+                      <ClipboardList size={16} aria-hidden="true" strokeWidth={1.5} /> Ver demandas
                     </Link>
                   )}
                   {temFinanceiro && (
-                    <Link
-                      href="/financeiro"
-                      className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-                    >
-                      <Wallet size={20} aria-hidden="true" />
-                      Ver financeiro
+                    <Link href="/financeiro" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50">
+                      <Wallet size={16} aria-hidden="true" strokeWidth={1.5} /> Ver financeiro
                     </Link>
                   )}
                 </div>
@@ -925,12 +1054,12 @@ function ResultsScreen({
                   type="button"
                   onClick={salvarTudo}
                   disabled={saving}
-                  className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-green-700 px-8 text-xl font-medium text-white shadow-[0_1px_3px_rgba(21,128,61,0.25)] transition-all duration-200 hover:bg-green-600 hover:shadow-[0_2px_6px_rgba(21,128,61,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 text-sm font-medium text-white shadow-[0_2px_8px_rgba(5,150,105,0.25)] transition-all duration-200 hover:from-emerald-700 hover:to-emerald-600 hover:shadow-[0_4px_12px_rgba(5,150,105,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-70 disabled:translate-y-0"
                 >
                   {saving ? (
-                    <Loader2 size={22} aria-hidden="true" className="animate-spin" />
+                    <Loader2 size={18} aria-hidden="true" className="animate-spin" />
                   ) : (
-                    <Save size={22} aria-hidden="true" />
+                    <Save size={18} aria-hidden="true" strokeWidth={1.5} />
                   )}
                   {saving ? "Salvando..." : "Salvar tudo"}
                 </button>
@@ -940,26 +1069,26 @@ function ResultsScreen({
             {saved && !saved.ok && (
               <p
                 role="alert"
-                className="mt-2 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-lg text-red-800"
+                className="mt-2 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
               >
-                <AlertCircle size={20} aria-hidden="true" />
+                <AlertCircle size={16} aria-hidden="true" strokeWidth={1.5} />
                 {saved.message}
               </p>
             )}
           </footer>
         </>
       ) : (
-        <div className="flex w-full flex-col items-center gap-4 rounded-2xl bg-white px-6 py-16 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-          <FileText size={48} className="text-zinc-400" aria-hidden="true" />
-          <p className="text-xl text-zinc-700">
-            Nenhum dado estruturado foi encontrado no conteúdo.
+        <div className="flex w-full flex-col items-center gap-4 rounded-2xl bg-white px-6 py-16 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60">
+          <FileText size={48} className="text-slate-300" aria-hidden="true" />
+          <p className="text-sm text-slate-600">
+            Nenhum dado estruturado foi encontrado no conteudo.
           </p>
           <button
             type="button"
             onClick={onReset}
-            className="flex min-h-12 items-center rounded-lg border border-zinc-400 bg-white px-4 py-2 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
-            Analisar outro conteúdo
+            Analisar outro conteudo
           </button>
         </div>
       )}
@@ -982,7 +1111,7 @@ function AtaTextarea({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-base font-medium text-zinc-900">
+      <label htmlFor={id} className="text-xs font-medium text-slate-700">
         {label}
       </label>
       <textarea
@@ -990,7 +1119,7 @@ function AtaTextarea({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
-        className={`${fieldClassName} min-h-24 resize-y`}
+        className={`${fieldClassName} min-h-20 resize-y`}
       />
     </div>
   );
@@ -1012,13 +1141,13 @@ function ResultColumn({
   return (
     <section
       aria-label={titulo}
-      className="flex min-h-[24rem] w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
+      className="flex min-h-[24rem] w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60"
     >
-      <header className="flex items-center gap-2 border-b border-zinc-100 pb-3">
-        <Icon size={24} className="text-blue-700" aria-hidden="true" />
-        <h3 className="text-xl font-semibold text-zinc-900">{titulo}</h3>
+      <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
+        <Icon size={20} className="text-blue-600" aria-hidden="true" strokeWidth={1.75} />
+        <h3 className="text-sm font-semibold text-slate-900">{titulo}</h3>
         {count !== null && (
-          <span className="ml-auto rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
+          <span className="ml-auto rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-blue-200/60">
             {count} {count === 1 ? "item" : "itens"}
           </span>
         )}
@@ -1031,5 +1160,5 @@ function ResultColumn({
 }
 
 function EmptyColumn({ text }: { text: string }) {
-  return <p className="text-lg text-zinc-500">{text}</p>;
+  return <p className="text-sm text-slate-400">{text}</p>;
 }

@@ -1,10 +1,3 @@
-// Shared área-breakdown page logic for Projetos and Pesquisas — both
-// render the same card list of áreas with demanda counts, differing only in
-// which áreas are included: projetos shows every área, pesquisas narrows to
-// áreas whose name contains "pesquisa" (the institution's research areas).
-// All counts are derived from ONE role-scoped read of demandas_com_status —
-// the caller's RLS grant already decides what rows exist, so a voluntário
-// sees only their own áreas' numbers.
 import Link from "next/link";
 import { FolderKanban, FlaskConical, ClipboardList } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -65,50 +58,56 @@ export default async function AreasPage({
 
   return (
     <PageContainer>
-      <div className="flex w-full max-w-4xl flex-col gap-2">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-          <Icon size={28} aria-hidden="true" />
+      <div className="flex w-full flex-col gap-2">
+        <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-[0_2px_8px_rgba(37,99,235,0.25)]">
+            <Icon size={20} className="text-white" aria-hidden="true" strokeWidth={1.75} />
+          </div>
           {title}
         </h1>
-        <p className="text-base text-zinc-700">{description}</p>
+        <p className="text-sm text-slate-500">{description}</p>
       </div>
 
       {areas.length === 0 ? (
-        <div className="flex w-full max-w-4xl flex-col items-center gap-4 py-16 text-center">
-          <Icon size={48} className="text-zinc-400" aria-hidden="true" />
-          <h2 className="text-3xl font-semibold text-zinc-900">
+        <div className="flex w-full flex-col items-center gap-4 py-16 text-center">
+          <Icon size={48} className="text-slate-300" aria-hidden="true" />
+          <h2 className="text-2xl font-semibold text-slate-900">
             Nenhuma {kind === "projetos" ? "área ou projeto" : "área de pesquisa"} cadastrada ainda
           </h2>
-          <p className="max-w-md text-xl text-zinc-700">
+          <p className="max-w-md text-sm text-slate-600">
             Quando uma demanda for criada com uma {kind === "projetos" ? "área" : "área de pesquisa"}, ela aparece aqui.
           </p>
           <Link
             href="/demandas/nova"
-            className="flex min-h-14 items-center justify-center rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600 hover:shadow-[0_4px_12px_rgba(37,99,235,0.35)] hover:-translate-y-0.5"
           >
             Nova demanda
           </Link>
         </div>
       ) : (
-        <div className="grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {areas.map((area) => (
             <Link
               key={area.area}
               href={`/?area=${encodeURIComponent(area.area)}`}
-              className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="group flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:ring-blue-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
             >
-              <span className="flex items-center gap-2 text-xl font-semibold text-zinc-900">
-                <ClipboardList size={20} aria-hidden="true" />
-                {area.area}
-              </span>
-              <span className="text-base text-zinc-700">
-                {area.count} {area.count === 1 ? "demanda" : "demandas"}
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-blue-50 transition-colors duration-200">
+                  <ClipboardList size={16} className="text-slate-500 group-hover:text-blue-600 transition-colors duration-200" aria-hidden="true" strokeWidth={1.75} />
+                </div>
+                <span className="truncate text-sm font-semibold text-slate-900">{area.area}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-slate-600">
+                  {area.count} {area.count === 1 ? "demanda" : "demandas"}
+                </span>
                 {area.overdueCount > 0 && (
-                  <span className="ml-2 font-medium text-red-700">
+                  <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-600 ring-1 ring-red-200/60">
                     {area.overdueCount} atrasada{area.overdueCount > 1 ? "s" : ""}
                   </span>
                 )}
-              </span>
+              </div>
             </Link>
           ))}
         </div>

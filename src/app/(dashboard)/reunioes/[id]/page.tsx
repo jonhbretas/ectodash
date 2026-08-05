@@ -19,6 +19,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
+import ExcluirAtaButton from "../excluir-ata-button";
+import DipActions from "../../dips/dip-actions";
 
 type AtaDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -52,19 +54,20 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
     );
   }
 
-  const [ataResult, dipsResult] = await Promise.all([
+  const [ataResult, dipsResult, profileResult] = await Promise.all([
     supabase
       .from("reunioes")
       .select(
-        "titulo, data_reuniao, horario, resumo, participantes, pontos_principais, deliberacoes, texto, arquivo_nome"
+        "titulo, data_reuniao, horario, resumo, participantes, pontos_principais, deliberacoes, texto, arquivo_nome, criado_por"
       )
       .eq("id", id)
       .single(),
     supabase
       .from("dips")
-      .select("id, localidade, pais, data_dip, participantes, observacoes")
+      .select("id, localidade, pais, data_dip, participantes, observacoes, criado_por")
       .eq("ata_id", id)
       .order("data_dip", { ascending: true }),
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
   ]);
 
   if (ataResult.error || !ataResult.data) {
@@ -95,6 +98,12 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
     locale: ptBR,
   });
 
+  // UX gate mirroring RLS 0007: only the creator or a coordenador_geral
+  // sees the delete button (RLS is the real boundary).
+  const canDelete =
+    ata.criado_por === user.id ||
+    profileResult.data?.role === "coordenador_geral";
+
   return (
     <PageContainer>
       <header className="flex w-full flex-wrap items-start justify-between gap-6">
@@ -111,7 +120,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
             {ata.horario && (
               <span className="flex items-center gap-1.5">
                 <Clock size={18} aria-hidden="true" />
-                {ata.horario}
+                {ata.horario.slice(0, 5)}
               </span>
             )}
             {ata.arquivo_nome && (
@@ -130,6 +139,9 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
             <Download size={22} aria-hidden="true" />
             Baixar PDF
           </a>
+          {canDelete && (
+            <ExcluirAtaButton ataId={id} ataTitulo={ata.titulo} />
+          )}
           <Link
             href="/reunioes"
             className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
@@ -245,6 +257,23 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
                       {dip.observacoes}
                     </p>
                   )}
+                  <div className="mt-1 flex justify-end border-t border-zinc-100 pt-1.5">
+                    <DipActions
+                      dip={{
+                        id: dip.id,
+                        ataId: id,
+                        localidade: dip.localidade,
+                        pais: dip.pais,
+                        data: dip.data_dip,
+                        participantes: dip.participantes,
+                        observacoes: dip.observacoes,
+                      }}
+                      canManage={
+                        dip.criado_por === user.id ||
+                        profileResult.data?.role === "coordenador_geral"
+                      }
+                    />
+                  </div>
                 </div>
               ))}
             </div>

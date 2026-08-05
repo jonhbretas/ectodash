@@ -23,7 +23,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { matchResponsavel } from "@/lib/ai/match-responsavel";
+import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
 import {
   analisarTranscricao,
   salvarAtaAnalise,
@@ -46,10 +46,17 @@ const salvarInitialState: SalvarAtaState = {
   ataId: null,
 };
 
-type Profile = { id: string; email: string; full_name?: string | null };
+// Same roster option shape as the demandas form (demanda-form.tsx): the
+// institutional roster is the source of truth for responsáveis; temConta
+// flags who has an activated account.
+export type VoluntarioOption = {
+  id: number;
+  nome: string;
+  temConta: boolean;
+};
 
 type AnaliseFormProps = {
-  profiles: Profile[];
+  voluntarios: VoluntarioOption[];
   meetings: Meeting[];
   meetingsError: string | null;
   meetingsConfigured: boolean;
@@ -69,7 +76,7 @@ function formatMeetingDate(iso: string): string {
 }
 
 export default function AnaliseForm({
-  profiles,
+  voluntarios,
   meetings,
   meetingsError,
   meetingsConfigured,
@@ -94,7 +101,7 @@ export default function AnaliseForm({
         analise={analise}
         arquivoNome={analiseState.arquivoNome}
         texto={analiseState.texto ?? ""}
-        profiles={profiles}
+        voluntarios={voluntarios}
         salvarState={salvarState}
         salvarAction={salvarAction}
         onBack={() => setResetKey((key) => key + 1)}
@@ -250,7 +257,7 @@ type ReviewScreenProps = {
   analise: NonNullable<AnalisarTranscricaoState["analise"]>;
   arquivoNome: string | null;
   texto: string;
-  profiles: Profile[];
+  voluntarios: VoluntarioOption[];
   salvarState: SalvarAtaState;
   // useActionState-wrapped action: one FormData argument, state bound.
   salvarAction: (formData: FormData) => void;
@@ -292,7 +299,7 @@ function ReviewScreen({
   analise,
   arquivoNome,
   texto,
-  profiles,
+  voluntarios,
   salvarState,
   salvarAction,
   onBack,
@@ -310,13 +317,23 @@ function ReviewScreen({
   );
   const [resumo, setResumo] = useState(analise.ata.resumo);
   const [demandas, setDemandas] = useState<DemandaReview[]>(() =>
-    analise.demandas.map((demanda, index) => ({
-      id: index,
-      incluida: true,
-      titulo: demanda.titulo,
-      responsavelId: matchResponsavel(demanda.responsavel_texto, profiles),
-      prazo: demanda.prazo_sugerido || null,
-    }))
+    analise.demandas.map((demanda, index) => {
+      // Roster-based match: returns the volunteer id when the name found a
+      // roster row (linked account or not) — same rule as /analisar.
+      const match = matchResponsavelRoster(
+        demanda.responsavel_texto,
+        [],
+        voluntarios.map((v) => ({ id: v.id, nome: v.nome, profileId: null }))
+      );
+      return {
+        id: index,
+        incluida: true,
+        titulo: demanda.titulo,
+        responsavelId:
+          match.rosterId !== null ? String(match.rosterId) : null,
+        prazo: demanda.prazo_sugerido || null,
+      };
+    })
   );
   const [dips, setDips] = useState<DipReview[]>(() =>
     analise.dips.map((dip, index) => ({
@@ -614,9 +631,13 @@ function ReviewScreen({
                         className={`${fieldClassName} disabled:cursor-not-allowed`}
                       >
                         <option value="">Sem responsável definido</option>
-                        {profiles.map((profile) => (
-                          <option key={profile.id} value={profile.id}>
-                            {profile.full_name?.trim() || profile.email}
+                        {voluntarios.map((voluntario) => (
+                          <option
+                            key={voluntario.id}
+                            value={String(voluntario.id)}
+                          >
+                            {voluntario.nome}
+                            {!voluntario.temConta ? " (sem acesso)" : ""}
                           </option>
                         ))}
                       </select>

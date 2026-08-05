@@ -9,6 +9,10 @@ import { listarReunioes } from "@/lib/meetings";
 import PageContainer from "../../page-container";
 import AnaliseForm from "./analise-form";
 
+// analisarTranscricao's AI call may run past the default 10s function
+// budget on long transcripts — give the page's server actions room.
+export const maxDuration = 60;
+
 export default async function AnalisarReuniaoPage() {
   const supabase = await createClient();
   const {
@@ -52,15 +56,32 @@ export default async function AnalisarReuniaoPage() {
     );
   }
 
-  const [profilesResult, meetingsResult] = await Promise.all([
-    supabase.from("profiles").select("id, email, full_name").order("email"),
+  // The ROSTER is the source of truth for who can be responsible for a
+  // demanda (same rule as demandas/nova): every registered volunteer is
+  // assignable, "mesmo que não estejam cadastrados" (sem conta ativada
+  // ainda). temConta marca quem já ativou o acesso pelo vínculo.
+  const [voluntariosResult, perfisResult, meetingsResult] = await Promise.all([
+    supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
+    supabase.from("profiles").select("voluntario_id").not("voluntario_id", "is", null),
     listarReunioes(),
   ]);
+
+  const comConta = new Set(
+    (perfisResult.data ?? [])
+      .map((p) => p.voluntario_id)
+      .filter((id): id is number => typeof id === "number")
+  );
+
+  const voluntarios = (voluntariosResult.data ?? []).map((v) => ({
+    id: v.id,
+    nome: v.nome,
+    temConta: comConta.has(v.id),
+  }));
 
   return (
     <PageContainer>
       <AnaliseForm
-        profiles={profilesResult.data ?? []}
+        voluntarios={voluntarios}
         meetings={meetingsResult.meetings}
         meetingsError={meetingsResult.error}
         meetingsConfigured={meetingsResult.configured}

@@ -1,14 +1,9 @@
 "use client";
 
-// Sidebar navigation — fixed column on lg+ screens; slide-over drawer on
-// smaller screens, opened by the hamburger in the mobile top bar and
-// closed on link click, Escape, or backdrop click. All links keep the
-// project's ≥44px touch-target floor. `usePathname` drives the active
-// state; the items themselves come from nav-items.ts (single source).
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { PanelLeftClose, PanelLeftOpen, X, ChevronRight } from "lucide-react";
 import { filterNavItems, navItems, coordinatorItems } from "./nav-items";
 import { useStoredPreference } from "@/lib/use-stored-preference";
 import SignOutButton from "./sign-out-button";
@@ -18,7 +13,6 @@ export type SidebarProps = {
   isFinanceiro?: boolean;
 };
 
-// localStorage key — desktop collapse preference, survives reloads.
 const COLLAPSED_KEY = "ectodash:sidebar-colapsada";
 
 function SidebarLinks({
@@ -39,14 +33,14 @@ function SidebarLinks({
 
   const linkClassName = (href: string) => {
     const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-    return `flex min-h-12 w-full items-center rounded-xl font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
+    return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
       collapsed
-        ? "flex-col justify-center gap-0.5 px-1 text-center"
-        : "gap-3 px-4 text-lg"
+        ? "flex-col justify-center gap-0.5 px-0 text-center"
+        : "gap-3 px-3 text-sm"
     } ${
       active
-        ? "bg-blue-700 text-white"
-        : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+        ? "bg-blue-600 text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)]"
+        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
     }`;
   };
 
@@ -58,18 +52,18 @@ function SidebarLinks({
       className={linkClassName(item.href)}
       title={collapsed ? item.label : undefined}
     >
-      <item.Icon size={22} aria-hidden="true" />
+      <item.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
       <span className="truncate">{item.label}</span>
     </Link>
   );
 
   return (
-    <nav aria-label="Menu principal" className="flex w-full flex-col gap-1">
+    <nav aria-label="Menu principal" className="flex w-full flex-col gap-0.5">
       {main.map(renderLink)}
 
       {coord.length > 0 && (
         <>
-          <div role="separator" className="my-2 h-px w-full bg-zinc-200" />
+          <div role="separator" className="my-2 h-px w-full bg-slate-200" />
           {coord.map(renderLink)}
         </>
       )}
@@ -83,18 +77,18 @@ function SidebarBrand({ collapsed }: { collapsed: boolean }) {
       href="/"
       title={collapsed ? "EctoDash" : undefined}
       aria-label="EctoDash — página inicial"
-      className={`flex min-h-12 items-center rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
-        collapsed ? "justify-center gap-0" : "gap-3"
+      className={`flex min-h-12 items-center rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
+        collapsed ? "justify-center gap-0" : "gap-3 px-2"
       }`}
     >
       <span
         aria-hidden="true"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-xl font-bold text-white"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-lg font-bold text-white shadow-[0_2px_8px_rgba(37,99,235,0.3)]"
       >
         E
       </span>
       {!collapsed && (
-        <span className="truncate text-2xl font-semibold text-zinc-900">
+        <span className="truncate text-lg font-semibold text-slate-900 tracking-tight">
           EctoDash
         </span>
       )}
@@ -105,15 +99,17 @@ function SidebarBrand({ collapsed }: { collapsed: boolean }) {
 export default function Sidebar({ isCoordenador = false, isFinanceiro = false }: SidebarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [collapsedRaw, setCollapsedRaw] = useStoredPreference(COLLAPSED_KEY, "0");
+  const [hovered, setHovered] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const [collapsedRaw, setCollapsedRaw] = useStoredPreference(COLLAPSED_KEY, "1");
   const collapsed = collapsedRaw === "1";
+
+  const visuallyCollapsed = collapsed && !hovered;
 
   function toggleCollapsed() {
     setCollapsedRaw(collapsed ? "0" : "1");
   }
 
-  // Close on Escape while the drawer is open. (Route-change closing needs
-  // no effect — every drawer link already closes via its own onClick.)
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -124,22 +120,22 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
   }, [open]);
 
   const drawer = open ? (
-    <div className="fixed inset-0 z-50 lg:hidden">
+    <div className="fixed inset-0 z-50 lg:hidden animate-fade-in">
       <div
-        className="absolute inset-0 bg-zinc-900/50"
+        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
         aria-hidden="true"
         onClick={() => setOpen(false)}
       />
-      <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-zinc-200 bg-white px-4 py-6">
+      <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-slate-200 glass-strong px-5 py-6 animate-slide-in-right">
         <div className="flex items-center justify-between">
           <SidebarBrand collapsed={false} />
           <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Fechar menu"
-            className="flex h-12 w-12 items-center justify-center rounded-xl text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
-            <X size={24} aria-hidden="true" />
+            <X size={22} aria-hidden="true" />
           </button>
         </div>
         <SidebarLinks
@@ -149,7 +145,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
           collapsed={false}
           onNavigate={() => setOpen(false)}
         />
-        <div className="mt-auto">
+        <div className="mt-auto space-y-2">
           <SignOutButton />
         </div>
       </div>
@@ -158,54 +154,63 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
 
   return (
     <>
-      {/* Desktop sidebar — always visible on lg+. `collapsed` shrinks it to
-          an icon rail (w-20) to maximize the work area; the preference is
-          persisted in localStorage. */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col gap-6 overflow-y-auto border-r border-zinc-200 bg-white py-6 transition-[width] duration-200 ease-in-out lg:flex ${
-          collapsed ? "w-20 px-2" : "w-72 px-4"
+        ref={sidebarRef}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={`sticky top-0 z-30 hidden h-dvh shrink-0 flex-col gap-5 overflow-hidden border-r border-slate-200/60 bg-white/95 backdrop-blur-xl py-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
+          visuallyCollapsed ? "w-18 px-2" : "w-64 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
         }`}
       >
-        <SidebarBrand collapsed={collapsed} />
-        <SidebarLinks
-          isCoordenador={isCoordenador}
-          isFinanceiro={isFinanceiro}
-          pathname={pathname}
-          collapsed={collapsed}
-        />
-        <div className="mt-auto flex flex-col items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
-            title={collapsed ? "Expandir menu" : "Recolher menu"}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          >
-            {collapsed ? (
-              <PanelLeftOpen size={24} aria-hidden="true" />
-            ) : (
-              <>
-                <PanelLeftClose size={24} aria-hidden="true" />
-                <span className="text-lg font-medium">Recolher menu</span>
-              </>
-            )}
-          </button>
-          <SignOutButton iconOnly={collapsed} />
+        <SidebarBrand collapsed={visuallyCollapsed} />
+
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
+          <SidebarLinks
+            isCoordenador={isCoordenador}
+            isFinanceiro={isFinanceiro}
+            pathname={pathname}
+            collapsed={visuallyCollapsed}
+          />
+        </div>
+
+        <div className="mt-auto flex flex-col items-center gap-2">
+          {!visuallyCollapsed && (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Recolher menu lateral"
+              title="Recolher menu"
+              className="flex h-9 w-full items-center justify-center gap-2 rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            >
+              <PanelLeftClose size={18} aria-hidden="true" strokeWidth={1.5} />
+              <span className="text-xs font-medium">Recolher</span>
+            </button>
+          )}
+          {visuallyCollapsed && (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Expandir menu lateral"
+              title="Fixar menu"
+              className="flex h-9 w-full items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            >
+              <PanelLeftOpen size={18} aria-hidden="true" strokeWidth={1.5} />
+            </button>
+          )}
+          <SignOutButton iconOnly={visuallyCollapsed} />
         </div>
       </aside>
 
-      {/* Mobile top bar — brand + hamburger. The drawer itself is above. */}
-      <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-zinc-200 bg-white/95 px-4 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-slate-200/60 glass px-4 lg:hidden">
         <SidebarBrand collapsed={false} />
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-expanded={open}
           aria-label="Abrir menu"
-          className="flex h-12 w-12 items-center justify-center rounded-xl text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
         >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="M3 6h18M3 12h18M3 18h18" />
           </svg>
         </button>

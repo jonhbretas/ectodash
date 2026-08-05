@@ -5,6 +5,11 @@ import { listarReunioes } from "@/lib/meetings";
 import PageContainer from "../../page-container";
 import ImportForm from "./import-form";
 
+// extractDemandas' AI call (and Tactiq transcript fetch) may run past the
+// default 10s function budget on long transcripts — give the page's
+// server actions room.
+export const maxDuration = 60;
+
 // Mirrors /painel/page.tsx's exact structure and precedent: a page-level
 // Server Component role check that is UX-layer convenience only, never the
 // real authorization boundary. The one real write this feature performs
@@ -57,24 +62,32 @@ export default async function ExtrairDemandasPage() {
     );
   }
 
-  // Same read nova/page.tsx already runs — no display-name column exists
-  // on profiles (0001_profiles.sql), email is the display label for the
-  // responsável select, reused by SuggestionReviewList (Task 2).
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email, full_name")
-    .order("email");
+  // The ROSTER is the source of truth for who can be responsible for a
+  // demanda (same rule as demandas/nova): every registered volunteer is
+  // assignable, "mesmo que não estejam cadastrados" (sem conta ativada
+  // ainda). temConta marca quem já ativou o acesso pelo vínculo.
+  const [voluntariosResult, perfisResult, meetingsResult] = await Promise.all([
+    supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
+    supabase.from("profiles").select("voluntario_id").not("voluntario_id", "is", null),
+    listarReunioes(),
+  ]);
 
-  // Tactiq recorded meetings (MCP-equivalent bridge) — fetched server-side
-  // so the Tactiq API key never reaches the browser. Missing config or a
-  // provider failure degrades to a hidden selector + clear notice, never a
-  // broken page.
-  const meetingsResult = await listarReunioes();
+  const comConta = new Set(
+    (perfisResult.data ?? [])
+      .map((p) => p.voluntario_id)
+      .filter((id): id is number => typeof id === "number")
+  );
+
+  const voluntarios = (voluntariosResult.data ?? []).map((v) => ({
+    id: v.id,
+    nome: v.nome,
+    temConta: comConta.has(v.id),
+  }));
 
   return (
     <PageContainer>
       <ImportForm
-        profiles={profiles ?? []}
+        voluntarios={voluntarios}
         meetings={meetingsResult.meetings}
         meetingsError={meetingsResult.error}
         meetingsConfigured={meetingsResult.configured}
