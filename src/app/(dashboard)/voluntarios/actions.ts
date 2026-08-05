@@ -122,6 +122,47 @@ function areasArray(areasTexto: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
+// Áreas extras (migration 0027) vêm como JSON no campo "areas".
+function areasExtrasDoForm(formData: FormData): string[] {
+  const raw = formData.get("areas");
+  if (typeof raw !== "string" || !raw.trim()) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((a): a is string => typeof a === "string")
+      .map((a) => a.trim())
+      .filter((a) => a.length > 0 && a.length <= 100)
+      .slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
+// Substitui as áreas extras do voluntário (delete + insert) — RLS 0027 é o
+// limite real (gestores do roster).
+async function salvarAreasExtras(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  voluntarioId: number,
+  areas: string[]
+): Promise<void> {
+  const { error: delError } = await supabase
+    .from("voluntario_areas")
+    .delete()
+    .eq("voluntario_id", voluntarioId);
+  if (delError) {
+    console.error("salvarAreasExtras: delete failed", delError);
+    return;
+  }
+  if (areas.length === 0) return;
+  const { error: insError } = await supabase
+    .from("voluntario_areas")
+    .insert(areas.map((area) => ({ voluntario_id: voluntarioId, area })));
+  if (insError) {
+    console.error("salvarAreasExtras: insert failed", insError);
+  }
+}
+
 export async function criarVoluntario(
   prevState: PerfilState,
   formData: FormData
@@ -165,6 +206,8 @@ export async function criarVoluntario(
         "Não foi possível cadastrar o voluntário. Verifique suas permissões.",
     };
   }
+
+  await salvarAreasExtras(supabase, novoId, areasExtrasDoForm(formData));
 
   revalidatePath("/voluntarios");
   return { ok: true, message: "Voluntário cadastrado.", novoId };
@@ -215,6 +258,8 @@ export async function atualizarVoluntario(
         "Não foi possível editar o voluntário. Verifique suas permissões.",
     };
   }
+
+  await salvarAreasExtras(supabase, id, areasExtrasDoForm(formData));
 
   revalidatePath("/voluntarios");
   revalidatePath(`/voluntarios/${id}`);
@@ -350,6 +395,61 @@ export async function atualizarVoluntariosEmMassa(
 // Situacao de trabalho (ativo/ocioso) + atividades de conscienciologia
 // (migration 0026)
 
+// ---------------------------------------------------------------------------
+// Merge de cadastros repetidos (migration 0028)
+
+export type MergeState = { ok: boolean; message: string };
+const mergeInitial: MergeState = { ok: false, message: "" };
+
+const MERGE_MENSAGENS: Record<string, string> = {
+  ok: "Cadastro vinculado ao perfil com sucesso (merge concluído).",
+  cadastro_nao_encontrado: "Cadastro não encontrado.",
+  perfil_nao_encontrado: "Perfil não encontrado.",
+  cadastro_ja_vinculado:
+    "Este cadastro já está vinculado a outra conta. Não foi possível mesclar.",
+  sem_permissao:
+    "Você não tem permissão para mesclar cadastros.",
+};
+
+export async function vincularCadastroPerdido(
+  cadastroId: number,
+  profileId: string
+): Promise<MergeState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ...mergeInitial, message: "Sessão expirada." };
+
+  if (!Number.isFinite(cadastroId)) {
+    return { ...mergeInitial, message: "Cadastro inválido." };
+  }
+
+  const { data, error } = await supabase.rpc("mesclar_cadastro_voluntario", {
+    p_cadastro_id: cadastroId,
+    p_profile_id: profileId,
+  });
+
+  if (error) {
+    console.error("vincularCadastroPerdido: rpc failed", error);
+    return {
+      ...mergeInitial,
+      message: "Não foi possível mesclar agora. Tente novamente.",
+    };
+  }
+
+  const resultado = typeof data === "string" ? data : "erro";
+  if (resultado === "ok") {
+    revalidatePath("/voluntarios");
+    revalidatePath("/painel");
+  }
+
+  return {
+    ok: resultado === "ok",
+    message: MERGE_MENSAGENS[resultado] ?? "Não foi possível mesclar agora.",
+  };
+}
+
 
 export type SituacaoState = { ok: boolean; message: string };
 const situacaoInitial: SituacaoState = { ok: false, message: "" };
@@ -451,3 +551,7 @@ export async function salvarAtividadesVoluntario(
   revalidatePath("/perfil");
   return { ok: true, message: "Atividades atualizadas." };
 }
+
+// ---------------------------------------------------------------------------
+// Merge de cadastros repetidos (migration 0028)
+

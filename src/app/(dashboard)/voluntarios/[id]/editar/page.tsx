@@ -58,7 +58,7 @@ export default async function EditarVoluntarioPage({
     );
   }
 
-  const [voluntarioResult, areasResult] = await Promise.all([
+  const [voluntarioResult, areasResult, areasRegistroResult, areasExtrasResult] = await Promise.all([
     supabase
       .from("voluntarios")
       .select(
@@ -67,6 +67,8 @@ export default async function EditarVoluntarioPage({
       .eq("id", Number(id))
       .maybeSingle(),
     supabase.from("voluntarios").select("area_atuacao"),
+    supabase.from("areas_institucionais").select("nome").order("nome"),
+    supabase.from("voluntario_areas").select("area").eq("voluntario_id", Number(id)),
   ]);
 
   const voluntario = voluntarioResult.data;
@@ -93,6 +95,10 @@ export default async function EditarVoluntarioPage({
         .filter((area): area is string => Boolean(area && area.trim()))
     ),
   ].sort((a, b) => a.localeCompare(b));
+  const areasInstitucionais = (areasRegistroResult.data ?? []).map(
+    (a) => a.nome
+  );
+  const areasExtras = (areasExtrasResult.data ?? []).map((a) => a.area);
 
   const values: VoluntarioFormValues = {
     nome: voluntario.nome,
@@ -107,6 +113,7 @@ export default async function EditarVoluntarioPage({
     papel: voluntario.role,
     areasLideradas: [],
     ativo: voluntario.ativo,
+    areas: areasExtras,
   };
 
   return (
@@ -124,6 +131,7 @@ export default async function EditarVoluntarioPage({
         voluntarioId={voluntario.id}
         values={values}
         areaOptions={areaOptions}
+        areasOptions={areasInstitucionais}
         canAssignRole={role === "coordenador_geral"}
       />
     </PageContainer>

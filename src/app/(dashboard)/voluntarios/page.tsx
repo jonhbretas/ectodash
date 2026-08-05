@@ -16,6 +16,9 @@ import VoluntariosFilters from "./voluntarios-filters";
 import VoluntariosListClient, { type AreaNode } from "./voluntarios-list";
 import MeuCadastroCard from "./meu-cadastro-card";
 import LocalidadesVoluntarioConfig from "./localidades-config";
+import MergeVincularSection, {
+  type MergePerfilOpcao,
+} from "./merge-vincular-section";
 
 type VoluntarioRow = {
   id: number;
@@ -122,6 +125,46 @@ export default async function VoluntariosPage({
     .from("voluntario_localidades")
     .select("id, nome")
     .order("nome");
+
+  // Dados do merge (migration 0028): perfis e cadastros perdidos.
+  const [perfisMergeResult, voluntariosMergeResult] =
+    role === "coordenador_geral" || role === "voluntariado"
+      ? await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, email, voluntario_id, vincular_pendente")
+            .order("email"),
+          supabase
+            .from("voluntarios")
+            .select("id, nome")
+            .order("nome"),
+        ])
+      : [
+          { data: [] as { id: string; email: string; voluntario_id: number | null; vincular_pendente: boolean }[] },
+          { data: [] as { id: number; nome: string }[] },
+        ];
+
+  const perfisVinculadosAoRoster = new Set(
+    (perfisMergeResult.data ?? []).map((p) => p.voluntario_id)
+  );
+  const nomePorVoluntario = new Map(
+    (voluntariosMergeResult.data ?? []).map((v) => [v.id, v.nome])
+  );
+  const perfisMerge: MergePerfilOpcao[] = (perfisMergeResult.data ?? []).map(
+    (p) => ({
+      id: p.id,
+      email: p.email,
+      voluntarioId: p.voluntario_id,
+      vinculadoNome:
+        p.voluntario_id !== null
+          ? (nomePorVoluntario.get(p.voluntario_id) ?? "cadastro removido")
+          : null,
+      pendente: p.vincular_pendente,
+    })
+  );
+  const cadastrosPerdidos = (voluntariosMergeResult.data ?? [])
+    .filter((v) => !perfisVinculadosAoRoster.has(v.id))
+    .map((v) => ({ id: v.id, nome: v.nome }));
 
   let query = supabase
     .from("voluntarios")
@@ -324,6 +367,13 @@ export default async function VoluntariosPage({
                 id: l.id,
                 nome: l.nome,
               }))}
+            />
+          )}
+
+          {(role === "coordenador_geral" || role === "voluntariado") && (
+            <MergeVincularSection
+              perfis={perfisMerge}
+              cadastrosPerdidos={cadastrosPerdidos}
             />
           )}
         </div>

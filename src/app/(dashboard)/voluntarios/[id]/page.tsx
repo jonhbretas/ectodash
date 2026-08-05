@@ -142,6 +142,13 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
 
   const situacao = voluntario.situacao === "ocioso" ? "ocioso" : "ativo";
 
+  // Áreas adicionais (migration 0027) — além da área principal.
+  const { data: areasExtrasRows } = await supabase
+    .from("voluntario_areas")
+    .select("area")
+    .eq("voluntario_id", voluntario.id);
+  const areasExtras = (areasExtrasRows ?? []).map((a) => a.area);
+
   // Participação em reuniões gerais (ata_participantes, migration 0023) —
   // the per-volunteer participation metric the coordinator can see here.
   const { data: participacoesRows } = await supabase
@@ -239,6 +246,21 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                 <dd className="text-xl text-zinc-900">{value ?? "—"}</dd>
               </div>
             ))}
+            {areasExtras.length > 0 && (
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <dt className="text-base text-zinc-500">Outras áreas</dt>
+                <dd className="flex flex-wrap gap-2">
+                  {areasExtras.map((area) => (
+                    <span
+                      key={area}
+                      className="rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800 ring-1 ring-blue-200/60"
+                    >
+                      {area}
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            )}
             <div className="flex flex-col gap-0.5 sm:col-span-2">
               <dt className="text-base text-zinc-500">Observações</dt>
               <dd className="text-xl text-zinc-900">

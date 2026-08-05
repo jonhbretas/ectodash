@@ -24,6 +24,7 @@ const emptyValues: VoluntarioFormValues = {
   papel: null,
   areasLideradas: [],
   ativo: true,
+  areas: [],
 };
 
 export default async function NovoVoluntarioPage() {
@@ -69,14 +70,20 @@ export default async function NovoVoluntarioPage() {
 
   // Known areas for the datalist — derived from the roster the caller can
   // already see (RLS-scoped for a coordenador_area).
-  const { data: rows } = await supabase.from("voluntarios").select("area_atuacao");
+  const [rowsResult, areasRegistroResult] = await Promise.all([
+    supabase.from("voluntarios").select("area_atuacao"),
+    supabase.from("areas_institucionais").select("nome").order("nome"),
+  ]);
   const areaOptions = [
     ...new Set(
-      (rows ?? [])
+      (rowsResult.data ?? [])
         .map((row) => row.area_atuacao)
         .filter((area): area is string => Boolean(area && area.trim()))
     ),
   ].sort((a, b) => a.localeCompare(b));
+  const areasInstitucionais = (areasRegistroResult.data ?? []).map(
+    (a) => a.nome
+  );
 
   return (
     <PageContainer>
@@ -95,6 +102,7 @@ export default async function NovoVoluntarioPage() {
         mode="criar"
         values={emptyValues}
         areaOptions={areaOptions}
+        areasOptions={areasInstitucionais}
         canAssignRole={role === "coordenador_geral"}
       />
     </PageContainer>

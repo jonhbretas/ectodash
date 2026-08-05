@@ -10,9 +10,10 @@
 import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
-import { Save, UserRoundPlus } from "lucide-react";
+import { Check, Save, UserRoundPlus } from "lucide-react";
 import { criarVoluntario, atualizarVoluntario, type PerfilState } from "./actions";
 import { FormCombobox, FormSelect } from "@/components/ui/form-select";
+import DateFieldBr from "@/components/ui/date-field";
 
 export type VoluntarioFormValues = {
   nome: string;
@@ -27,6 +28,8 @@ export type VoluntarioFormValues = {
   papel: string | null;
   areasLideradas: string[];
   ativo: boolean;
+  // Áreas ADICIONAIS além da principal (migration 0027).
+  areas: string[];
 };
 
 const initialState = { ok: false, message: "" };
@@ -72,12 +75,16 @@ export default function VoluntarioForm({
   voluntarioId,
   values,
   areaOptions,
+  areasOptions = [],
   canAssignRole,
 }: {
   mode: "criar" | "editar";
   voluntarioId?: number;
   values: VoluntarioFormValues;
   areaOptions: string[];
+  // Áreas institucionais cadastradas (areas_institucionais) — opções das
+  // "Outras áreas".
+  areasOptions?: string[];
   canAssignRole: boolean;
 }) {
   const router = useRouter();
@@ -88,6 +95,22 @@ export default function VoluntarioForm({
 
   const [areaAtuacao, setAreaAtuacao] = useState(values.area_atuacao ?? "");
   const [papel, setPapel] = useState(values.papel ?? "voluntario_comum");
+  const [areasExtras, setAreasExtras] = useState<string[]>(values.areas ?? []);
+
+  const outrasAreasOptions = [
+    ...new Set([
+      ...areasOptions,
+      ...(areaAtuacao ? [areaAtuacao] : []),
+      ...(values.area_atuacao ? [values.area_atuacao] : []),
+      ...(values.areas ?? []),
+    ]),
+  ].sort((a, b) => a.localeCompare(b));
+
+  function toggleAreaExtra(area: string) {
+    setAreasExtras((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    );
+  }
 
   const [state, formAction] = useActionState<
     PerfilState & { novoId?: number },
@@ -165,27 +188,23 @@ export default function VoluntarioForm({
         </Field>
 
         <Field id="data_inicio" label="Data de início">
-          <input
-            id="data_inicio"
+          <DateFieldBr
             name="data_inicio"
-            type="date"
-            defaultValue={values.data_inicio ?? ""}
+            defaultValue={values.data_inicio}
             className={inputClassName}
           />
         </Field>
 
         <Field id="data_saida" label="Data de saída">
-          <input
-            id="data_saida"
+          <DateFieldBr
             name="data_saida"
-            type="date"
-            defaultValue={values.data_saida ?? ""}
+            defaultValue={values.data_saida}
             className={inputClassName}
           />
         </Field>
 
         <div className="sm:col-span-2">
-          <Field id="area_atuacao" label="Área de atuação">
+          <Field id="area_atuacao" label="Área de atuação principal">
             <FormCombobox
               name="area_atuacao"
               value={areaAtuacao}
@@ -195,6 +214,45 @@ export default function VoluntarioForm({
               ariaLabel="Área de atuação"
             />
           </Field>
+        </div>
+
+        <div className="sm:col-span-2">
+          <span className={labelClassName}>Outras áreas (opcional)</span>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+            {outrasAreasOptions.length === 0 && (
+              <span className="text-lg text-zinc-400">
+                Nenhuma área cadastrada ainda.
+              </span>
+            )}
+            {outrasAreasOptions.map((area) => {
+              const marcada = areasExtras.includes(area);
+              return (
+                <button
+                  key={area}
+                  type="button"
+                  aria-pressed={marcada}
+                  onClick={() => toggleAreaExtra(area)}
+                  className={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-base font-medium ring-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
+                    marcada
+                      ? "bg-blue-700 text-white ring-blue-700"
+                      : "bg-white text-zinc-700 ring-zinc-300 hover:bg-zinc-50"
+                  }`}
+                >
+                  {marcada && <Check size={15} aria-hidden="true" />}
+                  {area}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-base text-zinc-600">
+            Marque as áreas adicionais além da principal (ex.: DIP + áreas
+            internas). A principal continua sendo a usada nos agrupamentos.
+          </p>
+          <input
+            type="hidden"
+            name="areas"
+            value={JSON.stringify(areasExtras)}
+          />
         </div>
 
         <div className="sm:col-span-2">
