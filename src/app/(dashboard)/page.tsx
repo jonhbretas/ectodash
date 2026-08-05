@@ -282,8 +282,8 @@ export default async function DashboardPage({
   return (
     <PageContainer>
       <header className="flex w-full flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
             Olá, {displayName(profile ?? { email: user.email ?? "" })}
           </h1>
           <p className="text-sm text-slate-500">
@@ -322,53 +322,53 @@ export default async function DashboardPage({
 
       {demandaList.length > 0 && view !== "calendario" && (
         <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
-              <ClipboardList size={18} className="text-slate-500" aria-hidden="true" strokeWidth={1.75} />
+          <div className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
+              <ClipboardList size={16} className="text-slate-500" aria-hidden="true" strokeWidth={1.75} />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-slate-500">Demandas</span>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">{stats.total}</span>
+              <span className="text-xl font-bold tracking-tight text-slate-900">{stats.total}</span>
             </div>
           </div>
-          <div className={`flex items-center gap-3 rounded-2xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${
+          <div className={`flex items-center gap-2.5 rounded-2xl p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] ${
             stats.atrasadas > 0
               ? "bg-red-50 ring-1 ring-red-200/60"
               : "bg-white ring-1 ring-slate-200/60"
           }`}>
-            <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${stats.atrasadas > 0 ? "bg-red-100" : "bg-slate-100"}`}>
-              <AlertTriangle size={18} className={stats.atrasadas > 0 ? "text-red-600" : "text-slate-400"} aria-hidden="true" strokeWidth={1.75} />
+            <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stats.atrasadas > 0 ? "bg-red-100" : "bg-slate-100"}`}>
+              <AlertTriangle size={16} className={stats.atrasadas > 0 ? "text-red-600" : "text-slate-400"} aria-hidden="true" strokeWidth={1.75} />
             </div>
             <div className="flex flex-col">
               <span className={`text-sm font-medium ${stats.atrasadas > 0 ? "text-red-600" : "text-slate-500"}`}>Atrasadas</span>
-              <span className={`text-2xl font-bold tracking-tight ${stats.atrasadas > 0 ? "text-red-700" : "text-slate-900"}`}>{stats.atrasadas}</span>
+              <span className={`text-xl font-bold tracking-tight ${stats.atrasadas > 0 ? "text-red-700" : "text-slate-900"}`}>{stats.atrasadas}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50">
-              <Circle size={18} className="text-amber-500" aria-hidden="true" strokeWidth={1.75} />
+          <div className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
+              <Circle size={16} className="text-amber-500" aria-hidden="true" strokeWidth={1.75} />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-slate-500">Pendentes</span>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">{stats.pendentes}</span>
+              <span className="text-xl font-bold tracking-tight text-slate-900">{stats.pendentes}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
-              <Clock size={18} className="text-blue-500" aria-hidden="true" strokeWidth={1.75} />
+          <div className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+              <Clock size={16} className="text-blue-500" aria-hidden="true" strokeWidth={1.75} />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-slate-500">Em andamento</span>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">{stats.emAndamento}</span>
+              <span className="text-xl font-bold tracking-tight text-slate-900">{stats.emAndamento}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50">
-              <CheckCircle2 size={18} className="text-green-500" aria-hidden="true" strokeWidth={1.75} />
+          <div className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-shadow duration-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
+              <CheckCircle2 size={16} className="text-green-500" aria-hidden="true" strokeWidth={1.75} />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-medium text-slate-500">Concluídas</span>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">{stats.concluidas}</span>
+              <span className="text-xl font-bold tracking-tight text-slate-900">{stats.concluidas}</span>
             </div>
           </div>
         </div>
@@ -381,17 +381,21 @@ export default async function DashboardPage({
           </p>
         )}
 
-        <DemandaFilters
-          areaOptions={areaOptions}
-          projetoOptions={projetoOptions}
-          eventoOptions={eventosResult.data ?? []}
-          etiquetaOptions={etiquetasResult.data ?? []}
-          responsavelOptions={responsavelOptions}
-          currentFilters={filters}
-        />
+        <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1">
+            <DemandaFilters
+              areaOptions={areaOptions}
+              projetoOptions={projetoOptions}
+              eventoOptions={eventosResult.data ?? []}
+              etiquetaOptions={etiquetasResult.data ?? []}
+              responsavelOptions={responsavelOptions}
+              currentFilters={filters}
+            />
+          </div>
 
-        <div className="flex w-full items-center justify-center">
-          <DemandaViewToggle currentView={view} />
+          <div className="flex w-full lg:w-auto lg:shrink-0">
+            <DemandaViewToggle currentView={view} />
+          </div>
         </div>
 
         {view === "kanban" ? (

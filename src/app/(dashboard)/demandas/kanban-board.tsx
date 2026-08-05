@@ -106,7 +106,7 @@ function KanbanCard({
       >
         <Link
           href={`/demandas/${demanda.id}/editar`}
-          className="block text-lg font-semibold leading-snug text-zinc-900 hover:text-blue-700 transition-colors duration-200 focus-visible:outline-none"
+          className="block text-base font-semibold leading-snug text-zinc-900 hover:text-blue-700 transition-colors duration-200 focus-visible:outline-none"
         >
           {demanda.titulo}
         </Link>

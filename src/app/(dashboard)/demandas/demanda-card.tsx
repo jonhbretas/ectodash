@@ -48,7 +48,7 @@ export default function DemandaCard({
         className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
       >
         <div className="flex items-start justify-between gap-2">
-          <p className="line-clamp-2 text-lg font-semibold text-zinc-900">
+          <p className="line-clamp-2 text-base font-semibold text-zinc-900">
             {titulo}
           </p>
           <StatusBadge status={status} />
