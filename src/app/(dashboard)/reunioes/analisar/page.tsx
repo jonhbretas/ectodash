@@ -69,6 +69,7 @@ export default async function AnalisarReuniaoPage() {
     areasResult,
     projetosResult,
     eventosResult,
+    etiquetasResult,
   ] = await Promise.all([
     supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
     supabase.from("profiles").select("voluntario_id").not("voluntario_id", "is", null),
@@ -81,6 +82,7 @@ export default async function AnalisarReuniaoPage() {
       .gte("data_evento", new Date().toISOString().slice(0, 10))
       .order("data_evento", { ascending: true })
       .limit(100),
+    supabase.from("etiquetas").select("id, area, nome").order("area").order("nome"),
   ]);
 
   const comConta = new Set(
@@ -102,6 +104,11 @@ export default async function AnalisarReuniaoPage() {
     titulo: e.titulo,
     dataEvento: e.data_evento,
   }));
+  const etiquetas = (etiquetasResult.data ?? []).map((e) => ({
+    id: e.id,
+    area: e.area,
+    nome: e.nome,
+  }));
 
   return (
     <PageContainer>
@@ -110,6 +117,7 @@ export default async function AnalisarReuniaoPage() {
         areas={areas}
         projetos={projetos}
         eventosExistentes={eventosExistentes}
+        etiquetas={etiquetas}
         meetings={meetingsResult.meetings}
         meetingsError={meetingsResult.error}
         meetingsConfigured={meetingsResult.configured}

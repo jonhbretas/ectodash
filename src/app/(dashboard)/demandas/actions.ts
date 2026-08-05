@@ -9,6 +9,8 @@ import {
   voluntarioIdsDosDestinos,
 } from "@/lib/destinos-voluntario";
 import { demandaSchema, eventoIdSchema, etiquetaIdSchema, idsNumericos } from "./demanda-schema";
+import { chatCompletion } from "@/lib/ai/ai-client";
+import { matchResponsavelRoster, normalize } from "@/lib/ai/match-responsavel";
 
 export type CreateDemandaState = {
   ok: boolean;
@@ -708,3 +710,205 @@ export async function removeDemandaMembro(
   revalidatePath("/");
   return { ok: true, message: "" };
 }
+
+// ---------------------------------------------------------------------------
+// Correcao de demanda existente com IA
+
+export type CorrigirDemandaResult = {
+  ok: boolean;
+  message: string;
+  sugestao: {
+    area: string | null;
+    projeto: string | null;
+    responsavelId: string | null;
+    eventoId: number | null;
+  } | null;
+};
+
+// The AI only SUGGESTS — matching against the roster/eventos is done
+// deterministically here (same rules as the ata analysis), and the actual
+// writes go through the existing per-field update actions, which are gated
+// by the same RLS as the rest of the app.
+const corrigirIaRespostaSchema = z.object({
+  area: z.string().trim().max(200),
+  projeto: z.string().trim().max(200),
+  responsavel_texto: z.string().trim().max(200),
+  evento_texto: z.string().trim().max(200),
+});
+
+const CORRIGIR_IA_PROMPT =
+  "Você é um assistente que preenche campos faltantes de uma demanda institucional. " +
+  'Responda APENAS com JSON no formato {"area": string, "projeto": string, "responsavel_texto": string, "evento_texto": string}. ' +
+  "Use \"\" (string vazia) para todo campo que não puder ser identificado com confiança a partir do contexto fornecido. " +
+  "Regras: baseie-se no título da demanda, nos comentários e nas informações disponíveis. " +
+  "responsavel_texto deve ser exatamente um dos nomes da lista de voluntários fornecida, ou \"\". " +
+  "evento_texto deve ser exatamente um dos títulos da lista de eventos fornecida, ou \"\". " +
+  "Nunca invente nomes, áreas, projetos ou eventos fora das listas fornecidas.";
+
+export async function corrigirDemandaComIa(
+  demandaId: number
+): Promise<CorrigirDemandaResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente.", sugestao: null };
+  }
+
+  if (!Number.isFinite(demandaId)) {
+    return { ok: false, message: "Demanda inválida.", sugestao: null };
+  }
+
+  const { data: demanda } = await supabase
+    .from("demandas_com_status")
+    .select("id, titulo, prazo, area, projeto, evento_id, etiqueta_id")
+    .eq("id", demandaId)
+    .single();
+
+  if (!demanda) {
+    return { ok: false, message: "Demanda não encontrada.", sugestao: null };
+  }
+
+  const [comentariosRows, responsaveisRows, perfisRows, voluntariosRows, eventosRows, areasRows, projetosRows] =
+    await Promise.all([
+      supabase
+        .from("demanda_comentarios")
+        .select("conteudo")
+        .eq("demanda_id", demandaId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("demanda_responsaveis")
+        .select("voluntario_id, profiles(voluntario_id)")
+        .eq("demanda_id", demandaId),
+      supabase.from("profiles").select("id, email, full_name, voluntario_id").not("voluntario_id", "is", null),
+      supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
+      supabase
+        .from("eventos")
+        .select("id, titulo, data_evento")
+        .gte("data_evento", new Date().toISOString().slice(0, 10))
+        .order("data_evento", { ascending: true })
+        .limit(100),
+      supabase.from("areas_institucionais").select("nome").order("nome"),
+      supabase.from("projetos").select("nome").order("nome"),
+    ]);
+
+  const responsaveisAtuais = new Set<string>();
+  for (const row of (responsaveisRows.data ?? []) as Array<{
+    voluntario_id: number | null;
+    profiles: { voluntario_id: number | null } | { voluntario_id: number | null }[] | null;
+  }>) {
+    const voluntarioId =
+      row.voluntario_id ??
+      (Array.isArray(row.profiles)
+        ? row.profiles[0]?.voluntario_id ?? null
+        : row.profiles?.voluntario_id ?? null);
+    if (voluntarioId !== null && voluntarioId !== undefined) {
+      responsaveisAtuais.add(String(voluntarioId));
+    }
+  }
+
+  const jaTemResponsavel = responsaveisAtuais.size > 0;
+  const jaTemArea = Boolean(demanda.area?.trim());
+  const jaTemProjeto = Boolean(demanda.projeto?.trim());
+  const jaTemEvento = demanda.evento_id !== null;
+
+  if (jaTemResponsavel && jaTemArea && jaTemProjeto && jaTemEvento) {
+    return { ok: true, message: "Todos os campos já estão preenchidos.", sugestao: null };
+  }
+
+  const voluntarios = (voluntariosRows.data ?? []).map((v) => v.nome);
+  const eventos = (eventosRows.data ?? []).map((e) => `${e.titulo} (${e.data_evento})`);
+
+  const contexto = [
+    `Título da demanda: ${demanda.titulo}`,
+    `Prazo: ${demanda.prazo}`,
+    demanda.area?.trim() ? `Área atual: ${demanda.area}` : "",
+    demanda.projeto?.trim() ? `Projeto atual: ${demanda.projeto}` : "",
+    ...(comentariosRows.data ?? []).map((c) => `Comentário: ${c.conteudo}`),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const pedido =
+    `${contexto}\n\n` +
+    `Voluntários cadastrados: ${voluntarios.join(", ")}\n` +
+    `Eventos cadastrados: ${eventos.join(", ")}\n` +
+    `Áreas institucionais: ${(areasRows.data ?? []).map((a) => a.nome).join(", ")}\n` +
+    `Projetos cadastrados: ${(projetosRows.data ?? []).map((p) => p.nome).join(", ")}\n\n` +
+    `Preencha apenas os campos que a demanda ainda NÃO tem (área, projeto, responsável, evento). Os já preenchidos devem vir "".`;
+
+  let rawJson: unknown;
+  try {
+    rawJson = JSON.parse(
+      await chatCompletion(CORRIGIR_IA_PROMPT, pedido, { jsonMode: true })
+    );
+  } catch (err) {
+    console.error("corrigirDemandaComIa: AI call failed", err);
+    return {
+      ok: false,
+      message: "Não foi possível consultar a IA agora. Tente novamente em instantes.",
+      sugestao: null,
+    };
+  }
+
+  const parsed = corrigirIaRespostaSchema.safeParse(rawJson);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "A IA respondeu em formato inesperado. Tente novamente.",
+      sugestao: null,
+    };
+  }
+
+  const profiles = (perfisRows.data ?? []).map((p) => ({
+    id: p.id,
+    email: p.email,
+    full_name: p.full_name,
+  }));
+  const roster = (voluntariosRows.data ?? []).map((v) => ({
+    id: v.id,
+    nome: v.nome,
+    profileId:
+      (perfisRows.data ?? []).find((p) => p.voluntario_id === v.id)?.id ?? null,
+  }));
+
+  const matchResponsavel = matchResponsavelRoster(
+    parsed.data.responsavel_texto,
+    profiles,
+    roster
+  );
+  const responsavelId =
+    !jaTemResponsavel && matchResponsavel.rosterId !== null
+      ? String(matchResponsavel.rosterId)
+      : null;
+
+  const eventoMatch = parsed.data.evento_texto
+    ? (eventosRows.data ?? []).find((evento) => {
+        const needle = normalize(parsed.data.evento_texto);
+        const haystack = normalize(evento.titulo);
+        return haystack.includes(needle) || needle.includes(haystack);
+      }) ?? null
+    : null;
+  const eventoId = !jaTemEvento && eventoMatch ? eventoMatch.id : null;
+
+  const area = !jaTemArea && parsed.data.area ? parsed.data.area : null;
+  const projeto = !jaTemProjeto && parsed.data.projeto ? parsed.data.projeto : null;
+
+  if (!area && !projeto && !responsavelId && !eventoId) {
+    return {
+      ok: true,
+      message: "A IA não encontrou informações para preencher os campos faltantes.",
+      sugestao: null,
+    };
+  }
+
+  return {
+    ok: true,
+    message: "",
+    sugestao: { area, projeto, responsavelId, eventoId },
+  };
+}
+

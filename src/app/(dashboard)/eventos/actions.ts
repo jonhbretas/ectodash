@@ -26,6 +26,80 @@ const adicionarTarefasInitialState: AdicionarTarefasState = {
 
 export { adicionarTarefasInitialState };
 
+export type EditarEventoState = {
+  ok: boolean;
+  message: string;
+};
+
+const editarEventoInitialState: EditarEventoState = { ok: false, message: "" };
+
+export { editarEventoInitialState };
+
+const editarEventoSchema = z.object({
+  id: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number().int().positive("Evento inválido")
+  ),
+  titulo: z.string().trim().min(1, "Dê um título ao evento.").max(200),
+  data_evento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha uma data válida."),
+  local: z.string().trim().max(200).optional().or(z.literal("")),
+  descricao: z.string().trim().max(2000).optional().or(z.literal("")),
+});
+
+// Corrects an existing event's data (the pre-registration events have no
+// edit screen). RLS (migration 0008) is the real boundary: only the
+// creator or any coordenador_geral can update.
+export async function editarEvento(
+  prevState: EditarEventoState,
+  formData: FormData
+): Promise<EditarEventoState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ...editarEventoInitialState, message: "Sessão expirada." };
+  }
+
+  const parsed = editarEventoSchema.safeParse({
+    id: formData.get("id"),
+    titulo: formData.get("titulo"),
+    data_evento: formData.get("data_evento"),
+    local: formData.get("local"),
+    descricao: formData.get("descricao"),
+  });
+
+  if (!parsed.success) {
+    return { ...editarEventoInitialState, message: "Verifique os campos do evento." };
+  }
+
+  const { error } = await supabase
+    .from("eventos")
+    .update({
+      titulo: parsed.data.titulo,
+      data_evento: parsed.data.data_evento,
+      local: parsed.data.local || null,
+      descricao: parsed.data.descricao || null,
+    })
+    .eq("id", parsed.data.id);
+
+  if (error) {
+    console.error("editarEvento: update failed", error);
+    return {
+      ...editarEventoInitialState,
+      message: "Não foi possível salvar o evento. Tente novamente.",
+    };
+  }
+
+  revalidatePath(`/eventos/${parsed.data.id}`);
+  revalidatePath("/eventos");
+  revalidatePath("/");
+  return { ok: true, message: "Evento atualizado com sucesso." };
+}
+
 // CSV row: parsed by header name (not position) — supports any column
 // order and extra columns. Required headers: Data, Título. Optional: Local,
 // Descrição. Dates in dd/MM/yyyy or yyyy-MM-dd.

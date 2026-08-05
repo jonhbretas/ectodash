@@ -36,6 +36,7 @@ const ataDemandaSchema = z.object({
   area_texto: z.string().trim().max(200).optional().or(z.literal("")),
   projeto_texto: z.string().trim().max(200).optional().or(z.literal("")),
   evento_texto: z.string().trim().max(200).optional().or(z.literal("")),
+  etiqueta_texto: z.string().trim().max(200).optional().or(z.literal("")),
 });
 
 export const ataAnaliseSchema = z.object({
@@ -123,6 +124,7 @@ export type AtaSalvarDemanda = {
   area: string | null;
   projeto: string | null;
   eventoRef: string | null;
+  etiquetaId: number | null;
 };
 
 export type AtaSalvarAtualizacao = {

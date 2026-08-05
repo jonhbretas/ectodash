@@ -15,7 +15,7 @@ describe("ataAnaliseSchema demandas", () => {
     resumo: "Resumo",
   };
 
-  it("aceita demanda com área, projeto e evento_texto (auto-seleção da revisão)", () => {
+  it("aceita demanda com área, projeto, evento e etiqueta_texto (auto-seleção da revisão)", () => {
     const result = ataAnaliseSchema.parse({
       ata: baseAta,
       demandas: [
@@ -27,6 +27,7 @@ describe("ataAnaliseSchema demandas", () => {
           area_texto: "Financeiro",
           projeto_texto: "Projeto X",
           evento_texto: "Qualificação de Agosto",
+          etiqueta_texto: "Orçamento",
         },
       ],
       eventos: [],
@@ -38,6 +39,7 @@ describe("ataAnaliseSchema demandas", () => {
     expect(demanda.area_texto).toBe("Financeiro");
     expect(demanda.projeto_texto).toBe("Projeto X");
     expect(demanda.evento_texto).toBe("Qualificação de Agosto");
+    expect(demanda.etiqueta_texto).toBe("Orçamento");
   });
 
   it('aceita demanda sem os campos novos (vazio ou ausente não quebra a análise)', () => {

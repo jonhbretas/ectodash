@@ -16,6 +16,7 @@ import {
   Check,
   Pencil,
   Plus,
+  Sparkles,
   X,
 } from "lucide-react";
 import StatusBadge, { type DemandaStatus } from "./status-badge";
@@ -35,6 +36,7 @@ import {
   removeDemandaResponsavel,
   addDemandaMembro,
   removeDemandaMembro,
+  corrigirDemandaComIa,
 } from "./actions";
 
 // The roster (public.voluntarios) is the source of truth for who can be a
@@ -287,6 +289,48 @@ export default function DemandaInlineEditor({
 
   const [localResponsaveis, setLocalResponsaveis] = useState(responsaveis);
   const [localMembros, setLocalMembros] = useState(membros);
+
+  // Correção com IA — preenche campos faltantes e persiste via os mesmos
+  // savers por campo (RLS do jeito de sempre); a mensagem pede revisão.
+  const [corrigindoIa, setCorrigindoIa] = useState(false);
+  const [corrigiuMensagem, setCorrigiuMensagem] = useState<string | null>(null);
+
+  async function corrigirComIa() {
+    setCorrigindoIa(true);
+    setCorrigiuMensagem(null);
+    const resultado = await corrigirDemandaComIa(demanda.id);
+    if (!resultado.ok || !resultado.sugestao) {
+      setCorrigiuMensagem(
+        resultado.message || "Não foi possível corrigir agora. Tente novamente."
+      );
+      setCorrigindoIa(false);
+      return;
+    }
+    const { area, projeto, responsavelId, eventoId } = resultado.sugestao;
+    const preenchidos: string[] = [];
+    if (area && !localArea?.trim()) {
+      await saveArea(area);
+      preenchidos.push("Área");
+    }
+    if (projeto && !localProjeto?.trim()) {
+      await saveProjeto(projeto);
+      preenchidos.push("Projeto");
+    }
+    if (eventoId !== null && localEventoId === null) {
+      await saveEvento(String(eventoId));
+      preenchidos.push("Evento");
+    }
+    if (responsavelId && !respIds.has(responsavelId)) {
+      await addResp(responsavelId);
+      preenchidos.push("Responsável");
+    }
+    setCorrigindoIa(false);
+    setCorrigiuMensagem(
+      preenchidos.length > 0
+        ? `Preenchido com IA: ${preenchidos.join(", ")}. Revise os campos se necessário.`
+        : "A IA não encontrou informações para preencher os campos faltantes."
+    );
+  }
 
   // Active editing pill — only one at a time.
   const [editingPill, setEditingPill] = useState<string | null>(null);
@@ -684,7 +728,25 @@ export default function DemandaInlineEditor({
             <Pencil size={13} className="text-zinc-400" aria-hidden="true" />
           </button>
         )}
+
+        {/* Preenche campos faltantes com IA */}
+        <button
+          type="button"
+          onClick={corrigirComIa}
+          disabled={corrigindoIa}
+          title="Preencher com IA os campos ainda vazios (área, responsável, projeto, evento)"
+          className="flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-base font-medium text-blue-700 ring-1 ring-blue-200/60 transition-all duration-200 hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Sparkles size={15} aria-hidden="true" />
+          {corrigindoIa ? "Corrigindo..." : "Preencher com IA"}
+        </button>
       </div>
+
+      {corrigiuMensagem && (
+        <p className="rounded-xl bg-blue-50 px-4 py-2.5 text-base text-blue-800 ring-1 ring-blue-200/60">
+          {corrigiuMensagem}
+        </p>
+      )}
     </div>
   );
 }

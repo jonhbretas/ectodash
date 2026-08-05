@@ -8,6 +8,10 @@ import DemandaChecklist from "../../demanda-checklist";
 import DemandaComentarios from "../../demanda-comentarios";
 import PageContainer from "../../../page-container";
 
+// corrigirDemandaComIa's AI call may run past the default 10s function
+// budget — give the page's server actions room.
+export const maxDuration = 60;
+
 type EditarDemandaPageProps = {
   params: Promise<{ id: string }>;
 };

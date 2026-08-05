@@ -21,6 +21,7 @@ import { displayName } from "@/lib/display-name";
 import PageContainer from "../../page-container";
 import KanbanBoard from "../../demandas/kanban-board";
 import AdicionarTarefasButton from "./adicionar-tarefas-button";
+import EditarEventoPanel from "../editar-evento-panel";
 
 type EventoPageProps = {
   params: Promise<{ id: string }>;
@@ -47,10 +48,10 @@ export default async function EventoPage({ params }: EventoPageProps) {
     );
   }
 
-  const [eventoResult, demandasResult] = await Promise.all([
+  const [eventoResult, demandasResult, profileResult] = await Promise.all([
     supabase
       .from("eventos")
-      .select("id, titulo, descricao, data_evento, local, tipo_evento_id")
+      .select("id, titulo, descricao, data_evento, local, tipo_evento_id, criado_por")
       .eq("id", id)
       .single(),
     supabase
@@ -58,6 +59,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
       .select("id, titulo, prazo, status, area, atrasada")
       .eq("evento_id", id)
       .order("prazo", { ascending: true }),
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
   ]);
 
   if (eventoResult.error || !eventoResult.data) {
@@ -76,6 +78,12 @@ export default async function EventoPage({ params }: EventoPageProps) {
 
   const evento = eventoResult.data;
   const rawDemandas = demandasResult.data ?? [];
+
+  // UX gate mirroring RLS 0008: only the creator or a coordenador_geral
+  // sees the edit panel (RLS is the real boundary).
+  const canEdit =
+    evento.criado_por === user.id ||
+    profileResult.data?.role === "coordenador_geral";
 
   // Responsável display names for the kanban cards — one batched read over
   // the event's demandas.
@@ -167,6 +175,17 @@ export default async function EventoPage({ params }: EventoPageProps) {
           <PlusCircle size={22} aria-hidden="true" />
           Nova demanda manual
         </Link>
+        {canEdit && (
+          <EditarEventoPanel
+            evento={{
+              id: evento.id,
+              titulo: evento.titulo,
+              data_evento: evento.data_evento,
+              local: evento.local,
+              descricao: evento.descricao,
+            }}
+          />
+        )}
       </div>
 
       {/* Stats — modern pills with semantic grouping, like the demandas

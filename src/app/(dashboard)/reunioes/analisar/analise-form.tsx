@@ -60,6 +60,7 @@ type AnaliseFormProps = {
   areas: string[];
   projetos: string[];
   eventosExistentes: { id: number; titulo: string; dataEvento: string }[];
+  etiquetas: { id: number; area: string; nome: string }[];
   meetings: Meeting[];
   meetingsError: string | null;
   meetingsConfigured: boolean;
@@ -83,6 +84,7 @@ export default function AnaliseForm({
   areas,
   projetos,
   eventosExistentes,
+  etiquetas,
   meetings,
   meetingsError,
   meetingsConfigured,
@@ -111,6 +113,7 @@ export default function AnaliseForm({
         areas={areas}
         projetos={projetos}
         eventosExistentes={eventosExistentes}
+        etiquetas={etiquetas}
         salvarState={salvarState}
         salvarAction={salvarAction}
         onBack={() => setResetKey((key) => key + 1)}
@@ -270,6 +273,7 @@ type ReviewScreenProps = {
   areas: string[];
   projetos: string[];
   eventosExistentes: { id: number; titulo: string; dataEvento: string }[];
+  etiquetas: { id: number; area: string; nome: string }[];
   salvarState: SalvarAtaState;
   // useActionState-wrapped action: one FormData argument, state bound.
   salvarAction: (formData: FormData) => void;
@@ -287,6 +291,7 @@ type DemandaReview = {
   projeto: string;
   // "" | "novo:<index>" | "existente:<id>"
   eventoRef: string;
+  etiquetaId: string;
 };
 
 type DipReview = {
@@ -319,6 +324,7 @@ function ReviewScreen({
   areas,
   projetos,
   eventosExistentes,
+  etiquetas,
   salvarState,
   salvarAction,
   onBack,
@@ -368,6 +374,15 @@ function ReviewScreen({
         [],
         voluntarios.map((v) => ({ id: v.id, nome: v.nome, profileId: null }))
       );
+      const etiquetaMatch = demanda.etiqueta_texto
+        ? etiquetas.find((etiqueta) => {
+            const needle = normalize(demanda.etiqueta_texto ?? "");
+            return (
+              normalize(etiqueta.nome).includes(needle) ||
+              needle.includes(normalize(etiqueta.nome))
+            );
+          })
+        : undefined;
       return {
         id: index,
         incluida: true,
@@ -378,6 +393,7 @@ function ReviewScreen({
         area: demanda.area_texto || "",
         projeto: demanda.projeto_texto || "",
         eventoRef: resolverEvento(demanda.evento_texto || ""),
+        etiquetaId: etiquetaMatch ? String(etiquetaMatch.id) : "",
       };
     });
   });
@@ -411,6 +427,7 @@ function ReviewScreen({
       area: d.area.trim() || null,
       projeto: d.projeto.trim() || null,
       eventoRef: d.eventoRef || null,
+      etiquetaId: d.etiquetaId ? Number(d.etiquetaId) : null,
     }));
 
   const salvarDips = dips
@@ -824,6 +841,39 @@ function ReviewScreen({
                             {evento.dataEvento
                               ? ` — ${evento.dataEvento.slice(8, 10)}/${evento.dataEvento.slice(5, 7)}/${evento.dataEvento.slice(0, 4)}`
                               : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                      <label
+                        htmlFor={`demanda-etiqueta-${demanda.id}`}
+                        className={labelClassName}
+                      >
+                        Etiqueta
+                      </label>
+                      <select
+                        id={`demanda-etiqueta-${demanda.id}`}
+                        value={demanda.etiquetaId}
+                        onChange={(e) =>
+                          setDemandas((prev) =>
+                            prev.map((d) =>
+                              d.id === demanda.id
+                                ? { ...d, etiquetaId: e.target.value }
+                                : d
+                            )
+                          )
+                        }
+                        disabled={!demanda.incluida}
+                        className={`${fieldClassName} disabled:cursor-not-allowed`}
+                      >
+                        <option value="">Nenhuma etiqueta</option>
+                        {etiquetas.map((etiqueta) => (
+                          <option
+                            key={etiqueta.id}
+                            value={String(etiqueta.id)}
+                          >
+                            {etiqueta.nome} ({etiqueta.area})
                           </option>
                         ))}
                       </select>

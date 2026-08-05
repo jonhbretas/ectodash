@@ -66,9 +66,9 @@ const pasteSchema = z.object({
 
 const AI_SYSTEM_PROMPT =
   "Você analisa transcrições de reunião e responde APENAS com JSON. " +
-  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}]}}. ' +
+  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string, "etiqueta_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}]}}. ' +
   "Regras: demandas = deliberações NOVAS com responsável e prazo claros. " +
-  "Para CADA demanda, identifique SEMPRE também: area_texto = a área institucional relacionada à demanda (ex.: Paratecnológico, Comunicação, Financeiro), projeto_texto = o projeto relacionado quando mencionado, evento_texto = o evento relacionado quando mencionado (use o MESMO título do evento da seção eventos quando aplicável). Use \"\" quando não houver menção. " +
+  "Para CADA demanda, identifique SEMPRE também: area_texto = a área institucional relacionada à demanda (ex.: Paratecnológico, Comunicação, Financeiro), projeto_texto = o projeto relacionado quando mencionado, evento_texto = o evento relacionado quando mencionado (use o MESMO título do evento da seção eventos quando aplicável), etiqueta_texto = a etiqueta relacionada quando mencionada. Use \"\" quando não houver menção. " +
   "eventos = eventos institucionais mencionados (ex.: qualificações, encontros, DIPs comemorativas, cursos, workshops, lives). Extraia titulo, data, local e descricao quando disponíveis. " +
   "atualizacoes = menções a demandas JÁ EXISTENTES (ex.: 'atualizar demanda X', 'a demanda Y avançou'); titulo deve ser o título da demanda existente; comentario descreve o que mudou. " +
   "dips = menções à Dinâmica DIP (localidades, países, datas, quantos participantes). " +
@@ -230,6 +230,7 @@ const salvarDemandasSchema = z
       projeto: z.string().trim().max(200).nullable(),
       // "" | "novo:<index>" | "existente:<id>"
       eventoRef: z.string().trim().max(50).nullable(),
+      etiquetaId: z.number().int().positive().nullable(),
     })
   )
   .max(50);
@@ -457,6 +458,7 @@ export async function salvarAtaAnalise(
         area: demanda.area || null,
         projeto: demanda.projeto || null,
         evento_id: resolverEventoId(demanda.eventoRef),
+        etiqueta_id: demanda.etiquetaId || null,
       })
       .select("id")
       .single();
