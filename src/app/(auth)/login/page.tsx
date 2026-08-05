@@ -24,26 +24,26 @@ export default async function LoginPage({
 
         <div className="flex flex-col gap-6">
           <h2 className="text-4xl font-semibold leading-tight tracking-tight">
-            Tudo que a instituicao precisa, em um so lugar.
+            Tudo que a instituição precisa, em um só lugar.
           </h2>
           <ul className="flex flex-col gap-4 text-lg text-blue-100">
             <li className="flex items-center gap-3">
               <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
-              Demandas e prazos sem perseguicao manual
+              Demandas e prazos sem perseguição manual
             </li>
             <li className="flex items-center gap-3">
               <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
-              Lembretes automaticos por e-mail
+              Lembretes automáticos por e-mail
             </li>
             <li className="flex items-center gap-3">
               <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
-              Visao geral do coordenador e das financas
+              Visão geral do coordenador e das finanças
             </li>
           </ul>
         </div>
 
         <p className="text-sm text-blue-200">
-          Acesso exclusivo para voluntarios da instituicao.
+          Acesso exclusivo para voluntários da instituição.
         </p>
       </aside>
 
@@ -62,13 +62,13 @@ export default async function LoginPage({
           </h1>
           <p className="text-sm text-slate-600">
             Digite seu e-mail principal abaixo. Enviaremos um link de acesso
-            por e-mail — nao e preciso criar ou digitar nenhuma senha.
-            Na primeira vez, voce escolhera seu nome na lista de voluntarios
+            por e-mail — não é preciso criar ou digitar nenhuma senha.
+            Na primeira vez, você escolherá seu nome na lista de voluntários
             para vincular o cadastro.
           </p>
           {erro === "link_invalido" && (
             <p className="text-sm font-medium text-red-600">
-              O link expirou ou ja foi usado. Peca um novo link de acesso
+              O link expirou ou já foi usado. Peça um novo link de acesso
               abaixo.
             </p>
           )}
