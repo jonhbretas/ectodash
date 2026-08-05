@@ -97,3 +97,61 @@ create policy "creator or coordinator can delete projetos"
     criado_por = (select auth.uid())
     or (select public.has_role('coordenador_geral'))
   );
+
+-- 3. utilidades_itens — archive of institutional documents and resources.
+--    Each item has a titulo, descricao, categoria (ata_fundacao, estatuto,
+--    logo, ficha_proposicao, grade_curricular, links_uteis, outro), URL or
+--    file reference, and optional ordenacao for display order.
+
+create table public.utilidades_itens (
+  id bigint generated always as identity primary key,
+  titulo text not null check (char_length(trim(titulo)) > 0),
+  descricao text,
+  categoria text not null check (categoria in (
+    'ata_fundacao', 'estatuto', 'logo', 'ficha_proposicao',
+    'grade_curricular', 'links_uteis', 'outro'
+  )),
+  url text,
+  arquivo_nome text,
+  ordenacao integer not null default 0,
+  criado_por uuid not null default auth.uid() references public.profiles(id),
+  created_at timestamptz not null default now()
+);
+
+alter table public.utilidades_itens enable row level security;
+
+create policy "authenticated users can view all utilidades"
+  on public.utilidades_itens
+  for select
+  to authenticated
+  using (true);
+
+create policy "authenticated users can insert utilidades"
+  on public.utilidades_itens
+  for insert
+  to authenticated
+  with check (criado_por = (select auth.uid()));
+
+create policy "creator or coordinator can update utilidades"
+  on public.utilidades_itens
+  for update
+  to authenticated
+  using (
+    criado_por = (select auth.uid())
+    or (select public.has_role('coordenador_geral'))
+    or (select public.has_role('coordenador_area'))
+  )
+  with check (
+    criado_por = (select auth.uid())
+    or (select public.has_role('coordenador_geral'))
+    or (select public.has_role('coordenador_area'))
+  );
+
+create policy "creator or coordinator can delete utilidades"
+  on public.utilidades_itens
+  for delete
+  to authenticated
+  using (
+    criado_por = (select auth.uid())
+    or (select public.has_role('coordenador_geral'))
+  );

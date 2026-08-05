@@ -47,13 +47,14 @@ export default async function ModelosEventosPage() {
     );
   }
 
-  const [tiposResult, tarefasResult] = await Promise.all([
+  const [tiposResult, tarefasResult, areasResult] = await Promise.all([
     supabase.from("evento_tipos").select("id, nome").order("nome"),
     supabase
       .from("modelo_tarefas")
       .select("id, tipo_id, titulo, area, prazo_offset_dias, ordem")
       .order("ordem", { ascending: true })
       .order("id", { ascending: true }),
+    supabase.from("areas_institucionais").select("nome").order("nome"),
   ]);
 
   const tarefasPorTipo = new Map<number, typeof tarefasResult.data>();
@@ -62,6 +63,8 @@ export default async function ModelosEventosPage() {
     bucket.push(tarefa);
     tarefasPorTipo.set(tarefa.tipo_id, bucket);
   }
+
+  const areaOptions = (areasResult.data ?? []).map((a) => a.nome);
 
   return (
     <PageContainer>
@@ -130,7 +133,7 @@ export default async function ModelosEventosPage() {
                 </div>
               )}
 
-              <AdicionarTarefaForm tipoId={tipo.id} />
+              <AdicionarTarefaForm tipoId={tipo.id} areaOptions={areaOptions} />
             </section>
           );
         })}

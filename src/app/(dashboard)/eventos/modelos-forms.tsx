@@ -64,7 +64,7 @@ function CreateTipoButton() {
   );
 }
 
-export function AdicionarTarefaForm({ tipoId }: { tipoId: number }) {
+export function AdicionarTarefaForm({ tipoId, areaOptions }: { tipoId: number; areaOptions: string[] }) {
   const [state, formAction] = useActionState(
     adicionarTarefaModelo,
     modelosInitialState
@@ -83,11 +83,20 @@ export function AdicionarTarefaForm({ tipoId }: { tipoId: number }) {
         className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
       />
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <input
-          name="area"
-          placeholder="Área (opcional)"
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-        />
+        <div className="flex flex-col gap-1">
+          <input
+            name="area"
+            list={`areas-modelo-${tipoId}`}
+            placeholder="Área (opcional)"
+            className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          />
+          <datalist id={`areas-modelo-${tipoId}`}>
+            {areaOptions.map((area) => (
+              <option key={area} value={area} />
+            ))}
+          </datalist>
+          <p className="text-sm text-zinc-500">Áreas institucionais como sugestão — digite para criar sub-área.</p>
+        </div>
         <input
           name="prazoOffsetDias"
           type="number"
