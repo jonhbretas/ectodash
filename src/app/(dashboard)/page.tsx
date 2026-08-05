@@ -313,9 +313,9 @@ export default async function DashboardPage({
                   : "Mostrar apenas as demandas atribuídas a você"
               }
               className={cn(
-                "flex h-10 items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
+                "flex h-10 items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]",
                 minhasDemandasAtivas
-                  ? "bg-blue-50 text-blue-700 ring-blue-200 hover:bg-blue-100"
+                  ? "bg-[#f5f0eb] text-[#d4883a] ring-[#f0e0cf] hover:bg-[#f5f0eb]"
                   : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
@@ -325,7 +325,7 @@ export default async function DashboardPage({
           )}
           <Link
             href="/demandas/nova"
-            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600 hover:shadow-[0_4px_12px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#d4883a] to-[#e8a85c] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)] transition-all duration-200 hover:from-[#c07828] hover:to-[#d4883a] hover:shadow-[0_4px_12px_rgba(212,136,58,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           >
             <Plus size={18} aria-hidden="true" />
             Nova demanda
@@ -335,7 +335,7 @@ export default async function DashboardPage({
 
       <div className="flex w-full flex-col gap-5">
         {scopedViewNotice && (
-          <p className="rounded-xl bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 ring-1 ring-blue-200/60">
+          <p className="rounded-xl bg-[#f5f0eb] px-4 py-2.5 text-sm font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60">
             {scopedViewNotice}
           </p>
         )}

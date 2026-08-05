@@ -59,9 +59,9 @@ export default function DemandaViewToggle({
             type="button"
             onClick={() => selectView(option.value)}
             aria-pressed={active}
-            className={`flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:flex-initial ${
+            className={`flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] sm:flex-initial ${
               active
-                ? "bg-white text-blue-700 shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/60"
+                ? "bg-white text-[#d4883a] shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-zinc-200/60"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >

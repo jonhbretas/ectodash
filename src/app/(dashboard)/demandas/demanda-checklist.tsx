@@ -155,7 +155,7 @@ export default function DemandaChecklist({
                 type="checkbox"
                 checked={item.concluido}
                 onChange={(e) => toggle(item.id, e.target.checked)}
-                className="h-5 w-5 shrink-0 rounded accent-blue-700"
+                className="h-5 w-5 shrink-0 rounded accent-[#d4883a]"
                 aria-label={`Marcar "${item.item}"`}
               />
               <span
@@ -171,7 +171,7 @@ export default function DemandaChecklist({
                 type="button"
                 onClick={() => removeItem(item.id)}
                 aria-label={`Remover item "${item.item}"`}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
               >
                 <X size={17} aria-hidden="true" />
               </button>
@@ -188,12 +188,12 @@ export default function DemandaChecklist({
             required
             placeholder="Adicionar item..."
             disabled={addPending}
-            className="min-h-12 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="min-h-12 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           />
           <button
             type="submit"
             disabled={addPending}
-            className="flex min-h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-60"
+            className="flex min-h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#d4883a] text-white transition-all duration-200 hover:bg-[#c07828] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:opacity-60"
             aria-label="Adicionar item ao checklist"
           >
             <Plus size={22} aria-hidden="true" />

@@ -45,7 +45,7 @@ export default function DemandaCard({
     <li>
       <Link
         href={`/demandas/${id}/editar`}
-        className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
       >
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-2 text-base font-semibold text-zinc-900">
@@ -84,7 +84,7 @@ export default function DemandaCard({
             </span>
           )}
           {projeto && (
-            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-base font-medium text-blue-700 ring-1 ring-blue-200/60">
+            <span className="rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-base font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60">
               {projeto}
             </span>
           )}

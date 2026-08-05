@@ -30,7 +30,7 @@ function ComentarButton() {
     <button
       type="submit"
       disabled={pending}
-      className="min-h-12 self-start rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="min-h-12 self-start rounded-xl bg-[#d4883a] px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-[#c07828] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Enviando..." : "Comentar"}
     </button>
@@ -97,7 +97,7 @@ export default function DemandaComentarios({
           rows={3}
           required
           placeholder='Mencione alguém com "@nome" para avisar por e-mail...'
-          className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
         />
         <ComentarButton />
         {state.message && (

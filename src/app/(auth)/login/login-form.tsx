@@ -11,7 +11,7 @@ import { requestMagicLink, type LoginState } from "./actions";
 const initialState: LoginState = { ok: false, message: "" };
 
 const inputClass =
-  "min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
+  "min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -20,7 +20,7 @@ function SubmitButton() {
     <Button
       type="submit"
       disabled={pending}
-      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? (
         <>

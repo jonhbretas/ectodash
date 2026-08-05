@@ -46,6 +46,7 @@ export async function criarLocalidadeVoluntario(
   }
 
   revalidatePath("/voluntarios");
+  revalidatePath("/voluntarios/localidades");
   return { ok: true, message: "Localidade cadastrada." };
 }
 
@@ -82,6 +83,7 @@ export async function editarLocalidadeVoluntario(
   }
 
   revalidatePath("/voluntarios");
+  revalidatePath("/voluntarios/localidades");
   return { ok: true, message: "Localidade atualizada." };
 }
 
@@ -107,5 +109,6 @@ export async function excluirLocalidadeVoluntario(
   }
 
   revalidatePath("/voluntarios");
+  revalidatePath("/voluntarios/localidades");
   return { ok: true, message: "Localidade removida do cadastro." };
 }

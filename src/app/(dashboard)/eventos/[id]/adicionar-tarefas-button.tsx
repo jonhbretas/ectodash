@@ -18,7 +18,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
     >
       <Sparkles size={22} aria-hidden="true" />
       {pending ? "Criando tarefas..." : "Adicionar tarefas do modelo"}
@@ -53,7 +53,7 @@ export default function AdicionarTarefasButton({ eventoId }: { eventoId: number 
         <button
           type="button"
           onClick={() => router.refresh()}
-          className="w-fit text-base font-medium text-blue-700 underline"
+          className="w-fit text-base font-medium text-[#d4883a] underline"
         >
           Atualizar o quadro
         </button>

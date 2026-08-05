@@ -22,7 +22,7 @@ const STATUS_CONFIG: Record<
   em_andamento: {
     label: "Em andamento",
     Icon: Clock,
-    className: "bg-blue-50 text-blue-700 ring-1 ring-blue-200/60",
+    className: "bg-[#f5f0eb] text-[#d4883a] ring-1 ring-[#f0e0cf]/60",
   },
   concluida: {
     label: "Concluída",

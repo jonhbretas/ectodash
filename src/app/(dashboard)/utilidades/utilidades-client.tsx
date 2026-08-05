@@ -16,7 +16,7 @@ const CATEGORIES = [
   { value: "outro", label: "Outros Documentos" },
 ];
 
-const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
+const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
 
 export default function UtilidadesClient() {
   const [show, setShow] = useState(false);
@@ -58,7 +58,7 @@ export default function UtilidadesClient() {
       <textarea name="descricao" rows={3} placeholder="Descrição (opcional)" className={`${inputClass} min-h-20 resize-y py-3`} />
 
       <div className="flex items-center gap-2">
-        <button type="submit" className="flex min-h-12 items-center gap-1.5 rounded-lg bg-blue-700 px-4 text-lg font-medium text-white transition-colors hover:bg-blue-800">
+        <button type="submit" className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#d4883a] px-4 text-lg font-medium text-white transition-colors hover:bg-[#c07828]">
           Adicionar
         </button>
         <button type="button" onClick={() => setShow(false)} className="rounded-lg px-3 py-2 text-lg text-zinc-600 hover:text-zinc-900">Cancelar</button>

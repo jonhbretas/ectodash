@@ -32,7 +32,7 @@ export default function ConcludeButton({ demandaId }: { demandaId: number }) {
     <form action={concludeAction}>
       <button
         type="submit"
-        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-xl font-medium text-white shadow-[0_1px_3px_rgba(21,128,61,0.2)] transition-all duration-200 hover:bg-green-500 hover:shadow-[0_2px_6px_rgba(21,128,61,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-xl font-medium text-white shadow-[0_1px_3px_rgba(21,128,61,0.2)] transition-all duration-200 hover:bg-green-500 hover:shadow-[0_2px_6px_rgba(21,128,61,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <polyline points="20 6 9 17 4 12" />

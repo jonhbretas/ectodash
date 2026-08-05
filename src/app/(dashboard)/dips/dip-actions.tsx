@@ -23,7 +23,7 @@ type DipActionsProps = {
 };
 
 const inputClass =
-  "min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
+  "min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
 
 export default function DipActions({
   dip,
@@ -74,7 +74,7 @@ export default function DipActions({
 
   if (editing) {
     return (
-      <div className="flex w-full flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+      <div className="flex w-full flex-col gap-2 rounded-lg border border-[#f0e0cf] bg-[#f5f0eb]/50 p-3">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
             Localidade
@@ -164,7 +164,7 @@ export default function DipActions({
         type="button"
         onClick={() => setEditing(true)}
         aria-label="Editar registro DIP"
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-blue-50 hover:text-blue-700"
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-[#f5f0eb] hover:text-[#d4883a]"
       >
         <Pencil size={16} aria-hidden="true" />
       </button>

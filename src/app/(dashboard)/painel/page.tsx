@@ -29,7 +29,7 @@ export default async function PainelPage() {
           <Lock size={48} className="text-slate-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-slate-900">Este painel e exclusivo do coordenador</h1>
           <p className="max-w-md text-lg text-slate-600">Voce nao tem acesso ao painel geral da instituicao. Toque abaixo para voltar as suas demandas.</p>
-          <Link href="/" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600">
+          <Link href="/" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#d4883a] to-[#e8a85c] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)] transition-all duration-200 hover:from-[#c07828] hover:to-[#d4883a]">
             Ver minhas demandas
           </Link>
         </div>
@@ -45,7 +45,7 @@ export default async function PainelPage() {
     <PageContainer>
       <div className="flex w-full flex-col gap-2">
         <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-[0_2px_8px_rgba(37,99,235,0.25)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#d4883a] to-[#c07828] shadow-[0_2px_8px_rgba(212,136,58,0.25)]">
             <ClipboardList size={20} className="text-white" aria-hidden="true" strokeWidth={1.75} />
           </div>
           Painel do coordenador
@@ -58,7 +58,7 @@ export default async function PainelPage() {
           <ClipboardList size={48} className="text-slate-300" aria-hidden="true" />
           <h2 className="text-2xl font-semibold text-slate-900">Nenhuma demanda cadastrada na instituicao ainda</h2>
           <p className="max-w-md text-sm text-slate-600">Quando as areas comecarem a cadastrar demandas, o resumo da instituicao vai aparecer aqui.</p>
-          <Link href="/" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600">
+          <Link href="/" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#d4883a] to-[#e8a85c] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)] transition-all duration-200 hover:from-[#c07828] hover:to-[#d4883a]">
             Ver demandas
           </Link>
         </div>
@@ -147,14 +147,14 @@ async function PainelContent({ rows, supabase }: { rows: PainelRow[]; supabase: 
         <StatCard label="Total de demandas" value={total} Icon={ClipboardList} iconClassName="text-slate-600" />
         <StatCard label="Atrasadas" value={atrasadas} Icon={AlertTriangle} highlight />
         <StatCard label="Pendentes" value={pendentes} Icon={Circle} iconClassName="text-amber-600" />
-        <StatCard label="Em andamento" value={emAndamento} Icon={Clock} iconClassName="text-blue-600" />
+        <StatCard label="Em andamento" value={emAndamento} Icon={Clock} iconClassName="text-[#d4883a]" />
         <StatCard label="Concluidas" value={concluidas} Icon={CheckCircle2} iconClassName="text-green-600" />
       </div>
 
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard label="Equipe total" value={totalVoluntarios} Icon={Users} iconClassName="text-zinc-600" />
         <StatCard label="Equipe DIP" value={equipeDip} Icon={Sparkles} iconClassName="text-purple-600" />
-        <StatCard label="Voluntários de áreas" value={voluntariosAreas} Icon={MapPin} iconClassName="text-blue-600" />
+        <StatCard label="Voluntários de áreas" value={voluntariosAreas} Icon={MapPin} iconClassName="text-[#d4883a]" />
       </div>
 
       <PainelTabs

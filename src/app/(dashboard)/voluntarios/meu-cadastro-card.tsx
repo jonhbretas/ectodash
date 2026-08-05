@@ -33,7 +33,7 @@ export default function MeuCadastroCard({ row, role }: { row: VoluntarioRow; rol
     <PageContainer>
       <div className="flex w-full max-w-2xl flex-col gap-3">
         <div className="flex items-center gap-3">
-          <span className="h-8 w-1.5 rounded-full bg-blue-600" aria-hidden="true" />
+          <span className="h-8 w-1.5 rounded-full bg-[#d4883a]" aria-hidden="true" />
           <h2 className="text-2xl font-semibold text-zinc-900">Meu cadastro</h2>
         </div>
         <div className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">

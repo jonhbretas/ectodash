@@ -99,7 +99,7 @@ export default async function FinanceiroPage({
           </p>
           <Link
             href="/"
-            className="flex min-h-14 items-center justify-center rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="flex min-h-14 items-center justify-center rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           >
             Ver minhas demandas
           </Link>
@@ -258,7 +258,7 @@ export default async function FinanceiroPage({
           label={stats.resultadoLabel}
           value={brl.format(resultado)}
           Icon={Scale}
-          iconClassName={resultado < 0 ? "text-red-600" : "text-blue-600"}
+          iconClassName={resultado < 0 ? "text-red-600" : "text-[#d4883a]"}
         />
         <StatPill
           label={stats.caixaLabel}
@@ -301,14 +301,14 @@ export default async function FinanceiroPage({
                   <tr
                     key={row.mes}
                     className={`border-b border-zinc-100 text-lg text-zinc-900 last:border-b-0 transition-colors hover:bg-zinc-50 ${
-                      selected ? "bg-blue-50/70 ring-1 ring-inset ring-blue-200" : ""
+                      selected ? "bg-[#f5f0eb]/70 ring-1 ring-inset ring-[#f0e0cf]" : ""
                     }`}
                   >
                     <td className="px-4 py-3 font-medium">
                       <span className="flex items-center gap-2">
                         {labelMes(row.mes)}
                         {selected && (
-                          <span className="rounded-full bg-blue-700 px-2 py-0.5 text-sm font-semibold text-white">
+                          <span className="rounded-full bg-[#d4883a] px-2 py-0.5 text-sm font-semibold text-white">
                             Selecionado
                           </span>
                         )}

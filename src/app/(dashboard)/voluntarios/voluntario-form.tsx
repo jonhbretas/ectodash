@@ -40,7 +40,7 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? "Salvando..." : label}
     </button>
@@ -48,7 +48,7 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 const inputClassName =
-  "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 transition-colors hover:border-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
+  "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 transition-colors hover:border-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
 const labelClassName = "text-lg font-medium text-zinc-900";
 
 function Field({
@@ -76,6 +76,8 @@ export default function VoluntarioForm({
   values,
   areaOptions,
   areasOptions = [],
+  unidadeOptions = [],
+  orgDeptOptions = [],
   canAssignRole,
 }: {
   mode: "criar" | "editar";
@@ -85,6 +87,10 @@ export default function VoluntarioForm({
   // Áreas institucionais cadastradas (areas_institucionais) — opções das
   // "Outras áreas".
   areasOptions?: string[];
+  // Localidades cadastradas (voluntario_localidades) — opções do campo unidade.
+  unidadeOptions?: string[];
+  // Caminhos org_depto gerados a partir da hierarquia de áreas.
+  orgDeptOptions?: string[];
   canAssignRole: boolean;
 }) {
   const router = useRouter();
@@ -94,6 +100,8 @@ export default function VoluntarioForm({
       : atualizarVoluntario.bind(null, voluntarioId!);
 
   const [areaAtuacao, setAreaAtuacao] = useState(values.area_atuacao ?? "");
+  const [unidade, setUnidade] = useState(values.unidade ?? "");
+  const [orgDepto, setOrgDepto] = useState(values.org_depto ?? "");
   const [papel, setPapel] = useState(values.papel ?? "voluntario_comum");
   const [areasExtras, setAreasExtras] = useState<string[]>(values.areas ?? []);
 
@@ -158,22 +166,24 @@ export default function VoluntarioForm({
         </Field>
 
         <Field id="unidade" label="Unidade">
-          <input
-            id="unidade"
+          <FormCombobox
             name="unidade"
-            defaultValue={values.unidade ?? ""}
-            placeholder="Ex: São Paulo, Curitiba..."
-            className={inputClassName}
+            value={unidade}
+            onChange={setUnidade}
+            options={unidadeOptions}
+            placeholder="Escolha a unidade ou digite outra"
+            ariaLabel="Unidade"
           />
         </Field>
 
         <Field id="org_depto" label="Org Depto">
-          <input
-            id="org_depto"
+          <FormCombobox
             name="org_depto"
-            defaultValue={values.org_depto ?? ""}
+            value={orgDepto}
+            onChange={setOrgDepto}
+            options={orgDeptOptions}
             placeholder="Ex: ECTOLAB \ Paratecnológico \ DIP"
-            className={inputClassName}
+            ariaLabel="Org Depto"
           />
         </Field>
 
@@ -232,9 +242,9 @@ export default function VoluntarioForm({
                   type="button"
                   aria-pressed={marcada}
                   onClick={() => toggleAreaExtra(area)}
-                  className={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-base font-medium ring-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
+                  className={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-base font-medium ring-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] ${
                     marcada
-                      ? "bg-blue-700 text-white ring-blue-700"
+                      ? "bg-[#d4883a] text-white ring-[#d4883a]"
                       : "bg-white text-zinc-700 ring-zinc-300 hover:bg-zinc-50"
                   }`}
                 >
@@ -310,7 +320,7 @@ export default function VoluntarioForm({
               type="checkbox"
               defaultChecked={values.ativo}
               value="true"
-              className="h-6 w-6 accent-blue-700"
+              className="h-6 w-6 accent-[#d4883a]"
             />
             <label
               htmlFor="ativo"

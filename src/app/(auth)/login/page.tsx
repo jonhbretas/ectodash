@@ -10,10 +10,10 @@ export default async function LoginPage({
   const erro = params.erro;
 
   return (
-    <main className="flex min-h-dvh flex-1 items-stretch bg-gradient-to-br from-slate-50 via-white to-blue-50/20">
+    <main className="flex min-h-dvh flex-1 items-stretch bg-gradient-to-br from-slate-50 via-white to-[#f5f0eb]/20">
       <aside
         aria-hidden="true"
-        className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-blue-700 via-indigo-700 to-indigo-800 p-12 text-white lg:flex"
+        className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-[#c07828] via-indigo-700 to-indigo-800 p-12 text-white lg:flex"
       >
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-2xl font-bold shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
@@ -26,23 +26,23 @@ export default async function LoginPage({
           <h2 className="text-4xl font-semibold leading-tight tracking-tight">
             Tudo que a instituição precisa, em um só lugar.
           </h2>
-          <ul className="flex flex-col gap-4 text-lg text-blue-100">
+          <ul className="flex flex-col gap-4 text-lg text-[#faf0e4]">
             <li className="flex items-center gap-3">
-              <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
+              <CheckCircle2 size={22} className="shrink-0 text-[#f5e6d3]" strokeWidth={1.5} />
               Demandas e prazos sem perseguição manual
             </li>
             <li className="flex items-center gap-3">
-              <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
+              <CheckCircle2 size={22} className="shrink-0 text-[#f5e6d3]" strokeWidth={1.5} />
               Lembretes automáticos por e-mail
             </li>
             <li className="flex items-center gap-3">
-              <CheckCircle2 size={22} className="shrink-0 text-blue-200" strokeWidth={1.5} />
+              <CheckCircle2 size={22} className="shrink-0 text-[#f5e6d3]" strokeWidth={1.5} />
               Visão geral do coordenador e das finanças
             </li>
           </ul>
         </div>
 
-        <p className="text-sm text-blue-200">
+        <p className="text-sm text-[#f5e6d3]">
           Acesso exclusivo para voluntários da instituição.
         </p>
       </aside>
@@ -50,7 +50,7 @@ export default async function LoginPage({
       <section className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-16">
         <div className="flex w-full max-w-md flex-col items-center gap-4 text-center">
           <div className="flex items-center gap-3 lg:hidden">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-2xl font-bold text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d4883a] to-[#c07828] text-2xl font-bold text-white shadow-[0_4px_12px_rgba(212,136,58,0.3)]">
               E
             </span>
             <span className="text-3xl font-semibold tracking-tight text-slate-900">

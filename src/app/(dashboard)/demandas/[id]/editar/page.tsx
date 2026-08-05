@@ -29,7 +29,7 @@ export default async function EditarDemandaPage({
       <PageContainer>
         <div className="flex w-full flex-col items-center gap-4 py-16 text-center">
           <p className="text-xl text-zinc-500">Demanda não encontrada.</p>
-          <Link href="/" className="text-xl font-medium text-blue-700 transition-colors hover:text-blue-600">
+          <Link href="/" className="text-xl font-medium text-[#d4883a] transition-colors hover:text-[#d4883a]">
             Voltar para a lista
           </Link>
         </div>
@@ -48,7 +48,7 @@ export default async function EditarDemandaPage({
       <PageContainer>
         <div className="flex w-full flex-col items-center gap-4 py-16 text-center">
           <p className="text-xl text-zinc-500">Demanda não encontrada.</p>
-          <Link href="/" className="text-xl font-medium text-blue-700 transition-colors hover:text-blue-600">
+          <Link href="/" className="text-xl font-medium text-[#d4883a] transition-colors hover:text-[#d4883a]">
             Voltar para a lista
           </Link>
         </div>

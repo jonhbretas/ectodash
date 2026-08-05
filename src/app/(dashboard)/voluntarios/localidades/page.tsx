@@ -1,14 +1,14 @@
-// /areas — cadastro das áreas institucionais (areas_institucionais,
-// migration 0022), acessível pela tela de voluntários. O CRUD é exclusivo
-// do coordenador_geral (RLS é o limite real; este é o gate de UX, como o
-// /painel).
+// /voluntarios/localidades — cadastro das localidades (regiões/cidades) dos
+// voluntários (voluntario_localidades, migration 0025), acessível pela tela
+// de voluntários. O CRUD é exclusivo do coordenador_geral (RLS é o limite
+// real; este é o gate de UX, como o /areas).
 import Link from "next/link";
-import { ArrowLeft, Lock, Layers } from "lucide-react";
+import { ArrowLeft, Lock, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import PageContainer from "../page-container";
-import AreasConfig from "../painel/areas-config";
+import PageContainer from "../../page-container";
+import LocalidadesVoluntarioConfig from "../localidades-config";
 
-export default async function AreasPage() {
+export default async function LocalidadesVoluntarioPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -30,7 +30,7 @@ export default async function AreasPage() {
             Este cadastro é exclusivo do coordenador
           </h1>
           <p className="max-w-md text-lg text-zinc-600">
-            Você não tem acesso ao cadastro de áreas institucionais.
+            Você não tem acesso ao cadastro de localidades dos voluntários.
           </p>
           <Link
             href="/voluntarios"
@@ -43,9 +43,9 @@ export default async function AreasPage() {
     );
   }
 
-  const { data: areas } = await supabase
-    .from("areas_institucionais")
-    .select("id, nome, area_mae_id")
+  const { data: localidades } = await supabase
+    .from("voluntario_localidades")
+    .select("id, nome")
     .order("nome");
 
   return (
@@ -60,17 +60,20 @@ export default async function AreasPage() {
 
       <header className="flex w-full flex-col gap-1">
         <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
-          <Layers size={30} aria-hidden="true" />
-          Áreas institucionais
+          <MapPin size={30} aria-hidden="true" />
+          Localidades dos voluntários
         </h1>
         <p className="max-w-2xl text-xl text-zinc-500">
-          Cadastro das áreas da instituição — usadas para organizar a equipe,
-          as demandas e os filtros.
+          Regiões/cidades de atuação da equipe — usadas no filtro de
+          localidade e na análise por região.
         </p>
       </header>
 
-      <AreasConfig
-        areas={(areas ?? []) as { id: number; nome: string; area_mae_id: number | null }[]}
+      <LocalidadesVoluntarioConfig
+        localidades={(localidades ?? []).map((l) => ({
+          id: l.id,
+          nome: l.nome,
+        }))}
       />
     </PageContainer>
   );

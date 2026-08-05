@@ -57,7 +57,7 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
     <button
       type="submit"
       disabled={pending}
-      className="min-h-14 w-full rounded-xl bg-blue-700 px-4 py-3 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 hover:shadow-[0_2px_6px_rgba(29,78,216,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="min-h-14 w-full rounded-xl bg-[#d4883a] px-4 py-3 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] hover:shadow-[0_2px_6px_rgba(212,136,58,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? pendingLabel : idleLabel}
     </button>
@@ -88,7 +88,7 @@ type DemandaFormProps = {
 
 const fieldLabelClass = "text-xl font-medium text-zinc-900";
 const fieldInputClass =
-  "min-h-14 rounded-xl border-zinc-200 bg-white text-zinc-900 shadow-none transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 focus-visible:ring-0";
+  "min-h-14 rounded-xl border-zinc-200 bg-white text-zinc-900 shadow-none transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] focus-visible:ring-0";
 const errorClass = "text-base text-red-600";
 
 function dataEventoLabel(data: string): string {
@@ -258,7 +258,7 @@ export default function DemandaForm({
                 id="responsavelIds"
                 multiple
                 size={5}
-                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
                 {...register("responsavelIds")}
               >
                 {voluntarios.map((voluntario) => (
@@ -280,7 +280,7 @@ export default function DemandaForm({
                 id="membroIds"
                 multiple
                 size={5}
-                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
                 {...register("membroIds")}
               >
                 {voluntarios.map((voluntario) => (
@@ -367,7 +367,7 @@ export default function DemandaForm({
                 <button
                   type="button"
                   onClick={() => setCriandoEtiqueta((v) => !v)}
-                  className="text-base font-medium text-blue-700 transition-colors hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                  className="text-base font-medium text-[#d4883a] transition-colors hover:text-[#d4883a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
                 >
                   {criandoEtiqueta ? "Cancelar" : "+ Nova etiqueta"}
                 </button>
@@ -395,13 +395,13 @@ export default function DemandaForm({
                       value={novaEtiquetaArea}
                       onChange={(e) => setNovaEtiquetaArea(e.target.value)}
                       placeholder="Área (ex.: Pesquisa)"
-                      className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                      className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
                     />
                     <input
                       value={novaEtiquetaNome}
                       onChange={(e) => setNovaEtiquetaNome(e.target.value)}
                       placeholder="Nome da etiqueta (ex.: Comunicação)"
-                      className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                      className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
                     />
                   </div>
                   {etiquetaError && (
@@ -410,7 +410,7 @@ export default function DemandaForm({
                   <button
                     type="button"
                     onClick={handleCriarEtiqueta}
-                    className="min-h-12 self-start rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                    className="min-h-12 self-start rounded-xl bg-[#d4883a] px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-[#c07828] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
                   >
                     Criar etiqueta
                   </button>
@@ -443,7 +443,7 @@ export default function DemandaForm({
           <SubmitButton mode={mode} />
           <Link
             href="/"
-            className="flex min-h-14 items-center justify-center rounded-xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="flex min-h-14 items-center justify-center rounded-xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           >
             Cancelar
           </Link>
@@ -508,7 +508,7 @@ export default function DemandaForm({
           id="responsavelIds"
           multiple
           size={5}
-          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           {...register("responsavelIds")}
         >
           {voluntarios.map((voluntario) => (
@@ -531,7 +531,7 @@ export default function DemandaForm({
           id="membroIds"
           multiple
           size={4}
-          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           {...register("membroIds")}
         >
           {voluntarios.map((voluntario) => (
@@ -637,7 +637,7 @@ export default function DemandaForm({
           <button
             type="button"
             onClick={() => setCriandoEtiqueta((v) => !v)}
-            className="text-base font-medium text-blue-700 transition-colors hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="text-base font-medium text-[#d4883a] transition-colors hover:text-[#d4883a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           >
             {criandoEtiqueta ? "Cancelar" : "+ Nova etiqueta"}
           </button>
@@ -665,13 +665,13 @@ export default function DemandaForm({
                 value={novaEtiquetaArea}
                 onChange={(e) => setNovaEtiquetaArea(e.target.value)}
                 placeholder="Área (ex.: Pesquisa)"
-                className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
               />
               <input
                 value={novaEtiquetaNome}
                 onChange={(e) => setNovaEtiquetaNome(e.target.value)}
                 placeholder="Nome da etiqueta (ex.: Comunicação)"
-                className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                className="min-h-12 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
               />
             </div>
             {etiquetaError && (
@@ -680,7 +680,7 @@ export default function DemandaForm({
             <button
               type="button"
               onClick={handleCriarEtiqueta}
-              className="min-h-12 self-start rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-blue-600 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="min-h-12 self-start rounded-xl bg-[#d4883a] px-5 text-lg font-medium text-white transition-all duration-200 hover:bg-[#c07828] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
             >
               Criar etiqueta
             </button>
@@ -693,7 +693,7 @@ export default function DemandaForm({
 
       <Link
         href="/"
-        className="flex min-h-14 items-center justify-center rounded-xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="flex min-h-14 items-center justify-center rounded-xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
       >
         Cancelar
       </Link>

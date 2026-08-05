@@ -2,7 +2,7 @@
 
 import { useState, useActionState } from "react";
 import Link from "next/link";
-import { Users, UserRoundCheck, Pencil, ShieldCheck, CalendarClock, Settings2, X, CheckSquare, Square, Sparkles, CheckCircle2, Plus, Minus, MoonStar, UserX } from "lucide-react";
+import { Users, UserRoundCheck, Pencil, CalendarClock, Settings2, X, CheckSquare, Square, CheckCircle2, Plus, Minus, MoonStar, UserX } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { roleLabel } from "@/lib/role-labels";
@@ -52,10 +52,7 @@ export default function VoluntariosListClient({
   ociosos,
   afastados,
   vinculados,
-  equipeDip,
   desligados,
-  totalEctolab,
-  totalDip,
   canManage,
   areaOptions,
 }: {
@@ -66,15 +63,8 @@ export default function VoluntariosListClient({
   ociosos: number;
   afastados: number;
   vinculados: number;
-  // Voluntários da equipe DIP (org_depto com "DIP") — seção separada das
-  // áreas institucionais, com contagem própria.
-  equipeDip: VoluntarioRow[];
   // Desativados (ativo = false) — seção própria "Desligados" no fim.
   desligados: VoluntarioRow[];
-  // Voluntários institucionais (ECTOLAB) vs equipe DIP — contagens
-  // separadas ao lado do total geral.
-  totalEctolab: number;
-  totalDip: number;
   canManage: boolean;
   areaOptions: string[];
 }) {
@@ -153,7 +143,7 @@ export default function VoluntariosListClient({
           className="flex w-full items-center gap-3 text-left"
         >
           <span
-            className={`rounded-full ${isCollapsed ? "bg-zinc-200 text-zinc-600" : "bg-blue-100 text-blue-700"}`}
+            className={`rounded-full ${isCollapsed ? "bg-zinc-200 text-zinc-600" : "bg-[#f5f0eb] text-[#d4883a]"}`}
             aria-hidden="true"
           >
             {isCollapsed ? <Plus size={20} className="m-1" /> : <Minus size={20} className="m-1" />}
@@ -161,7 +151,7 @@ export default function VoluntariosListClient({
           <h2 className={`flex-1 ${nivel > 0 ? "text-xl sm:text-2xl" : "text-2xl font-semibold sm:text-3xl"} ${isSemArea ? "font-semibold text-zinc-500" : "font-semibold text-zinc-900"}`}>
             {no.nome}
           </h2>
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
+          <span className="rounded-full bg-[#f5f0eb] px-3 py-1 text-base font-medium text-[#8b5e2a]">
             {branchRows.length} {branchRows.length === 1 ? "voluntário" : "voluntários"}
           </span>
           {canManage && (
@@ -201,21 +191,19 @@ export default function VoluntariosListClient({
 
   return (
     <>
-      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-8">
+      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatPill icon={<Users size={22} className="text-zinc-500" />} label="Total geral" value={all.length} />
-        <StatPill icon={<ShieldCheck size={22} className="text-blue-600" />} label="Voluntários ECTOLAB" value={totalEctolab} />
-        <StatPill icon={<Sparkles size={22} className="text-purple-600" />} label="Voluntários DIP" value={totalDip} />
         <StatPill icon={<CheckCircle2 size={22} className="text-green-500" />} label="Ativos" value={ativos} />
         <StatPill icon={<MoonStar size={22} className="text-amber-500" />} label="Ociosos" value={ociosos} />
         <StatPill icon={<CalendarClock size={22} className="text-amber-500" />} label="Com saída marcada" value={afastados} />
-        <StatPill icon={<UserRoundCheck size={22} className="text-blue-500" />} label="Vinculados" value={vinculados} />
+        <StatPill icon={<UserRoundCheck size={22} className="text-[#d4883a]" />} label="Vinculados" value={vinculados} />
         <StatPill icon={<UserX size={22} className="text-red-500" />} label="Desligados" value={desligados.length} />
       </div>
 
       {selectedIdsArr.length > 0 && (
-        <div className="sticky top-2 z-30 flex w-full flex-col gap-3 rounded-2xl bg-blue-50 p-4 shadow-[0_4px_12px_rgba(37,99,235,0.15)] ring-1 ring-blue-200/60">
+        <div className="sticky top-2 z-30 flex w-full flex-col gap-3 rounded-2xl bg-[#f5f0eb] p-4 shadow-[0_4px_12px_rgba(212,136,58,0.15)] ring-1 ring-[#f0e0cf]/60">
           <div className="flex w-full flex-wrap items-center gap-3">
-            <span className="text-lg font-medium text-blue-900">
+            <span className="text-lg font-medium text-[#8b5e2a]">
               {selectedIdsArr.length} {selectedIdsArr.length === 1 ? "selecionado" : "selecionados"}
             </span>
             <button
@@ -231,7 +219,7 @@ export default function VoluntariosListClient({
                 <button
                   type="button"
                   onClick={() => { setShowBulkPanel(true); setBulkAcao(null); }}
-                  className="flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-blue-600"
+                  className="flex items-center gap-2 rounded-full bg-[#d4883a] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-[#c07828]"
                 >
                   <Settings2 size={18} />
                   Ações em massa
@@ -267,7 +255,7 @@ export default function VoluntariosListClient({
                 <button
                   type="button"
                   onClick={() => setBulkAcao("migrar_area")}
-                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_area" ? "bg-blue-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
+                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_area" ? "bg-[#d4883a] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
                 >
                   Migrar de área
                 </button>
@@ -287,7 +275,7 @@ export default function VoluntariosListClient({
                         required
                         list="areas-bulk"
                         placeholder="Digite a nova área"
-                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
                       />
                       <datalist id="areas-bulk">
                         {areaOptions.map((a) => <option key={a} value={a} />)}
@@ -297,7 +285,7 @@ export default function VoluntariosListClient({
 
                   <button
                     type="submit"
-                    className="flex min-h-12 items-center gap-2 rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-colors hover:bg-blue-600"
+                    className="flex min-h-12 items-center gap-2 rounded-xl bg-[#d4883a] px-5 text-lg font-medium text-white transition-colors hover:bg-[#c07828]"
                   >
                     Confirmar
                   </button>
@@ -315,7 +303,6 @@ export default function VoluntariosListClient({
       )}
 
       <div className="flex w-full flex-col gap-6">
-        {equipeDip.length > 0 && renderNo({ nome: "Equipe DIP", rows: equipeDip, subAreas: [] }, 0)}
         {areas.map((no) => renderNo(no, 0))}
         {desligados.length > 0 &&
           renderNo({ nome: "Desligados", rows: desligados, subAreas: [] }, 0)}
@@ -354,20 +341,20 @@ function VoluntarioCard({
           className="shrink-0 rounded p-0.5 transition-colors hover:bg-zinc-100"
           aria-label={isSelected ? "Desmarcar" : "Selecionar"}
         >
-          {isSelected ? <CheckSquare size={22} className="text-blue-700" /> : <Square size={22} className="text-zinc-400" />}
+          {isSelected ? <CheckSquare size={22} className="text-[#d4883a]" /> : <Square size={22} className="text-zinc-400" />}
         </button>
       )}
 
       <Link
         href={`/voluntarios/${row.id}`}
-        className="flex min-w-0 flex-1 flex-col gap-1 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="flex min-w-0 flex-1 flex-col gap-1 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
       >
         <span className="flex flex-wrap items-center gap-2">
           <span className={`truncate text-xl font-medium ${row.ativo ? "text-zinc-900" : "text-zinc-500 line-through"}`}>
             {row.nome}
           </span>
           {linked && (
-            <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-base font-medium text-blue-800 ring-1 ring-blue-200/60">
+            <span className="flex items-center gap-1 rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-base font-medium text-[#8b5e2a] ring-1 ring-[#f0e0cf]/60">
               <UserRoundCheck size={14} aria-hidden="true" />
               Vinculado
             </span>
@@ -399,7 +386,7 @@ function VoluntarioCard({
         </span>
         <Link
           href={`/voluntarios/${row.id}/editar`}
-          className="flex min-h-12 items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="flex min-h-12 items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
         >
           <Pencil size={16} aria-hidden="true" />
           Editar

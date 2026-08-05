@@ -48,7 +48,7 @@ function formatMeetingDate(iso: string): string {
 }
 
 // Mirrors demanda-form.tsx's exact SubmitButton pattern — idle/pending
-// labels swap via useFormStatus, same min-h-14/bg-blue-700 classes. The
+// labels swap via useFormStatus, same min-h-14/bg-[#d4883a] classes. The
 // idle label becomes "Tentar novamente" once a genuine extraction error is
 // showing — same button, same textarea, same FormData on re-submit, per
 // 08-UI-SPEC.md's "re-submits the same textarea content" requirement (no
@@ -60,7 +60,7 @@ function SubmitButton({ isRetry }: { isRetry: boolean }) {
     <button
       type="submit"
       disabled={pending}
-      className="min-h-14 w-full rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="min-h-14 w-full rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? "Analisando..." : isRetry ? "Tentar novamente" : "Extrair demandas"}
     </button>
@@ -109,13 +109,13 @@ export default function ImportForm({
           <button
             type="button"
             onClick={() => setResetKey((key) => key + 1)}
-            className="flex min-h-14 items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="flex min-h-14 items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           >
             Colar outro resumo
           </button>
           <Link
             href="/demandas/nova"
-            className="flex min-h-14 items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="flex min-h-14 items-center justify-center rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           >
             Criar demanda manualmente
           </Link>
@@ -164,7 +164,7 @@ export default function ImportForm({
                 id="reuniaoId"
                 name="reuniaoId"
                 defaultValue=""
-                className="min-h-14 w-full rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                className="min-h-14 w-full rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
               >
                 <option value="">Escolha uma reunião...</option>
                 {meetings.map((meeting) => (
@@ -244,7 +244,7 @@ function ResumoTextarea() {
       name="texto"
       readOnly={pending}
       placeholder="Cole aqui o texto do resumo da reunião..."
-      className="min-h-48 w-full rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+      className="min-h-48 w-full rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
     />
   );
 }

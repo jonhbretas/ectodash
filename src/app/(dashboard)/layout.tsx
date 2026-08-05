@@ -32,7 +32,7 @@ export default async function DashboardLayout({
     return (
       <main
         id="main-content"
-        className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 bg-gradient-to-br from-slate-50 to-blue-50/30 px-6 py-16 text-center"
+        className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-4 bg-gradient-to-br from-slate-50 to-[#f5f0eb]/30 px-6 py-16 text-center"
       >
         <Lock size={48} className="text-slate-400" aria-hidden="true" />
         <h1 className="text-3xl font-semibold text-slate-900">
@@ -51,7 +51,7 @@ export default async function DashboardLayout({
   const isFinanceiro = role === "financeiro";
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/20">
+    <div className="flex h-dvh overflow-hidden bg-gradient-to-br from-slate-50 via-white to-[#f5f0eb]/20">
       <Sidebar isCoordenador={isCoordenador} isFinanceiro={isFinanceiro} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {children}

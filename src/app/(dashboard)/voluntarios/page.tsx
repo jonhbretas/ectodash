@@ -8,14 +8,13 @@
 //   - coordenador_area: their own áreas (RLS-scoped read + notice);
 //   - voluntario_comum: only their own linked record.
 import Link from "next/link";
-import { Users, Plus, Layers } from "lucide-react";
+import { Users, Plus, Layers, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import { parseVoluntariosFilters } from "./voluntarios-filter-schema";
 import VoluntariosFilters from "./voluntarios-filters";
 import VoluntariosListClient, { type AreaNode } from "./voluntarios-list";
 import MeuCadastroCard from "./meu-cadastro-card";
-import LocalidadesVoluntarioConfig from "./localidades-config";
 import MergeVincularSection, {
   type MergePerfilOpcao,
 } from "./merge-vincular-section";
@@ -121,11 +120,6 @@ export default async function VoluntariosPage({
     ),
   ].sort((a, b) => a.localeCompare(b));
 
-  const { data: localidadesCadastradas } = await supabase
-    .from("voluntario_localidades")
-    .select("id, nome")
-    .order("nome");
-
   // Dados do merge (migration 0028): perfis e cadastros perdidos.
   const [perfisMergeResult, voluntariosMergeResult] =
     role === "coordenador_geral" || role === "voluntariado"
@@ -200,31 +194,50 @@ export default async function VoluntariosPage({
   }).length;
 
   // Desligados (ativo = false) vão para a seção própria no fim da lista;
-  // a equipe DIP e as áreas mostram apenas os ativos.
+  // as áreas mostram apenas os ativos.
   const desligados = all.filter((row) => !row.ativo);
   const ativosRows = all.filter((row) => row.ativo);
 
-  // Equipe DIP = voluntários cujo departamento é da Dinâmica DIP
-  // (ex.: "ECTOLAB \ Paratecnológico \ DIP") — exibidos em seção própria,
-  // separados dos voluntários das áreas institucionais.
-  const equipeDip = ativosRows.filter((row) =>
-    row.org_depto?.toLowerCase().includes("dip")
-  );
-  const demais = ativosRows.filter((row) => !row.org_depto?.toLowerCase().includes("dip"));
-  const totalEctolab = demais.length;
-  const totalDip = equipeDip.length;
-
-  const groups = new Map<string, VoluntarioRow[]>();
-  for (const row of demais) {
-    const key = row.area_atuacao?.trim() || SEM_AREA_DEFINIDA;
-    const bucket = groups.get(key) ?? [];
-    bucket.push(row);
-    groups.set(key, bucket);
+  // ── Agrupamento hierárquico por org_depto ──────────────────────────
+  // O campo org_depto segue o padrão "ECTOLAB \ Área \ Subárea". Cada
+  // nível da hierarquia vira um nó da árvore, com as áreas registradas
+  // em areas_institucionais definindo a estrutura-pai.
+  function parseOrgDepto(
+    orgDepto: string | null
+  ): { area: string; subArea: string | null } | null {
+    if (!orgDepto?.trim()) return null;
+    const parts = orgDepto
+      .split("\\")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length < 2) return null;
+    const area = parts[1];
+    const subArea = parts.length >= 3 ? parts[2] : null;
+    return { area, subArea };
   }
 
-  // Árvore de áreas a partir do registro institucional (áreas mãe com suas
-  // subáreas aninhadas), em ordem alfabética; áreas usadas mas não
-  // registradas entram como nós livres; "Sem área definida" por último.
+  // Voluntários ativos agrupados por área pai → subárea (ou null).
+  const hierarquia = new Map<string, Map<string | null, VoluntarioRow[]>>();
+  const semOrgDepto: VoluntarioRow[] = [];
+
+  for (const row of ativosRows) {
+    const parsed = parseOrgDepto(row.org_depto);
+    if (!parsed) {
+      semOrgDepto.push(row);
+      continue;
+    }
+    if (!hierarquia.has(parsed.area)) {
+      hierarquia.set(parsed.area, new Map());
+    }
+    const subMap = hierarquia.get(parsed.area)!;
+    const bucket = subMap.get(parsed.subArea) ?? [];
+    bucket.push(row);
+    subMap.set(parsed.subArea, bucket);
+  }
+
+  // Árvore de áreas a partir do registro institucional (áreas mãe com
+  // suas subáreas aninhadas), em ordem alfabética. Voluntários de áreas
+  // não registradas entram como nós livres.
   const { data: areasRegistro } = await supabase
     .from("areas_institucionais")
     .select("id, nome, area_mae_id")
@@ -248,7 +261,9 @@ export default async function VoluntariosPage({
       .sort((a, b) => a.localeCompare(b))
       .map(construirNo)
       .filter((no) => no.rows.length > 0 || no.subAreas.length > 0);
-    return { nome, rows: groups.get(nome) ?? [], subAreas };
+    // Voluntários diretamente nesta área (sem subárea no org_depto).
+    const direto = hierarquia.get(nome)?.get(null) ?? [];
+    return { nome, rows: direto, subAreas };
   }
 
   const nomesMae = [...subPorMae.keys()].filter(
@@ -262,15 +277,16 @@ export default async function VoluntariosPage({
     .map(construirNo)
     .filter((no) => no.rows.length > 0 || no.subAreas.length > 0);
 
-  const usadasNaoRegistradas = [...groups.keys()]
-    .filter((nome) => !registroPorNome.has(nome) && nome !== SEM_AREA_DEFINIDA)
+  // Áreas usadas no org_depto mas não registradas em areas_institucionais.
+  const usadasNaoRegistradas = [...hierarquia.keys()]
+    .filter((nome) => !registroPorNome.has(nome))
     .sort((a, b) => a.localeCompare(b))
     .map(construirNo)
     .filter((no) => no.rows.length > 0);
 
   const areaTree: AreaNode[] = [...arvoreRegistrada, ...usadasNaoRegistradas];
-  if (groups.has(SEM_AREA_DEFINIDA)) {
-    areaTree.push(construirNo(SEM_AREA_DEFINIDA));
+  if (semOrgDepto.length > 0) {
+    areaTree.push({ nome: SEM_AREA_DEFINIDA, rows: semOrgDepto, subAreas: [] });
   }
 
   const filtersActive = Boolean(filters.busca || filters.area || filters.localidade || filters.situacao);
@@ -287,7 +303,7 @@ export default async function VoluntariosPage({
             Equipe da instituição — cadastro e coordenações por área.
           </p>
           {isAreaScoped && (
-            <p className="mt-1 rounded-xl bg-blue-50 px-4 py-2 text-base font-medium text-blue-800">
+            <p className="mt-1 rounded-xl bg-[#f5f0eb] px-4 py-2 text-base font-medium text-[#8b5e2a]">
               Mostrando apenas os voluntários das suas áreas de coordenação.
             </p>
           )}
@@ -295,17 +311,26 @@ export default async function VoluntariosPage({
         {canManage && (
           <div className="flex flex-wrap items-center gap-2">
             {role === "coordenador_geral" && (
-              <Link
-                href="/areas"
-                className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-              >
-                <Layers size={22} aria-hidden="true" />
-                Cadastro de áreas
-              </Link>
+              <>
+                <Link
+                  href="/areas"
+                  className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                >
+                  <Layers size={22} aria-hidden="true" />
+                  Cadastro de áreas
+                </Link>
+                <Link
+                  href="/voluntarios/localidades"
+                  className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                >
+                  <MapPin size={22} aria-hidden="true" />
+                  Cadastro de localidades
+                </Link>
+              </>
             )}
             <Link
               href="/voluntarios/novo"
-              className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 hover:shadow-[0_2px_6px_rgba(29,78,216,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] hover:shadow-[0_2px_6px_rgba(212,136,58,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
             >
               <Plus size={22} aria-hidden="true" />
               Novo voluntário
@@ -353,24 +378,12 @@ export default async function VoluntariosPage({
             ociosos={ociosos}
             afastados={afastados}
             vinculados={vinculados}
-            equipeDip={equipeDip}
             desligados={desligados}
-            totalEctolab={totalEctolab}
-            totalDip={totalDip}
             canManage={canManage}
             areaOptions={areaOptions}
           />
 
           {role === "coordenador_geral" && (
-            <LocalidadesVoluntarioConfig
-              localidades={(localidadesCadastradas ?? []).map((l) => ({
-                id: l.id,
-                nome: l.nome,
-              }))}
-            />
-          )}
-
-          {(role === "coordenador_geral" || role === "voluntariado") && (
             <MergeVincularSection
               perfis={perfisMerge}
               cadastrosPerdidos={cadastrosPerdidos}

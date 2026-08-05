@@ -64,9 +64,9 @@ export default async function ProjetosPage() {
 
       <section className="flex w-full flex-col gap-4">
         <div className="flex items-center gap-3">
-          <span className="h-8 w-1.5 rounded-full bg-blue-600" aria-hidden="true" />
+          <span className="h-8 w-1.5 rounded-full bg-[#d4883a]" aria-hidden="true" />
           <h2 className="text-2xl font-semibold text-zinc-900">Projetos cadastrados</h2>
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
+          <span className="rounded-full bg-[#f5f0eb] px-3 py-1 text-base font-medium text-[#8b5e2a]">
             {projetos.length} {projetos.length === 1 ? "projeto" : "projetos"}
           </span>
         </div>

@@ -60,7 +60,7 @@ export default async function AreasPage({
     <PageContainer>
       <div className="flex w-full flex-col gap-2">
         <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-[0_2px_8px_rgba(37,99,235,0.25)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#d4883a] to-[#c07828] shadow-[0_2px_8px_rgba(212,136,58,0.25)]">
             <Icon size={20} className="text-white" aria-hidden="true" strokeWidth={1.75} />
           </div>
           {title}
@@ -79,7 +79,7 @@ export default async function AreasPage({
           </p>
           <Link
             href="/demandas/nova"
-            className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600 hover:shadow-[0_4px_12px_rgba(37,99,235,0.35)] hover:-translate-y-0.5"
+            className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#d4883a] to-[#e8a85c] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)] transition-all duration-200 hover:from-[#c07828] hover:to-[#d4883a] hover:shadow-[0_4px_12px_rgba(212,136,58,0.35)] hover:-translate-y-0.5"
           >
             Nova demanda
           </Link>
@@ -90,11 +90,11 @@ export default async function AreasPage({
             <Link
               key={area.area}
               href={`/?area=${encodeURIComponent(area.area)}`}
-              className="group flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:ring-blue-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className="group flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:ring-[#f0e0cf]/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
             >
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-blue-50 transition-colors duration-200">
-                  <ClipboardList size={16} className="text-slate-500 group-hover:text-blue-600 transition-colors duration-200" aria-hidden="true" strokeWidth={1.75} />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-[#f5f0eb] transition-colors duration-200">
+                  <ClipboardList size={16} className="text-slate-500 group-hover:text-[#d4883a] transition-colors duration-200" aria-hidden="true" strokeWidth={1.75} />
                 </div>
                 <span className="truncate text-sm font-semibold text-slate-900">{area.area}</span>
               </div>

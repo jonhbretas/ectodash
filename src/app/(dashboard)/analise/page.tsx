@@ -158,7 +158,7 @@ export default async function AnalisePage() {
     <PageContainer>
       <div className="flex w-full flex-col gap-2">
         <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-[0_2px_8px_rgba(37,99,235,0.25)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#d4883a] to-[#c07828] shadow-[0_2px_8px_rgba(212,136,58,0.25)]">
             <BarChart3 size={20} className="text-white" aria-hidden="true" strokeWidth={1.75} />
           </div>
           Analise
@@ -172,7 +172,7 @@ export default async function AnalisePage() {
         <StatCard label="Taxa de conclusao" value={`${taxaConclusao}%`} Icon={TrendingUp} iconClassName={taxaConclusao >= 60 ? "text-green-600" : "text-amber-600"} />
         <StatCard label="Atrasadas" value={atrasadas} Icon={AlertTriangle} highlight={atrasadas > 0} />
         <StatCard label="Eventos" value={eventosRealizados} Icon={CalendarDays} />
-        <StatCard label="Concluidas no mes" value={concluidasEsteMes} Icon={CheckCircle2} iconClassName="text-blue-600" />
+        <StatCard label="Concluidas no mes" value={concluidasEsteMes} Icon={CheckCircle2} iconClassName="text-[#d4883a]" />
       </div>
 
       <section className="flex w-full flex-col gap-3">
@@ -183,7 +183,7 @@ export default async function AnalisePage() {
             {evolucao.map((mes) => (
               <div key={mes.label} className="flex flex-col items-center gap-1.5">
                 <div className="flex h-28 w-full items-end justify-center gap-1">
-                  <div className="w-3.5 rounded-t-md bg-blue-500" style={{ height: `${Math.max(4, (mes.criadas / maxEvolucao) * 100)}%` }} title={`Criadas: ${mes.criadas}`} role="img" aria-label={`${mes.label}: ${mes.criadas} criadas`} />
+                  <div className="w-3.5 rounded-t-md bg-[#d4883a]" style={{ height: `${Math.max(4, (mes.criadas / maxEvolucao) * 100)}%` }} title={`Criadas: ${mes.criadas}`} role="img" aria-label={`${mes.label}: ${mes.criadas} criadas`} />
                   <div className="w-3.5 rounded-t-md bg-emerald-500" style={{ height: `${Math.max(4, (mes.feitas / maxEvolucao) * 100)}%` }} title={`Concluidas: ${mes.feitas}`} role="img" aria-label={`${mes.label}: ${mes.feitas} concluidas`} />
                 </div>
                 <span className="text-xs font-medium text-slate-500">{mes.label}</span>
@@ -191,7 +191,7 @@ export default async function AnalisePage() {
             ))}
           </div>
           <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
-            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-blue-500" aria-hidden="true" /> Criadas</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#d4883a]" aria-hidden="true" /> Criadas</span>
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" aria-hidden="true" /> Concluidas</span>
           </div>
         </div>
@@ -215,7 +215,7 @@ export default async function AnalisePage() {
                   <span className="text-xs text-slate-500">{row.feitas}/{row.total} concluidas ({row.total > 0 ? Math.round((row.feitas / row.total) * 100) : 0}%)</span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${(row.total / maxVoluntario) * 100}%` }} role="img" aria-label={`${row.nome}: ${row.total} demandas, ${row.feitas} concluidas`} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#d4883a] to-emerald-500" style={{ width: `${(row.total / maxVoluntario) * 100}%` }} role="img" aria-label={`${row.nome}: ${row.total} demandas, ${row.feitas} concluidas`} />
                 </div>
               </div>
             ))}
@@ -238,7 +238,7 @@ export default async function AnalisePage() {
                   </span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500" style={{ width: `${(row.total / maxRegiao) * 100}%` }} role="img" aria-label={`${row.regiao}: ${row.total} voluntários, ${row.ativos} ativos`} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#d4883a] to-[#c07828]" style={{ width: `${(row.total / maxRegiao) * 100}%` }} role="img" aria-label={`${row.regiao}: ${row.total} voluntários, ${row.ativos} ativos`} />
                 </div>
               </div>
             ))}
@@ -296,7 +296,7 @@ function BarSection({ title, rows }: { title: string; rows: Array<{ label: strin
               <span className="shrink-0 text-xs text-slate-500">{row.feitas}/{row.total} concluidas</span>
             </div>
             <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${(row.total / row.max) * 100}%` }} role="img" aria-label={`${row.label}: ${row.total} demandas, ${row.feitas} concluidas`} />
+              <div className="h-full rounded-full bg-gradient-to-r from-[#d4883a] to-emerald-500" style={{ width: `${(row.total / row.max) * 100}%` }} role="img" aria-label={`${row.label}: ${row.total} demandas, ${row.feitas} concluidas`} />
             </div>
           </div>
         ))}

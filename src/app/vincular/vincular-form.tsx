@@ -58,12 +58,12 @@ export default function VincularForm() {
           onChange={(event) => setTermo(event.target.value)}
           placeholder="Busque seu nome..."
           autoComplete="name"
-          className="min-h-14 flex-1 rounded-xl border border-zinc-300 bg-white px-4 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="min-h-14 flex-1 rounded-xl border border-zinc-300 bg-white px-4 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
         />
         <button
           type="submit"
           disabled={buscaPending}
-          className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
         >
           <Search size={22} aria-hidden="true" />
           Buscar
@@ -110,7 +110,7 @@ export default function VincularForm() {
                   <button
                     type="submit"
                     disabled={vinculaState.ok}
-                    className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-70"
+                    className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:opacity-70"
                   >
                     <UserRoundCheck size={22} aria-hidden="true" />
                     Sou eu
@@ -154,7 +154,7 @@ export default function VincularForm() {
           type="button"
           onClick={() => setShowNaoEncontrei((show) => !show)}
           aria-expanded={showNaoEncontrei}
-          className="flex min-h-14 items-center gap-2 text-xl font-medium text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="flex min-h-14 items-center gap-2 text-xl font-medium text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
         >
           <UserRoundPlus size={22} aria-hidden="true" />
           Não encontrei meu nome
@@ -175,12 +175,12 @@ export default function VincularForm() {
               minLength={2}
               placeholder="Digite seu nome e sobrenome"
               autoComplete="name"
-              className="min-h-14 flex-1 rounded-xl border border-zinc-300 bg-white px-4 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="min-h-14 flex-1 rounded-xl border border-zinc-300 bg-white px-4 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
             />
             <button
               type="submit"
               disabled={criaState.ok}
-              className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-70"
+              className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:opacity-70"
             >
               <UserRoundPlus size={22} aria-hidden="true" />
               Criar meu cadastro

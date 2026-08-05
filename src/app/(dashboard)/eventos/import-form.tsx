@@ -14,7 +14,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="min-h-14 w-full rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="min-h-14 w-full rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? "Importando..." : "Importar eventos"}
     </button>
@@ -58,7 +58,7 @@ export default function ImportEventosForm() {
           type="file"
           accept=".csv,.xlsx,.xls"
           required
-          className="block w-full cursor-pointer rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 file:mr-4 file:min-h-12 file:rounded-lg file:border-0 file:bg-blue-700 file:px-4 file:text-lg file:font-medium file:text-white file:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="block w-full cursor-pointer rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 file:mr-4 file:min-h-12 file:rounded-lg file:border-0 file:bg-[#d4883a] file:px-4 file:text-lg file:font-medium file:text-white file:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
         />
         <SubmitButton />
       </form>
@@ -79,7 +79,7 @@ export default function ImportEventosForm() {
         <button
           type="button"
           onClick={() => router.refresh()}
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
         >
           Atualizar a lista
         </button>

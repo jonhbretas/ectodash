@@ -52,7 +52,7 @@ export default function VoluntarioPicker({
       <button
         type="button"
         onClick={() => { setOpen((v) => !v); setBusca(""); }}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
         aria-label={`Adicionar ${label}`}
         title={`Adicionar ${label}`}
       >
@@ -72,7 +72,7 @@ export default function VoluntarioPicker({
               onChange={(e) => setBusca(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
               placeholder="Buscar nome..."
-              className="mb-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-base text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500"
+              className="mb-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-base text-zinc-900 outline-none focus:ring-2 focus:ring-[#d4883a]"
             />
             <div className="max-h-56 overflow-y-auto">
               {filtrados.map((v) => (
@@ -82,7 +82,7 @@ export default function VoluntarioPicker({
                   onClick={() => { onAdd(v.id); setOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base text-zinc-900 transition-colors hover:bg-zinc-100"
                 >
-                  <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                  <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f5f0eb] text-xs font-semibold text-[#d4883a]">
                     {initialsOf(v.nome)}
                   </span>
                   <span className="truncate">{v.nome}</span>

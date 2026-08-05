@@ -59,7 +59,7 @@ export default async function NovoVoluntarioPage() {
           </h1>
           <Link
             href="/voluntarios"
-            className="flex min-h-14 items-center justify-center rounded-lg bg-blue-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="flex min-h-14 items-center justify-center rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
           >
             Voltar para a equipe
           </Link>
@@ -70,9 +70,16 @@ export default async function NovoVoluntarioPage() {
 
   // Known areas for the datalist — derived from the roster the caller can
   // already see (RLS-scoped for a coordenador_area).
-  const [rowsResult, areasRegistroResult] = await Promise.all([
+  const [rowsResult, areasRegistroResult, localidadesResult] = await Promise.all([
     supabase.from("voluntarios").select("area_atuacao"),
-    supabase.from("areas_institucionais").select("nome").order("nome"),
+    supabase
+      .from("areas_institucionais")
+      .select("id, nome, area_mae_id")
+      .order("nome"),
+    supabase
+      .from("voluntario_localidades")
+      .select("nome")
+      .order("nome"),
   ]);
   const areaOptions = [
     ...new Set(
@@ -84,6 +91,26 @@ export default async function NovoVoluntarioPage() {
   const areasInstitucionais = (areasRegistroResult.data ?? []).map(
     (a) => a.nome
   );
+  const unidadeOptions = (localidadesResult.data ?? []).map((l) => l.nome);
+
+  // Gerar caminhos org_depto a partir da hierarquia de áreas.
+  const areasReg = areasRegistroResult.data ?? [];
+  const subPorPai = new Map<string, string[]>();
+  for (const a of areasReg) {
+    if (a.area_mae_id === null) continue;
+    const pai = areasReg.find((p) => p.id === a.area_mae_id);
+    if (!pai) continue;
+    const lista = subPorPai.get(pai.nome) ?? [];
+    lista.push(a.nome);
+    subPorPai.set(pai.nome, lista);
+  }
+  const orgDeptOptions: string[] = [];
+  for (const a of areasReg.filter((a) => a.area_mae_id === null)) {
+    orgDeptOptions.push(`ECTOLAB \\ ${a.nome}`);
+    for (const sub of (subPorPai.get(a.nome) ?? []).sort()) {
+      orgDeptOptions.push(`ECTOLAB \\ ${a.nome} \\ ${sub}`);
+    }
+  }
 
   return (
     <PageContainer>
@@ -103,6 +130,8 @@ export default async function NovoVoluntarioPage() {
         values={emptyValues}
         areaOptions={areaOptions}
         areasOptions={areasInstitucionais}
+        unidadeOptions={unidadeOptions}
+        orgDeptOptions={orgDeptOptions}
         canAssignRole={role === "coordenador_geral"}
       />
     </PageContainer>

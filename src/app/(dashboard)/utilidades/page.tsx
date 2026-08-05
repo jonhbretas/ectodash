@@ -65,11 +65,11 @@ export default async function UtilidadesPage() {
           return (
             <section key={key} className="flex w-full flex-col gap-3">
               <div className="flex items-center gap-3">
-                <span className="h-8 w-1.5 rounded-full bg-blue-600" aria-hidden="true" />
-                <Icon size={24} className="text-blue-700" aria-hidden="true" />
+                <span className="h-8 w-1.5 rounded-full bg-[#d4883a]" aria-hidden="true" />
+                <Icon size={24} className="text-[#d4883a]" aria-hidden="true" />
                 <h2 className="text-2xl font-semibold text-zinc-900">{label}</h2>
                 {catItens.length > 0 && (
-                  <span className="rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
+                  <span className="rounded-full bg-[#f5f0eb] px-3 py-1 text-base font-medium text-[#8b5e2a]">
                     {catItens.length} {catItens.length === 1 ? "item" : "itens"}
                   </span>
                 )}
@@ -97,7 +97,7 @@ export default async function UtilidadesPage() {
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-blue-600"
+                            className="flex items-center gap-1.5 rounded-lg bg-[#d4883a] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-[#c07828]"
                           >
                             <ExternalLink size={16} />
                             Acessar

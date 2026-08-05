@@ -119,7 +119,7 @@ export default function DemandaTable({ demandas }: DemandaTableProps) {
                   )}
                   {demanda.projeto && (
                     <span
-                      className="max-w-36 truncate rounded-full bg-blue-50 px-2.5 py-0.5 text-sm font-medium text-blue-700 ring-1 ring-blue-200/60"
+                      className="max-w-36 truncate rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-sm font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60"
                       title={demanda.projeto}
                     >
                       {demanda.projeto}

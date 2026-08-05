@@ -115,7 +115,7 @@ export default function SheetSyncPanel({ runs, className }: SheetSyncPanelProps)
 
           {runs.length > 1 && (
             <details className="group">
-              <summary className="min-h-14 cursor-pointer list-none rounded-lg px-2 text-xl font-medium text-zinc-900 marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+              <summary className="min-h-14 cursor-pointer list-none rounded-lg px-2 text-xl font-medium text-zinc-900 marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]">
                 Histórico de sincronizações
               </summary>
               <div className="flex flex-col">

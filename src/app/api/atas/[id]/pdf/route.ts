@@ -17,7 +17,7 @@ export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const ACCENT = "#1e40af"; // blue-800
+const ACCENT = "#d4883a"; // amber
 const TEXT_DARK = "#18181b";
 const TEXT_MID = "#52525b";
 const TEXT_MUTED = "#a1a1aa";

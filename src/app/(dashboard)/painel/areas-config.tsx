@@ -41,9 +41,9 @@ export default function AreasConfig({ areas }: { areas: AreaRow[] }) {
   return (
     <section className="flex w-full max-w-4xl flex-col gap-4">
       <div className="flex items-center gap-3">
-        <span className="h-8 w-1.5 rounded-full bg-blue-600" aria-hidden="true" />
+        <span className="h-8 w-1.5 rounded-full bg-[#d4883a]" aria-hidden="true" />
         <h2 className="text-2xl font-semibold text-zinc-900">Áreas institucionais</h2>
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
+        <span className="rounded-full bg-[#f5f0eb] px-3 py-1 text-base font-medium text-[#8b5e2a]">
           {areas.length} {areas.length === 1 ? "área" : "áreas"}
         </span>
       </div>
@@ -117,7 +117,7 @@ function CriarAreaForm({ parentOptions }: { parentOptions: AreaRow[] }) {
     );
   }
 
-  const inputClass = "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 transition-colors hover:border-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
+  const inputClass = "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 transition-colors hover:border-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
 
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
@@ -139,7 +139,7 @@ function CriarAreaForm({ parentOptions }: { parentOptions: AreaRow[] }) {
       <div className="flex items-center gap-2">
         <SubmitButton
           label="Criar área"
-          className="flex min-h-12 items-center gap-1.5 rounded-lg bg-blue-700 px-4 text-lg font-medium text-white transition-colors hover:bg-blue-800"
+          className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#d4883a] px-4 text-lg font-medium text-white transition-colors hover:bg-[#c07828]"
         />
         <button type="button" onClick={() => setShow(false)} className="rounded-lg px-3 py-2 text-lg text-zinc-600 transition-colors hover:text-zinc-900">Cancelar</button>
       </div>
@@ -167,7 +167,7 @@ function EditarAreaForm({
     setTimeout(onSaved, 800);
   }
 
-  const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
+  const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
 
   return (
     <form action={formAction} className="flex w-full flex-wrap items-center gap-2">
