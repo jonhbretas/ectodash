@@ -11,7 +11,7 @@ type ProjetoRow = {
 };
 
 const initial: ProjetoState = { ok: false, message: "" };
-const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 const STATUS_OPTIONS = [
   { value: "ativo", label: "Ativo" },
   { value: "concluido", label: "Concluído" },
@@ -63,7 +63,7 @@ export default function ProjetosClient({
                         <span className="text-xl font-medium text-zinc-900">{proj.nome}</span>
                         <span className={`rounded-full px-2.5 py-0.5 text-base font-medium ring-1 ${
                           proj.status === "ativo" ? "bg-green-50 text-green-800 ring-green-200/60" :
-                          proj.status === "concluido" ? "bg-[#f5f0eb] text-[#8b5e2a] ring-[#f0e0cf]/60" :
+                          proj.status === "concluido" ? "bg-[#E6E6E6] text-[#28627B] ring-[#E6E6E6]/60" :
                           "bg-zinc-100 text-zinc-600 ring-zinc-200/60"
                         }`}>
                           {STATUS_OPTIONS.find((s) => s.value === proj.status)?.label ?? proj.status}
@@ -141,7 +141,7 @@ function CriarProjetoForm({ areaOptions }: { areaOptions: string[] }) {
         </select>
       </div>
       <div className="flex items-center gap-2">
-        <button type="submit" className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#d4883a] px-4 text-lg font-medium text-white transition-colors hover:bg-[#c07828]">
+        <button type="submit" className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 text-lg font-medium text-white transition-colors hover:bg-[#28627B]">
           Criar projeto
         </button>
         <button type="button" onClick={() => setShow(false)} className="rounded-lg px-3 py-2 text-lg text-zinc-600 transition-colors hover:text-zinc-900">Cancelar</button>

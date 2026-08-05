@@ -15,7 +15,7 @@ import {
 } from "./actions";
 
 const inputClass =
-  "min-h-12 w-full rounded-xl border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+  "min-h-12 w-full rounded-xl border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
 export default function EditarEventoPanel({
   evento,
@@ -43,7 +43,7 @@ export default function EditarEventoPanel({
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <Pencil size={20} aria-hidden="true" />
         Editar evento
@@ -118,14 +118,14 @@ export default function EditarEventoPanel({
           rows={3}
           defaultValue={evento.descricao ?? ""}
           placeholder="Sobre o evento..."
-          className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="submit"
-          className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#d4883a] px-4 text-lg font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 text-lg font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <Check size={18} aria-hidden="true" />
           Salvar alterações

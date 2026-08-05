@@ -1,4 +1,4 @@
-﻿// /voluntarios — the institutional roster (public.voluntarios, migration
+// /voluntarios — the institutional roster (public.voluntarios, migration
 // 0017), full-width modern layout like demandas/eventos: stat pills, a
 // search/filter bar, and the roster grouped by área with multi-select,
 // bulk actions, and collapsible sections.
@@ -306,7 +306,7 @@ export default async function VoluntariosPage({
             Equipe da instituição — cadastro e coordenações por área.
           </p>
           {isAreaScoped && (
-            <p className="mt-1 rounded-xl bg-[#f5f0eb] px-4 py-2 text-base font-medium text-[#8b5e2a]">
+            <p className="mt-1 rounded-xl bg-[#E6E6E6] px-4 py-2 text-base font-medium text-[#28627B]">
               Mostrando apenas os voluntários das suas áreas de coordenação.
             </p>
           )}
@@ -317,14 +317,14 @@ export default async function VoluntariosPage({
               <>
                 <Link
                   href="/areas"
-                  className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                  className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
                 >
                   <Layers size={22} aria-hidden="true" />
                   Cadastro de áreas
                 </Link>
                 <Link
                   href="/voluntarios/localidades"
-                  className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                  className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
                 >
                   <MapPin size={22} aria-hidden="true" />
                   Cadastro de localidades
@@ -333,7 +333,7 @@ export default async function VoluntariosPage({
             )}
             <Link
               href="/voluntarios/novo"
-              className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] hover:shadow-[0_2px_6px_rgba(212,136,58,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+              className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
               <Plus size={22} aria-hidden="true" />
               Novo voluntário

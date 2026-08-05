@@ -54,7 +54,7 @@ export type KanbanBoardProps = {
 
 const COLUMNS: Array<{ status: DemandaStatus; label: string; dotClassName: string; bgClassName: string }> = [
   { status: "pendente", label: "Pendente", dotClassName: "bg-amber-400", bgClassName: "bg-amber-50/60" },
-  { status: "em_andamento", label: "Em andamento", dotClassName: "bg-[#d4883a]", bgClassName: "bg-[#f5f0eb]/60" },
+  { status: "em_andamento", label: "Em andamento", dotClassName: "bg-[#2195B9]", bgClassName: "bg-[#E6E6E6]/60" },
   { status: "concluida", label: "Concluída", dotClassName: "bg-green-500", bgClassName: "bg-green-50/60" },
 ];
 
@@ -102,11 +102,11 @@ function KanbanCard({
           event.dataTransfer.setData("text/plain", String(demanda.id));
           event.dataTransfer.effectAllowed = "move";
         }}
-        className="group rounded-xl bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-150 hover:ring-[#f0e0cf] hover:shadow-[0_1px_4px_rgba(212,136,58,0.06)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#d4883a]"
+        className="group rounded-xl bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-150 hover:ring-[#E6E6E6] hover:shadow-[0_1px_4px_rgba(33,149,185,0.06)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#2195B9]"
       >
         <Link
           href={`/demandas/${demanda.id}/editar`}
-          className="block text-base font-semibold leading-snug text-zinc-900 hover:text-[#d4883a] transition-colors duration-200 focus-visible:outline-none"
+          className="block text-base font-semibold leading-snug text-zinc-900 hover:text-[#2195B9] transition-colors duration-200 focus-visible:outline-none"
         >
           {demanda.titulo}
         </Link>
@@ -127,7 +127,7 @@ function KanbanCard({
             <span className="flex min-w-0 flex-1 items-center gap-1.5 text-base text-zinc-700">
               <span
                 aria-hidden="true"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f5f0eb] text-xs font-semibold text-[#d4883a]"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E6E6E6] text-xs font-semibold text-[#2195B9]"
               >
                 {initialsOf(responsavel)}
               </span>
@@ -151,7 +151,7 @@ function KanbanCard({
               onClick={() => onMove(demanda.id, STATUS_ORDER[currentIndex - 1])}
               disabled={!canMoveLeft || pending}
               aria-label={`Mover "${demanda.titulo}" para ${COLUMNS[currentIndex - 1]?.label ?? ""}`}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-all duration-150 hover:bg-[#f5f0eb] hover:text-[#d4883a] disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-all duration-150 hover:bg-[#E6E6E6] hover:text-[#2195B9] disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
               <ChevronLeft size={18} aria-hidden="true" />
             </button>
@@ -160,7 +160,7 @@ function KanbanCard({
               onClick={() => onMove(demanda.id, STATUS_ORDER[currentIndex + 1])}
               disabled={!canMoveRight || pending}
               aria-label={`Mover "${demanda.titulo}" para ${COLUMNS[currentIndex + 1]?.label ?? ""}`}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-all duration-150 hover:bg-[#f5f0eb] hover:text-[#d4883a] disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-all duration-150 hover:bg-[#E6E6E6] hover:text-[#2195B9] disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
               <ChevronRight size={18} aria-hidden="true" />
             </button>
@@ -193,7 +193,7 @@ function KanbanCard({
             >
               <div
                 className={`h-full rounded-full transition-all duration-300 ${
-                  progress === 100 ? "bg-green-500" : "bg-[#d4883a]"
+                  progress === 100 ? "bg-green-500" : "bg-[#2195B9]"
                 }`}
                 style={{ width: `${progress}%` }}
               />
@@ -282,14 +282,14 @@ export default function KanbanBoard({ demandas }: KanbanBoardProps) {
                 if (Number.isFinite(id)) moveDemanda(id, column.status);
                 setDraggedId(null);
               }}
-              className={`flex w-full flex-col items-center rounded-2xl p-2 transition-all duration-200 lg:w-20 ${column.bgClassName} ${draggedId !== null ? "ring-2 ring-[#d4883a]" : "ring-1 ring-zinc-200/60"}`}
+              className={`flex w-full flex-col items-center rounded-2xl p-2 transition-all duration-200 lg:w-20 ${column.bgClassName} ${draggedId !== null ? "ring-2 ring-[#2195B9]" : "ring-1 ring-zinc-200/60"}`}
             >
               <button
                 type="button"
                 onClick={() => toggleCollapsed(column.status)}
                 aria-expanded={false}
                 title={`Expandir coluna ${column.label}`}
-                className="flex w-full flex-col items-center gap-1.5 rounded-xl p-2 transition-colors hover:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                className="flex w-full flex-col items-center gap-1.5 rounded-xl p-2 transition-colors hover:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
               >
                 <span
                   className={`h-3 w-3 rounded-full ${column.dotClassName}`}
@@ -322,7 +322,7 @@ export default function KanbanBoard({ demandas }: KanbanBoardProps) {
               setDraggedId(null);
             }}
             className={`flex w-full min-w-0 flex-col rounded-2xl p-3 transition-all duration-200 lg:flex-1 ${column.bgClassName} ${
-              draggedId !== null ? "ring-2 ring-[#d4883a]" : "ring-1 ring-zinc-200/60"
+              draggedId !== null ? "ring-2 ring-[#2195B9]" : "ring-1 ring-zinc-200/60"
             }`}
           >
             <div className="flex items-center justify-between gap-2 pb-2">
@@ -343,7 +343,7 @@ export default function KanbanBoard({ demandas }: KanbanBoardProps) {
                   aria-expanded={true}
                   aria-label={`Recolher coluna ${column.label}`}
                   title={`Recolher coluna ${column.label}`}
-                  className="hidden h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-white/80 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] lg:flex"
+                  className="hidden h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-white/80 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] lg:flex"
                 >
                   <ChevronDown size={20} aria-hidden="true" />
                 </button>
@@ -372,7 +372,7 @@ export default function KanbanBoard({ demandas }: KanbanBoardProps) {
 
       <Link
         href="/demandas/nova"
-        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 ring-1 ring-zinc-200/60 transition-all duration-200 hover:bg-white hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] lg:hidden"
+        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 ring-1 ring-zinc-200/60 transition-all duration-200 hover:bg-white hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] lg:hidden"
       >
         <PlusCircle size={22} aria-hidden="true" />
         Nova demanda

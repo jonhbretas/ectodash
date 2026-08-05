@@ -45,7 +45,7 @@ export default function RootLayout({
         */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:min-h-14 focus:flex focus:items-center focus:rounded-md focus:bg-white focus:px-4 focus:py-3 focus:text-xl focus:text-zinc-900 focus:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:min-h-14 focus:flex focus:items-center focus:rounded-md focus:bg-white focus:px-4 focus:py-3 focus:text-xl focus:text-zinc-900 focus:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           Pular para o conteúdo principal
         </a>

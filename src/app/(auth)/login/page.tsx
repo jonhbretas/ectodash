@@ -10,10 +10,10 @@ export default async function LoginPage({
   const erro = params.erro;
 
   return (
-    <main className="flex min-h-dvh flex-1 items-stretch bg-gradient-to-br from-slate-50 via-white to-[#f5f0eb]/20">
+    <main className="flex min-h-dvh flex-1 items-stretch bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20">
       <aside
         aria-hidden="true"
-        className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-[#1a5a6a] via-[#1a7a8e] to-[#2b9eb3] p-12 text-white lg:flex"
+        className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-[#28627B] via-[#28627B] to-[#2195B9] p-12 text-white lg:flex"
       >
         <div className="flex items-center gap-3">
             <img src="/logo-ectolab.png" alt="EctoLab" className="h-12" />

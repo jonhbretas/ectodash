@@ -18,7 +18,7 @@ export default function ImportEventosToggle() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] hover:shadow-[0_2px_6px_rgba(212,136,58,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <UploadCloud size={22} aria-hidden="true" />
         Cadastrar por planilha

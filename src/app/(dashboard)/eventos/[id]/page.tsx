@@ -68,7 +68,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
         <p className="text-xl text-zinc-700">Evento não encontrado.</p>
         <Link
           href="/eventos"
-          className="text-xl font-medium text-[#d4883a] underline"
+          className="text-xl font-medium text-[#2195B9] underline"
         >
           Voltar para os eventos
         </Link>
@@ -159,7 +159,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
         </div>
         <Link
           href="/eventos"
-          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <ArrowLeft size={22} aria-hidden="true" />
           Voltar aos eventos
@@ -170,7 +170,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
         <AdicionarTarefasButton eventoId={id} />
         <Link
           href="/demandas/nova"
-          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <PlusCircle size={22} aria-hidden="true" />
           Nova demanda manual

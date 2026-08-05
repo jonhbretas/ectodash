@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 // Shared volunteer form (create + edit) — all roster data fields from
 // migration 0017 (nome, código PF, unidade, org depto, função, datas, obs,
@@ -42,7 +42,7 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? "Salvando..." : label}
     </button>
@@ -50,7 +50,7 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 const inputClassName =
-  "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 transition-colors hover:border-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+  "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 transition-colors hover:border-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 const labelClassName = "text-lg font-medium text-zinc-900";
 
 function Field({
@@ -260,9 +260,9 @@ export default function VoluntarioForm({
                   type="button"
                   aria-pressed={marcada}
                   onClick={() => toggleAreaExtra(area)}
-                  className={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-base font-medium ring-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] ${
+                  className={`flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-base font-medium ring-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
                     marcada
-                      ? "bg-[#d4883a] text-white ring-[#d4883a]"
+                      ? "bg-[#2195B9] text-white ring-[#2195B9]"
                       : "bg-white text-zinc-700 ring-zinc-300 hover:bg-zinc-50"
                   }`}
                 >
@@ -338,7 +338,7 @@ export default function VoluntarioForm({
               type="checkbox"
               defaultChecked={values.ativo}
               value="true"
-              className="h-6 w-6 accent-[#d4883a]"
+              className="h-6 w-6 accent-[#2195B9]"
             />
             <label
               htmlFor="ativo"

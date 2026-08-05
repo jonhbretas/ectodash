@@ -33,13 +33,13 @@ function SidebarLinks({
 
   const linkClassName = (href: string) => {
     const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-    return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2b9eb3] ${
+    return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
       collapsed
         ? "flex-col justify-center gap-0.5 px-0 text-center"
         : "gap-3 px-3 text-sm"
     } ${
       active
-        ? "bg-[#2b9eb3] text-white shadow-[0_2px_8px_rgba(43,158,179,0.25)]"
+        ? "bg-[#2195B9] text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)]"
         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
     }`;
   };
@@ -127,7 +127,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Fechar menu"
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <X size={22} aria-hidden="true" />
           </button>
@@ -174,7 +174,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
               onClick={toggleCollapsed}
               aria-label="Recolher menu lateral"
               title="Recolher menu"
-              className="flex h-9 w-full items-center justify-center gap-2 rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+              className="flex h-9 w-full items-center justify-center gap-2 rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
               <PanelLeftClose size={18} aria-hidden="true" strokeWidth={1.5} />
               <span className="text-xs font-medium">Recolher</span>
@@ -186,7 +186,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
               onClick={toggleCollapsed}
               aria-label="Expandir menu lateral"
               title="Fixar menu"
-              className="flex h-9 w-full items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+              className="flex h-9 w-full items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
               <PanelLeftOpen size={18} aria-hidden="true" strokeWidth={1.5} />
             </button>
@@ -202,7 +202,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
           onClick={() => setOpen(true)}
           aria-expanded={open}
           aria-label="Abrir menu"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="M3 6h18M3 12h18M3 18h18" />

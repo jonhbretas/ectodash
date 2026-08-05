@@ -34,7 +34,7 @@ export default async function AreasPage() {
           </p>
           <Link
             href="/voluntarios"
-            className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#d4883a] to-[#e8a85c] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)] transition-all duration-200 hover:from-[#c07828] hover:to-[#d4883a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Voltar para a equipe
           </Link>
@@ -52,7 +52,7 @@ export default async function AreasPage() {
     <PageContainer>
       <Link
         href="/voluntarios"
-        className="inline-flex w-fit items-center gap-1.5 text-base font-medium text-zinc-400 transition-colors hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="inline-flex w-fit items-center gap-1.5 text-base font-medium text-zinc-400 transition-colors hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <ArrowLeft size={16} aria-hidden="true" />
         Voltar para os voluntários

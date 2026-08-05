@@ -17,7 +17,7 @@ function SubmitButton() {
     <Button
       type="submit"
       disabled={pending}
-      className="min-h-14 w-full rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
+      className="min-h-14 w-full rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? "Salvando..." : "Salvar ata"}
     </Button>
@@ -49,7 +49,7 @@ export default function AtaForm({
   }
 
   const inputClassName =
-    "min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+    "min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
   const labelClassName = "text-xl font-medium text-zinc-900";
 
   return (
@@ -89,7 +89,7 @@ export default function AtaForm({
             >
               <span
                 aria-hidden="true"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f5f0eb] text-xs font-semibold text-[#d4883a]"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E6E6E6] text-xs font-semibold text-[#2195B9]"
               >
                 {initialsOf(v.nome)}
               </span>
@@ -128,7 +128,7 @@ export default function AtaForm({
           id="resumo"
           name="resumo"
           rows={6}
-          className="rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           placeholder="Principais pontos discutidos, decisões tomadas..."
         />
       </div>
@@ -141,7 +141,7 @@ export default function AtaForm({
 
       <Link
         href="/reunioes"
-        className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-center text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-center text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         Voltar para as atas
       </Link>

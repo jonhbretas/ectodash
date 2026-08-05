@@ -71,7 +71,7 @@ export default async function DipLocalidadePage({
           </h1>
           <Link
             href="/dips"
-            className="flex min-h-14 items-center justify-center rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Voltar para a Dinâmica DIP
           </Link>
@@ -125,7 +125,7 @@ export default async function DipLocalidadePage({
     <PageContainer>
       <Link
         href="/dips"
-        className="inline-flex w-fit items-center gap-1.5 text-base font-medium text-zinc-400 transition-colors hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="inline-flex w-fit items-center gap-1.5 text-base font-medium text-zinc-400 transition-colors hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <ArrowLeft size={16} aria-hidden="true" />
         Voltar para a Dinâmica DIP
@@ -157,7 +157,7 @@ export default async function DipLocalidadePage({
 
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
         <StatPill
-          icon={<Sparkles size={24} className="text-[#d4883a]" aria-hidden="true" />}
+          icon={<Sparkles size={24} className="text-[#2195B9]" aria-hidden="true" />}
           label="Registros"
           value={rows.length}
         />
@@ -167,7 +167,7 @@ export default async function DipLocalidadePage({
           value={totalParticipantes}
         />
         <StatPill
-          icon={<CalendarDays size={24} className="text-[#d4883a]" aria-hidden="true" />}
+          icon={<CalendarDays size={24} className="text-[#2195B9]" aria-hidden="true" />}
           label="Próximas DIPs"
           value={futuros.length}
         />
@@ -177,7 +177,7 @@ export default async function DipLocalidadePage({
         {futuros.length > 0 && (
           <section className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
             <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-              <CalendarDays size={22} aria-hidden="true" className="text-[#d4883a]" />
+              <CalendarDays size={22} aria-hidden="true" className="text-[#2195B9]" />
               Próximas DIPs
             </h2>
             <div className="flex flex-col">

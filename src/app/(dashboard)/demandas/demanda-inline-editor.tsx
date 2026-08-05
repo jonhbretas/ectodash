@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 
 // Trigger compacto para os pills de edição inline (o padrão é min-h-14).
-const pillSelectClass = `${formSelectTriggerClass} min-h-10 w-40 max-w-72 rounded-lg border-zinc-300 px-2 py-1 text-lg focus:ring-2 focus:ring-[#d4883a]`;
+const pillSelectClass = `${formSelectTriggerClass} min-h-10 w-40 max-w-72 rounded-lg border-zinc-300 px-2 py-1 text-lg focus:ring-2 focus:ring-[#2195B9]`;
 import {
   criarEtiqueta,
   updateDemandaTitulo,
@@ -157,7 +157,7 @@ function InlineText({
           onBlur={save}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
           disabled={saving}
-          className={`min-h-12 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#d4883a] ${className ?? ""}`}
+          className={`min-h-12 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#2195B9] ${className ?? ""}`}
         />
         {saving && <span className="text-base text-zinc-400">salvando...</span>}
       </div>
@@ -169,7 +169,7 @@ function InlineText({
       type="button"
       onClick={() => setEditing(true)}
       title="Clique para editar"
-      className="group flex items-center gap-1.5 rounded-lg px-2 py-1 -mx-1 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+      className="group flex items-center gap-1.5 rounded-lg px-2 py-1 -mx-1 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
     >
       <span className={className}>{value || (placeholder ?? "")}</span>
       <Pencil size={14} className="shrink-0 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
@@ -216,7 +216,7 @@ function InlinePill({
       type="button"
       onClick={onStart}
       title={`Editar ${label}`}
-      className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+      className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
     >
       <span className="font-medium text-zinc-500">{label}</span>
       {children}
@@ -232,7 +232,7 @@ function AvatarPill({ profile, onRemove }: { profile: InlinePessoa; onRemove?: (
       className="group relative flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-base ring-1 ring-zinc-200/60"
       title={profile.temConta === false ? `${display(profile)} — sem acesso ativado` : undefined}
     >
-      <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f5f0eb] text-xs font-semibold text-[#d4883a]">
+      <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E6E6E6] text-xs font-semibold text-[#2195B9]">
         {initials(display(profile))}
       </span>
       <span className="truncate max-w-32 text-zinc-700">{display(profile)}</span>
@@ -521,7 +521,7 @@ export default function DemandaInlineEditor({
               type="date"
               value={localPrazo}
               onChange={(e) => setLocalPrazo(e.target.value)}
-              className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#d4883a]"
+              className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#2195B9]"
             />
             <button
               type="button"
@@ -542,7 +542,7 @@ export default function DemandaInlineEditor({
           <button
             type="button"
             onClick={() => setEditingPill("prazo")}
-            className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             title="Editar prazo"
           >
             <Calendar size={16} className="text-zinc-500" aria-hidden="true" />
@@ -579,7 +579,7 @@ export default function DemandaInlineEditor({
           <button
             type="button"
             onClick={() => setEditingPill("status")}
-            className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             title="Editar status"
           >
             <span className="font-medium text-zinc-500">Status:</span>
@@ -609,7 +609,7 @@ export default function DemandaInlineEditor({
           </div>
         ) : (
           <button type="button" onClick={() => setEditingPill("area")}
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             style={{ backgroundColor: localArea ? "#f4f4f5" : "transparent", border: localArea ? "" : "1px dashed #d4d4d8" }}
             title="Editar área"
           >
@@ -640,7 +640,7 @@ export default function DemandaInlineEditor({
           </div>
         ) : (
           <button type="button" onClick={() => setEditingPill("projeto")}
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             style={{ backgroundColor: localProjeto ? "#eff6ff" : "transparent", border: localProjeto ? "" : "1px dashed #d4d4d8" }}
             title="Editar projeto"
           >
@@ -699,7 +699,7 @@ export default function DemandaInlineEditor({
           </div>
         ) : (
           <button type="button" onClick={() => setEditingPill("evento")}
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             style={{ backgroundColor: localEventoId ? "#faf5ff" : "transparent", border: localEventoId ? "" : "1px dashed #d4d4d8" }}
             title="Editar evento"
           >
@@ -739,7 +739,7 @@ export default function DemandaInlineEditor({
                 <input value={novaEtiquetaNome} onChange={(e) => setNovaEtiquetaNome(e.target.value)}
                   placeholder="Nome" className="min-h-10 w-32 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg" />
                 <button type="button" onClick={handleCriarEtiqueta}
-                  className="min-h-10 rounded-lg bg-[#d4883a] px-3 text-base font-medium text-white transition-colors hover:bg-[#c07828]">
+                  className="min-h-10 rounded-lg bg-[#2195B9] px-3 text-base font-medium text-white transition-colors hover:bg-[#28627B]">
                   Criar
                 </button>
                 <button type="button" onClick={() => { setCriandoEtiqueta(false); setEtiquetaError(""); }}
@@ -748,14 +748,14 @@ export default function DemandaInlineEditor({
               </div>
             ) : (
               <button type="button" onClick={() => setCriandoEtiqueta(true)}
-                className="self-start text-base font-medium text-[#d4883a] transition-colors hover:text-[#d4883a]">
+                className="self-start text-base font-medium text-[#2195B9] transition-colors hover:text-[#2195B9]">
                 + Nova etiqueta
               </button>
             )}
           </div>
         ) : (
           <button type="button" onClick={() => setEditingPill("etiqueta")}
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             style={{ backgroundColor: localEtiquetaId ? "#fffbeb" : "transparent", border: localEtiquetaId ? "" : "1px dashed #d4d4d8" }}
             title="Editar etiqueta"
           >
@@ -771,7 +771,7 @@ export default function DemandaInlineEditor({
           onClick={corrigirComIa}
           disabled={corrigindoIa}
           title="Preencher com IA os campos ainda vazios (área, responsável, projeto, evento)"
-          className="flex items-center gap-1.5 rounded-full bg-[#f5f0eb] px-3 py-1.5 text-base font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60 transition-all duration-200 hover:bg-[#f5f0eb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-full bg-[#E6E6E6] px-3 py-1.5 text-base font-medium text-[#2195B9] ring-1 ring-[#E6E6E6]/60 transition-all duration-200 hover:bg-[#E6E6E6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Sparkles size={15} aria-hidden="true" />
           {corrigindoIa ? "Corrigindo..." : "Preencher com IA"}
@@ -779,7 +779,7 @@ export default function DemandaInlineEditor({
       </div>
 
       {corrigiuMensagem && (
-        <p className="rounded-xl bg-[#f5f0eb] px-4 py-2.5 text-base text-[#8b5e2a] ring-1 ring-[#f0e0cf]/60">
+        <p className="rounded-xl bg-[#E6E6E6] px-4 py-2.5 text-base text-[#28627B] ring-1 ring-[#E6E6E6]/60">
           {corrigiuMensagem}
         </p>
       )}

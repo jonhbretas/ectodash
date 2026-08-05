@@ -143,7 +143,7 @@ export default function AnaliseForm({
         </div>
         <Link
           href="/reunioes"
-          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <ArrowLeft size={22} aria-hidden="true" />
           Voltar às atas
@@ -165,7 +165,7 @@ export default function AnaliseForm({
             name="arquivo"
             type="file"
             accept=".pdf,.md,.txt"
-            className="block w-full cursor-pointer rounded-xl border border-zinc-300 bg-white px-4 py-3 text-lg text-zinc-900 file:mr-4 file:min-h-12 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#d4883a] file:px-4 file:text-lg file:font-medium file:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="block w-full cursor-pointer rounded-xl border border-zinc-300 bg-white px-4 py-3 text-lg text-zinc-900 file:mr-4 file:min-h-12 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#2195B9] file:px-4 file:text-lg file:font-medium file:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           />
           <p className="text-base text-zinc-600">
             O PDF é convertido para texto — só o texto é salvo (formato leve,
@@ -191,7 +191,7 @@ export default function AnaliseForm({
                 id="reuniaoId"
                 name="reuniaoId"
                 defaultValue=""
-                className="min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                className="min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
               >
                 <option value="">Escolha uma reunião...</option>
                 {meetings.map((meeting) => (
@@ -215,7 +215,7 @@ export default function AnaliseForm({
             id="texto"
             name="texto"
             placeholder="Cole aqui o texto da transcrição da reunião..."
-            className="min-h-40 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="min-h-40 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           />
         </div>
       </section>
@@ -244,7 +244,7 @@ function AnalyseSubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-6 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] hover:shadow-[0_2px_6px_rgba(212,136,58,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-6 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? (
         <Loader2 size={22} aria-hidden="true" className="animate-spin" />
@@ -313,7 +313,7 @@ type EventoReview = {
 };
 
 const fieldClassName =
-  "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+  "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 const labelClassName = "text-lg font-medium text-zinc-900";
 
 function ReviewScreen({
@@ -493,7 +493,7 @@ function ReviewScreen({
       <header className="flex w-full flex-wrap items-start justify-between gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
-            <Sparkles size={30} aria-hidden="true" className="text-[#d4883a]" />
+            <Sparkles size={30} aria-hidden="true" className="text-[#2195B9]" />
             Revisar análise da reunião
           </h1>
           <p className="max-w-2xl text-xl text-zinc-500">
@@ -505,7 +505,7 @@ function ReviewScreen({
         <button
           type="button"
           onClick={onBack}
-          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <ArrowLeft size={22} aria-hidden="true" />
           Nova análise
@@ -667,7 +667,7 @@ function ReviewScreen({
                           )
                         )
                       }
-                      className="h-6 w-6 shrink-0 cursor-pointer accent-[#d4883a]"
+                      className="h-6 w-6 shrink-0 cursor-pointer accent-[#2195B9]"
                     />
                     <input
                       aria-label={`Título da demanda ${demanda.id + 1}`}
@@ -923,7 +923,7 @@ function ReviewScreen({
                           )
                         )
                       }
-                      className="h-6 w-6 shrink-0 cursor-pointer accent-[#d4883a]"
+                      className="h-6 w-6 shrink-0 cursor-pointer accent-[#2195B9]"
                     />
                     <input
                       aria-label={`Título do evento ${evento.id + 1}`}
@@ -1183,7 +1183,7 @@ function SaveSubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-6 text-xl font-medium text-white shadow-[0_1px_3px_rgba(21,128,61,0.25)] transition-all duration-200 hover:bg-green-600 hover:shadow-[0_2px_6px_rgba(21,128,61,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-6 text-xl font-medium text-white shadow-[0_1px_3px_rgba(21,128,61,0.25)] transition-all duration-200 hover:bg-green-600 hover:shadow-[0_2px_6px_rgba(21,128,61,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? (
         <Loader2 size={22} aria-hidden="true" className="animate-spin" />

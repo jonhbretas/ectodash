@@ -87,7 +87,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
           </h1>
           <Link
             href="/reunioes"
-            className="text-xl font-medium text-[#d4883a] underline"
+            className="text-xl font-medium text-[#2195B9] underline"
           >
             Voltar para as atas
           </Link>
@@ -161,7 +161,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
         <div className="flex flex-wrap items-center gap-3">
           <a
             href={`/api/atas/${id}/pdf`}
-            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] hover:shadow-[0_2px_6px_rgba(212,136,58,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <Download size={22} aria-hidden="true" />
             Baixar PDF
@@ -171,7 +171,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
           )}
           <Link
             href="/reunioes"
-            className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <ArrowLeft size={22} aria-hidden="true" />
             Voltar
@@ -197,7 +197,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
             <ul className="flex flex-col gap-2">
               {pontos.map((ponto, index) => (
                 <li key={index} className="flex gap-2 text-lg leading-relaxed text-zinc-700">
-                  <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#d4883a]" aria-hidden="true" />
+                  <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2195B9]" aria-hidden="true" />
                   {ponto}
                 </li>
               ))}
@@ -240,7 +240,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
               </h2>
               <Link
                 href="/dips"
-                className="text-base font-medium text-[#d4883a] underline decoration-[#d4883a]/40 underline-offset-4"
+                className="text-base font-medium text-[#2195B9] underline decoration-[#2195B9]/40 underline-offset-4"
               >
                 Ver tela completa
               </Link>
@@ -299,7 +299,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
 
         {ata.texto && (
           <details className="group w-full rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-            <summary className="flex min-h-14 w-full cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-14 w-full cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] [&::-webkit-details-marker]:hidden">
               <span className="text-xl font-semibold text-zinc-900">
                 Transcrição fonte
               </span>

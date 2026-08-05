@@ -132,7 +132,7 @@ export default function LocalidadesConfig({
 }
 
 const inputClass =
-  "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+  "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
 function CriarLocalidadeForm() {
   const [state, formAction] = useActionState(criarLocalidadeDip, initial);
@@ -173,7 +173,7 @@ function CriarLocalidadeForm() {
       <div className="flex items-center gap-2">
         <SubmitButton
           label="Cadastrar localidade"
-          className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#d4883a] px-4 text-lg font-medium text-white transition-colors hover:bg-[#c07828]"
+          className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 text-lg font-medium text-white transition-colors hover:bg-[#28627B]"
         />
         <button
           type="button"

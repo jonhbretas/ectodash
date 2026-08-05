@@ -104,7 +104,7 @@ export default function FinanceiroFilters({
   const activeCount = activeChips.length;
 
   const triggerClassName =
-    "min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+    "min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
   const selectControl = (
     ariaLabel: string,
@@ -139,12 +139,12 @@ export default function FinanceiroFilters({
           type="button"
           onClick={toggleOpen}
           aria-expanded={open}
-          className="flex min-h-12 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-lg font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex min-h-12 items-center gap-2 rounded-xl bg-zinc-100 px-4 text-lg font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <SlidersHorizontal size={20} aria-hidden="true" />
           Filtros
           {activeCount > 0 && (
-            <span className="rounded-full bg-[#d4883a] px-2 py-0.5 text-base font-semibold text-white">
+            <span className="rounded-full bg-[#2195B9] px-2 py-0.5 text-base font-semibold text-white">
               {activeCount}
             </span>
           )}
@@ -178,7 +178,7 @@ export default function FinanceiroFilters({
             <button
               type="button"
               onClick={clearFilters}
-              className="min-h-11 rounded-full bg-white px-4 text-lg font-medium text-zinc-700 ring-1 ring-zinc-300 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+              className="min-h-11 rounded-full bg-white px-4 text-lg font-medium text-zinc-700 ring-1 ring-zinc-300 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
               Limpar filtros
             </button>

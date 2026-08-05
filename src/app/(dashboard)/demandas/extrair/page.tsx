@@ -53,7 +53,7 @@ export default async function ExtrairDemandasPage() {
           </p>
           <Link
             href="/"
-            className="flex min-h-14 items-center justify-center rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Ver minhas demandas
           </Link>

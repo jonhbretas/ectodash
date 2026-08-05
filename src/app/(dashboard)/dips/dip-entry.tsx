@@ -36,9 +36,9 @@ export default function DipEntry({
   localidades?: { localidade: string; pais: string }[];
 }) {
   return (
-    <div className={`flex flex-col gap-1 border-b border-zinc-100 py-3 last:border-b-0 ${index === 0 ? "pt-0" : ""} ${highlight ? "bg-[#f5f0eb]/50 -mx-2 px-2 rounded-lg" : ""}`}>
+    <div className={`flex flex-col gap-1 border-b border-zinc-100 py-3 last:border-b-0 ${index === 0 ? "pt-0" : ""} ${highlight ? "bg-[#E6E6E6]/50 -mx-2 px-2 rounded-lg" : ""}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className={`flex items-center gap-2 text-lg font-medium ${highlight ? "text-[#8b5e2a]" : "text-zinc-900"}`}>
+        <span className={`flex items-center gap-2 text-lg font-medium ${highlight ? "text-[#28627B]" : "text-zinc-900"}`}>
           {registro.data_dip
             ? format(new Date(`${registro.data_dip}T00:00:00`), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
             : "Data não informada"}
@@ -55,7 +55,7 @@ export default function DipEntry({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           href={`/reunioes/${registro.ataId}`}
-          className="w-fit text-base font-medium text-[#d4883a] underline decoration-[#d4883a]/40 underline-offset-4"
+          className="w-fit text-base font-medium text-[#2195B9] underline decoration-[#2195B9]/40 underline-offset-4"
         >
           {registro.ataTitulo}
           {registro.ataData

@@ -44,22 +44,22 @@
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #2b9eb3;
+  --primary: #2195B9;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
   --muted: #f1f5f9;
   --muted-foreground: #475569;
-  --accent: #e8f5f8;
-  --accent-foreground: #1a5a6a;
+  --accent: #E6E6E6;
+  --accent-foreground: #28627B;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #cbd5e1;
-  --ring: #2b9eb3;
+  --ring: #2195B9;
   --radius: 0.625rem;
   --success: #16a34a;
-  --warning: #f0b060;
+  --warning: #FDBA2F;
 
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -167,7 +167,7 @@
 }
 
 .gradient-primary {
-  background: linear-gradient(135deg, #2b9eb3 0%, #1e8a9e 50%, #1a7a8e 100%);
+  background: linear-gradient(135deg, #2195B9 0%, #28627B 50%, #28627B 100%);
 }
 
 .gradient-success {
@@ -175,7 +175,7 @@
 }
 
 .gradient-warning {
-  background: linear-gradient(135deg, #f0b060 0%, #e8a85c 100%);
+  background: linear-gradient(135deg, #FDBA2F 0%, #FDBA2F 100%);
 }
 
 .gradient-danger {

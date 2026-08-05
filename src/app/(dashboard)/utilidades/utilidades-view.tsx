@@ -86,7 +86,7 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
               aria-selected={selected}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex min-h-12 items-center gap-2 rounded-xl px-4 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]",
+                "flex min-h-12 items-center gap-2 rounded-xl px-4 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]",
                 selected
                   ? "bg-white text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
                   : "text-zinc-500 hover:bg-zinc-200/60 hover:text-zinc-700"
@@ -99,7 +99,7 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
                   className={cn(
                     "flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-sm font-semibold",
                     selected
-                      ? "bg-[#d4883a]/10 text-[#d4883a]"
+                      ? "bg-[#2195B9]/10 text-[#2195B9]"
                       : "bg-zinc-200 text-zinc-500"
                   )}
                 >
@@ -118,7 +118,7 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
           placeholder="Buscar por título, descrição, área ou tag..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-4 text-xl text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] placeholder:text-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-4 text-xl text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] placeholder:text-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         />
       </div>
 
@@ -148,12 +148,12 @@ function ItemCard({ item }: { item: Item }) {
     <div className="flex flex-col gap-2 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
       <div className="flex flex-wrap items-center gap-2">
         {item.area_nome && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#2b9eb3]/10 px-2.5 py-0.5 text-sm font-medium text-[#2b9eb3]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-sm font-medium text-[#2195B9]">
             {item.area_nome}
           </span>
         )}
         {cat && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#d4883a]/10 px-2.5 py-0.5 text-sm font-medium text-[#d4883a]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-sm font-medium text-[#2195B9]">
             <cat.icon size={12} aria-hidden="true" />
             {cat.label}
           </span>
@@ -185,7 +185,7 @@ function ItemCard({ item }: { item: Item }) {
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-lg bg-[#d4883a] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-[#c07828]"
+            className="flex items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-[#28627B]"
           >
             <ExternalLink size={16} />
             Acessar

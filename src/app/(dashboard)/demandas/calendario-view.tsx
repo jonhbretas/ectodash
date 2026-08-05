@@ -33,7 +33,7 @@ const STATUS_CHIP: Record<
   { className: string; label: string }
 > = {
   pendente: { className: "bg-amber-100 text-amber-900", label: "Pendente" },
-  em_andamento: { className: "bg-[#f5f0eb] text-[#8b5e2a]", label: "Em andamento" },
+  em_andamento: { className: "bg-[#E6E6E6] text-[#28627B]", label: "Em andamento" },
   concluida: { className: "bg-green-100 text-green-900", label: "Concluída" },
 };
 
@@ -78,14 +78,14 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
             type="button"
             onClick={() => setCursor((m) => addMonths(m, -1))}
             aria-label="Mês anterior"
-            className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-300 bg-white text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-300 bg-white text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <ChevronLeft size={22} aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={() => setCursor(startOfMonth(new Date()))}
-            className="min-h-12 rounded-xl border border-zinc-300 bg-white px-4 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="min-h-12 rounded-xl border border-zinc-300 bg-white px-4 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Hoje
           </button>
@@ -93,7 +93,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
             type="button"
             onClick={() => setCursor((m) => addMonths(m, 1))}
             aria-label="Próximo mês"
-            className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-300 bg-white text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-300 bg-white text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <ChevronRight size={22} aria-hidden="true" />
           </button>
@@ -130,7 +130,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
                   <span
                     className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-medium ${
                       isToday
-                        ? "bg-[#d4883a] text-white"
+                        ? "bg-[#2195B9] text-white"
                         : inMonth
                           ? "text-zinc-900"
                           : "text-zinc-400"
@@ -147,7 +147,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
                           key={demanda.id}
                           href={`/demandas/${demanda.id}/editar`}
                           title={`${demanda.titulo} — ${chip.label}`}
-                          className={`block truncate rounded-lg px-1.5 py-0.5 text-sm font-medium transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] sm:text-base ${
+                          className={`block truncate rounded-lg px-1.5 py-0.5 text-sm font-medium transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:text-base ${
                             chip.className
                           } ${demanda.atrasada ? "ring-1 ring-red-400" : ""}`}
                         >

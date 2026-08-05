@@ -41,7 +41,7 @@ export function CriarTipoForm() {
           name="nome"
           required
           placeholder="Ex: Evento presencial"
-          className="min-h-14 flex-1 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="min-h-14 flex-1 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         />
         <CreateTipoButton />
       </div>
@@ -56,7 +56,7 @@ function CreateTipoButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-14 items-center justify-center gap-2 rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:opacity-70"
+      className="flex min-h-14 items-center justify-center gap-2 rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:opacity-70"
     >
       <PlusCircle size={20} aria-hidden="true" />
       {pending ? "Criando..." : "Criar tipo"}
@@ -80,7 +80,7 @@ export function AdicionarTarefaForm({ tipoId, areaOptions }: { tipoId: number; a
         name="titulo"
         required
         placeholder="Ex: Confirmar patrocínio"
-        className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       />
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
@@ -88,7 +88,7 @@ export function AdicionarTarefaForm({ tipoId, areaOptions }: { tipoId: number; a
             name="area"
             list={`areas-modelo-${tipoId}`}
             placeholder="Área (opcional)"
-            className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           />
           <datalist id={`areas-modelo-${tipoId}`}>
             {areaOptions.map((area) => (
@@ -102,7 +102,7 @@ export function AdicionarTarefaForm({ tipoId, areaOptions }: { tipoId: number; a
           type="number"
           defaultValue={0}
           placeholder="Dias em relação ao evento (ex.: -7)"
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         />
       </div>
       <AddTarefaButton />
@@ -117,7 +117,7 @@ function AddTarefaButton() {
     <button
       type="submit"
       disabled={pending}
-      className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:opacity-70"
+      className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:opacity-70"
     >
       {pending ? "Adicionando..." : "Adicionar ao modelo"}
     </button>
@@ -132,7 +132,7 @@ export function RemoverTarefaButton({ tarefaId }: { tarefaId: number }) {
       <button
         type="submit"
         aria-label="Remover tarefa do modelo"
-        className="flex h-12 w-12 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="flex h-12 w-12 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <X size={20} aria-hidden="true" />
       </button>
@@ -148,7 +148,7 @@ export function RemoverTipoButton({ tipoId }: { tipoId: number }) {
       <input type="hidden" name="id" value={tipoId} />
       <button
         type="submit"
-        className="flex min-h-12 items-center gap-1 rounded-lg px-2 text-base font-medium text-red-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="flex min-h-12 items-center gap-1 rounded-lg px-2 text-base font-medium text-red-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <Trash2 size={18} aria-hidden="true" />
         Remover tipo

@@ -20,7 +20,7 @@ export default function StatCard({
     <Card
       role="group"
       aria-label={`${label}: ${value}`}
-      className={`relative overflow-hidden border-0 shadow-[0_1px_3px_rgba(212,136,58,0.04),0_1px_2px_rgba(212,136,58,0.02)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(212,136,58,0.08)] hover:-translate-y-0.5 ${
+      className={`relative overflow-hidden border-0 shadow-[0_1px_3px_rgba(33,149,185,0.04),0_1px_2px_rgba(33,149,185,0.02)] transition-all duration-200 hover:shadow-[0_4px_12px_rgba(33,149,185,0.08)] hover:-translate-y-0.5 ${
         highlight
           ? "bg-red-50 ring-1 ring-red-200/60"
           : "bg-white ring-1 ring-[#e8ddd4]/60"
@@ -30,7 +30,7 @@ export default function StatCard({
         className={`absolute top-0 left-0 h-1 w-full ${
           highlight
             ? "bg-gradient-to-r from-red-500 to-red-400"
-            : "bg-gradient-to-r from-[#d4883a] to-[#e8a85c]"
+            : "bg-gradient-to-r from-[#2195B9] to-[#FDBA2F]"
         }`}
         aria-hidden="true"
       />
@@ -40,7 +40,7 @@ export default function StatCard({
             className={`flex h-9 w-9 items-center justify-center rounded-lg ${
               highlight
                 ? "bg-red-100 text-red-600"
-                : "bg-[#f5f0eb] text-[#d4883a]"
+                : "bg-[#E6E6E6] text-[#2195B9]"
             }`}
           >
             <Icon size={18} aria-hidden="true" strokeWidth={1.75} />

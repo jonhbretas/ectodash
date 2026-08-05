@@ -214,7 +214,7 @@ export default function DemandaFilters({
   const activeCount = activeChips.length;
 
   const triggerClassName =
-    "min-h-12 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+    "min-h-12 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
   const selectControl = (
     ariaLabel: string,
@@ -253,12 +253,12 @@ export default function DemandaFilters({
         onClick={toggleOpen}
         aria-expanded={open}
         aria-controls="demanda-filtros-painel"
-        className="flex min-h-10 items-center gap-2 rounded-xl bg-zinc-100 px-3.5 text-base font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+        className="flex min-h-10 items-center gap-2 rounded-xl bg-zinc-100 px-3.5 text-base font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <SlidersHorizontal size={18} aria-hidden="true" />
         Filtros
         {activeCount > 0 && (
-          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#d4883a] px-1.5 text-sm font-semibold text-white">
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#2195B9] px-1.5 text-sm font-semibold text-white">
             {activeCount}
           </span>
         )}
@@ -282,7 +282,7 @@ export default function DemandaFilters({
               <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                 Filtros
                 {activeCount > 0 && (
-                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#f5f0eb] px-1.5 text-sm font-semibold text-[#8b5e2a]">
+                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#E6E6E6] px-1.5 text-sm font-semibold text-[#28627B]">
                     {activeCount} ativo{activeCount === 1 ? "" : "s"}
                   </span>
                 )}
@@ -291,7 +291,7 @@ export default function DemandaFilters({
                 type="button"
                 onClick={() => setOpenRaw("0")}
                 aria-label="Fechar filtros"
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
               >
                 <X size={20} aria-hidden="true" />
               </button>
@@ -319,7 +319,7 @@ export default function DemandaFilters({
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="min-h-11 rounded-full bg-white px-4 text-base font-medium text-zinc-700 ring-1 ring-zinc-300 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                  className="min-h-11 rounded-full bg-white px-4 text-base font-medium text-zinc-700 ring-1 ring-zinc-300 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
                 >
                   Limpar filtros
                 </button>
@@ -423,9 +423,9 @@ export default function DemandaFilters({
                         type="button"
                         aria-pressed={ativo}
                         onClick={() => toggleStatus(status.value)}
-                        className={`flex min-h-11 items-center gap-2 rounded-full px-4 text-base font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] ${
+                        className={`flex min-h-11 items-center gap-2 rounded-full px-4 text-base font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
                           ativo
-                            ? "bg-[#d4883a] text-white ring-[#d4883a]"
+                            ? "bg-[#2195B9] text-white ring-[#2195B9]"
                             : "bg-white text-zinc-700 ring-zinc-300 hover:bg-zinc-50"
                         }`}
                       >
@@ -438,7 +438,7 @@ export default function DemandaFilters({
                     type="button"
                     onClick={() => navigateWith({ status: undefined })}
                     disabled={statusAtivos.length === 0}
-                    className="min-h-11 rounded-full px-4 text-base font-medium text-zinc-500 ring-1 ring-transparent transition-colors hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:opacity-50"
+                    className="min-h-11 rounded-full px-4 text-base font-medium text-zinc-500 ring-1 ring-transparent transition-colors hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:opacity-50"
                   >
                     Todos
                   </button>

@@ -19,7 +19,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="min-h-14 w-full rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
+      className="min-h-14 w-full rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? "Importando..." : "Importar planilha"}
     </button>
@@ -71,7 +71,7 @@ export default function ImportFinanceiroForm() {
           type="file"
           accept=".csv,.xlsx,.xls"
           required
-          className="block w-full cursor-pointer rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 file:mr-4 file:min-h-12 file:rounded-lg file:border-0 file:bg-[#d4883a] file:px-4 file:text-lg file:font-medium file:text-white file:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="block w-full cursor-pointer rounded-lg border border-zinc-400 bg-white px-4 py-3 text-lg text-zinc-900 file:mr-4 file:min-h-12 file:rounded-lg file:border-0 file:bg-[#2195B9] file:px-4 file:text-lg file:font-medium file:text-white file:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         />
         <SubmitButton />
       </form>
@@ -87,8 +87,8 @@ export default function ImportFinanceiroForm() {
           </p>
         )}
         {state.resumo && (
-          <div className="flex flex-col gap-2 rounded-lg border border-[#f0e0cf] bg-[#f5f0eb] p-4">
-            <p className="flex items-center gap-2 text-xl font-semibold text-[#8b5e2a]">
+          <div className="flex flex-col gap-2 rounded-lg border border-[#E6E6E6] bg-[#E6E6E6] p-4">
+            <p className="flex items-center gap-2 text-xl font-semibold text-[#28627B]">
               <Sparkles size={20} aria-hidden="true" />
               Leitura didática da IA
             </p>
@@ -103,7 +103,7 @@ export default function ImportFinanceiroForm() {
         <button
           type="button"
           onClick={() => router.refresh()}
-          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           Atualizar o dashboard
         </button>

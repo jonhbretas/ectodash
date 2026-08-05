@@ -135,7 +135,7 @@ export default function DemandaList({
           </p>
           <Link
             href="/"
-            className="flex min-h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Limpar filtros
           </Link>
@@ -152,7 +152,7 @@ export default function DemandaList({
           </p>
           <Link
             href="/demandas/nova"
-            className="flex min-h-14 items-center justify-center rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white transition-all duration-200 hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white transition-all duration-200 hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Nova demanda
           </Link>

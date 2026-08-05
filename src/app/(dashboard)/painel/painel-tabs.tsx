@@ -41,7 +41,7 @@ export default function PainelTabs({ tabs }: { tabs: PainelTab[] }) {
               aria-controls={`painel-tab-panel-${tab.id}`}
               onClick={() => setActiveId(tab.id)}
               className={cn(
-                "flex min-h-12 items-center gap-2 rounded-xl px-4 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]",
+                "flex min-h-12 items-center gap-2 rounded-xl px-4 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]",
                 selected
                   ? "bg-white text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
                   : "text-zinc-500 hover:bg-zinc-200/60 hover:text-zinc-700"

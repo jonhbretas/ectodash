@@ -285,7 +285,7 @@ export default function SuggestionReviewList({
             type="button"
             onClick={handleConfirmarTodas}
             disabled={bulkPending}
-            className="min-h-14 w-full rounded-lg bg-green-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
+            className="min-h-14 w-full rounded-lg bg-green-700 px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {bulkPending
               ? "Criando demandas..."
@@ -308,7 +308,7 @@ export default function SuggestionReviewList({
           type="button"
           disabled={!allResolved}
           onClick={() => router.push("/")}
-          className="min-h-14 w-full rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
+          className="min-h-14 w-full rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70"
         >
           Concluir revisão
         </button>
@@ -380,7 +380,7 @@ function SuggestionCard({
           <button
             type="button"
             onClick={onDesfazer}
-            className="text-base text-[#d4883a] underline"
+            className="text-base text-[#2195B9] underline"
           >
             Desfazer
           </button>
@@ -400,7 +400,7 @@ function SuggestionCard({
               value={titulo}
               onChange={(e) => onTituloChange(e.target.value)}
               disabled={isConfirming}
-              className="min-h-14 text-xl rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] focus-visible:ring-0"
+              className="min-h-14 text-xl rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] focus-visible:ring-0"
             />
             {errors.titulo && (
               <span className="text-base text-red-700">{errors.titulo}</span>
@@ -478,7 +478,7 @@ function SuggestionCard({
               value={prazo}
               onChange={(e) => onPrazoChange(e.target.value)}
               disabled={isConfirming}
-              className="min-h-14 text-xl rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] focus-visible:ring-0"
+              className="min-h-14 text-xl rounded-lg border-zinc-400 bg-white text-zinc-900 shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] focus-visible:ring-0"
             />
             {errors.prazo && (
               <span className="text-base text-red-700">{errors.prazo}</span>
@@ -494,7 +494,7 @@ function SuggestionCard({
               type="button"
               onClick={onRejeitar}
               disabled={isConfirming}
-              className="min-h-14 flex-1 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
+              className="min-h-14 flex-1 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70"
             >
               Rejeitar
             </button>
@@ -502,7 +502,7 @@ function SuggestionCard({
               type="button"
               onClick={onConfirmar}
               disabled={!responsavelId || isConfirming}
-              className="min-h-14 flex-1 rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70"
+              className="min-h-14 flex-1 rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isConfirming ? "Confirmando..." : "Confirmar"}
             </button>

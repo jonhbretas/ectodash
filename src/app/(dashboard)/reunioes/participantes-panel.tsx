@@ -60,7 +60,7 @@ export function ParticipantesPanel({
         <Users size={22} aria-hidden="true" />
         Participantes
         {vinculados.length > 0 && (
-          <span className="rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-base font-medium text-[#8b5e2a] ring-1 ring-[#f0e0cf]/60">
+          <span className="rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-base font-medium text-[#28627B] ring-1 ring-[#E6E6E6]/60">
             {vinculados.length} vinculado{vinculados.length === 1 ? "" : "s"}
           </span>
         )}
@@ -75,7 +75,7 @@ export function ParticipantesPanel({
         {vinculados.map((v) => (
           <span
             key={v.id}
-            className="flex items-center gap-1.5 rounded-full bg-[#f5f0eb] px-2.5 py-1 text-base font-medium text-[#8b5e2a] ring-1 ring-[#f0e0cf]/60"
+            className="flex items-center gap-1.5 rounded-full bg-[#E6E6E6] px-2.5 py-1 text-base font-medium text-[#28627B] ring-1 ring-[#E6E6E6]/60"
             title="Vinculado ao cadastro de voluntário"
           >
             <Check size={14} aria-hidden="true" />
@@ -85,7 +85,7 @@ export function ParticipantesPanel({
                 type="button"
                 onClick={() => remove(v.id)}
                 aria-label={`Remover ${v.nome}`}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#d4883a] transition-all hover:bg-red-50 hover:text-red-600"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#2195B9] transition-all hover:bg-red-50 hover:text-red-600"
               >
                 <X size={12} aria-hidden="true" />
               </button>

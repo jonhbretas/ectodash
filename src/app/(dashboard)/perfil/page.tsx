@@ -88,7 +88,7 @@ export default async function MeuPerfilPage() {
     <PageContainer>
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d4883a] to-[#c07828] shadow-[0_4px_12px_rgba(212,136,58,0.3)]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2195B9] to-[#28627B] shadow-[0_4px_12px_rgba(33,149,185,0.3)]">
             <UserRound size={26} className="text-white" aria-hidden="true" strokeWidth={1.75} />
           </div>
           <div>
@@ -119,7 +119,7 @@ export default async function MeuPerfilPage() {
               <Shield size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
               <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                 <span className="text-sm text-slate-500">Papel</span>
-                <span className="rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-xs font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60">
+                <span className="rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-xs font-medium text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
                   {roleLabel(profile.role)}
                 </span>
               </div>
@@ -202,7 +202,7 @@ export default async function MeuPerfilPage() {
                 <NotebookPen size={14} aria-hidden="true" />
                 Participação em reuniões gerais
               </span>
-              <span className="rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-sm font-semibold text-[#d4883a] ring-1 ring-[#f0e0cf]/60">
+              <span className="rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-sm font-semibold text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
                 {participacoesComAta.length}
               </span>
             </div>
@@ -216,7 +216,7 @@ export default async function MeuPerfilPage() {
                   <Link
                     key={p.ataId}
                     href={`/reunioes/${p.ataId}`}
-                    className="flex items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
                   >
                     <span className="truncate text-sm font-medium text-slate-900">
                       {p.titulo}
@@ -233,7 +233,7 @@ export default async function MeuPerfilPage() {
 
         <Link
           href="/"
-          className="flex h-10 w-fit items-center gap-2 rounded-xl px-4 text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex h-10 w-fit items-center gap-2 rounded-xl px-4 text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <ArrowLeft size={16} aria-hidden="true" strokeWidth={1.5} />
           Voltar para as demandas

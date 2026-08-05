@@ -110,7 +110,7 @@ export default async function DipsPage({
       </header>
 
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatPill icon={<Sparkles size={24} className="text-[#d4883a]" />} label="Registros" value={rows.length} />
+        <StatPill icon={<Sparkles size={24} className="text-[#2195B9]" />} label="Registros" value={rows.length} />
         <StatPill icon={<Globe2 size={24} className="text-green-600" />} label="Países" value={paises.length} />
         <StatPill icon={<MapPin size={24} className="text-amber-500" />} label="Localidades" value={localidades.length} />
         <StatPill icon={<Users size={24} className="text-purple-500" />} label="Participantes" value={totalParticipantes} />
@@ -130,7 +130,7 @@ export default async function DipsPage({
               href={`/dips?localidade=${encodeURIComponent(loc)}`}
               className={`rounded-full px-3 py-1 text-base font-medium transition-colors ring-1 ${
                 filterLocalidade === loc
-                  ? "bg-[#d4883a] text-white ring-[#d4883a]"
+                  ? "bg-[#2195B9] text-white ring-[#2195B9]"
                   : "bg-white text-zinc-700 ring-zinc-200/60 hover:bg-zinc-50"
               }`}
             >
@@ -149,7 +149,7 @@ export default async function DipsPage({
           </p>
           <Link
             href="/analisar"
-            className="flex min-h-14 items-center justify-center rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Analisar reunião por IA
           </Link>
@@ -177,7 +177,7 @@ export default async function DipsPage({
                       <MapPin size={20} aria-hidden="true" className="text-amber-500" />
                       <Link
                         href={`/dips/${slugify(local.localidade)}`}
-                        className="transition-colors hover:text-[#d4883a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                        className="transition-colors hover:text-[#2195B9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
                         title={`Ver página da DIP ${local.localidade}`}
                       >
                         {local.localidade}
@@ -196,7 +196,7 @@ export default async function DipsPage({
 
                     {local.futuros.length > 0 && (
                       <div className="flex flex-col gap-2">
-                        <h4 className="flex items-center gap-1.5 text-base font-semibold text-[#d4883a]">
+                        <h4 className="flex items-center gap-1.5 text-base font-semibold text-[#2195B9]">
                           <CalendarDays size={16} aria-hidden="true" />
                           Próximas DIPs
                         </h4>

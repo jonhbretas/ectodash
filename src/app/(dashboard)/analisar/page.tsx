@@ -64,7 +64,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#d4883a] to-[#c07828] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)] transition-all duration-200 hover:from-[#c07828] hover:to-[#c07828] hover:shadow-[0_4px_12px_rgba(212,136,58,0.35)] hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] disabled:cursor-not-allowed disabled:opacity-70 disabled:translate-y-0"
+      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2195B9] to-[#28627B] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#28627B] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70 disabled:translate-y-0"
     >
       <Sparkles size={18} aria-hidden="true" />
       {pending ? "Analisando com IA..." : "Analisar com IA"}
@@ -159,7 +159,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
       >
         <div className="flex flex-col gap-2">
           <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#d4883a] to-[#c07828] shadow-[0_2px_8px_rgba(212,136,58,0.25)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2195B9] to-[#28627B] shadow-[0_2px_8px_rgba(33,149,185,0.25)]">
               <Sparkles size={20} className="text-white" aria-hidden="true" strokeWidth={1.75} />
             </div>
             Analisar com IA
@@ -177,7 +177,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
           <div className="flex items-center gap-3">
             <label
               htmlFor="arquivo-input"
-              className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#d4883a]"
+              className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#2195B9]"
             >
               <Upload size={16} aria-hidden="true" strokeWidth={1.5} />
               Escolher arquivo
@@ -195,7 +195,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
               />
             </label>
             {arquivoNome ? (
-              <span className="flex items-center gap-2 rounded-xl bg-[#f5f0eb] px-3 py-2 text-sm font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60">
+              <span className="flex items-center gap-2 rounded-xl bg-[#E6E6E6] px-3 py-2 text-sm font-medium text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
                 {arquivoNome}
                 <button
                   type="button"
@@ -203,7 +203,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
                     setArquivoNome(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#d4883a] hover:bg-[#f5f0eb] transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#2195B9] hover:bg-[#E6E6E6] transition-colors"
                   aria-label="Remover arquivo"
                 >
                   <X size={14} />
@@ -221,7 +221,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
             name="texto"
             readOnly={false}
             placeholder="Cole aqui o conteudo para a IA analisar..."
-            className="min-h-36 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="min-h-36 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           />
           {isEmpty && (
             <span className="text-xs text-red-600">{state.message}</span>
@@ -290,7 +290,7 @@ type DipEdit = {
 };
 
 const fieldClassName =
-  "min-h-9 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
+  "min-h-9 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
 function ResultsScreen({
   state,
@@ -446,25 +446,25 @@ function ResultsScreen({
       <header className="flex w-full flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#d4883a] to-[#c07828] shadow-[0_2px_8px_rgba(212,136,58,0.25)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2195B9] to-[#28627B] shadow-[0_2px_8px_rgba(33,149,185,0.25)]">
               <Sparkles size={20} className="text-white" aria-hidden="true" strokeWidth={1.75} />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Resultado da analise
             </h1>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-[#f0e0cf] bg-[#f5f0eb]/60 px-4 py-2.5">
-            <TIcon size={20} className="text-[#d4883a]" aria-hidden="true" strokeWidth={1.5} />
+          <div className="flex items-center gap-2 rounded-xl border border-[#E6E6E6] bg-[#E6E6E6]/60 px-4 py-2.5">
+            <TIcon size={20} className="text-[#2195B9]" aria-hidden="true" strokeWidth={1.5} />
             <div>
-              <span className="text-xs font-medium text-[#d4883a]">{tipoMeta.label}</span>
-              <h2 className="text-sm font-semibold text-[#8b5e2a]">{state.titulo}</h2>
+              <span className="text-xs font-medium text-[#2195B9]">{tipoMeta.label}</span>
+              <h2 className="text-sm font-semibold text-[#28627B]">{state.titulo}</h2>
             </div>
           </div>
         </div>
         <button
           type="button"
           onClick={onReset}
-          className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+          className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <X size={18} aria-hidden="true" strokeWidth={1.5} />
           Analisar outro conteudo
@@ -820,9 +820,9 @@ function ResultsScreen({
           {temDips && (
             <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
               <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <Users size={20} className="text-[#d4883a]" aria-hidden="true" strokeWidth={1.75} />
+                <Users size={20} className="text-[#2195B9]" aria-hidden="true" strokeWidth={1.75} />
                 <h3 className="text-sm font-semibold text-slate-900">Dinamica DIP</h3>
-                <span className="ml-auto rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-xs font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60">
+                <span className="ml-auto rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-xs font-medium text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
                   {dipEdits.length} {dipEdits.length === 1 ? "registro" : "registros"}
                 </span>
               </header>
@@ -971,7 +971,7 @@ function ResultsScreen({
           {temAtualizacoes && (
             <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
               <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <MessageSquareText size={20} className="text-[#d4883a]" aria-hidden="true" strokeWidth={1.75} />
+                <MessageSquareText size={20} className="text-[#2195B9]" aria-hidden="true" strokeWidth={1.75} />
                 <h3 className="text-sm font-semibold text-slate-900">
                   Atualizacoes de demandas existentes
                 </h3>
@@ -1027,7 +1027,7 @@ function ResultsScreen({
                   {saved.ataId !== null && (
                     <Link
                       href={`/reunioes/${saved.ataId}`}
-                      className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#d4883a] to-[#e8a85c] px-4 text-sm font-medium text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)] transition-all duration-200 hover:from-[#c07828] hover:to-[#d4883a]"
+                      className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-4 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9]"
                     >
                       <NotebookPen size={16} aria-hidden="true" strokeWidth={1.5} />
                       Ver ata
@@ -1086,7 +1086,7 @@ function ResultsScreen({
           <button
             type="button"
             onClick={onReset}
-            className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Analisar outro conteudo
           </button>
@@ -1144,10 +1144,10 @@ function ResultColumn({
       className="flex min-h-[24rem] w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60"
     >
       <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
-        <Icon size={20} className="text-[#d4883a]" aria-hidden="true" strokeWidth={1.75} />
+        <Icon size={20} className="text-[#2195B9]" aria-hidden="true" strokeWidth={1.75} />
         <h3 className="text-sm font-semibold text-slate-900">{titulo}</h3>
         {count !== null && (
-          <span className="ml-auto rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-xs font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60">
+          <span className="ml-auto rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-xs font-medium text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
             {count} {count === 1 ? "item" : "itens"}
           </span>
         )}

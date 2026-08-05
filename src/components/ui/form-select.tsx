@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 
 // Mesmo visual dos inputs do app (min-h-14, rounded-xl, border, text-lg).
 export const formSelectTriggerClass =
-  "min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 shadow-none transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] focus-visible:ring-0 data-placeholder:text-zinc-500";
+  "min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 shadow-none transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] focus-visible:ring-0 data-placeholder:text-zinc-500";
 
 const itemClass = "rounded-lg py-2.5 text-lg data-[highlighted]:bg-zinc-100";
 
@@ -159,7 +159,7 @@ export function FormCombobox({
           ))}
           <SelectItem
             value={FORM_COMBOBOX_OUTRO}
-            className={cn(itemClass, "font-medium text-[#d4883a]")}
+            className={cn(itemClass, "font-medium text-[#2195B9]")}
           >
             {customLabel}
           </SelectItem>
@@ -167,14 +167,14 @@ export function FormCombobox({
       </Select>
 
       {digitando && (
-        <div className="mt-2 flex items-center gap-2 rounded-xl border border-[#f0e0cf] bg-[#f5f0eb]/50 px-3 py-2">
-          <Pencil size={16} className="shrink-0 text-[#d4883a]" aria-hidden="true" />
+        <div className="mt-2 flex items-center gap-2 rounded-xl border border-[#E6E6E6] bg-[#E6E6E6]/50 px-3 py-2">
+          <Pencil size={16} className="shrink-0 text-[#2195B9]" aria-hidden="true" />
           <input
             ref={inputRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Digite o valor"
-            className="min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#d4883a]"
+            className="min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#2195B9]"
           />
         </div>
       )}

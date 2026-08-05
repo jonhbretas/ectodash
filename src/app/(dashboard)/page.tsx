@@ -313,9 +313,9 @@ export default async function DashboardPage({
                   : "Mostrar apenas as demandas atribuídas a você"
               }
               className={cn(
-                "flex h-10 items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]",
+                "flex h-10 items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]",
                 minhasDemandasAtivas
-                  ? "bg-[#f5f0eb] text-[#d4883a] ring-[#f0e0cf] hover:bg-[#f5f0eb]"
+                  ? "bg-[#E6E6E6] text-[#2195B9] ring-[#E6E6E6] hover:bg-[#E6E6E6]"
                   : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
@@ -325,7 +325,7 @@ export default async function DashboardPage({
           )}
           <Link
             href="/demandas/nova"
-            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#d4883a] to-[#e8a85c] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)] transition-all duration-200 hover:from-[#c07828] hover:to-[#d4883a] hover:shadow-[0_4px_12px_rgba(212,136,58,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <Plus size={18} aria-hidden="true" />
             Nova demanda
@@ -335,7 +335,7 @@ export default async function DashboardPage({
 
       <div className="flex w-full flex-col gap-5">
         {scopedViewNotice && (
-          <p className="rounded-xl bg-[#f5f0eb] px-4 py-2.5 text-sm font-medium text-[#d4883a] ring-1 ring-[#f0e0cf]/60">
+          <p className="rounded-xl bg-[#E6E6E6] px-4 py-2.5 text-sm font-medium text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
             {scopedViewNotice}
           </p>
         )}

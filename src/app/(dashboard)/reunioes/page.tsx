@@ -120,14 +120,14 @@ export default async function ReunioesPage() {
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/analisar"
-            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#d4883a] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(212,136,58,0.25)] transition-all duration-200 hover:bg-[#c07828] hover:shadow-[0_2px_6px_rgba(212,136,58,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <Sparkles size={22} aria-hidden="true" />
             Analisar por IA
           </Link>
           <Link
             href="/reunioes/nova"
-            className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <PlusCircle size={22} aria-hidden="true" />
             Registrar manual
@@ -155,11 +155,11 @@ export default async function ReunioesPage() {
               aria-label={monthLabel(group.key)}
             >
               <div className="flex items-center gap-3">
-                <span className="h-8 w-1.5 rounded-full bg-[#d4883a]" aria-hidden="true" />
+                <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
                 <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
                   {monthLabel(group.key)}
                 </h2>
-                <span className="rounded-full bg-[#f5f0eb] px-3 py-1 text-base font-medium text-[#8b5e2a]">
+                <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
                   {group.rows.length} {group.rows.length === 1 ? "ata" : "atas"}
                 </span>
               </div>
@@ -202,7 +202,7 @@ function AtaAgendaRow({ ata }: { ata: AtaRow }) {
 
       <Link
         href={`/reunioes/${ata.id}`}
-        className="flex min-w-0 flex-1 flex-col gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_6px_rgba(0,0,0,0.06)] hover:ring-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] sm:p-5"
+        className="flex min-w-0 flex-1 flex-col gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_6px_rgba(0,0,0,0.06)] hover:ring-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:p-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="min-w-0 text-xl font-semibold text-zinc-900">
@@ -236,7 +236,7 @@ function AtaAgendaRow({ ata }: { ata: AtaRow }) {
         ) : (
           <p className="text-base text-zinc-500">Sem resumo registrado.</p>
         )}
-        <span className="mt-auto flex items-center gap-1.5 pt-1 text-base font-medium text-[#d4883a] underline decoration-[#d4883a]/40 underline-offset-4">
+        <span className="mt-auto flex items-center gap-1.5 pt-1 text-base font-medium text-[#2195B9] underline decoration-[#2195B9]/40 underline-offset-4">
           <FileText size={16} aria-hidden="true" />
           Ver ata completa
         </span>

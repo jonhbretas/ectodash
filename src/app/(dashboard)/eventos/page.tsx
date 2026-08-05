@@ -138,7 +138,7 @@ export default async function EventosPage() {
           {isCoordenador && (
             <Link
               href="/eventos/modelos"
-              className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+              className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
               <Settings2 size={22} aria-hidden="true" />
               Modelos
@@ -161,7 +161,7 @@ export default async function EventosPage() {
             </p>
             <Link
               href="/demandas/nova"
-              className="flex min-h-14 items-center justify-center rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+              className="flex min-h-14 items-center justify-center rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
               Criar demanda
             </Link>
@@ -192,7 +192,7 @@ export default async function EventosPage() {
 
           {anteriores.length > 0 && (
             <details className="group w-full">
-              <summary className="flex min-h-14 w-full cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-white px-5 py-4 ring-1 ring-zinc-200/60 marker:hidden transition-colors hover:ring-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-14 w-full cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-white px-5 py-4 ring-1 ring-zinc-200/60 marker:hidden transition-colors hover:ring-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] [&::-webkit-details-marker]:hidden">
                 <span className="text-2xl font-semibold text-zinc-900">
                   Eventos anteriores ({anteriores.length})
                 </span>
@@ -238,11 +238,11 @@ function MonthSection({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex items-center gap-3">
-        <span className="h-8 w-1.5 rounded-full bg-[#d4883a]" aria-hidden="true" />
+        <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
         <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
           {label}
         </h2>
-        <span className="rounded-full bg-[#f5f0eb] px-3 py-1 text-base font-medium text-[#8b5e2a]">
+        <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
           {count} {count === 1 ? "evento" : "eventos"}
         </span>
         {isCurrentMonth && (
@@ -272,7 +272,7 @@ function AgendaRow({ evento, today }: { evento: EventoRow; today: string }) {
         </span>
         <span
           className={`text-2xl font-semibold sm:text-3xl ${
-            isToday ? "text-[#d4883a]" : "text-zinc-900"
+            isToday ? "text-[#2195B9]" : "text-zinc-900"
           }`}
         >
           {date.getDate()}
@@ -281,7 +281,7 @@ function AgendaRow({ evento, today }: { evento: EventoRow; today: string }) {
           {MONTH_ABBR[date.getMonth()]}
         </span>
         {isToday && (
-          <span className="mt-1 rounded-full bg-[#d4883a] px-2 py-0.5 text-sm font-semibold text-white">
+          <span className="mt-1 rounded-full bg-[#2195B9] px-2 py-0.5 text-sm font-semibold text-white">
             Hoje
           </span>
         )}
@@ -289,7 +289,7 @@ function AgendaRow({ evento, today }: { evento: EventoRow; today: string }) {
 
       <Link
         href={`/eventos/${evento.id}`}
-        className="flex min-w-0 flex-1 flex-col gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_6px_rgba(0,0,0,0.06)] hover:ring-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] sm:p-5"
+        className="flex min-w-0 flex-1 flex-col gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_6px_rgba(0,0,0,0.06)] hover:ring-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:p-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="min-w-0 text-xl font-semibold text-zinc-900">
@@ -313,7 +313,7 @@ function AgendaRow({ evento, today }: { evento: EventoRow; today: string }) {
             {evento.descricao}
           </p>
         )}
-        <span className="mt-auto pt-1 text-base font-medium text-[#d4883a] underline decoration-[#d4883a]/40 underline-offset-4">
+        <span className="mt-auto pt-1 text-base font-medium text-[#2195B9] underline decoration-[#2195B9]/40 underline-offset-4">
           Gerenciar evento
         </span>
       </Link>

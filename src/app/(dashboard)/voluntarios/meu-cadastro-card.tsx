@@ -1,4 +1,4 @@
-﻿import { format } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Phone, Mail } from "lucide-react";
 import { roleLabel } from "@/lib/role-labels";
@@ -37,7 +37,7 @@ function PhoneLink({ phone, label }: { phone: string; label: string }) {
       href={`https://wa.me/${digits}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-1.5 text-lg text-[#d4883a] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+      className="flex items-center gap-1.5 text-lg text-[#2195B9] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
     >
       <Phone size={14} aria-hidden="true" />
       {label}: {phone}
@@ -56,7 +56,7 @@ export default function MeuCadastroCard({ row, role }: { row: VoluntarioRow; rol
     <PageContainer>
       <div className="flex w-full max-w-2xl flex-col gap-3">
         <div className="flex items-center gap-3">
-          <span className="h-8 w-1.5 rounded-full bg-[#d4883a]" aria-hidden="true" />
+          <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
           <h2 className="text-2xl font-semibold text-zinc-900">Meu cadastro</h2>
         </div>
         <div className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">

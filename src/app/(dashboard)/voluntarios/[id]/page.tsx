@@ -64,7 +64,7 @@ function WhatsAppLink({ phone, label }: { phone: string; label: string }) {
       href={`https://wa.me/${normalized}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-xl text-[#d4883a] underline decoration-[#d4883a]/30 transition-colors hover:text-[#c07828] hover:decoration-[#c07828]/50"
+      className="text-xl text-[#2195B9] underline decoration-[#2195B9]/30 transition-colors hover:text-[#28627B] hover:decoration-[#28627B]/50"
     >
       {label}
     </a>
@@ -84,7 +84,7 @@ function PhoneLink({ phone, label }: { phone: string; label: string }) {
       href={`https://wa.me/${digits}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-1.5 text-lg text-[#d4883a] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+      className="flex items-center gap-1.5 text-lg text-[#2195B9] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
     >
       <Phone size={14} aria-hidden="true" />
       {label}: {phone}
@@ -140,7 +140,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
           </h1>
           <Link
             href="/voluntarios"
-            className="flex min-h-14 items-center justify-center rounded-lg bg-[#d4883a] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#c07828] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+            className="flex min-h-14 items-center justify-center rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Voltar para a equipe
           </Link>
@@ -240,7 +240,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                   {voluntario.nome}
                 </h1>
                 {linked && (
-                  <span className="flex items-center gap-1 rounded-full bg-[#f5f0eb] px-2.5 py-0.5 text-base font-medium text-[#8b5e2a] ring-1 ring-[#f0e0cf]/60">
+                  <span className="flex items-center gap-1 rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-base font-medium text-[#28627B] ring-1 ring-[#E6E6E6]/60">
                     <UserRoundCheck size={14} aria-hidden="true" />
                     Vinculado
                   </span>
@@ -290,7 +290,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
               <div className="flex flex-col gap-2">
                 <Link
                   href={`/voluntarios/${voluntario.id}/editar`}
-                  className="flex min-h-12 items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]"
+                  className="flex min-h-12 items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
                 >
                   <Pencil size={18} aria-hidden="true" />
                   Editar cadastro
@@ -322,7 +322,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                   {areasExtras.map((area) => (
                     <span
                       key={area}
-                      className="rounded-full bg-[#f5f0eb] px-3 py-1 text-base font-medium text-[#8b5e2a] ring-1 ring-[#f0e0cf]/60"
+                      className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B] ring-1 ring-[#E6E6E6]/60"
                     >
                       {area}
                     </span>
@@ -361,7 +361,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                 <Link
                   key={participacao.ataId}
                   href={`/reunioes/${participacao.ataId}`}
-                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
                 >
                   <span className="text-xl text-zinc-900">
                     {participacao.titulo}
@@ -395,7 +395,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                 <Link
                   key={demanda.id}
                   href={`/demandas/${demanda.id}/editar`}
-                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
                 >
                   <span className="text-xl text-zinc-900">{demanda.titulo}</span>
                   <span className="flex flex-wrap items-center gap-2">
@@ -429,7 +429,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                 <Link
                   key={demanda.id}
                   href={`/demandas/${demanda.id}/editar`}
-                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
                 >
                   <span className="text-xl text-zinc-900">{demanda.titulo}</span>
                   <span className="text-base text-zinc-700">
