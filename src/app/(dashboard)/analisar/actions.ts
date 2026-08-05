@@ -207,15 +207,14 @@ Responda APENAS com JSON. O JSON deve ter este formato:
   "titulo": "título resumindo o conteúdo",
   "resumo": "resumo didático em português (máx. 5 frases curtas)",
   "financeiro": [{"tipo": "entrada"|"saida", "descricao": "texto", "valor": 123.45, "data": "AAAA-MM-DD", "categoria": "categoria opcional"}],
-  "eventos": [{"titulo": "nome", "data": "AAAA-MM-DD", "local": "lugar", "descricao": "detalhes"}],
+  "eventos": [{"titulo": "nome do evento", "data": "AAAA-MM-DD", "local": "lugar", "descricao": "detalhes"}],
   "demandas": [{"titulo": "tarefa", "responsavel_texto": "nome da pessoa no texto", "prazo_texto": "prazo como mencionado", "prazo_sugerido": "data concreta AAAA-MM-DD"}],
   "ata": {"titulo": "título da ata", "data": "AAAA-MM-DD ("" se não mencionada)", "horario": "HH:mm ("" se não mencionado)", "participantes": ["nomes"], "pontos_principais": ["pontos"], "deliberacoes": ["deliberações"], "resumo": "resumo da reunião"},
   "dips": [{"localidade": "cidade/região", "pais": "país", "data": "AAAA-MM-DD ("" se não mencionada)", "participantes": 123 (número, "" quando não mencionado), "observacoes": "detalhes"}],
   "atualizacoes": [{"titulo": "título da demanda JÁ EXISTENTE mencionada", "comentario": "o que mudou"}]
 }
 Inclua SOMENTE os campos relevantes ao tipo detectado (ex: se for financeiro, inclua apenas "financeiro" e omita "eventos" e "demandas").
-Quando o conteúdo for uma transcrição ou ata de reunião, inclua "ata" completo, "demandas" (deliberações NOVAS com responsável e prazo claros), "dips" (menções à Dinâmica DIP, um registro por menção) e "atualizacoes" (menções a demandas que já existiam, ex.: "atualizar demanda X"). Se uma seção não tiver itens, use o array vazio.
-VALORES MONETÁRIOS: sempre como número (ex: 1234.56, nunca "1.234,56").
+Quando o conteúdo for uma transcrição ou ata de reunião, inclua "ata" completo, "demandas" (deliberações NOVAS com responsável e prazo claros), "dips" (menções à Dinâmica DIP, um registro por menção), "atualizacoes" (menções a demandas que já existiam, ex.: "atualizar demanda X") e "eventos" (toda menção a um acontecimento futuro com data, como reuniões, cursos, encontros, congressos, qualificações, viradas de consciência — extraia do texto mesmo que a data seja relativa, usando ${hoje} como referência). Se uma seção não tiver itens, use o array vazio.
 DATAS: sempre AAAA-MM-DD. Para prazos relativos ("sexta", "amanhã", "fim do mês"), calcule a data concreta a partir de hoje (${hoje}).
 Se o conteúdo não se encaixar em nenhuma categoria, use tipo "outro" e forneça apenas titulo e resumo.`,
     `Hoje é ${hoje}. Analise o conteúdo abaixo e extraia os dados estruturados:\n\n"""\n${texto.slice(0, MAX_TEXT_CHARS)}\n"""`,
