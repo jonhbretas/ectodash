@@ -62,7 +62,7 @@ export default async function EditarVoluntarioPage({
     supabase
       .from("voluntarios")
       .select(
-        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, telefone_1, telefone_2, profiles(email)"
+        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, telefone1, telefone2, profiles(email)"
       )
       .eq("id", Number(id))
       .maybeSingle(),
@@ -140,8 +140,8 @@ export default async function EditarVoluntarioPage({
     areasLideradas: [],
     ativo: voluntario.ativo,
     areas: areasExtras,
-    telefone_1: voluntario.telefone_1 ?? null,
-    telefone_2: voluntario.telefone_2 ?? null,
+    telefone1: voluntario.telefone1 ?? null,
+    telefone2: voluntario.telefone2 ?? null,
   };
 
   return (

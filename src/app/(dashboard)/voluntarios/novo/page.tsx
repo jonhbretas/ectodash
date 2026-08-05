@@ -25,8 +25,8 @@ const emptyValues: VoluntarioFormValues = {
   areasLideradas: [],
   ativo: true,
   areas: [],
-  telefone_1: null,
-  telefone_2: null,
+  telefone1: null,
+  telefone2: null,
 };
 
 export default async function NovoVoluntarioPage() {
