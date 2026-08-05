@@ -61,6 +61,9 @@ type DemandaFormProps = {
   voluntarios: VoluntarioOption[];
   eventos: EventoOption[];
   etiquetas: EtiquetaOption[];
+  // Nomes das áreas institucionais (areas_institucionais) — sugeridas no
+  // campo Área via datalist; o texto livre continua aceito (legado).
+  areas?: string[];
   mode?: "create" | "edit";
   demandaId?: number;
   defaultValues?: Partial<DemandaFormValues> & {
@@ -93,6 +96,7 @@ export default function DemandaForm({
   voluntarios,
   eventos,
   etiquetas,
+  areas = [],
   mode = "create",
   demandaId,
   defaultValues,
@@ -282,10 +286,16 @@ export default function DemandaForm({
               <Input
                 id="area"
                 type="text"
+                list="areas-institucionais"
                 placeholder="Ex: Pesquisa de Campo"
                 className={fieldInputClass}
                 {...register("area")}
               />
+              <datalist id="areas-institucionais">
+                {areas.map((area) => (
+                  <option key={area} value={area} />
+                ))}
+              </datalist>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -519,10 +529,16 @@ export default function DemandaForm({
             <Input
               id="area"
               type="text"
+              list="areas-institucionais"
               placeholder="Ex: Pesquisa de Campo"
               className={fieldInputClass}
               {...register("area")}
             />
+            <datalist id="areas-institucionais">
+              {areas.map((area) => (
+                <option key={area} value={area} />
+              ))}
+            </datalist>
           </div>
 
           <div className="flex flex-col gap-1.5">

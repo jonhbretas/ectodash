@@ -74,6 +74,9 @@ export type InlineEditorProps = {
   allVoluntarios: InlinePessoa[];
   eventos: InlineEvento[];
   etiquetas: InlineEtiqueta[];
+  // Nomes das áreas institucionais (areas_institucionais) — sugeridas no
+  // campo Área via datalist; o texto livre continua aceito (legado).
+  areas?: string[];
 };
 
 function initials(name: string): string {
@@ -319,6 +322,7 @@ export default function DemandaInlineEditor({
   allVoluntarios,
   eventos,
   etiquetas,
+  areas = [],
 }: InlineEditorProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -588,9 +592,14 @@ export default function DemandaInlineEditor({
         {editingPill === "area" ? (
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
             <input ref={editingRef as any} value={localArea ?? ""} onChange={(e) => setLocalArea(e.target.value)}
-              placeholder="Área" onBlur={async () => { await saveArea(localArea ?? ""); setEditingPill(null); }}
+              placeholder="Área" list="areas-institucionais" onBlur={async () => { await saveArea(localArea ?? ""); setEditingPill(null); }}
               onKeyDown={(e) => { if (e.key === "Enter") { saveArea(localArea ?? ""); setEditingPill(null); } if (e.key === "Escape") { setLocalArea(demanda.area); setEditingPill(null); } }}
               className="min-h-10 w-40 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500" />
+            <datalist id="areas-institucionais">
+              {areas.map((area) => (
+                <option key={area} value={area} />
+              ))}
+            </datalist>
           </div>
         ) : (
           <button type="button" onClick={() => setEditingPill("area")}

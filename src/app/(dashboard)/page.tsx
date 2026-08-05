@@ -108,11 +108,12 @@ export default async function DashboardPage({
   const baseRows = baseDemandas ?? [];
 
   const areaOptions = [
-    ...new Set(
-      baseRows
+    ...new Set([
+      ...(areasInstitucionaisResult.data ?? []).map((a) => a.nome),
+      ...baseRows
         .map((d) => d.area)
-        .filter((area): area is string => Boolean(area && area.trim()))
-    ),
+        .filter((area): area is string => Boolean(area && area.trim())),
+    ]),
   ].sort((a, b) => a.localeCompare(b));
 
   const projetoOptions = [
@@ -128,7 +129,7 @@ export default async function DashboardPage({
   const demandaIds = (demandas ?? []).map((demanda) => demanda.id);
   const baseDemandaIds = baseRows.map((demanda) => demanda.id);
 
-  const [responsaveisResult, eventosResult, etiquetasResult, checklistResult] =
+  const [responsaveisResult, eventosResult, etiquetasResult, checklistResult, areasInstitucionaisResult] =
     await Promise.all([
       baseDemandaIds.length > 0
         ? supabase
@@ -158,6 +159,7 @@ export default async function DashboardPage({
             .select("demanda_id, concluido")
             .in("demanda_id", baseDemandaIds)
         : Promise.resolve({ data: [] as { demanda_id: number; concluido: boolean }[] }),
+      supabase.from("areas_institucionais").select("nome").order("nome"),
     ]);
 
   const responsaveis = (responsaveisResult.data ?? []) as unknown as RowResponsavel[];

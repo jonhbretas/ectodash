@@ -61,6 +61,7 @@ export default async function EditarDemandaPage({
     { data: etiquetas },
     { data: checklistItems },
     { data: comentariosRaw },
+    { data: areasInstitucionais },
   ] = await Promise.all([
     supabase.from("demanda_responsaveis").select("profile_id, voluntario_id").eq("demanda_id", id),
     supabase.from("demanda_membros").select("profile_id, voluntario_id").eq("demanda_id", id),
@@ -75,6 +76,7 @@ export default async function EditarDemandaPage({
     supabase.from("demanda_comentarios")
       .select("id, conteudo, created_at, autor_id, profiles(full_name, email)")
       .eq("demanda_id", id).order("created_at", { ascending: true }),
+    supabase.from("areas_institucionais").select("nome").order("nome"),
   ]);
 
   // Normalize the persisted assignments (profile_id OR voluntario_id, per
