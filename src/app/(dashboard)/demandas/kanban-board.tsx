@@ -111,10 +111,10 @@ function KanbanCard({
           {demanda.titulo}
         </Link>
 
-        {/* Prazo + atraso */}
+        {/* Prazo + responsável + mover coluna (uma linha) */}
         <div className="mt-2 flex items-center gap-2">
           <span
-            className={`flex items-center gap-1 text-base ${
+            className={`flex shrink-0 items-center gap-1 text-base ${
               demanda.atrasada ? "font-medium text-red-700" : "text-zinc-500"
             }`}
           >
@@ -122,12 +122,9 @@ function KanbanCard({
             {prazoFormatada}
           </span>
           {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
-        </div>
 
-        {/* Responsável à esquerda, mover coluna à direita (inline) */}
-        <div className="mt-2 flex items-center gap-1.5">
           {responsavel ? (
-            <span className="flex min-w-0 items-center gap-1.5 text-base text-zinc-700">
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 text-base text-zinc-700">
               <span
                 aria-hidden="true"
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
@@ -142,7 +139,7 @@ function KanbanCard({
               )}
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 text-base text-zinc-400">
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 text-base text-zinc-400">
               <User size={14} aria-hidden="true" />
               Sem responsável
             </span>

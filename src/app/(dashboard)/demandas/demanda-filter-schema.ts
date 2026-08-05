@@ -51,7 +51,16 @@ export const demandaFilterSchema = z.object({
       .regex(/^\d+$/, "etiqueta deve ser um id numérico")
       .optional()
   ),
-  responsavel: z.string().uuid().optional(),
+  // responsavel: a numeric string id (voluntarios.id is bigint) — the roster
+  // id is the UI's single vocabulary for responsáveis since DEM-06
+  // (2026-08-04), so this follows the same numeric-string rule as evento.
+  responsavel: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^\d+$/, "responsavel deve ser um id numérico")
+      .optional()
+  ),
   status: z.enum(["pendente", "em_andamento", "concluida"]).optional(),
   agrupar: z.enum(["area", "responsavel"]).optional(),
   view: z.enum(["lista", "kanban", "calendario"]).optional(),

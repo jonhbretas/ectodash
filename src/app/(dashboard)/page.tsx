@@ -16,8 +16,10 @@ import {
   ClipboardList,
   Clock,
   Plus,
+  UserCheck,
 } from "lucide-react";
 import { parseDemandaFilters } from "./demandas/demanda-filter-schema";
+import { cn } from "@/lib/utils";
 
 export default async function DashboardPage({
   searchParams,
@@ -37,11 +39,19 @@ export default async function DashboardPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("email, full_name, role")
+    .select("email, full_name, role, voluntario_id")
     .eq("id", user.id)
     .single();
 
   const role = profile?.role;
+
+  const meuVoluntarioId = profile?.voluntario_id ?? null;
+  const minhasDemandasAtivas = Boolean(
+    meuVoluntarioId !== null && filters.responsavel === String(meuVoluntarioId)
+  );
+  const minhasDemandasHref = minhasDemandasAtivas
+    ? "/"
+    : `/?responsavel=${meuVoluntarioId ?? ""}`;
 
   const { data: liderAreasRows } =
     role === "coordenador_area"
@@ -51,7 +61,9 @@ export default async function DashboardPage({
   const liderAreas = (liderAreasRows ?? []).map((row) => row.area);
 
   let scopedViewNotice: string | null = null;
-  if (role === "voluntario_comum") {
+  if (minhasDemandasAtivas) {
+    scopedViewNotice = "Mostrando apenas as demandas atribuídas a você.";
+  } else if (role === "voluntario_comum") {
     scopedViewNotice = "Mostrando apenas as demandas atribuídas a você.";
   } else if (role === "coordenador_area") {
     if (liderAreas.length === 0) {
@@ -278,13 +290,34 @@ export default async function DashboardPage({
             Acompanhe suas demandas e prazos por aqui.
           </p>
         </div>
-        <Link
-          href="/demandas/nova"
-          className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600 hover:shadow-[0_4px_12px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-        >
-          <Plus size={18} aria-hidden="true" />
-          Nova demanda
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {meuVoluntarioId !== null && (
+            <Link
+              href={minhasDemandasHref}
+              title={
+                minhasDemandasAtivas
+                  ? "Voltar para todas as demandas"
+                  : "Mostrar apenas as demandas atribuídas a você"
+              }
+              className={cn(
+                "flex h-10 items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
+                minhasDemandasAtivas
+                  ? "bg-blue-50 text-blue-700 ring-blue-200 hover:bg-blue-100"
+                  : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
+              )}
+            >
+              <UserCheck size={18} aria-hidden="true" />
+              Minhas demandas
+            </Link>
+          )}
+          <Link
+            href="/demandas/nova"
+            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(37,99,235,0.25)] transition-all duration-200 hover:from-blue-700 hover:to-blue-600 hover:shadow-[0_4px_12px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          >
+            <Plus size={18} aria-hidden="true" />
+            Nova demanda
+          </Link>
+        </div>
       </header>
 
       {demandaList.length > 0 && (

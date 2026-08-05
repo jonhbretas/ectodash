@@ -29,8 +29,17 @@ describe("demandaFilterSchema", () => {
     expect(result.area).toBeUndefined();
   });
 
-  it("throws when responsavel is not a valid UUID", () => {
-    expect(() => demandaFilterSchema.parse({ responsavel: "not-a-uuid" })).toThrow();
+  it("throws when responsavel is not a numeric roster id", () => {
+    expect(() => demandaFilterSchema.parse({ responsavel: "not-a-number" })).toThrow();
+  });
+
+  it("accepts a numeric responsavel roster id and rejects a UUID", () => {
+    expect(() => demandaFilterSchema.parse({ responsavel: "42" })).not.toThrow();
+    expect(() =>
+      demandaFilterSchema.parse({
+        responsavel: "123e4567-e89b-12d3-a456-426614174000",
+      })
+    ).toThrow();
   });
 
   it("accepts agrupar values of exactly area or responsavel, and rejects anything else", () => {
@@ -40,17 +49,16 @@ describe("demandaFilterSchema", () => {
   });
 
   it("combines all three filters independently when set together", () => {
-    const uuid = "123e4567-e89b-12d3-a456-426614174000";
     const result = demandaFilterSchema.parse({
       area: "Pesquisa",
-      responsavel: uuid,
+      responsavel: "42",
       agrupar: "responsavel",
       view: "kanban",
     });
 
     expect(result).toEqual({
       area: "Pesquisa",
-      responsavel: uuid,
+      responsavel: "42",
       agrupar: "responsavel",
       view: "kanban",
     });
