@@ -33,16 +33,21 @@ export default async function DipLocalidadePage({
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [dipsResult, atasResult, profileResult] = await Promise.all([
+  const [dipsResult, atasResult, profileResult, localidadesResult] = await Promise.all([
     supabase
       .from("dips")
       .select("id, localidade, pais, data_dip, participantes, observacoes, ata_id, criado_por")
       .order("data_dip", { ascending: false }),
     supabase.from("reunioes").select("id, titulo, data_reuniao"),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("dip_localidades").select("localidade, pais").order("localidade"),
   ]);
 
   const isCoordenadorGeral = profileResult.data?.role === "coordenador_geral";
+  const localidadesCadastradas = (localidadesResult.data ?? []).map((l) => ({
+    localidade: l.localidade,
+    pais: l.pais,
+  }));
   const ataById = new Map((atasResult.data ?? []).map((ata) => [ata.id, ata]));
 
   // Resolve o slug para a localidade real — exige match ÚNICO.
@@ -174,6 +179,7 @@ export default async function DipLocalidadePage({
                   isLast={i === futuros.length - 1}
                   highlight
                   canManage={canManage(r.criadoPor)}
+                  localidades={localidadesCadastradas}
                 />
               ))}
             </div>
@@ -198,6 +204,7 @@ export default async function DipLocalidadePage({
                   index={i}
                   isLast={i === passados.length - 1}
                   canManage={canManage(r.criadoPor)}
+                  localidades={localidadesCadastradas}
                 />
               ))}
             </div>

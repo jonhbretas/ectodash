@@ -7,6 +7,7 @@ import { Globe2, MapPin, Sparkles, Users, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import DipEntry, { type DipRow } from "./dip-entry";
+import LocalidadesConfig from "./localidades-config";
 import { slugify } from "@/lib/slug";
 
 export default async function DipsPage({
@@ -21,16 +22,21 @@ export default async function DipsPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [dipsResult, atasResult, profileResult] = await Promise.all([
+  const [dipsResult, atasResult, profileResult, localidadesResult] = await Promise.all([
     supabase
       .from("dips")
       .select("id, localidade, pais, data_dip, participantes, observacoes, ata_id, criado_por")
       .order("data_dip", { ascending: false }),
     supabase.from("reunioes").select("id, titulo, data_reuniao"),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("dip_localidades").select("id, localidade, pais").order("localidade"),
   ]);
 
   const isCoordenadorGeral = profileResult.data?.role === "coordenador_geral";
+  const localidadesCadastradas = (localidadesResult.data ?? []).map((l) => ({
+    localidade: l.localidade,
+    pais: l.pais,
+  }));
 
   const ataById = new Map((atasResult.data ?? []).map((ata) => [ata.id, ata]));
 
@@ -178,6 +184,7 @@ export default async function DipsPage({
                               isLast={i === local.futuros.length - 1}
                               highlight
                               canManage={r.criadoPor === user.id || isCoordenadorGeral}
+                              localidades={localidadesCadastradas}
                             />
                           ))}
                         </div>
@@ -198,6 +205,7 @@ export default async function DipsPage({
                               index={i}
                               isLast={i === local.passados.length - 1}
                               canManage={r.criadoPor === user.id || isCoordenadorGeral}
+                              localidades={localidadesCadastradas}
                             />
                           ))}
                         </div>
@@ -209,6 +217,16 @@ export default async function DipsPage({
             </section>
           ))}
         </div>
+      )}
+
+      {isCoordenadorGeral && (
+        <LocalidadesConfig
+          localidades={(localidadesResult.data ?? []).map((l) => ({
+            id: l.id,
+            localidade: l.localidade,
+            pais: l.pais,
+          }))}
+        />
       )}
     </PageContainer>
   );

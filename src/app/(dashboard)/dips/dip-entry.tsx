@@ -26,12 +26,14 @@ export default function DipEntry({
   isLast,
   highlight,
   canManage,
+  localidades = [],
 }: {
   registro: DipRow;
   index: number;
   isLast: boolean;
   highlight?: boolean;
   canManage?: boolean;
+  localidades?: { localidade: string; pais: string }[];
 }) {
   return (
     <div className={`flex flex-col gap-1 border-b border-zinc-100 py-3 last:border-b-0 ${index === 0 ? "pt-0" : ""} ${highlight ? "bg-blue-50/50 -mx-2 px-2 rounded-lg" : ""}`}>
@@ -72,6 +74,7 @@ export default function DipEntry({
               observacoes: registro.observacoes,
             }}
             canManage
+            localidades={localidades}
           />
         )}
       </div>

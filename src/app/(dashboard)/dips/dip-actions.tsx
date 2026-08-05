@@ -2,7 +2,7 @@
 
 // Editar (inline) e excluir um registro DIP — visível apenas para o criador
 // do registro ou um coordenador_geral (espelha a RLS da migration 0015).
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Pencil, Trash2, X, Check } from "lucide-react";
 import { atualizarDip, excluirDip } from "./actions";
 
@@ -17,12 +17,19 @@ type DipActionsProps = {
     observacoes: string | null;
   };
   canManage: boolean;
+  // Localidades cadastradas (dip_localidades) — sugeridas no campo
+  // Localidade; escolher uma cadastrada preenche o país automaticamente.
+  localidades?: { localidade: string; pais: string }[];
 };
 
 const inputClass =
   "min-h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
 
-export default function DipActions({ dip, canManage }: DipActionsProps) {
+export default function DipActions({
+  dip,
+  canManage,
+  localidades = [],
+}: DipActionsProps) {
   const [editing, setEditing] = useState(false);
   const [localidade, setLocalidade] = useState(dip.localidade);
   const [pais, setPais] = useState(dip.pais);
@@ -32,6 +39,7 @@ export default function DipActions({ dip, canManage }: DipActionsProps) {
   );
   const [observacoes, setObservacoes] = useState(dip.observacoes ?? "");
   const [saving, setSaving] = useState(false);
+  const localidadesListId = useId();
 
   if (!canManage) return null;
 
@@ -72,9 +80,23 @@ export default function DipActions({ dip, canManage }: DipActionsProps) {
             Localidade
             <input
               value={localidade}
-              onChange={(e) => setLocalidade(e.target.value)}
+              list={localidadesListId}
+              onChange={(e) => {
+                setLocalidade(e.target.value);
+                const cadastrada = localidades.find(
+                  (l) => l.localidade === e.target.value
+                );
+                if (cadastrada) setPais(cadastrada.pais);
+              }}
               className={inputClass}
             />
+            {localidades.length > 0 && (
+              <datalist id={localidadesListId}>
+                {localidades.map((l) => (
+                  <option key={l.localidade} value={l.localidade} />
+                ))}
+              </datalist>
+            )}
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
             País

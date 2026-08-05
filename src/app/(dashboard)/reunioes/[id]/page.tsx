@@ -54,7 +54,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
     );
   }
 
-  const [ataResult, dipsResult, profileResult, participantesResult, voluntariosResult] =
+  const [ataResult, dipsResult, profileResult, participantesResult, voluntariosResult, localidadesResult] =
     await Promise.all([
       supabase
         .from("reunioes")
@@ -74,6 +74,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
         .select("voluntario_id, voluntarios(nome)")
         .eq("ata_id", id),
       supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("dip_localidades").select("localidade, pais").order("localidade"),
     ]);
 
   if (ataResult.error || !ataResult.data) {
@@ -117,6 +118,11 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
   const voluntarios = (voluntariosResult.data ?? []).map((v) => ({
     id: String(v.id),
     nome: v.nome,
+  }));
+
+  const localidadesCadastradas = (localidadesResult.data ?? []).map((l) => ({
+    localidade: l.localidade,
+    pais: l.pais,
   }));
 
   // UX gate mirroring RLS 0007: only the creator or a coordenador_geral
@@ -282,6 +288,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
                         dip.criado_por === user.id ||
                         profileResult.data?.role === "coordenador_geral"
                       }
+                      localidades={localidadesCadastradas}
                     />
                   </div>
                 </div>
