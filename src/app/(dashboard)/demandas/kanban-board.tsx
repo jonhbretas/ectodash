@@ -355,7 +355,7 @@ export default function KanbanBoard({ demandas }: KanbanBoardProps) {
                 Nenhuma demanda aqui
               </p>
             ) : (
-              <ul className="flex min-h-0 flex-col gap-2 overflow-y-auto lg:max-h-[calc(100dvh-22rem)]">
+              <ul className="flex flex-col gap-2 lg:min-h-[calc(100dvh-13rem)]">
                 {items.map((demanda) => (
                   <KanbanCard
                     key={demanda.id}

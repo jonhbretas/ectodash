@@ -293,7 +293,9 @@ export default async function DashboardPage({
             currentFilters={filters}
           />
 
-          <DemandaViewToggle currentView={view} />
+          <div className="mr-2 lg:mr-4">
+            <DemandaViewToggle currentView={view} />
+          </div>
 
           {meuVoluntarioId !== null && (
             <Link
