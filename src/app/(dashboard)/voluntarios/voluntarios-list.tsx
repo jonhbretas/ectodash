@@ -156,101 +156,103 @@ export default function VoluntariosListClient({
       </div>
 
       {selectedIdsArr.length > 0 && (
-        <div className="sticky top-2 z-30 flex w-full flex-wrap items-center gap-3 rounded-2xl bg-blue-50 p-4 shadow-[0_4px_12px_rgba(37,99,235,0.15)] ring-1 ring-blue-200/60">
-          <span className="text-lg font-medium text-blue-900">
-            {selectedIdsArr.length} {selectedIdsArr.length === 1 ? "selecionado" : "selecionados"}
-          </span>
-          <button
-            type="button"
-            onClick={clearSelection}
-            className="rounded-full bg-white px-3 py-1 text-base font-medium text-zinc-700 ring-1 ring-zinc-200/60 transition-colors hover:bg-zinc-100"
-          >
-            Limpar seleção
-          </button>
-
-          {canManage && (
-            <>
-              <button
-                type="button"
-                onClick={() => { setShowBulkPanel(true); setBulkAcao(null); }}
-                className="flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-blue-600"
-              >
-                <Settings2 size={18} />
-                Ações em massa
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {showBulkPanel && selectedIdsArr.length > 0 && (
-        <div className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-zinc-900">Ações em massa</h3>
-            <button type="button" onClick={() => setShowBulkPanel(false)} className="rounded-lg p-1 text-zinc-500 transition-colors hover:bg-zinc-100">
-              <X size={20} />
+        <div className="sticky top-2 z-30 flex w-full flex-col gap-3 rounded-2xl bg-blue-50 p-4 shadow-[0_4px_12px_rgba(37,99,235,0.15)] ring-1 ring-blue-200/60">
+          <div className="flex w-full flex-wrap items-center gap-3">
+            <span className="text-lg font-medium text-blue-900">
+              {selectedIdsArr.length} {selectedIdsArr.length === 1 ? "selecionado" : "selecionados"}
+            </span>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="rounded-full bg-white px-3 py-1 text-base font-medium text-zinc-700 ring-1 ring-zinc-200/60 transition-colors hover:bg-zinc-100"
+            >
+              Limpar seleção
             </button>
+
+            {canManage && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setShowBulkPanel(true); setBulkAcao(null); }}
+                  className="flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-blue-600"
+                >
+                  <Settings2 size={18} />
+                  Ações em massa
+                </button>
+              </>
+            )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setBulkAcao("ativar")}
-              className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "ativar" ? "bg-green-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-            >
-              Ativar
-            </button>
-            <button
-              type="button"
-              onClick={() => setBulkAcao("desativar")}
-              className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "desativar" ? "bg-red-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-            >
-              Desativar
-            </button>
-            <button
-              type="button"
-              onClick={() => setBulkAcao("migrar_area")}
-              className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_area" ? "bg-blue-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-            >
-              Migrar de área
-            </button>
-          </div>
+          {showBulkPanel && (
+            <div className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-zinc-900">Ações em massa</h3>
+                <button type="button" onClick={() => setShowBulkPanel(false)} className="rounded-lg p-1 text-zinc-500 transition-colors hover:bg-zinc-100">
+                  <X size={20} />
+                </button>
+              </div>
 
-          {bulkAcao && (
-            <form action={bulkAction} className="flex flex-wrap items-end gap-3">
-              <input type="hidden" name="ids" value={selectedIdsArr.join(",")} />
-              <input type="hidden" name="acao" value={bulkAcao} />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkAcao("ativar")}
+                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "ativar" ? "bg-green-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
+                >
+                  Ativar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkAcao("desativar")}
+                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "desativar" ? "bg-red-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
+                >
+                  Desativar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkAcao("migrar_area")}
+                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_area" ? "bg-blue-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
+                >
+                  Migrar de área
+                </button>
+              </div>
 
-              {bulkAcao === "migrar_area" && (
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="nova_area_bulk" className="text-lg font-medium text-zinc-900">Nova área</label>
-                  <input
-                    id="nova_area_bulk"
-                    name="nova_area"
-                    required
-                    list="areas-bulk"
-                    placeholder="Digite a nova área"
-                    className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-                  />
-                  <datalist id="areas-bulk">
-                    {areaOptions.map((a) => <option key={a} value={a} />)}
-                  </datalist>
-                </div>
+              {bulkAcao && (
+                <form action={bulkAction} className="flex flex-wrap items-end gap-3">
+                  <input type="hidden" name="ids" value={selectedIdsArr.join(",")} />
+                  <input type="hidden" name="acao" value={bulkAcao} />
+
+                  {bulkAcao === "migrar_area" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="nova_area_bulk" className="text-lg font-medium text-zinc-900">Nova área</label>
+                      <input
+                        id="nova_area_bulk"
+                        name="nova_area"
+                        required
+                        list="areas-bulk"
+                        placeholder="Digite a nova área"
+                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                      />
+                      <datalist id="areas-bulk">
+                        {areaOptions.map((a) => <option key={a} value={a} />)}
+                      </datalist>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="flex min-h-12 items-center gap-2 rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-colors hover:bg-blue-600"
+                  >
+                    Confirmar
+                  </button>
+
+                  {bulkState.message && (
+                    <p className={`text-base ${bulkState.ok ? "text-green-800" : "text-red-700"}`}>
+                      {bulkState.message}
+                    </p>
+                  )}
+                </form>
               )}
-
-              <button
-                type="submit"
-                className="flex min-h-12 items-center gap-2 rounded-xl bg-blue-700 px-5 text-lg font-medium text-white transition-colors hover:bg-blue-600"
-              >
-                Confirmar
-              </button>
-
-              {bulkState.message && (
-                <p className={`text-base ${bulkState.ok ? "text-green-800" : "text-red-700"}`}>
-                  {bulkState.message}
-                </p>
-              )}
-            </form>
+            </div>
           )}
         </div>
       )}

@@ -8,7 +8,7 @@
 //   - coordenador_area: their own áreas (RLS-scoped read + notice);
 //   - voluntario_comum: only their own linked record.
 import Link from "next/link";
-import { Users, Plus } from "lucide-react";
+import { Users, Plus, Layers } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import { parseVoluntariosFilters } from "./voluntarios-filter-schema";
@@ -175,13 +175,24 @@ export default async function VoluntariosPage({
           )}
         </div>
         {canManage && (
-          <Link
-            href="/voluntarios/novo"
-            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 hover:shadow-[0_2px_6px_rgba(29,78,216,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          >
-            <Plus size={22} aria-hidden="true" />
-            Novo voluntário
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {role === "coordenador_geral" && (
+              <Link
+                href="/areas"
+                className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              >
+                <Layers size={22} aria-hidden="true" />
+                Cadastro de áreas
+              </Link>
+            )}
+            <Link
+              href="/voluntarios/novo"
+              className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-blue-600 hover:shadow-[0_2px_6px_rgba(29,78,216,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              <Plus size={22} aria-hidden="true" />
+              Novo voluntário
+            </Link>
+          </div>
         )}
       </header>
 
