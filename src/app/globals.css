@@ -38,28 +38,28 @@
 }
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #faf9f7;
+  --foreground: #1a1a1a;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #1a1a1a;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #2563eb;
+  --popover-foreground: #1a1a1a;
+  --primary: #d4883a;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;
-  --accent: #eff6ff;
-  --accent-foreground: #1e40af;
+  --secondary: #f5f0eb;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f0eb;
+  --muted-foreground: #6b6b6b;
+  --accent: #fff8f0;
+  --accent-foreground: #8b5a2b;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --ring: #2563eb;
+  --border: #e8ddd4;
+  --input: #d4c9be;
+  --ring: #d4883a;
   --radius: 0.625rem;
-  --success: #16a34a;
-  --warning: #d97706;
+  --success: #2d8f5e;
+  --warning: #d4883a;
 
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -167,15 +167,15 @@
 }
 
 .gradient-primary {
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
+  background: linear-gradient(135deg, #d4883a 0%, #e8a85c 50%, #f0c078 100%);
 }
 
 .gradient-success {
-  background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+  background: linear-gradient(135deg, #2d8f5e 0%, #237a4d 100%);
 }
 
 .gradient-warning {
-  background: linear-gradient(135deg, #d97706 0%, #ea580c 100%);
+  background: linear-gradient(135deg, #d4883a 0%, #c07828 100%);
 }
 
 .gradient-danger {
@@ -183,11 +183,11 @@
 }
 
 .gradient-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #fff8f0 100%);
 }
 
 .gradient-slate {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #faf9f7 0%, #f5f0eb 100%);
 }
 
 @layer base {
