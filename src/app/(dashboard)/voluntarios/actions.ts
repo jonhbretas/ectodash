@@ -221,3 +221,75 @@ export async function atualizarVoluntario(
   revalidatePath("/");
   return { ok: true, message: "Voluntário atualizado." };
 }
+
+export type BulkState = { ok: boolean; message: string; processados: number };
+
+export async function atualizarVoluntariosEmMassa(
+  prevState: BulkState,
+  formData: FormData
+): Promise<BulkState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada.", processados: 0 };
+
+  const idsRaw = formData.get("ids");
+  if (typeof idsRaw !== "string" || !idsRaw.trim()) {
+    return { ok: false, message: "Nenhum voluntário selecionado.", processados: 0 };
+  }
+
+  const ids = idsRaw.split(",").map(Number).filter((n) => Number.isFinite(n));
+  if (ids.length === 0) {
+    return { ok: false, message: "Nenhum voluntário selecionado.", processados: 0 };
+  }
+
+  const acao = formData.get("acao");
+
+  if (acao === "desativar") {
+    let processados = 0;
+    for (const id of ids) {
+      const { error } = await supabase.rpc("atualizar_voluntario", {
+        p_cadastro_id: id,
+        p_nome: undefined,
+        p_ativo: false,
+      });
+      if (!error) processados++;
+    }
+    revalidatePath("/voluntarios");
+    return { ok: true, message: `${processados} voluntário(s) desativado(s).`, processados };
+  }
+
+  if (acao === "ativar") {
+    let processados = 0;
+    for (const id of ids) {
+      const { error } = await supabase.rpc("atualizar_voluntario", {
+        p_cadastro_id: id,
+        p_nome: undefined,
+        p_ativo: true,
+      });
+      if (!error) processados++;
+    }
+    revalidatePath("/voluntarios");
+    return { ok: true, message: `${processados} voluntário(s) ativado(s).`, processados };
+  }
+
+  if (acao === "migrar_area") {
+    const novaArea = formData.get("nova_area");
+    if (typeof novaArea !== "string" || !novaArea.trim()) {
+      return { ok: false, message: "Escolha a nova área.", processados: 0 };
+    }
+
+    let processados = 0;
+    for (const id of ids) {
+      const { error } = await supabase.rpc("atualizar_voluntario", {
+        p_cadastro_id: id,
+        p_nome: undefined,
+        p_area_atuacao: novaArea.trim(),
+      });
+      if (!error) processados++;
+    }
+    revalidatePath("/voluntarios");
+    return { ok: true, message: `${processados} voluntário(s) migrados para "${novaArea.trim()}".`, processados };
+  }
+
+  return { ok: false, message: "Ação desconhecida.", processados: 0 };
+}

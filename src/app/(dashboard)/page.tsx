@@ -363,7 +363,9 @@ export default async function DashboardPage({
           currentFilters={filters}
         />
 
-        <DemandaViewToggle currentView={view} />
+        <div className="flex w-full items-center justify-end">
+          <DemandaViewToggle currentView={view} />
+        </div>
 
         {view === "kanban" ? (
           <KanbanBoard key={boardKey} demandas={demandaList} />

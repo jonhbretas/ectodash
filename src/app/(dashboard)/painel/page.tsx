@@ -13,6 +13,7 @@ import ReminderRunsPanel, {
   type ReminderRunRow,
 } from "./reminder-runs-panel";
 import SheetSyncPanel, { type SheetSyncRunRow } from "./sheet-sync-panel";
+import AreasConfig from "./areas-config";
 
 // Matches demanda-list.tsx's SEM_AREA_DEFINIDA constant exactly, character
 // for character — the coordinator dashboard's área breakdown must never
@@ -327,8 +328,24 @@ async function PainelContent({
       <AreaSummary rows={areaRows} />
       <ResponsavelSummary rows={responsavelRows} />
       <OverduePanel demandas={overduePanelRows} />
+
+      <PainelAreasSection supabase={supabase} />
+
       <ReminderRunsPanel runs={reminderRuns} />
       <SheetSyncPanel runs={sheetSyncRuns} />
     </>
   );
+}
+
+async function PainelAreasSection({
+  supabase,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+}) {
+  const { data: areas } = await supabase
+    .from("areas_institucionais")
+    .select("id, nome, area_mae_id")
+    .order("nome");
+
+  return <AreasConfig areas={(areas ?? []) as { id: number; nome: string; area_mae_id: number | null }[]} />;
 }

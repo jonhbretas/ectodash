@@ -352,6 +352,7 @@ function ResultsScreen({
           titulo: d.titulo,
           responsavelId: d.responsavelId || null,
           prazoSugerido: d.prazo,
+          responsavelTexto: d.responsavelTexto || undefined,
         })),
       ata: temAta
         ? {

@@ -337,25 +337,51 @@ export async function analisarComIA(
           }))
         : null,
       demandas: data.demandas
-        ? data.demandas.map((d) => {
-            const match = matchResponsavelRoster(
-              d.responsavel_texto ?? "",
-              profiles,
-              roster
-            );
-            return {
-              key: crypto.randomUUID(),
-              titulo: d.titulo,
-              responsavelId: match.profileId,
-              responsavelTexto: d.responsavel_texto ?? "",
-              prazoTexto: d.prazo_texto ?? "",
-              prazoSugerido: d.prazo_sugerido?.length
-                ? d.prazo_sugerido
-                : null,
-              responsavelEncontrado:
-                match.profileId !== null || match.rosterId !== null,
-            };
-          })
+        ? await Promise.all(
+            data.demandas.map(async (d) => {
+              const texto = d.responsavel_texto ?? "";
+              let match: { profileId: string | null; rosterId: number | null } =
+                { profileId: null, rosterId: null };
+
+              if (texto) {
+                // 1. Aliases salvos por coordenadores ("paratecnologico
+                //    ectolab → paulobattistela").
+                const { data: aliasVid } = await supabase.rpc(
+                  "buscar_alias",
+                  { termo_busca: texto }
+                );
+                if (typeof aliasVid === "number") {
+                  const { data: linked } = await supabase
+                    .from("profiles")
+                    .select("id")
+                    .eq("voluntario_id", aliasVid)
+                    .maybeSingle();
+                  match = {
+                    profileId: linked?.id ?? null,
+                    rosterId: aliasVid,
+                  };
+                }
+              }
+
+              // 2. Fallback: name/email heuristic against roster + accounts.
+              if (!match.profileId && !match.rosterId) {
+                match = matchResponsavelRoster(texto, profiles, roster);
+              }
+
+              return {
+                key: crypto.randomUUID(),
+                titulo: d.titulo,
+                responsavelId: match.profileId,
+                responsavelTexto: texto,
+                prazoTexto: d.prazo_texto ?? "",
+                prazoSugerido: d.prazo_sugerido?.length
+                  ? d.prazo_sugerido
+                  : null,
+                responsavelEncontrado:
+                  match.profileId !== null || match.rosterId !== null,
+              };
+            })
+          )
         : null,
       ata: data.ata
         ? {
@@ -419,6 +445,9 @@ export type SalvarTudoInput = {
     titulo: string;
     responsavelId: string | null;
     prazoSugerido: string | null;
+    // Original text from the AI — passed to save aliases when the user's
+    // final selection differs from the automatic match.
+    responsavelTexto?: string;
   }>;
   ata?: {
     titulo: string;
@@ -691,10 +720,41 @@ async function salvarDemandas(
       }
     }
 
+    // Alias learning: when the AI extracted a name and the user confirmed
+    // (or changed) the assignment, save the mapping so the system learns
+    // it for future analyses ("paratecnologico ectolab → paulobattistela").
+    if (d.responsavelTexto && d.responsavelId) {
+      const texto = normalizeTexto(d.responsavelTexto);
+      if (texto) {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("voluntario_id")
+          .eq("id", d.responsavelId)
+          .maybeSingle();
+
+        if (profileRow?.voluntario_id) {
+          await supabase.from("alias_responsaveis").insert({
+            termo: texto,
+            voluntario_id: profileRow.voluntario_id,
+          });
+        }
+      }
+    }
+
     salvos++;
   }
 
   return { salvos, erros };
+}
+
+// ── Helpers ──
+
+function normalizeTexto(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 }
 
 // One-click save for everything the AI extracted (ata, events, demandas,
