@@ -131,13 +131,21 @@ export default async function DashboardPage({
       baseDemandaIds.length > 0
         ? supabase
             .from("demanda_responsaveis")
-            .select("demanda_id, profile_id, profiles(email, full_name)")
+            .select(
+              "demanda_id, profile_id, voluntario_id, profiles(email, full_name, voluntario_id), voluntarios(nome)"
+            )
             .in("demanda_id", baseDemandaIds)
         : Promise.resolve({
             data: [] as {
               demanda_id: number;
-              profile_id: string;
-              profiles: { email: string; full_name: string | null } | null;
+              profile_id: string | null;
+              voluntario_id: number | null;
+              profiles: {
+                email: string;
+                full_name: string | null;
+                voluntario_id: number | null;
+              } | null;
+              voluntarios: { nome: string } | null;
             }[],
           }),
       supabase.from("eventos").select("id, titulo").order("data_evento", { ascending: true }),
@@ -150,7 +158,7 @@ export default async function DashboardPage({
         : Promise.resolve({ data: [] as { demanda_id: number; concluido: boolean }[] }),
     ]);
 
-  const responsaveis = responsaveisResult.data ?? [];
+  const responsaveis = (responsaveisResult.data ?? []) as unknown as RowResponsavel[];
   const eventoById = new Map(
     (eventosResult.data ?? []).map((evento) => [evento.id, evento.titulo])
   );
@@ -167,20 +175,43 @@ export default async function DashboardPage({
     checklistPorDemanda.set(row.demanda_id, current);
   }
 
+  // Each assignment row normalizes to the ROSTER volunteer id (profile rows
+  // resolve via profiles.voluntario_id) and its display name — the roster
+  // is the single vocabulary for who owns a demanda, account or not.
+  type RowResponsavel = {
+    demanda_id: number;
+    profile_id: string | null;
+    voluntario_id: number | null;
+    profiles: {
+      email: string;
+      full_name: string | null;
+      voluntario_id: number | null;
+    } | null;
+    voluntarios: { nome: string } | null;
+  };
+
+  function voluntarioIdDaRow(row: RowResponsavel): number | null {
+    return row.voluntario_id ?? row.profiles?.voluntario_id ?? null;
+  }
+
+  function nomeDaRow(row: RowResponsavel): string | null {
+    if (row.voluntarios?.nome) return row.voluntarios.nome;
+    if (row.profiles?.full_name?.trim()) return row.profiles.full_name;
+    if (row.profiles?.email) return row.profiles.email;
+    return null;
+  }
+
   const responsaveisPorDemanda = new Map<number, string[]>();
   const responsavelOptionById = new Map<string, string>();
   for (const row of responsaveis) {
-    const profileRow = Array.isArray(row.profiles)
-      ? row.profiles[0]
-      : row.profiles;
-    if (profileRow) {
-      const label = displayName(profileRow);
-      responsavelOptionById.set(row.profile_id, label);
-      if (demandaIds.includes(row.demanda_id)) {
-        const labels = responsaveisPorDemanda.get(row.demanda_id) ?? [];
-        labels.push(label);
-        responsaveisPorDemanda.set(row.demanda_id, labels);
-      }
+    const voluntarioId = voluntarioIdDaRow(row);
+    const label = nomeDaRow(row);
+    if (voluntarioId === null || !label) continue;
+    responsavelOptionById.set(String(voluntarioId), label);
+    if (demandaIds.includes(row.demanda_id)) {
+      const labels = responsaveisPorDemanda.get(row.demanda_id) ?? [];
+      labels.push(label);
+      responsaveisPorDemanda.set(row.demanda_id, labels);
     }
   }
 
@@ -214,7 +245,9 @@ export default async function DashboardPage({
   if (filters.responsavel) {
     const matchingDemandaIds = new Set(
       responsaveis
-        .filter((row) => row.profile_id === filters.responsavel)
+        .filter(
+          (row) => String(voluntarioIdDaRow(row)) === filters.responsavel
+        )
         .map((row) => row.demanda_id)
     );
     demandaList = demandaList.filter((demanda) =>

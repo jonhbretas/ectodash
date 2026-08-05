@@ -163,36 +163,49 @@ async function PainelContent({
   // read for the responsável breakdown, per migration 0004's
   // demanda_responsaveis SELECT policy having the same unconditional
   // coordenador branch. ONE batched query, never a per-volunteer loop
-  // (06-RESEARCH.md Pattern 1b, Pitfall 3).
+  // (06-RESEARCH.md Pattern 1b, Pitfall 3). Each row normalizes to the
+  // ROSTER volunteer id/name (profile rows resolve via voluntario_id) —
+  // volunteers without an account still show as responsáveis.
   const { data: responsaveisRows } = await supabase.from("demanda_responsaveis")
-    .select("demanda_id, profile_id, profiles(email, full_name)");
+    .select(
+      "demanda_id, profile_id, voluntario_id, profiles(email, full_name, voluntario_id), voluntarios(nome)"
+    );
+
+  type RowResponsavel = {
+    demanda_id: number;
+    profile_id: string | null;
+    voluntario_id: number | null;
+    profiles: {
+      email: string;
+      full_name: string | null;
+      voluntario_id: number | null;
+    } | null;
+    voluntarios: { nome: string } | null;
+  };
 
   const countsByResponsavel = new Map<
     string,
     { email: string; count: number; overdueCount: number }
   >();
-  for (const row of responsaveisRows ?? []) {
-    // Defensive normalization — same nested-select shape quirk page.tsx
-    // already documents for the exact same query pattern.
-    const profileRow = Array.isArray(row.profiles)
-      ? row.profiles[0]
-      : row.profiles;
-    const email = profileRow?.email;
-    if (!email) continue;
-    // Display label is the full name when set, email otherwise — the same
-    // displayName fallback used everywhere else.
-    const label = profileRow.full_name?.trim() || email;
-    const existing =
-      countsByResponsavel.get(row.profile_id) ?? {
-        email: label,
-        count: 0,
-        overdueCount: 0,
-      };
+  for (const row of (responsaveisRows ?? []) as unknown as RowResponsavel[]) {
+    const voluntarioId = row.voluntario_id ?? row.profiles?.voluntario_id;
+    if (voluntarioId === null || voluntarioId === undefined) continue;
+    const label =
+      row.voluntarios?.nome ??
+      row.profiles?.full_name?.trim() ??
+      row.profiles?.email;
+    if (!label) continue;
+    const key = String(voluntarioId);
+    const existing = countsByResponsavel.get(key) ?? {
+      email: label,
+      count: 0,
+      overdueCount: 0,
+    };
     existing.count += 1;
     if (atrasadaByDemandaId.get(row.demanda_id)) {
       existing.overdueCount += 1;
     }
-    countsByResponsavel.set(row.profile_id, existing);
+    countsByResponsavel.set(key, existing);
   }
 
   const responsavelRows: ResponsavelSummaryRow[] = [
@@ -208,12 +221,12 @@ async function PainelContent({
   // expect — responsavelEmails is derived per-demanda from the same
   // responsaveisRows fetch, one pass, no additional query.
   const emailsByDemandaId = new Map<number, string[]>();
-  for (const row of responsaveisRows ?? []) {
-    const profileRow = Array.isArray(row.profiles)
-      ? row.profiles[0]
-      : row.profiles;
-    if (!profileRow?.email) continue;
-    const label = profileRow.full_name?.trim() || profileRow.email;
+  for (const row of (responsaveisRows ?? []) as unknown as RowResponsavel[]) {
+    const label =
+      row.voluntarios?.nome ??
+      row.profiles?.full_name?.trim() ??
+      row.profiles?.email;
+    if (!label) continue;
     const emails = emailsByDemandaId.get(row.demanda_id) ?? [];
     emails.push(label);
     emailsByDemandaId.set(row.demanda_id, emails);

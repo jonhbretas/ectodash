@@ -55,16 +55,17 @@ export default async function EditarDemandaPage({
   const [
     { data: responsaveisRows },
     { data: membrosRows },
-    { data: profiles },
+    { data: voluntarios },
+    { data: perfisVinculados },
     { data: eventos },
     { data: etiquetas },
     { data: checklistItems },
     { data: comentariosRaw },
   ] = await Promise.all([
-    supabase.from("demanda_responsaveis").select("profile_id").eq("demanda_id", id),
-    supabase.from("demanda_membros").select("profile_id").eq("demanda_id", id),
-    supabase.from("profiles").select("id, email, full_name").eq("ativo", true)
-      .not("email", "ilike", "%example.invalid%").order("email"),
+    supabase.from("demanda_responsaveis").select("profile_id, voluntario_id").eq("demanda_id", id),
+    supabase.from("demanda_membros").select("profile_id, voluntario_id").eq("demanda_id", id),
+    supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
+    supabase.from("profiles").select("id, voluntario_id").not("voluntario_id", "is", null),
     supabase.from("eventos").select("id, titulo")
       .gte("data_evento", new Date().toISOString().slice(0, 10))
       .order("data_evento", { ascending: true }).limit(100),
@@ -76,17 +77,43 @@ export default async function EditarDemandaPage({
       .eq("demanda_id", id).order("created_at", { ascending: true }),
   ]);
 
-  const profileById = new Map(
-    (profiles ?? []).map((p) => [p.id, { id: p.id, email: p.email, full_name: p.full_name }])
+  // Normalize the persisted assignments (profile_id OR voluntario_id, per
+  // migration 0020) to roster volunteer ids — the UI's single vocabulary.
+  const voluntarioByProfile = new Map(
+    (perfisVinculados ?? []).map((p) => [p.id, p.voluntario_id])
+  );
+  const voluntarioById = new Map(
+    (voluntarios ?? []).map((v) => [v.id, v])
   );
 
-  const responsaveis = (responsaveisRows ?? [])
-    .map((r) => profileById.get(r.profile_id as string))
-    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+  function normalizarRows(
+    rows: { profile_id: string | null; voluntario_id: number | null }[]
+  ) {
+    const resultado: { id: string; nome: string; temConta: boolean }[] = [];
+    for (const row of rows) {
+      const voluntarioId = row.voluntario_id ?? voluntarioByProfile.get(row.profile_id ?? "");
+      if (voluntarioId === undefined || voluntarioId === null) continue;
+      const voluntario = voluntarioById.get(voluntarioId);
+      if (!voluntario) continue;
+      resultado.push({
+        id: String(voluntarioId),
+        nome: voluntario.nome,
+        temConta: Boolean(
+          [...voluntarioByProfile.entries()].find(([, vid]) => vid === voluntarioId)
+        ),
+      });
+    }
+    return resultado;
+  }
 
-  const membros = (membrosRows ?? [])
-    .map((r) => profileById.get(r.profile_id as string))
-    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const responsaveis = normalizarRows(responsaveisRows ?? []);
+  const membros = normalizarRows(membrosRows ?? []);
+
+  const voluntarioOptions = (voluntarios ?? []).map((v) => ({
+    id: String(v.id),
+    nome: v.nome,
+    temConta: [...voluntarioByProfile.values()].includes(v.id),
+  }));
 
   const eventoNome = (eventos ?? []).find((e) => e.id === demanda.evento_id)?.titulo ?? null;
   const etiquetaRow = (etiquetas ?? []).find((e) => e.id === demanda.etiqueta_id);
@@ -129,11 +156,7 @@ export default async function EditarDemandaPage({
           }}
           responsaveis={responsaveis}
           membros={membros}
-          allProfiles={(profiles ?? []).map((p) => ({
-            id: p.id,
-            email: p.email,
-            full_name: p.full_name,
-          }))}
+          allVoluntarios={voluntarioOptions}
           eventos={(eventos ?? []).map((e) => ({ id: e.id, titulo: e.titulo }))}
           etiquetas={(etiquetas ?? []).map((e) => ({
             id: e.id,

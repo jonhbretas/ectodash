@@ -8,9 +8,13 @@ import { z } from "zod";
 export const demandaSchema = z.object({
   titulo: z.string().trim().min(1, "Digite um título para a demanda."),
   // Multi-responsável is the locked data-model decision (04-CONTEXT.md): an
-  // array of profile ids, never a single string — this is the tracer's
-  // proof that the multi-responsável decision reaches the database.
-  responsavelIds: z.array(z.string().uuid()).min(1, "Escolha quem é o responsável."),
+  // array of ROSTER volunteer ids (public.voluntarios, migration 0020),
+  // never a single string — a volunteer is assignable even without an auth
+  // account. Native <select multiple> submits strings; the server actions
+  // convert each to the numeric roster id.
+  responsavelIds: z
+    .array(z.string().regex(/^\d+$/, "Responsável inválido."))
+    .min(1, "Escolha quem é o responsável."),
   // Native <input type="date"> always yields yyyy-mm-dd.
   prazo: z.string().date("Escolha uma data de prazo."),
   status: z.enum(["pendente", "em_andamento", "concluida"]),
@@ -20,8 +24,16 @@ export const demandaSchema = z.object({
   projeto: z.string().trim().optional(),
   // Membros/acompanhantes: optional extra volunteers who follow the
   // demanda and receive the same reminders (join table demanda_membros).
-  membroIds: z.array(z.string().uuid()).optional(),
+  membroIds: z.array(z.string().regex(/^\d+$/)).optional(),
 });
+
+// Roster ids arrive as strings from the DOM — normalize to numbers for the
+// server-side resolution helpers.
+export function idsNumericos(ids: string[] | undefined): number[] {
+  return (ids ?? [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+}
 
 // Etiqueta link — validated separately (native select, not RHF-managed),
 // same pattern as eventoIdSchema.

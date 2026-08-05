@@ -7,16 +7,39 @@ import PageContainer from "../../page-container";
 export default async function NovaDemandaPage() {
   const supabase = await createClient();
 
-  const [profilesResult, eventosResult, etiquetasResult] = await Promise.all([
-    supabase.from("profiles").select("id, email, full_name").eq("ativo", true).not("email", "ilike", "%example.invalid%").order("email"),
-    supabase
-      .from("eventos")
-      .select("id, titulo")
-      .gte("data_evento", new Date().toISOString().slice(0, 10))
-      .order("data_evento", { ascending: true })
-      .limit(100),
-    supabase.from("etiquetas").select("id, area, nome").order("area").order("nome"),
-  ]);
+  // The ROSTER is the source of truth for who can be responsible for a
+  // demanda (user decision 2026-08-04): every registered volunteer is
+  // assignable, "mesmo que eles não estejam cadastrados" (sem conta ativada
+  // ainda). temConta marca quem já ativou o acesso pelo vínculo.
+  const [voluntariosResult, perfisResult, eventosResult, etiquetasResult] =
+    await Promise.all([
+      supabase
+        .from("voluntarios")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome"),
+      supabase
+        .from("profiles")
+        .select("voluntario_id")
+        .not("voluntario_id", "is", null),
+      supabase
+        .from("eventos")
+        .select("id, titulo")
+        .gte("data_evento", new Date().toISOString().slice(0, 10))
+        .order("data_evento", { ascending: true })
+        .limit(100),
+      supabase.from("etiquetas").select("id, area, nome").order("area").order("nome"),
+    ]);
+
+  const comConta = new Set(
+    (perfisResult.data ?? []).map((p) => p.voluntario_id)
+  );
+
+  const voluntarios = (voluntariosResult.data ?? []).map((v) => ({
+    id: v.id,
+    nome: v.nome,
+    temConta: comConta.has(v.id),
+  }));
 
   return (
     <PageContainer>
@@ -32,7 +55,7 @@ export default async function NovaDemandaPage() {
         <h1 className="text-3xl font-semibold text-zinc-900">Nova demanda</h1>
 
         <DemandaForm
-          profiles={profilesResult.data ?? []}
+          voluntarios={voluntarios}
           eventos={eventosResult.data ?? []}
           etiquetas={etiquetasResult.data ?? []}
           wide

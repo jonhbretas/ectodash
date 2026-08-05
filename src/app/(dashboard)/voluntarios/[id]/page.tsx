@@ -92,32 +92,40 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
   const effectiveRole = linked?.role ?? voluntario.role ?? "voluntario_comum";
   const afastado = Boolean(voluntario.data_saida);
 
-  // Demandas of the linked account — same join-table read as before, scoped
-  // to the linked profile; empty for volunteers without an account yet.
+  // Demandas of this volunteer — assigned either to their linked account
+  // (profile_id) or directly to their roster row (voluntario_id, migration
+  // 0020: volunteers without an account are assignable too).
   let ativas: DemandaRow[] = [];
   let historico: DemandaRow[] = [];
+
+  let links = null;
   if (linked?.id) {
-    const { data: links } = await supabase
+    const result = await supabase
       .from("demanda_responsaveis")
       .select("demanda_id")
-      .eq("profile_id", linked.id);
-
-    const demandaIds = (links ?? []).map((row) => row.demanda_id);
-    const demandas = demandaIds.length
-      ? (
-          await supabase
-            .from("demandas_com_status")
-            .select("id, titulo, prazo, status, atrasada")
-            .in("id", demandaIds)
-            .order("prazo", { ascending: true })
-        ).data ?? []
-      : [];
-
-    ativas = demandas.filter((d) => d.status !== "concluida") as DemandaRow[];
-    historico = demandas.filter(
-      (d) => d.status === "concluida"
-    ) as DemandaRow[];
+      .or(`profile_id.eq.${linked.id},voluntario_id.eq.${voluntario.id}`);
+    links = result.data;
+  } else {
+    const result = await supabase
+      .from("demanda_responsaveis")
+      .select("demanda_id")
+      .eq("voluntario_id", voluntario.id);
+    links = result.data;
   }
+
+  const idsDeDemandas = (links ?? []).map((row) => row.demanda_id);
+  const demandas = idsDeDemandas.length
+    ? (
+        await supabase
+          .from("demandas_com_status")
+          .select("id, titulo, prazo, status, atrasada")
+          .in("id", idsDeDemandas)
+          .order("prazo", { ascending: true })
+      ).data ?? []
+    : [];
+
+  ativas = demandas.filter((d) => d.status !== "concluida") as DemandaRow[];
+  historico = demandas.filter((d) => d.status === "concluida") as DemandaRow[];
 
   return (
     <PageContainer>

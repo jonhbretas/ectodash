@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { demandaSchema, eventoIdSchema, etiquetaIdSchema } from "./demanda-schema";
+import {
+  resolverDestinosVoluntario,
+  voluntarioIdDoDestino,
+  voluntarioIdsDosDestinos,
+} from "@/lib/destinos-voluntario";
+import { demandaSchema, eventoIdSchema, etiquetaIdSchema, idsNumericos } from "./demanda-schema";
 
 export type CreateDemandaState = {
   ok: boolean;
@@ -74,13 +79,20 @@ export async function createDemanda(
   }
 
   // One batched insert for every selected responsável, not a loop of
-  // individual inserts.
+  // individual inserts. Each roster id resolves to its effective
+  // destination: profile_id when the volunteer has a linked account,
+  // voluntario_id otherwise (migration 0020).
+  const destinos = await resolverDestinosVoluntario(
+    supabase,
+    idsNumericos(parsed.data.responsavelIds)
+  );
+
   const { error: responsaveisError } = await supabase
     .from("demanda_responsaveis")
     .insert(
-      parsed.data.responsavelIds.map((profileId) => ({
+      destinos.map((destino) => ({
         demanda_id: demanda.id,
-        profile_id: profileId,
+        ...destino,
       }))
     );
 
@@ -98,12 +110,17 @@ export async function createDemanda(
 
   // Membros (acompanhantes) — same batched insert, no transaction.
   if ((parsed.data.membroIds ?? []).length > 0) {
+    const membrosDestinos = await resolverDestinosVoluntario(
+      supabase,
+      idsNumericos(parsed.data.membroIds)
+    );
+
     const { error: membrosError } = await supabase
       .from("demanda_membros")
       .insert(
-        (parsed.data.membroIds ?? []).map((profileId) => ({
+        membrosDestinos.map((destino) => ({
           demanda_id: demanda.id,
-          profile_id: profileId,
+          ...destino,
         }))
       );
 
@@ -181,12 +198,12 @@ export async function updateDemanda(
   // Responsável diffing: re-query the row's actual current set server-side
   // rather than trusting whatever the client last rendered as "current" —
   // the client's form state only expresses the *desired* end state
-  // (T-04-12 mitigation). Only the real delta is written: additions are
-  // inserted, removals are deleted, and either call is skipped entirely
-  // when its list is empty rather than issuing a no-op insert/delete.
+  // (T-04-12 mitigation). Both representations are normalized to roster
+  // volunteer ids (profile_id rows resolve via profiles.voluntario_id), so
+  // the diff is expressed in roster terms; only the real delta is written.
   const { data: currentRows, error: currentError } = await supabase
     .from("demanda_responsaveis")
-    .select("profile_id")
+    .select("profile_id, voluntario_id")
     .eq("demanda_id", id);
 
   if (currentError) {
@@ -197,21 +214,27 @@ export async function updateDemanda(
     return { ok: false, message: "Não foi possível salvar as alterações." };
   }
 
-  const currentIds = new Set(
-    (currentRows ?? []).map((row) => row.profile_id as string)
+  const currentVoluntarioIds = await voluntarioIdsDosDestinos(
+    supabase,
+    currentRows ?? []
   );
-  const desiredIds = new Set(parsed.data.responsavelIds);
+  const currentIds = new Set(currentVoluntarioIds);
+  const desiredIds = new Set(idsNumericos(parsed.data.responsavelIds));
 
   const idsToAdd = [...desiredIds].filter((id) => !currentIds.has(id));
   const idsToRemove = [...currentIds].filter((id) => !desiredIds.has(id));
 
   if (idsToAdd.length > 0) {
+    const destinosParaAdicionar = await resolverDestinosVoluntario(
+      supabase,
+      idsToAdd
+    );
     const { error: insertError } = await supabase
       .from("demanda_responsaveis")
       .insert(
-        idsToAdd.map((profileId) => ({
+        destinosParaAdicionar.map((destino) => ({
           demanda_id: id,
-          profile_id: profileId,
+          ...destino,
         }))
       );
 
@@ -225,48 +248,88 @@ export async function updateDemanda(
   }
 
   if (idsToRemove.length > 0) {
-    const { error: deleteError } = await supabase
+    const { data: rowsParaRemover } = await supabase
       .from("demanda_responsaveis")
-      .delete()
-      .eq("demanda_id", id)
-      .in("profile_id", idsToRemove);
+      .select("profile_id, voluntario_id")
+      .eq("demanda_id", id);
 
-    if (deleteError) {
-      console.error(
-        "updateDemanda: demanda_responsaveis delete failed",
-        deleteError
-      );
-      return { ok: false, message: "Não foi possível salvar as alterações." };
+    // Resolve which persisted rows belong to the removed roster ids.
+    const removidos = new Set(idsToRemove);
+    const perfisARemover = new Set<string>();
+    const voluntariosARemover = new Set<number>();
+    for (const row of rowsParaRemover ?? []) {
+      const vid = await voluntarioIdDoDestino(supabase, row);
+      if (vid === null || !removidos.has(vid)) continue;
+      if (row.profile_id) perfisARemover.add(row.profile_id);
+      if (row.voluntario_id) voluntariosARemover.add(row.voluntario_id);
+    }
+
+    if (perfisARemover.size > 0) {
+      const { error: deleteError } = await supabase
+        .from("demanda_responsaveis")
+        .delete()
+        .eq("demanda_id", id)
+        .in("profile_id", [...perfisARemover]);
+
+      if (deleteError) {
+        console.error(
+          "updateDemanda: demanda_responsaveis delete (profile) failed",
+          deleteError
+        );
+        return { ok: false, message: "Não foi possível salvar as alterações." };
+      }
+    }
+
+    if (voluntariosARemover.size > 0) {
+      const { error: deleteError } = await supabase
+        .from("demanda_responsaveis")
+        .delete()
+        .eq("demanda_id", id)
+        .in("voluntario_id", [...voluntariosARemover]);
+
+      if (deleteError) {
+        console.error(
+          "updateDemanda: demanda_responsaveis delete (voluntario) failed",
+          deleteError
+        );
+        return { ok: false, message: "Não foi possível salvar as alterações." };
+      }
     }
   }
 
   // Membros (acompanhantes) diffing — same shape as the responsável diff
   // above: re-read the current set server-side, apply only the delta.
-  const desiredMembroIds = parsed.data.membroIds ?? [];
+  const desiredMembroIds = idsNumericos(parsed.data.membroIds);
   if (desiredMembroIds.length > 0 || true) {
     const { data: currentMembros } = await supabase
       .from("demanda_membros")
-      .select("profile_id")
+      .select("profile_id, voluntario_id")
       .eq("demanda_id", id);
 
-    const currentMembroIds = new Set(
-      (currentMembros ?? []).map((row) => row.profile_id as string)
+    const currentMembroVoluntarioIds = await voluntarioIdsDosDestinos(
+      supabase,
+      currentMembros ?? []
     );
+    const currentMembroIds = new Set(currentMembroVoluntarioIds);
     const desiredMembroSet = new Set(desiredMembroIds);
     const membrosToAdd = [...desiredMembroSet].filter(
-      (profileId) => !currentMembroIds.has(profileId)
+      (vid) => !currentMembroIds.has(vid)
     );
     const membrosToRemove = [...currentMembroIds].filter(
-      (profileId) => !desiredMembroSet.has(profileId)
+      (vid) => !desiredMembroSet.has(vid)
     );
 
     if (membrosToAdd.length > 0) {
+      const membrosDestinos = await resolverDestinosVoluntario(
+        supabase,
+        membrosToAdd
+      );
       const { error: membrosInsertError } = await supabase
         .from("demanda_membros")
         .insert(
-          membrosToAdd.map((profileId) => ({
+          membrosDestinos.map((destino) => ({
             demanda_id: id,
-            profile_id: profileId,
+            ...destino,
           }))
         );
       if (membrosInsertError) {
@@ -279,17 +342,49 @@ export async function updateDemanda(
     }
 
     if (membrosToRemove.length > 0) {
-      const { error: membrosDeleteError } = await supabase
+      const { data: rowsMembrosARemover } = await supabase
         .from("demanda_membros")
-        .delete()
-        .eq("demanda_id", id)
-        .in("profile_id", membrosToRemove);
-      if (membrosDeleteError) {
-        console.error(
-          "updateDemanda: demanda_membros delete failed",
-          membrosDeleteError
-        );
-        return { ok: false, message: "Não foi possível salvar as alterações." };
+        .select("profile_id, voluntario_id")
+        .eq("demanda_id", id);
+
+      const removidosMembros = new Set(membrosToRemove);
+      const perfisMembrosARemover = new Set<string>();
+      const voluntariosMembrosARemover = new Set<number>();
+      for (const row of rowsMembrosARemover ?? []) {
+        const vid = await voluntarioIdDoDestino(supabase, row);
+        if (vid === null || !removidosMembros.has(vid)) continue;
+        if (row.profile_id) perfisMembrosARemover.add(row.profile_id);
+        if (row.voluntario_id) voluntariosMembrosARemover.add(row.voluntario_id);
+      }
+
+      if (perfisMembrosARemover.size > 0) {
+        const { error: membrosDeleteError } = await supabase
+          .from("demanda_membros")
+          .delete()
+          .eq("demanda_id", id)
+          .in("profile_id", [...perfisMembrosARemover]);
+        if (membrosDeleteError) {
+          console.error(
+            "updateDemanda: demanda_membros delete failed",
+            membrosDeleteError
+          );
+          return { ok: false, message: "Não foi possível salvar as alterações." };
+        }
+      }
+
+      if (voluntariosMembrosARemover.size > 0) {
+        const { error: membrosDeleteError } = await supabase
+          .from("demanda_membros")
+          .delete()
+          .eq("demanda_id", id)
+          .in("voluntario_id", [...voluntariosMembrosARemover]);
+        if (membrosDeleteError) {
+          console.error(
+            "updateDemanda: demanda_membros delete failed",
+            membrosDeleteError
+          );
+          return { ok: false, message: "Não foi possível salvar as alterações." };
+        }
       }
     }
   }
@@ -528,14 +623,16 @@ export async function updateDemandaEtiqueta(
 
 export async function addDemandaResponsavel(
   demandaId: number,
-  profileId: string
+  voluntarioId: string
 ): Promise<InlineUpdateState> {
-  const parsed = z.string().uuid().safeParse(profileId);
+  const parsed = z.coerce.number().int().positive().safeParse(voluntarioId);
   if (!parsed.success) return { ok: false, message: "Voluntário inválido." };
   const supabase = await createClient();
+  const [destino] = await resolverDestinosVoluntario(supabase, [parsed.data]);
+  if (!destino) return { ok: false, message: "Voluntário não encontrado." };
   const { error } = await supabase.from("demanda_responsaveis").insert({
     demanda_id: demandaId,
-    profile_id: parsed.data,
+    ...destino,
   });
   if (error) {
     if (error.code === "23505") return { ok: true, message: "" };
@@ -547,14 +644,22 @@ export async function addDemandaResponsavel(
 
 export async function removeDemandaResponsavel(
   demandaId: number,
-  profileId: string
+  voluntarioId: string
 ): Promise<InlineUpdateState> {
-  const parsed = z.string().uuid().safeParse(profileId);
+  const parsed = z.coerce.number().int().positive().safeParse(voluntarioId);
   if (!parsed.success) return { ok: false, message: "Voluntário inválido." };
   const supabase = await createClient();
-  const { error } = await supabase.from("demanda_responsaveis").delete()
-    .eq("demanda_id", demandaId)
-    .eq("profile_id", parsed.data);
+  const [destino] = await resolverDestinosVoluntario(supabase, [parsed.data]);
+  if (!destino) return { ok: false, message: "Voluntário não encontrado." };
+  let query = supabase
+    .from("demanda_responsaveis")
+    .delete()
+    .eq("demanda_id", demandaId);
+  query =
+    "profile_id" in destino
+      ? query.eq("profile_id", destino.profile_id)
+      : query.eq("voluntario_id", destino.voluntario_id);
+  const { error } = await query;
   if (error) return inlineUpdateError;
   revalidatePath("/");
   return { ok: true, message: "" };
@@ -562,14 +667,16 @@ export async function removeDemandaResponsavel(
 
 export async function addDemandaMembro(
   demandaId: number,
-  profileId: string
+  voluntarioId: string
 ): Promise<InlineUpdateState> {
-  const parsed = z.string().uuid().safeParse(profileId);
+  const parsed = z.coerce.number().int().positive().safeParse(voluntarioId);
   if (!parsed.success) return { ok: false, message: "Voluntário inválido." };
   const supabase = await createClient();
+  const [destino] = await resolverDestinosVoluntario(supabase, [parsed.data]);
+  if (!destino) return { ok: false, message: "Voluntário não encontrado." };
   const { error } = await supabase.from("demanda_membros").insert({
     demanda_id: demandaId,
-    profile_id: parsed.data,
+    ...destino,
   });
   if (error) {
     if (error.code === "23505") return { ok: true, message: "" };
@@ -581,14 +688,22 @@ export async function addDemandaMembro(
 
 export async function removeDemandaMembro(
   demandaId: number,
-  profileId: string
+  voluntarioId: string
 ): Promise<InlineUpdateState> {
-  const parsed = z.string().uuid().safeParse(profileId);
+  const parsed = z.coerce.number().int().positive().safeParse(voluntarioId);
   if (!parsed.success) return { ok: false, message: "Voluntário inválido." };
   const supabase = await createClient();
-  const { error } = await supabase.from("demanda_membros").delete()
-    .eq("demanda_id", demandaId)
-    .eq("profile_id", parsed.data);
+  const [destino] = await resolverDestinosVoluntario(supabase, [parsed.data]);
+  if (!destino) return { ok: false, message: "Voluntário não encontrado." };
+  let query = supabase
+    .from("demanda_membros")
+    .delete()
+    .eq("demanda_id", demandaId);
+  query =
+    "profile_id" in destino
+      ? query.eq("profile_id", destino.profile_id)
+      : query.eq("voluntario_id", destino.voluntario_id);
+  const { error } = await query;
   if (error) return inlineUpdateError;
   revalidatePath("/");
   return { ok: true, message: "" };

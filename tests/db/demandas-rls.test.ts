@@ -122,6 +122,12 @@ describe.skipIf(!canRun)(
       for (const id of createdDemandaIds) {
         await admin.from("demandas").delete().eq("id", id);
       }
+      // Roster rows created by the DEM-06 cases — cascade cleans their
+      // demanda_responsaveis/membros rows; profiles.voluntario_id is
+      // on delete set null.
+      for (const id of createdVoluntarioIds) {
+        await admin.from("voluntarios").delete().eq("id", id);
+      }
       // lider_areas rows next — `on delete cascade` from profiles would
       // clean these up too, but deleting them explicitly first keeps
       // cleanup order matching the composite key's own semantics.
@@ -1017,6 +1023,112 @@ describe.skipIf(!canRun)(
 
       expect(ownRowsError).toBeNull();
       expect((ownRows ?? []).map((r) => r.area)).toEqual(["Pesquisa"]);
+    });
+
+    // ── Migration 0020: roster volunteers (sem conta) como responsáveis ──
+
+    const createdVoluntarioIds: number[] = [];
+
+    async function createVoluntario(nome: string) {
+      const { data, error } = await admin
+        .from("voluntarios")
+        .insert({ nome, ativo: true })
+        .select("id")
+        .single();
+      if (error || !data) {
+        throw new Error(`Failed to create voluntario: ${error?.message}`);
+      }
+      createdVoluntarioIds.push(data.id);
+      return data.id as number;
+    }
+
+    it("DEM-06: um voluntário do roster SEM conta pode ser responsável de uma demanda (voluntario_id na demanda_responsaveis)", async () => {
+      const criador = await createFixtureWithRole("coordenador_geral");
+      const voluntarioId = await createVoluntario(`Sem Conta ${Date.now()}`);
+
+      const criadorClient = await signInAs(criador);
+      const { data: demanda, error: insertError } = await criadorClient
+        .from("demandas")
+        .insert({
+          titulo: `Demanda do voluntário sem conta ${Date.now()}`,
+          prazo: "2027-06-01",
+          status: "pendente",
+        })
+        .select("id")
+        .single();
+      expect(insertError).toBeNull();
+      expect(demanda?.id).toBeDefined();
+      const demandaId = demanda!.id as number;
+      createdDemandaIds.push(demandaId);
+
+      const { error: linkError } = await criadorClient
+        .from("demanda_responsaveis")
+        .insert({ demanda_id: demandaId, voluntario_id: voluntarioId });
+      expect(linkError).toBeNull();
+
+      const { data: links, error: readError } = await admin
+        .from("demanda_responsaveis")
+        .select("voluntario_id, profile_id")
+        .eq("demanda_id", demandaId);
+      expect(readError).toBeNull();
+      expect(links ?? []).toHaveLength(1);
+      expect(links?.[0]?.voluntario_id).toBe(voluntarioId);
+      expect(links?.[0]?.profile_id).toBeNull();
+    });
+
+    it("DEM-06: um voluntário vinculado enxerga e edita demandas atribuídas ao SEU cadastro (is_responsavel_for via roster)", async () => {
+      const voluntarioId = await createVoluntario(`Vinculado ${Date.now()}`);
+      const dono = await createFixtureUser();
+      // O vínculo da conta ao roster (o que o fluxo /vincular faz) —
+      // simulado via service-role.
+      await admin
+        .from("profiles")
+        .update({ voluntario_id: voluntarioId, vincular_pendente: false })
+        .eq("id", dono.id);
+
+      const criador = await createFixtureWithRole("coordenador_geral");
+      const criadorClient = await signInAs(criador);
+      const { data: demanda } = await criadorClient
+        .from("demandas")
+        .insert({
+          titulo: `Demanda do vinculado ${Date.now()}`,
+          prazo: "2027-06-15",
+          status: "pendente",
+        })
+        .select("id")
+        .single();
+      const demandaId = demanda!.id as number;
+      createdDemandaIds.push(demandaId);
+      await criadorClient
+        .from("demanda_responsaveis")
+        .insert({ demanda_id: demandaId, voluntario_id: voluntarioId });
+
+      // O dono (vinculado ao roster row) vê a demanda…
+      const donoClient = await signInAs(dono);
+      const { data: visivel, error: visivelError } = await donoClient
+        .from("demandas_com_status")
+        .select("id")
+        .eq("id", demandaId)
+        .maybeSingle();
+      expect(visivelError).toBeNull();
+      expect(visivel?.id).toBe(demandaId);
+
+      // …e pode editar (a policy de UPDATE usa o mesmo is_responsavel_for).
+      const { error: editError } = await donoClient
+        .from("demandas")
+        .update({ titulo: `Editada pelo vinculado ${Date.now()}` })
+        .eq("id", demandaId);
+      expect(editError).toBeNull();
+
+      // Um terceiro sem vínculo NÃO enxerga a demanda.
+      const terceiro = await createFixtureUser();
+      const terceiroClient = await signInAs(terceiro);
+      const { data: oculta } = await terceiroClient
+        .from("demandas_com_status")
+        .select("id")
+        .eq("id", demandaId)
+        .maybeSingle();
+      expect(oculta).toBeNull();
     });
   }
 );

@@ -21,10 +21,11 @@ const initialState: CreateDemandaState | UpdateDemandaState = {
   message: "",
 };
 
-type Profile = {
-  id: string;
-  email: string;
-  full_name?: string | null;
+export type VoluntarioOption = {
+  id: number;
+  nome: string;
+  // false = cadastrado no roster, mas ainda sem conta ativada.
+  temConta: boolean;
 };
 
 export type EventoOption = {
@@ -55,7 +56,7 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
 }
 
 type DemandaFormProps = {
-  profiles: Profile[];
+  voluntarios: VoluntarioOption[];
   eventos: EventoOption[];
   etiquetas: EtiquetaOption[];
   mode?: "create" | "edit";
@@ -76,7 +77,7 @@ const fieldInputClass =
 const errorClass = "text-base text-red-600";
 
 export default function DemandaForm({
-  profiles,
+  voluntarios,
   eventos,
   etiquetas,
   mode = "create",
@@ -221,9 +222,9 @@ export default function DemandaForm({
                 className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
                 {...register("responsavelIds")}
               >
-                {profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.full_name?.trim() || profile.email}
+                {voluntarios.map((voluntario) => (
+                  <option key={voluntario.id} value={String(voluntario.id)}>
+                    {voluntario.nome}{!voluntario.temConta ? ' (sem acesso)' : ''}
                   </option>
                 ))}
               </select>
@@ -243,9 +244,9 @@ export default function DemandaForm({
                 className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
                 {...register("membroIds")}
               >
-                {profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.full_name?.trim() || profile.email}
+                {voluntarios.map((voluntario) => (
+                  <option key={voluntario.id} value={String(voluntario.id)}>
+                    {voluntario.nome}{!voluntario.temConta ? ' (sem acesso)' : ''}
                   </option>
                 ))}
               </select>
@@ -459,9 +460,9 @@ export default function DemandaForm({
           className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           {...register("responsavelIds")}
         >
-          {profiles.map((profile) => (
-            <option key={profile.id} value={profile.id}>
-              {profile.full_name?.trim() || profile.email}
+          {voluntarios.map((voluntario) => (
+            <option key={voluntario.id} value={String(voluntario.id)}>
+              {voluntario.nome}{!voluntario.temConta ? ' (sem acesso)' : ''}
             </option>
           ))}
         </select>
@@ -482,9 +483,9 @@ export default function DemandaForm({
           className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           {...register("membroIds")}
         >
-          {profiles.map((profile) => (
-            <option key={profile.id} value={profile.id}>
-              {profile.full_name?.trim() || profile.email}
+          {voluntarios.map((voluntario) => (
+            <option key={voluntario.id} value={String(voluntario.id)}>
+              {voluntario.nome}{!voluntario.temConta ? ' (sem acesso)' : ''}
             </option>
           ))}
         </select>

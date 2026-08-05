@@ -36,10 +36,13 @@ import {
   removeDemandaMembro,
 } from "./actions";
 
-export type InlineProfile = {
+// The roster (public.voluntarios) is the source of truth for who can be a
+// responsável/membro — id is the ROSTER id (stringified), not the auth
+// account id; temConta marks volunteers whose access is already activated.
+export type InlinePessoa = {
   id: string;
-  email: string;
-  full_name?: string | null;
+  nome: string;
+  temConta?: boolean;
 };
 
 export type InlineEvento = { id: number; titulo: string };
@@ -61,9 +64,9 @@ export type InlineDemanda = {
 
 export type InlineEditorProps = {
   demanda: InlineDemanda;
-  responsaveis: InlineProfile[];
-  membros: InlineProfile[];
-  allProfiles: InlineProfile[];
+  responsaveis: InlinePessoa[];
+  membros: InlinePessoa[];
+  allVoluntarios: InlinePessoa[];
   eventos: InlineEvento[];
   etiquetas: InlineEtiqueta[];
 };
@@ -74,8 +77,8 @@ function initials(name: string): string {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
 
-function display(p: InlineProfile): string {
-  return p.full_name?.trim() || p.email;
+function display(p: InlinePessoa): string {
+  return p.nome;
 }
 
 function InlineText({
@@ -185,9 +188,12 @@ function InlinePill({
   );
 }
 
-function AvatarPill({ profile, onRemove }: { profile: InlineProfile; onRemove?: () => void }) {
+function AvatarPill({ profile, onRemove }: { profile: InlinePessoa; onRemove?: () => void }) {
   return (
-    <span className="group relative flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-base ring-1 ring-zinc-200/60">
+    <span
+      className="group relative flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-base ring-1 ring-zinc-200/60"
+      title={profile.temConta === false ? `${display(profile)} — sem acesso ativado` : undefined}
+    >
       <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
         {initials(display(profile))}
       </span>
@@ -207,18 +213,18 @@ function AvatarPill({ profile, onRemove }: { profile: InlineProfile; onRemove?: 
 }
 
 function PersonPicker({
-  profiles,
+  pessoas,
   selectedIds,
   onAdd,
   label,
 }: {
-  profiles: InlineProfile[];
+  pessoas: InlinePessoa[];
   selectedIds: Set<string>;
   onAdd: (id: string) => void;
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const available = profiles.filter((p) => !selectedIds.has(p.id));
+  const available = pessoas.filter((p) => !selectedIds.has(p.id));
 
   if (available.length === 0) return null;
 
@@ -252,6 +258,11 @@ function PersonPicker({
                   {initials(display(p))}
                 </span>
                 <span className="truncate">{display(p)}</span>
+                {p.temConta === false && (
+                  <span className="shrink-0 text-xs text-zinc-400">
+                    sem acesso
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -266,7 +277,7 @@ export default function DemandaInlineEditor({
   demanda,
   responsaveis,
   membros,
-  allProfiles,
+  allVoluntarios,
   eventos,
   etiquetas,
 }: InlineEditorProps) {
@@ -383,9 +394,9 @@ export default function DemandaInlineEditor({
 
   // ── People ──
   async function addResp(id: string) {
-    const profile = allProfiles.find((p) => p.id === id);
-    if (!profile || respIds.has(id)) return;
-    setLocalResponsaveis((c) => [...c, profile]);
+    const pessoa = allVoluntarios.find((p) => p.id === id);
+    if (!pessoa || respIds.has(id)) return;
+    setLocalResponsaveis((c) => [...c, pessoa]);
     const r = await addDemandaResponsavel(demanda.id, id);
     if (r.ok) refresh(); else setLocalResponsaveis((c) => c.filter((p) => p.id !== id));
   }
@@ -395,9 +406,9 @@ export default function DemandaInlineEditor({
     if (r.ok) refresh();
   }
   async function addMembro(id: string) {
-    const profile = allProfiles.find((p) => p.id === id);
-    if (!profile || membroIds.has(id)) return;
-    setLocalMembros((c) => [...c, profile]);
+    const pessoa = allVoluntarios.find((p) => p.id === id);
+    if (!pessoa || membroIds.has(id)) return;
+    setLocalMembros((c) => [...c, pessoa]);
     const r = await addDemandaMembro(demanda.id, id);
     if (r.ok) refresh(); else setLocalMembros((c) => c.filter((p) => p.id !== id));
   }
@@ -437,7 +448,7 @@ export default function DemandaInlineEditor({
             {localResponsaveis.map((p) => (
               <AvatarPill key={p.id} profile={p} onRemove={() => removeResp(p.id)} />
             ))}
-            <PersonPicker profiles={allProfiles} selectedIds={respIds} onAdd={addResp} label="responsável" />
+            <PersonPicker pessoas={allVoluntarios} selectedIds={respIds} onAdd={addResp} label="responsável" />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -446,7 +457,7 @@ export default function DemandaInlineEditor({
             {localMembros.map((p) => (
               <AvatarPill key={p.id} profile={p} onRemove={() => removeMembro(p.id)} />
             ))}
-            <PersonPicker profiles={allProfiles} selectedIds={membroIds} onAdd={addMembro} label="acompanhante" />
+            <PersonPicker pessoas={allVoluntarios} selectedIds={membroIds} onAdd={addMembro} label="acompanhante" />
             {localMembros.length === 0 && (
               <span className="text-base text-zinc-400">Nenhum acompanhante</span>
             )}
