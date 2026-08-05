@@ -49,9 +49,19 @@ create policy "coordenador_geral can delete dip localidades"
 
 -- Backfill: seed the registry with the localidades already present in dips
 -- (one row each — the earliest record's país wins) so the standard list
--- starts populated instead of empty.
-insert into public.dip_localidades (localidade, pais)
-select distinct on (localidade) localidade, pais
-from public.dips
-order by localidade, data_dip asc nulls last
-on conflict (localidade) do nothing;
+-- starts populated instead of empty. criado_por must be explicit here:
+-- during a migration there is no session, so auth.uid() is NULL and would
+-- violate the NOT NULL constraint. The oldest profile is credited as the
+-- creator; if profiles is empty the seed is skipped (nothing to credit).
+do $$
+begin
+  if exists (select 1 from public.profiles) then
+    insert into public.dip_localidades (localidade, pais, criado_por)
+    select distinct on (localidade) localidade, pais,
+      (select id from public.profiles order by created_at asc limit 1)
+    from public.dips
+    order by localidade, data_dip asc nulls last
+    on conflict (localidade) do nothing;
+  end if;
+end;
+$$;
