@@ -10,6 +10,7 @@ import OverduePanel from "./overdue-panel";
 import ReminderRunsPanel, { type ReminderRunRow } from "./reminder-runs-panel";
 import SheetSyncPanel, { type SheetSyncRunRow } from "./sheet-sync-panel";
 import AreasConfig from "./areas-config";
+import PainelTabs from "./painel-tabs";
 
 const SEM_AREA_DEFINIDA = "Sem area definida";
 
@@ -130,7 +131,7 @@ async function PainelContent({ rows, supabase }: { rows: PainelRow[]; supabase: 
   const sheetSyncRuns: SheetSyncRunRow[] = (sheetSyncRunRows ?? []).map((row) => ({ id: row.id, startedAt: row.started_at, finishedAt: row.finished_at, status: row.status, entriesCount: row.entries_count, errorMessage: row.error_message }));
 
   return (
-    <>
+    <div className="flex w-full flex-col gap-6">
       <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Total de demandas" value={total} Icon={ClipboardList} iconClassName="text-slate-600" />
         <StatCard label="Atrasadas" value={atrasadas} Icon={AlertTriangle} highlight />
@@ -138,13 +139,43 @@ async function PainelContent({ rows, supabase }: { rows: PainelRow[]; supabase: 
         <StatCard label="Em andamento" value={emAndamento} Icon={Clock} iconClassName="text-blue-600" />
         <StatCard label="Concluidas" value={concluidas} Icon={CheckCircle2} iconClassName="text-green-600" />
       </div>
-      <AreaSummary rows={areaRows} />
-      <ResponsavelSummary rows={responsavelRows} />
-      <OverduePanel demandas={overduePanelRows} />
-      <PainelAreasSection supabase={supabase} />
-      <ReminderRunsPanel runs={reminderRuns} />
-      <SheetSyncPanel runs={sheetSyncRuns} />
-    </>
+
+      <PainelTabs
+        tabs={[
+          {
+            id: "visao-geral",
+            label: "Visão geral",
+            content: (
+              <>
+                <AreaSummary rows={areaRows} />
+                <ResponsavelSummary rows={responsavelRows} />
+              </>
+            ),
+          },
+          {
+            id: "atrasadas",
+            label: "Atrasadas",
+            badge: atrasadas,
+            content: <OverduePanel demandas={overduePanelRows} />,
+          },
+          {
+            id: "areas",
+            label: "Áreas",
+            content: <PainelAreasSection supabase={supabase} />,
+          },
+          {
+            id: "lembretes",
+            label: "Lembretes",
+            content: <ReminderRunsPanel runs={reminderRuns} />,
+          },
+          {
+            id: "planilha",
+            label: "Planilha",
+            content: <SheetSyncPanel runs={sheetSyncRuns} />,
+          },
+        ]}
+      />
+    </div>
   );
 }
 
