@@ -62,6 +62,7 @@ export default async function EditarDemandaPage({
     { data: checklistItems },
     { data: comentariosRaw },
     { data: areasInstitucionais },
+    { data: projetosRows },
   ] = await Promise.all([
     supabase.from("demanda_responsaveis").select("profile_id, voluntario_id").eq("demanda_id", id),
     supabase.from("demanda_membros").select("profile_id, voluntario_id").eq("demanda_id", id),
@@ -77,6 +78,7 @@ export default async function EditarDemandaPage({
       .select("id, conteudo, created_at, autor_id, profiles(full_name, email)")
       .eq("demanda_id", id).order("created_at", { ascending: true }),
     supabase.from("areas_institucionais").select("nome").order("nome"),
+    supabase.from("projetos").select("nome").order("nome"),
   ]);
 
   // Normalize the persisted assignments (profile_id OR voluntario_id, per
@@ -170,6 +172,13 @@ export default async function EditarDemandaPage({
             area: e.area,
             nome: e.nome,
           }))}
+          areas={(areasInstitucionais ?? []).map((a) => a.nome)}
+          projetos={[
+            ...new Set([
+              ...(projetosRows ?? []).map((p) => p.nome),
+              ...(demanda.projeto ? [demanda.projeto] : []),
+            ]),
+          ].sort((a, b) => a.localeCompare(b))}
         />
 
         <div className="grid w-full grid-cols-1 items-start gap-8 lg:grid-cols-2">

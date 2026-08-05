@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserRound, Lock, Mail, Shield, MapPin, Hash, Building2, Briefcase, Calendar, ArrowLeft } from "lucide-react";
+import { UserRound, Lock, Mail, Shield, MapPin, Hash, Building2, Briefcase, Calendar, ArrowLeft, NotebookPen } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
 import { roleLabel } from "@/lib/role-labels";
@@ -52,6 +52,25 @@ export default async function MeuPerfilPage() {
         .eq("id", profile.voluntario_id)
         .maybeSingle()
     : { data: null };
+
+  // Participação em reuniões gerais — count + last few atas, powered by
+  // ata_participantes (migration 0023).
+  const participacoes = profile.voluntario_id
+    ? (
+        await supabase
+          .from("ata_participantes")
+          .select("ata_id, reunioes(titulo, data_reuniao)")
+          .eq("voluntario_id", profile.voluntario_id)
+      ).data ?? []
+    : [];
+  const participacoesComAta = participacoes
+    .map((row) => {
+      const ata = Array.isArray(row.reunioes) ? row.reunioes[0] : row.reunioes;
+      if (!ata) return null;
+      return { ataId: row.ata_id, titulo: ata.titulo, data: ata.data_reuniao };
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null)
+    .sort((a, b) => b.data.localeCompare(a.data));
 
   return (
     <PageContainer>
@@ -153,6 +172,42 @@ export default async function MeuPerfilPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {profile.voluntario_id && (
+          <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+              <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <NotebookPen size={14} aria-hidden="true" />
+                Participação em reuniões gerais
+              </span>
+              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-sm font-semibold text-blue-700 ring-1 ring-blue-200/60">
+                {participacoesComAta.length}
+              </span>
+            </div>
+            {participacoesComAta.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-slate-500">
+                Você ainda não foi vinculado como participante de nenhuma ata.
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {participacoesComAta.map((p) => (
+                  <Link
+                    key={p.ataId}
+                    href={`/reunioes/${p.ataId}`}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                  >
+                    <span className="truncate text-sm font-medium text-slate-900">
+                      {p.titulo}
+                    </span>
+                    <span className="shrink-0 text-sm text-slate-500">
+                      {new Date(`${p.data}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

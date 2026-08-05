@@ -13,7 +13,6 @@ import {
   NotebookPen,
   Paperclip,
   Sparkles,
-  Users,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,6 +20,7 @@ import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
 import ExcluirAtaButton from "../excluir-ata-button";
 import DipActions from "../../dips/dip-actions";
+import { ParticipantesPanel } from "../participantes-panel";
 
 type AtaDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -54,21 +54,27 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
     );
   }
 
-  const [ataResult, dipsResult, profileResult] = await Promise.all([
-    supabase
-      .from("reunioes")
-      .select(
-        "titulo, data_reuniao, horario, resumo, participantes, pontos_principais, deliberacoes, texto, arquivo_nome, criado_por"
-      )
-      .eq("id", id)
-      .single(),
-    supabase
-      .from("dips")
-      .select("id, localidade, pais, data_dip, participantes, observacoes, criado_por")
-      .eq("ata_id", id)
-      .order("data_dip", { ascending: true }),
-    supabase.from("profiles").select("role").eq("id", user.id).single(),
-  ]);
+  const [ataResult, dipsResult, profileResult, participantesResult, voluntariosResult] =
+    await Promise.all([
+      supabase
+        .from("reunioes")
+        .select(
+          "titulo, data_reuniao, horario, resumo, participantes, pontos_principais, deliberacoes, texto, arquivo_nome, criado_por"
+        )
+        .eq("id", id)
+        .single(),
+      supabase
+        .from("dips")
+        .select("id, localidade, pais, data_dip, participantes, observacoes, criado_por")
+        .eq("ata_id", id)
+        .order("data_dip", { ascending: true }),
+      supabase.from("profiles").select("role").eq("id", user.id).single(),
+      supabase
+        .from("ata_participantes")
+        .select("voluntario_id, voluntarios(nome)")
+        .eq("ata_id", id),
+      supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
+    ]);
 
   if (ataResult.error || !ataResult.data) {
     return (
@@ -97,6 +103,21 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
   const dataLabel = format(new Date(`${ata.data_reuniao}T00:00:00`), "dd/MM/yyyy", {
     locale: ptBR,
   });
+
+  // Roster-linked participants (migration 0023) — normalized to the same
+  // shape as the picker's options.
+  const vinculados = (participantesResult.data ?? []).flatMap((row) => {
+    const nomeRow = Array.isArray(row.voluntarios)
+      ? row.voluntarios[0]
+      : row.voluntarios;
+    if (!nomeRow?.nome) return [];
+    return [{ id: String(row.voluntario_id), nome: nomeRow.nome }];
+  });
+
+  const voluntarios = (voluntariosResult.data ?? []).map((v) => ({
+    id: String(v.id),
+    nome: v.nome,
+  }));
 
   // UX gate mirroring RLS 0007: only the creator or a coordenador_geral
   // sees the delete button (RLS is the real boundary).
@@ -153,24 +174,13 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
       </header>
 
       <div className="flex w-full flex-col gap-5">
-        {participantes.length > 0 && (
-          <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-            <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-              <Users size={22} aria-hidden="true" />
-              Participantes
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {participantes.map((nome, index) => (
-                <span
-                  key={`${nome}-${index}`}
-                  className="rounded-full bg-zinc-100 px-3 py-1 text-base text-zinc-800 ring-1 ring-zinc-200/60"
-                >
-                  {nome}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
+        <ParticipantesPanel
+          ataId={id}
+          canManage={canDelete}
+          vinculados={vinculados}
+          voluntarios={voluntarios}
+          textoLivre={participantes}
+        />
 
         {pontos.length > 0 && (
           <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">

@@ -11,6 +11,7 @@ import {
   Pencil,
   UserRoundCheck,
   CalendarClock,
+  NotebookPen,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -127,6 +128,26 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
   ativas = demandas.filter((d) => d.status !== "concluida") as DemandaRow[];
   historico = demandas.filter((d) => d.status === "concluida") as DemandaRow[];
 
+  // Participação em reuniões gerais (ata_participantes, migration 0023) —
+  // the per-volunteer participation metric the coordinator can see here.
+  const { data: participacoesRows } = await supabase
+    .from("ata_participantes")
+    .select("ata_id, reunioes(titulo, data_reuniao)")
+    .eq("voluntario_id", voluntario.id);
+
+  type AtaRow = { titulo: string; data_reuniao: string };
+  const participacoes = (participacoesRows ?? [])
+    .map((row) => {
+      const ata = Array.isArray(row.reunioes) ? row.reunioes[0] : row.reunioes;
+      if (!ata) return null;
+      return {
+        ataId: row.ata_id,
+        ...(ata as AtaRow),
+      };
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null)
+    .sort((a, b) => b.data_reuniao.localeCompare(a.data_reuniao));
+
   return (
     <PageContainer>
       <div className="flex w-full max-w-4xl flex-col gap-5">
@@ -203,6 +224,36 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
             </div>
           </dl>
         </div>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+            <NotebookPen size={24} aria-hidden="true" />
+            Participação em reuniões gerais ({participacoes.length})
+          </h2>
+          {participacoes.length === 0 ? (
+            <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-700 ring-1 ring-zinc-200/60">
+              Este voluntário ainda não foi vinculado como participante de
+              nenhuma ata.
+            </p>
+          ) : (
+            <div className="flex flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+              {participacoes.map((participacao) => (
+                <Link
+                  key={participacao.ataId}
+                  href={`/reunioes/${participacao.ataId}`}
+                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <span className="text-xl text-zinc-900">
+                    {participacao.titulo}
+                  </span>
+                  <span className="text-base text-zinc-700">
+                    {formatData(participacao.data_reuniao)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">

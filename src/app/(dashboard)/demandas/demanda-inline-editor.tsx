@@ -16,11 +16,12 @@ import {
   Check,
   Pencil,
   Plus,
-  UserPlus,
   X,
 } from "lucide-react";
 import StatusBadge, { type DemandaStatus } from "./status-badge";
 import OverdueBadge from "./overdue-badge";
+import VoluntarioPicker from "@/components/voluntario-picker";
+import { agruparEventosPorMes } from "@/lib/eventos-agrupados";
 import {
   criarEtiqueta,
   updateDemandaTitulo,
@@ -77,6 +78,9 @@ export type InlineEditorProps = {
   // Nomes das áreas institucionais (areas_institucionais) — sugeridas no
   // campo Área via datalist; o texto livre continua aceito (legado).
   areas?: string[];
+  // Nomes dos projetos cadastrados (projetos) + usados nas demandas —
+  // sugeridos no campo Projeto via datalist.
+  projetos?: string[];
 };
 
 function initials(name: string): string {
@@ -242,75 +246,13 @@ function PersonPicker({
   onAdd: (id: string) => void;
   label: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [busca, setBusca] = useState("");
-  const buscaRef = useRef<HTMLInputElement>(null);
-  const available = pessoas.filter((p) => !selectedIds.has(p.id));
-
-  useEffect(() => { if (open) buscaRef.current?.focus(); }, [open]);
-
-  if (available.length === 0) return null;
-
-  const filtradas = available.filter((p) =>
-    display(p).toLowerCase().includes(busca.trim().toLowerCase())
-  );
-
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => { setOpen((v) => !v); setBusca(""); }}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-        aria-label={`Adicionar ${label}`}
-        title={`Adicionar ${label}`}
-      >
-        <UserPlus size={14} aria-hidden="true" />
-      </button>
-      {open && (
-        <>
-          <button
-            className="fixed inset-0 z-10 cursor-default border-0 bg-transparent"
-            onClick={() => setOpen(false)}
-            aria-label="Fechar seletor"
-          />
-          <div className="absolute left-0 top-full z-20 mt-2 w-64 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
-            <input
-              ref={buscaRef}
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
-              placeholder="Buscar nome..."
-              className="mb-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-base text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="max-h-56 overflow-y-auto">
-              {filtradas.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => { onAdd(p.id); setOpen(false); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base text-zinc-900 transition-colors hover:bg-zinc-100"
-                >
-                  <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                    {initials(display(p))}
-                  </span>
-                  <span className="truncate">{display(p)}</span>
-                  {p.temConta === false && (
-                    <span className="shrink-0 text-xs text-zinc-400">
-                      sem acesso
-                    </span>
-                  )}
-                </button>
-              ))}
-              {filtradas.length === 0 && (
-                <p className="px-3 py-2 text-base text-zinc-400">
-                  Nenhum voluntário encontrado.
-                </p>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+    <VoluntarioPicker
+      voluntarios={pessoas}
+      selectedIds={selectedIds}
+      onAdd={onAdd}
+      label={label}
+    />
   );
 }
 
@@ -323,6 +265,7 @@ export default function DemandaInlineEditor({
   eventos,
   etiquetas,
   areas = [],
+  projetos = [],
 }: InlineEditorProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -617,9 +560,14 @@ export default function DemandaInlineEditor({
         {editingPill === "projeto" ? (
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
             <input ref={editingRef as any} value={localProjeto ?? ""} onChange={(e) => setLocalProjeto(e.target.value)}
-              placeholder="Projeto" onBlur={async () => { await saveProjeto(localProjeto ?? ""); setEditingPill(null); }}
+              placeholder="Projeto" list="projetos-cadastrados" onBlur={async () => { await saveProjeto(localProjeto ?? ""); setEditingPill(null); }}
               onKeyDown={(e) => { if (e.key === "Enter") { saveProjeto(localProjeto ?? ""); setEditingPill(null); } if (e.key === "Escape") { setLocalProjeto(demanda.projeto); setEditingPill(null); } }}
               className="min-h-10 w-40 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-blue-500" />
+            <datalist id="projetos-cadastrados">
+              {projetos.map((projeto) => (
+                <option key={projeto} value={projeto} />
+              ))}
+            </datalist>
           </div>
         ) : (
           <button type="button" onClick={() => setEditingPill("projeto")}
@@ -638,10 +586,30 @@ export default function DemandaInlineEditor({
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
             <select ref={editingRef as any} value={String(localEventoId ?? "")}
               onChange={(e) => setLocalEventoId(e.target.value ? Number(e.target.value) : null)}
-              className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none"
+              className="min-h-10 max-w-72 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none"
             >
               <option value="">Nenhum evento</option>
-              {eventos.map((ev) => <option key={ev.id} value={ev.id}>{eventoLabel(ev)}</option>)}
+              {agruparEventosPorMes(
+                eventos.map((ev) => ({
+                  id: ev.id,
+                  titulo: ev.titulo,
+                  data_evento: ev.dataEvento,
+                  local: ev.local ?? null,
+                }))
+              ).map((grupo) => (
+                <optgroup key={grupo.label} label={grupo.label}>
+                  {grupo.eventos.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {eventoLabel({
+                        id: ev.id,
+                        titulo: ev.titulo,
+                        dataEvento: ev.data_evento,
+                        local: ev.local ?? null,
+                      })}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
             <button type="button" onClick={async () => { await saveEvento(String(localEventoId ?? "")); setEditingPill(null); }}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-green-600 hover:bg-green-50" aria-label="Salvar evento">

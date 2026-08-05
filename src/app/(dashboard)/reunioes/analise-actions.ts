@@ -18,6 +18,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { chatCompletion } from "@/lib/ai/ai-client";
 import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
+import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
 import { obterTranscricao } from "@/lib/meetings";
 import { parseArquivoFonte, ArquivoNaoSuportadoError, ArquivoVazioError } from "@/lib/atas/parse-file";
 import {
@@ -343,6 +344,62 @@ export async function salvarAtaAnalise(
 
   const ataId = novaAta.id;
   const tituloReferencia = `${ata.data.titulo} (${ata.data.data_reuniao})`;
+
+  // Auto-vínculo de participantes ao roster: cada nome em texto livre da
+  // ata é casado deterministicamente com voluntarios.nome (matchResponsavel
+  // roster matcher, same rule as the demandas review). Nomes sem match
+  // confiável ficam só no texto livre — o criador pode vincular depois na
+  // tela da ata. RLS 0023 valida: quem salva a análise é o criador da ata.
+  const participantesTexto = (ata.data.participantes ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (participantesTexto.length > 0) {
+    const [rosterRows, profileRows] = await Promise.all([
+      supabase.from("voluntarios").select("id, nome").eq("ativo", true),
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, voluntario_id")
+        .not("voluntario_id", "is", null),
+    ]);
+    const profiles = (profileRows.data ?? []).map((p) => ({
+      id: p.id,
+      email: p.email,
+      full_name: p.full_name,
+    }));
+    const roster = (rosterRows.data ?? []).map((v) => ({
+      id: v.id,
+      nome: v.nome,
+      profileId:
+        (profileRows.data ?? []).find((p) => p.voluntario_id === v.id)?.id ??
+        null,
+    }));
+
+    const vinculos = [
+      ...new Map(
+        participantesTexto
+          .map((nome) => matchResponsavelRoster(nome, profiles, roster))
+          .filter(
+            (match): match is { profileId: string | null; rosterId: number } =>
+              match.rosterId !== null
+          )
+          .map((match) => [match.rosterId, { ata_id: ataId, voluntario_id: match.rosterId }])
+      ).values(),
+    ];
+
+    if (vinculos.length > 0) {
+      const { error: vinculoError } = await supabase
+        .from("ata_participantes")
+        .insert(vinculos);
+      if (vinculoError) {
+        console.error(
+          "salvarAtaAnalise: ata_participantes auto-link failed",
+          vinculoError
+        );
+      }
+    }
+  }
 
   // New demandas from deliberations — same batched-insert shape as
   // createDemanda, without the form layer.

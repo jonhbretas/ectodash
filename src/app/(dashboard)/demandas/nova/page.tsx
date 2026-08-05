@@ -11,7 +11,7 @@ export default async function NovaDemandaPage() {
   // demanda (user decision 2026-08-04): every registered volunteer is
   // assignable, "mesmo que eles não estejam cadastrados" (sem conta ativada
   // ainda). temConta marca quem já ativou o acesso pelo vínculo.
-  const [voluntariosResult, perfisResult, eventosResult, etiquetasResult, areasResult] =
+  const [voluntariosResult, perfisResult, eventosResult, etiquetasResult, areasResult, projetosResult] =
     await Promise.all([
       supabase
         .from("voluntarios")
@@ -30,6 +30,7 @@ export default async function NovaDemandaPage() {
         .limit(100),
       supabase.from("etiquetas").select("id, area, nome").order("area").order("nome"),
       supabase.from("areas_institucionais").select("nome").order("nome"),
+      supabase.from("projetos").select("nome").order("nome"),
     ]);
 
   const comConta = new Set(
@@ -60,6 +61,7 @@ export default async function NovaDemandaPage() {
           eventos={eventosResult.data ?? []}
           etiquetas={etiquetasResult.data ?? []}
           areas={(areasResult.data ?? []).map((a) => a.nome)}
+          projetos={(projetosResult.data ?? []).map((p) => p.nome)}
           wide
         />
       </div>

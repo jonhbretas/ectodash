@@ -107,6 +107,11 @@ export default async function DashboardPage({
     .select("nome")
     .order("nome");
 
+  const { data: projetosCadastrados } = await supabase
+    .from("projetos")
+    .select("nome")
+    .order("nome");
+
   const areaOptions = [
     ...new Set([
       ...(areasInstitucionaisRows ?? []).map((a) => a.nome),
@@ -117,11 +122,12 @@ export default async function DashboardPage({
   ].sort((a, b) => a.localeCompare(b));
 
   const projetoOptions = [
-    ...new Set(
-      baseRows
+    ...new Set([
+      ...(projetosCadastrados ?? []).map((p) => p.nome),
+      ...baseRows
         .map((d) => d.projeto)
-        .filter((projeto): projeto is string => Boolean(projeto && projeto.trim()))
-    ),
+        .filter((projeto): projeto is string => Boolean(projeto && projeto.trim())),
+    ]),
   ].sort((a, b) => a.localeCompare(b));
 
   const { data: demandas } = await query;

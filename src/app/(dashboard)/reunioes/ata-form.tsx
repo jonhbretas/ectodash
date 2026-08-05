@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import VoluntarioPicker from "@/components/voluntario-picker";
 import { criarAta, type CriarAtaState } from "./actions";
 
 const initialState: CriarAtaState = { ok: false, message: "" };
@@ -22,8 +24,29 @@ function SubmitButton() {
   );
 }
 
-export default function AtaForm() {
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  const first = parts[0][0] ?? "?";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] ?? "" : "";
+  return (first + last).toUpperCase();
+}
+
+export default function AtaForm({
+  voluntarios = [],
+}: {
+  voluntarios?: { id: number; nome: string; temConta?: boolean }[];
+}) {
   const [state, formAction] = useActionState(criarAta, initialState);
+  const [participanteIds, setParticipanteIds] = useState<string[]>([]);
+
+  const participantes = voluntarios.filter((v) =>
+    participanteIds.includes(String(v.id))
+  );
+
+  function removeParticipante(id: string) {
+    setParticipanteIds((current) => current.filter((x) => x !== id));
+  }
 
   const inputClassName =
     "min-h-14 rounded-lg border border-zinc-400 bg-white px-4 py-3 text-xl text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
@@ -49,6 +72,52 @@ export default function AtaForm() {
           required
           className={inputClassName}
         />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className={labelClassName}>Participantes (opcional)</span>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-300 bg-white p-3">
+          {participantes.length === 0 && (
+            <span className="text-lg text-zinc-400">
+              Nenhum participante vinculado
+            </span>
+          )}
+          {participantes.map((v) => (
+            <span
+              key={v.id}
+              className="group relative flex items-center gap-1.5 rounded-full bg-zinc-100 px-2 py-1 text-base ring-1 ring-zinc-200/60"
+            >
+              <span
+                aria-hidden="true"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
+              >
+                {initialsOf(v.nome)}
+              </span>
+              <span className="truncate text-zinc-700">{v.nome}</span>
+              <button
+                type="button"
+                onClick={() => removeParticipante(String(v.id))}
+                aria-label={`Remover ${v.nome}`}
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-all hover:bg-red-50 hover:text-red-600"
+              >
+                <X size={12} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+          <VoluntarioPicker
+            voluntarios={voluntarios.map((v) => ({ ...v, id: String(v.id) }))}
+            selectedIds={new Set(participanteIds)}
+            onAdd={(id) => setParticipanteIds((current) => [...current, id])}
+            label="participante"
+          />
+        </div>
+        {participanteIds.map((id) => (
+          <input key={id} type="hidden" name="voluntarioIds" value={id} />
+        ))}
+        <p className="text-base text-zinc-500">
+          Vincule os participantes aos cadastros do roster — isso alimenta a
+          métrica de participação no perfil de cada voluntário.
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">

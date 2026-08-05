@@ -17,11 +17,14 @@ import { SlidersHorizontal, X } from "lucide-react";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { useStoredPreference } from "@/lib/use-stored-preference";
+import { agruparEventosPorMes } from "@/lib/eventos-agrupados";
 import type { DemandaFilters } from "./demanda-filter-schema";
 
 const ALL_VALUE = "__todas__";
@@ -311,10 +314,22 @@ export default function DemandaFilters({
                 ALL_VALUE,
                 "Todos os eventos",
                 (value) => navigateWith({ evento: value }),
-                eventoOptions.map((evento) => (
-                  <SelectItem key={evento.id} value={String(evento.id)}>
-                    {eventoLabel(evento)}
-                  </SelectItem>
+                agruparEventosPorMes(
+                  eventoOptions.map((e) => ({
+                    id: e.id,
+                    titulo: e.titulo,
+                    data_evento: e.data_evento,
+                    local: e.local,
+                  }))
+                ).map((grupo) => (
+                  <SelectGroup key={grupo.label}>
+                    <SelectLabel>{grupo.label}</SelectLabel>
+                    {grupo.eventos.map((evento) => (
+                      <SelectItem key={evento.id} value={String(evento.id)}>
+                        {eventoLabel(evento)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))
               )}
 

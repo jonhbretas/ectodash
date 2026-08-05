@@ -15,6 +15,7 @@ import {
   type UpdateDemandaState,
 } from "./actions";
 import { demandaSchema, type DemandaFormValues } from "./demanda-schema";
+import { agruparEventosPorMes } from "@/lib/eventos-agrupados";
 
 const initialState: CreateDemandaState | UpdateDemandaState = {
   ok: false,
@@ -64,6 +65,9 @@ type DemandaFormProps = {
   // Nomes das áreas institucionais (areas_institucionais) — sugeridas no
   // campo Área via datalist; o texto livre continua aceito (legado).
   areas?: string[];
+  // Nomes dos projetos cadastrados (projetos) + usados nas demandas —
+  // sugeridos no campo Projeto via datalist.
+  projetos?: string[];
   mode?: "create" | "edit";
   demandaId?: number;
   defaultValues?: Partial<DemandaFormValues> & {
@@ -97,6 +101,7 @@ export default function DemandaForm({
   eventos,
   etiquetas,
   areas = [],
+  projetos = [],
   mode = "create",
   demandaId,
   defaultValues,
@@ -305,10 +310,16 @@ export default function DemandaForm({
               <Input
                 id="projeto"
                 type="text"
+                list="projetos-cadastrados"
                 placeholder="Ex: Projeto Horta Comunitária"
                 className={fieldInputClass}
                 {...register("projeto")}
               />
+              <datalist id="projetos-cadastrados">
+                {projetos.map((projeto) => (
+                  <option key={projeto} value={projeto} />
+                ))}
+              </datalist>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -322,10 +333,14 @@ export default function DemandaForm({
                 className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
               >
                 <option value="">Nenhum evento</option>
-                {eventos.map((evento) => (
-                  <option key={evento.id} value={evento.id}>
-                    {eventoLabel(evento)}
-                  </option>
+                {agruparEventosPorMes(eventos).map((grupo) => (
+                  <optgroup key={grupo.label} label={grupo.label}>
+                    {grupo.eventos.map((evento) => (
+                      <option key={evento.id} value={evento.id}>
+                        {eventoLabel(evento)}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -548,10 +563,16 @@ export default function DemandaForm({
             <Input
               id="projeto"
               type="text"
+              list="projetos-cadastrados"
               placeholder="Ex: Projeto Horta Comunitária"
               className={fieldInputClass}
               {...register("projeto")}
             />
+            <datalist id="projetos-cadastrados">
+              {projetos.map((projeto) => (
+                <option key={projeto} value={projeto} />
+              ))}
+            </datalist>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -565,10 +586,14 @@ export default function DemandaForm({
               className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
             >
               <option value="">Nenhum evento</option>
-              {eventos.map((evento) => (
-                <option key={evento.id} value={evento.id}>
-                  {eventoLabel(evento)}
-                </option>
+              {agruparEventosPorMes(eventos).map((grupo) => (
+                <optgroup key={grupo.label} label={grupo.label}>
+                  {grupo.eventos.map((evento) => (
+                    <option key={evento.id} value={evento.id}>
+                      {eventoLabel(evento)}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>

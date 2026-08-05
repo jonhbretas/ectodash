@@ -83,33 +83,64 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   const contentWidth = doc.page.width - MARGIN * 2;
 
-  function drawFooter(pageIndex: number, total: number) {
+  function drawFooter() {
     const page = doc.page;
     const y = page.height - 34;
+    // An explicit `height` (non-null) makes the text wrapper skip its
+    // continue-on-new-page logic — without it, text drawn below the bottom
+    // margin triggers addPage → pageAdded → drawFooter → infinite recursion
+    // (RangeError: Maximum call stack size exceeded).
     const footerOptions = { height: 20, lineBreak: false };
-    doc.save();
+
+    // pageAdded fires inside continueOnNewPage — mid text-wrap. The line
+    // wrapper resumes drawing with the CURRENT doc state, so any change
+    // here to x/y, font, size, or fill color would render the continuation
+    // off-page: every remaining line got its own near-blank page (the old
+    // 43-page bug). Preserve and restore the full text state.
+    const state = doc as unknown as {
+      x: number;
+      y: number;
+      _fontSource: string;
+      _fontFamily: string | null;
+      _fontSize: number;
+      _fillColor: [string, number | undefined];
+    };
+    const prev = {
+      x: doc.x,
+      y: doc.y,
+      fontSource: state._fontSource,
+      fontFamily: state._fontFamily,
+      fontSize: state._fontSize,
+      fillColor: state._fillColor,
+    };
+
     doc
       .font("Helvetica")
       .fontSize(8)
       .fillColor(TEXT_MUTED)
       .text("EctoDash · Atas de Reuniões", page.margins.left, y, footerOptions);
+    // bufferedPageRange().start+count = index of the current page: with the
+    // default streaming buffer (bufferPages:false) only the current page is
+    // kept, so .count alone was always 1 ("Página 1" on every page).
     doc.text(
-      `Página ${pageIndex + 1} de ${total}`,
+      `Página ${doc.bufferedPageRange().start + doc.bufferedPageRange().count}`,
       page.width - page.margins.right - 120,
       y,
       { ...footerOptions, width: 120, align: "right" }
     );
-    doc.restore();
+
+    if (prev.fontSource) {
+      doc.font(prev.fontSource, prev.fontFamily);
+    }
+    doc.fontSize(prev.fontSize);
+    doc.fillColor(prev.fillColor[0], prev.fillColor[1]);
+    doc.x = prev.x;
+    doc.y = prev.y;
   }
 
-  function drawAllFooters() {
-    const range = doc.bufferedPageRange();
-    const total = range.count;
-    for (let i = 0; i < total; i++) {
-      doc.switchToPage(i);
-      drawFooter(i, total);
-    }
-  }
+  // Footer on every page (pageAdded fires for pages 2+; the last page gets
+  // one final drawFooter() before doc.end()).
+  doc.on("pageAdded", drawFooter);
 
   // ---------------------------------------------------------------------
   // Header band
@@ -290,7 +321,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     }
   }
 
-  drawAllFooters();
+  drawFooter();
   doc.end();
   await done;
 
