@@ -83,30 +83,33 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   const contentWidth = doc.page.width - MARGIN * 2;
 
-  function drawFooter() {
+  function drawFooter(pageIndex: number, total: number) {
     const page = doc.page;
     const y = page.height - 34;
-    // An explicit `height` (non-null) makes the text wrapper skip its
-    // continue-on-new-page logic — without it, text drawn below the bottom
-    // margin triggers addPage → pageAdded → drawFooter → infinite recursion
-    // (RangeError: Maximum call stack size exceeded).
     const footerOptions = { height: 20, lineBreak: false };
+    doc.save();
     doc
       .font("Helvetica")
       .fontSize(8)
       .fillColor(TEXT_MUTED)
       .text("EctoDash · Atas de Reuniões", page.margins.left, y, footerOptions);
     doc.text(
-      `Página ${doc.bufferedPageRange().count}`,
+      `Página ${pageIndex + 1} de ${total}`,
       page.width - page.margins.right - 120,
       y,
       { ...footerOptions, width: 120, align: "right" }
     );
+    doc.restore();
   }
 
-  // Footer on every page (pageAdded fires for pages 2+; the last page gets
-  // one final drawFooter() before doc.end()).
-  doc.on("pageAdded", drawFooter);
+  function drawAllFooters() {
+    const range = doc.bufferedPageRange();
+    const total = range.count;
+    for (let i = 0; i < total; i++) {
+      doc.switchToPage(i);
+      drawFooter(i, total);
+    }
+  }
 
   // ---------------------------------------------------------------------
   // Header band
@@ -287,7 +290,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     }
   }
 
-  drawFooter();
+  drawAllFooters();
   doc.end();
   await done;
 
