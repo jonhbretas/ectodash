@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" fill="none">
+  <!-- Background -->
+  <rect width="800" height="300" fill="#1A1A1A"/>
+  
+  <!-- Logo Symbol - DNA/Helix shape -->
+  <g transform="translate(20, 20)">
+    <!-- Left teal curve -->
+    <path d="M60 20 C60 20, 20 80, 60 140 C100 200, 60 260, 60 260" 
+          stroke="#2B9EB3" stroke-width="35" fill="none" stroke-linecap="round"/>
+    
+    <!-- Right teal curve -->
+    <path d="M140 20 C140 20, 180 80, 140 140 C100 200, 140 260, 140 260" 
+          stroke="#2B9EB3" stroke-width="35" fill="none" stroke-linecap="round"/>
+    
+    <!-- Yellow circle at top -->
+    <circle cx="100" cy="40" r="25" fill="#F0B060"/>
+    
+    <!-- Yellow base -->
+    <path d="M40 220 L160 220 L160 280 C160 290, 150 300, 140 300 L60 300 C50 300, 40 290, 40 280 Z" 
+          fill="#F0B060"/>
+    
+    <!-- Horizontal lines on yellow base -->
+    <line x1="60" y1="245" x2="140" y2="245" stroke="#1A1A1A" stroke-width="3"/>
+    <line x1="60" y1="265" x2="140" y2="265" stroke="#1A1A1A" stroke-width="3"/>
+    <line x1="60" y1="285" x2="140" y2="285" stroke="#1A1A1A" stroke-width="3"/>
+  </g>
+  
+  <!-- Text: ECTOLAB -->
+  <text x="220" y="140" font-family="Arial, sans-serif" font-size="90" font-weight="bold" fill="#2B9EB3">
+    ECTOLAB
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="220" y="180" font-family="Arial, sans-serif" font-size="22" fill="#1E6B7A">
+    ASSOCIAÇÃO INTERNACIONAL
+  </text>
+  <text x="220" y="210" font-family="Arial, sans-serif" font-size="22" fill="#1E6B7A">
+    DE PESQUISA LABORATORIAL EM
+  </text>
+  <text x="220" y="240" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#1E6B7A">
+    ECTOPLASMIA E PARACIRURGIA
+  </text>
+</svg>

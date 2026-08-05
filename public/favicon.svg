@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="50" fill="#1A1A1A"/>
+  
+  <!-- Left teal curve -->
+  <path d="M35 15 C35 15, 15 40, 35 65 C55 90, 35 95, 35 95" 
+        stroke="#2B9EB3" stroke-width="12" fill="none" stroke-linecap="round"/>
+  
+  <!-- Right teal curve -->
+  <path d="M65 15 C65 15, 85 40, 65 65 C45 90, 65 95, 65 95" 
+        stroke="#2B9EB3" stroke-width="12" fill="none" stroke-linecap="round"/>
+  
+  <!-- Yellow circle at top -->
+  <circle cx="50" cy="22" r="8" fill="#F0B060"/>
+  
+  <!-- Yellow base -->
+  <path d="M28 80 L72 80 L72 92 C72 95, 69 98, 66 98 L34 98 C31 98, 28 95, 28 92 Z" 
+        fill="#F0B060"/>
+  
+  <!-- Horizontal lines on yellow base -->
+  <line x1="34" y1="85" x2="66" y2="85" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="34" y1="89" x2="66" y2="89" stroke="#1A1A1A" stroke-width="1.5"/>
+  <line x1="34" y1="93" x2="66" y2="93" stroke="#1A1A1A" stroke-width="1.5"/>
+</svg>

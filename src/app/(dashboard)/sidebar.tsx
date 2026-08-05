@@ -33,14 +33,14 @@ function SidebarLinks({
 
   const linkClassName = (href: string) => {
     const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-    return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] ${
+    return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2b9eb3] ${
       collapsed
         ? "flex-col justify-center gap-0.5 px-0 text-center"
         : "gap-3 px-3 text-sm"
     } ${
       active
-        ? "bg-[#d4883a] text-white shadow-[0_2px_8px_rgba(212,136,58,0.25)]"
-        : "text-slate-600 hover:bg-[#f5f0eb] hover:text-slate-900"
+        ? "bg-[#2b9eb3] text-white shadow-[0_2px_8px_rgba(43,158,179,0.25)]"
+        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
     }`;
   };
 
@@ -75,23 +75,17 @@ function SidebarBrand({ collapsed }: { collapsed: boolean }) {
   return (
     <Link
       href="/"
-      title={collapsed ? "EctoDash" : undefined}
-      aria-label="EctoDash — página inicial"
-      className={`flex min-h-12 items-center rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a] ${
+      title={collapsed ? "EctoLab — página inicial" : undefined}
+      aria-label="EctoLab — página inicial"
+      className={`flex min-h-12 items-center rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
         collapsed ? "justify-center gap-0" : "gap-3 px-2"
       }`}
     >
-      <span
-        aria-hidden="true"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#d4883a] to-[#c07828] text-lg font-bold text-white shadow-[0_2px_8px_rgba(212,136,58,0.3)]"
-      >
-        E
-      </span>
-      {!collapsed && (
-        <span className="truncate text-lg font-semibold text-slate-900 tracking-tight">
-          EctoDash
-        </span>
-      )}
+      <img
+        src="/logo-ectolab.svg"
+        alt="EctoLab"
+        className={`shrink-0 ${collapsed ? "h-9 w-9" : "h-10"}`}
+      />
     </Link>
   );
 }
@@ -158,8 +152,8 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
         ref={sidebarRef}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className={`sticky top-0 z-30 hidden h-dvh shrink-0 flex-col gap-5 overflow-hidden border-r border-[#e8ddd4]/60 bg-white/95 backdrop-blur-xl py-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
-          visuallyCollapsed ? "w-18 px-2" : "w-64 px-4 shadow-[4px_0_24px_rgba(212,136,58,0.04)]"
+        className={`sticky top-0 z-30 hidden h-dvh shrink-0 flex-col gap-5 overflow-hidden border-r border-slate-200/60 bg-white/95 backdrop-blur-xl py-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
+          visuallyCollapsed ? "w-18 px-2" : "w-64 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
         }`}
       >
         <SidebarBrand collapsed={visuallyCollapsed} />
