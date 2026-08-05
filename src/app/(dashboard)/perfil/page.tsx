@@ -5,6 +5,7 @@ import { displayName } from "@/lib/display-name";
 import { roleLabel } from "@/lib/role-labels";
 import PageContainer from "../page-container";
 import MeuPerfilForm from "../voluntarios/meu-perfil-form";
+import AtividadesSection from "../voluntarios/atividades-section";
 
 export default async function MeuPerfilPage() {
   const supabase = await createClient();
@@ -71,6 +72,17 @@ export default async function MeuPerfilPage() {
     })
     .filter((p): p is NonNullable<typeof p> => p !== null)
     .sort((a, b) => b.data.localeCompare(a.data));
+
+  // Atividades de conscienciologia (migration 0026) — preenchidas pelo
+  // próprio voluntário no perfil.
+  const atividades = profile.voluntario_id
+    ? (
+        await supabase
+          .from("voluntario_atividades")
+          .select("atividade")
+          .eq("voluntario_id", profile.voluntario_id)
+      ).data ?? []
+    : [];
 
   return (
     <PageContainer>
@@ -173,6 +185,14 @@ export default async function MeuPerfilPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {profile.voluntario_id && (
+          <AtividadesSection
+            voluntarioId={profile.voluntario_id}
+            atuais={atividades.map((a) => a.atividade)}
+            editavel
+          />
         )}
 
         {profile.voluntario_id && (

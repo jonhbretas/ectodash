@@ -13,6 +13,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { ATIVIDADES_VOLUNTARIO } from "@/lib/atividades-voluntario";
 
 export type PerfilState = { ok: boolean; message: string };
 const perfilInitial: PerfilState = { ok: false, message: "" };
@@ -343,4 +344,110 @@ export async function atualizarVoluntariosEmMassa(
     message: `${processados} voluntário(s) ${acaoLabel}.${negadosLabel}`,
     processados,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Situacao de trabalho (ativo/ocioso) + atividades de conscienciologia
+// (migration 0026)
+
+
+export type SituacaoState = { ok: boolean; message: string };
+const situacaoInitial: SituacaoState = { ok: false, message: "" };
+
+export async function atualizarSituacaoVoluntario(
+  id: number,
+  situacao: string
+): Promise<SituacaoState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ...situacaoInitial, message: "Sessão expirada." };
+
+  if (!Number.isFinite(id)) return { ...situacaoInitial, message: "Voluntário inválido." };
+  if (situacao !== "ativo" && situacao !== "ocioso") {
+    return { ...situacaoInitial, message: "Situação inválida." };
+  }
+
+  const { data, error } = await supabase.rpc("atualizar_situacao_voluntario", {
+    p_cadastro_id: id,
+    p_situacao: situacao,
+  });
+
+  if (error || data !== true) {
+    console.error("atualizarSituacaoVoluntario: rpc failed", error);
+    return {
+      ...situacaoInitial,
+      message: "Você não tem permissão para alterar a situação deste voluntário.",
+    };
+  }
+
+  revalidatePath("/voluntarios/" + id);
+  revalidatePath("/voluntarios");
+  revalidatePath("/painel");
+  return { ok: true, message: situacao === "ocioso" ? "Voluntário marcado como ocioso." : "Voluntário marcado como ativo." };
+}
+
+export type AtividadesState = { ok: boolean; message: string };
+const atividadesInitial: AtividadesState = { ok: false, message: "" };
+
+const atividadesSchema = z.object({
+  atividades: z.array(
+    z.enum(ATIVIDADES_VOLUNTARIO.map((a) => a.value) as [string, ...string[]])
+  ).max(20),
+});
+
+// Self-service: cada voluntário grava as próprias atividades (RLS 0026
+// permite o próprio cadastro ou coordenadores). Diff simples: apaga o que
+// saiu, insere o que entrou.
+export async function salvarAtividadesVoluntario(
+  voluntarioId: number,
+  atividades: string[]
+): Promise<AtividadesState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ...atividadesInitial, message: "Sessão expirada." };
+
+  if (!Number.isFinite(voluntarioId)) {
+    return { ...atividadesInitial, message: "Voluntário inválido." };
+  }
+
+  const parsed = atividadesSchema.safeParse({ atividades });
+  if (!parsed.success) {
+    return { ...atividadesInitial, message: "Atividades inválidas." };
+  }
+  const desejadas = parsed.data.atividades;
+
+  const { data: atuais } = await supabase
+    .from("voluntario_atividades")
+    .select("atividade")
+    .eq("voluntario_id", voluntarioId);
+  const atuaisSet = new Set((atuais ?? []).map((a) => a.atividade));
+
+  const paraRemover = [...atuaisSet].filter((a) => !desejadas.includes(a));
+  const paraInserir = desejadas.filter((a) => !atuaisSet.has(a));
+
+  if (paraRemover.length > 0) {
+    const { error } = await supabase
+      .from("voluntario_atividades")
+      .delete()
+      .eq("voluntario_id", voluntarioId)
+      .in("atividade", paraRemover);
+    if (error) {
+      console.error("salvarAtividadesVoluntario: delete failed", error);
+      return { ...atividadesInitial, message: "Não foi possível salvar as atividades." };
+    }
+  }
+
+  if (paraInserir.length > 0) {
+    const { error } = await supabase
+      .from("voluntario_atividades")
+      .insert(paraInserir.map((atividade) => ({ voluntario_id: voluntarioId, atividade })));
+    if (error) {
+      console.error("salvarAtividadesVoluntario: insert failed", error);
+      return { ...atividadesInitial, message: "Não foi possível salvar as atividades." };
+    }
+  }
+
+  revalidatePath("/voluntarios/" + voluntarioId);
+  revalidatePath("/perfil");
+  return { ok: true, message: "Atividades atualizadas." };
 }

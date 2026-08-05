@@ -7,6 +7,8 @@ import { z } from "zod";
 export const voluntariosFilterSchema = z.object({
   busca: z.string().trim().max(120).optional(),
   area: z.string().trim().max(120).optional(),
+  localidade: z.string().trim().max(120).optional(),
+  situacao: z.enum(["ativo", "ocioso"]).optional(),
 });
 
 export type VoluntariosFilters = z.infer<typeof voluntariosFilterSchema>;

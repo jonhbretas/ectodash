@@ -21,18 +21,25 @@ const ALL_VALUE = "__todas__";
 
 export type VoluntariosFiltersProps = {
   areaOptions: string[];
+  localidadeOptions: string[];
   currentFilters: VoluntariosFilters;
 };
 
 export default function VoluntariosFilters({
   areaOptions,
+  localidadeOptions,
   currentFilters,
 }: VoluntariosFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [buscaDraft, setBuscaDraft] = useState(currentFilters.busca ?? "");
 
-  const hasActiveFilter = Boolean(currentFilters.busca || currentFilters.area);
+  const hasActiveFilter = Boolean(
+    currentFilters.busca ||
+      currentFilters.area ||
+      currentFilters.localidade ||
+      currentFilters.situacao
+  );
 
   function navigateWith(updates: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -66,7 +73,7 @@ export default function VoluntariosFilters({
         <form
           action={submitBusca}
           role="search"
-          className="flex gap-2"
+          className="flex gap-2 sm:col-span-2"
         >
           <label htmlFor="busca" className="sr-only">
             Buscar por nome ou código PF
@@ -109,6 +116,47 @@ export default function VoluntariosFilters({
             ))}
           </SelectContent>
         </Select>
+
+        <Select
+          value={currentFilters.localidade ?? ALL_VALUE}
+          onValueChange={(next) =>
+            navigateWith({ localidade: next === ALL_VALUE ? undefined : next })
+          }
+        >
+          <SelectTrigger
+            aria-label="Filtrar por localidade"
+            className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          >
+            <SelectValue placeholder="Todas as localidades" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todas as localidades</SelectItem>
+            {localidadeOptions.map((localidade) => (
+              <SelectItem key={localidade} value={localidade}>
+                {localidade}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={currentFilters.situacao ?? ALL_VALUE}
+          onValueChange={(next) =>
+            navigateWith({ situacao: next === ALL_VALUE ? undefined : next })
+          }
+        >
+          <SelectTrigger
+            aria-label="Filtrar por situação"
+            className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          >
+            <SelectValue placeholder="Todas as situações" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todas as situações</SelectItem>
+            <SelectItem value="ativo">Ativo</SelectItem>
+            <SelectItem value="ocioso">Ocioso</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {hasActiveFilter && (
@@ -133,6 +181,32 @@ export default function VoluntariosFilters({
                 type="button"
                 onClick={() => navigateWith({ area: undefined })}
                 aria-label="Remover filtro de área"
+                className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-zinc-200"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </span>
+          )}
+          {currentFilters.localidade && (
+            <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-base text-zinc-700 ring-1 ring-zinc-200/60">
+              Localidade: {currentFilters.localidade}
+              <button
+                type="button"
+                onClick={() => navigateWith({ localidade: undefined })}
+                aria-label="Remover filtro de localidade"
+                className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-zinc-200"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </span>
+          )}
+          {currentFilters.situacao && (
+            <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-base text-zinc-700 ring-1 ring-zinc-200/60">
+              Situação: {currentFilters.situacao === "ocioso" ? "Ocioso" : "Ativo"}
+              <button
+                type="button"
+                onClick={() => navigateWith({ situacao: undefined })}
+                aria-label="Remover filtro de situação"
                 className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-zinc-200"
               >
                 <X size={14} aria-hidden="true" />

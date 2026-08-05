@@ -12,6 +12,7 @@ import {
   UserRoundCheck,
   CalendarClock,
   NotebookPen,
+  MoonStar,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +21,8 @@ import { roleLabel } from "@/lib/role-labels";
 import PageContainer from "../../page-container";
 import StatusBadge from "../../demandas/status-badge";
 import OverdueBadge from "../../demandas/overdue-badge";
+import AtividadesSection from "../atividades-section";
+import SituacaoToggle from "../situacao-toggle";
 
 type VoluntarioPageProps = {
   params: Promise<{ id: string }>;
@@ -51,7 +54,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
 
   const { data: me } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, voluntario_id")
     .eq("id", user.id)
     .single();
   const role = me?.role;
@@ -63,7 +66,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
   const { data: voluntario } = await supabase
     .from("voluntarios")
     .select(
-      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, profiles(id, email, role)"
+      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, situacao, profiles(id, email, role)"
     )
     .eq("id", Number(id))
     .maybeSingle();
@@ -128,6 +131,17 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
   ativas = demandas.filter((d) => d.status !== "concluida") as DemandaRow[];
   historico = demandas.filter((d) => d.status === "concluida") as DemandaRow[];
 
+  // Atividades de conscienciologia (migration 0026) — o próprio voluntário
+  // (ou o coordenador) preenche.
+  const { data: atividadesRows } = await supabase
+    .from("voluntario_atividades")
+    .select("atividade")
+    .eq("voluntario_id", voluntario.id);
+  const atividades = (atividadesRows ?? []).map((a) => a.atividade);
+  const ehProprioCadastro = me?.voluntario_id === voluntario.id;
+
+  const situacao = voluntario.situacao === "ocioso" ? "ocioso" : "ativo";
+
   // Participação em reuniões gerais (ata_participantes, migration 0023) —
   // the per-volunteer participation metric the coordinator can see here.
   const { data: participacoesRows } = await supabase
@@ -176,6 +190,12 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                 <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-base font-medium text-zinc-800 ring-1 ring-zinc-200/60">
                   {roleLabel(effectiveRole)}
                 </span>
+                {situacao === "ocioso" && (
+                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-base font-medium text-amber-800 ring-1 ring-amber-200/60">
+                    <MoonStar size={14} aria-hidden="true" />
+                    Ocioso
+                  </span>
+                )}
                 <span
                   className={`w-fit rounded-full px-3 py-1 text-base font-medium ring-1 ${
                     voluntario.ativo
@@ -191,13 +211,16 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
               )}
             </div>
             {canManage && (
-              <Link
-                href={`/voluntarios/${voluntario.id}/editar`}
-                className="flex min-h-12 items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-              >
-                <Pencil size={18} aria-hidden="true" />
-                Editar cadastro
-              </Link>
+              <div className="flex flex-col gap-2">
+                <Link
+                  href={`/voluntarios/${voluntario.id}/editar`}
+                  className="flex min-h-12 items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-lg font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                >
+                  <Pencil size={18} aria-hidden="true" />
+                  Editar cadastro
+                </Link>
+                <SituacaoToggle voluntarioId={voluntario.id} situacao={situacao} />
+              </div>
             )}
           </div>
 
@@ -224,6 +247,12 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
             </div>
           </dl>
         </div>
+
+        <AtividadesSection
+          voluntarioId={voluntario.id}
+          atuais={atividades}
+          editavel={canManage || ehProprioCadastro}
+        />
 
         <section className="flex flex-col gap-3">
           <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">

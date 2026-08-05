@@ -13,8 +13,9 @@ import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import { parseVoluntariosFilters } from "./voluntarios-filter-schema";
 import VoluntariosFilters from "./voluntarios-filters";
-import VoluntariosListClient from "./voluntarios-list";
+import VoluntariosListClient, { type AreaNode } from "./voluntarios-list";
 import MeuCadastroCard from "./meu-cadastro-card";
+import LocalidadesVoluntarioConfig from "./localidades-config";
 
 type VoluntarioRow = {
   id: number;
@@ -29,6 +30,7 @@ type VoluntarioRow = {
   area_atuacao: string | null;
   role: string | null;
   ativo: boolean;
+  situacao: string | null;
   profiles:
     | { email: string; role: string }[]
     | { email: string; role: string }
@@ -98,7 +100,7 @@ export default async function VoluntariosPage({
 
   const { data: baseRows } = await supabase
     .from("voluntarios")
-    .select("id, area_atuacao");
+    .select("id, area_atuacao, unidade");
 
   const areaOptions = [
     ...new Set(
@@ -108,10 +110,23 @@ export default async function VoluntariosPage({
     ),
   ].sort((a, b) => a.localeCompare(b));
 
+  const localidadeOptions = [
+    ...new Set(
+      (baseRows ?? [])
+        .map((row) => row.unidade)
+        .filter((localidade): localidade is string => Boolean(localidade && localidade.trim()))
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+
+  const { data: localidadesCadastradas } = await supabase
+    .from("voluntario_localidades")
+    .select("id, nome")
+    .order("nome");
+
   let query = supabase
     .from("voluntarios")
     .select(
-      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, profiles(email, role)"
+      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, situacao, profiles(email, role)"
     )
     .order("nome", { ascending: true });
 
@@ -123,11 +138,18 @@ export default async function VoluntariosPage({
   if (filters.area) {
     query = query.eq("area_atuacao", filters.area);
   }
+  if (filters.localidade) {
+    query = query.eq("unidade", filters.localidade);
+  }
+  if (filters.situacao) {
+    query = query.eq("situacao", filters.situacao);
+  }
 
   const { data: rows } = await query;
   const all = (rows ?? []) as VoluntarioRow[];
 
   const ativos = all.filter((row) => row.ativo).length;
+  const ociosos = all.filter((row) => row.situacao === "ocioso").length;
   const afastados = all.filter((row) => row.data_saida).length;
   const vinculados = all.filter((row) => {
     const linked = !row.profiles ? null : Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
@@ -141,6 +163,8 @@ export default async function VoluntariosPage({
     row.org_depto?.toLowerCase().includes("dip")
   );
   const demais = all.filter((row) => !row.org_depto?.toLowerCase().includes("dip"));
+  const totalEctolab = demais.length;
+  const totalDip = equipeDip.length;
 
   const groups = new Map<string, VoluntarioRow[]>();
   for (const row of demais) {
@@ -149,13 +173,59 @@ export default async function VoluntariosPage({
     bucket.push(row);
     groups.set(key, bucket);
   }
-  const grouped = [...groups.entries()].sort(([a], [b]) => {
-    if (a === SEM_AREA_DEFINIDA) return 1;
-    if (b === SEM_AREA_DEFINIDA) return -1;
-    return a.localeCompare(b);
-  });
 
-  const filtersActive = Boolean(filters.busca || filters.area);
+  // Árvore de áreas a partir do registro institucional (áreas mãe com suas
+  // subáreas aninhadas), em ordem alfabética; áreas usadas mas não
+  // registradas entram como nós livres; "Sem área definida" por último.
+  const { data: areasRegistro } = await supabase
+    .from("areas_institucionais")
+    .select("id, nome, area_mae_id")
+    .order("nome");
+
+  const registroPorNome = new Map(
+    (areasRegistro ?? []).map((a) => [a.nome, a])
+  );
+  const subPorMae = new Map<string, string[]>();
+  for (const area of areasRegistro ?? []) {
+    if (area.area_mae_id === null) continue;
+    const mae = (areasRegistro ?? []).find((a) => a.id === area.area_mae_id);
+    if (!mae) continue;
+    const lista = subPorMae.get(mae.nome) ?? [];
+    lista.push(area.nome);
+    subPorMae.set(mae.nome, lista);
+  }
+
+  function construirNo(nome: string): AreaNode {
+    const subAreas = (subPorMae.get(nome) ?? [])
+      .sort((a, b) => a.localeCompare(b))
+      .map(construirNo)
+      .filter((no) => no.rows.length > 0 || no.subAreas.length > 0);
+    return { nome, rows: groups.get(nome) ?? [], subAreas };
+  }
+
+  const nomesMae = [...subPorMae.keys()].filter(
+    (nome) => registroPorNome.get(nome)?.area_mae_id === null
+  );
+  const maesSemSub = [...registroPorNome.values()]
+    .filter((a) => a.area_mae_id === null && !subPorMae.has(a.nome))
+    .map((a) => a.nome);
+  const arvoreRegistrada = [...new Set([...nomesMae, ...maesSemSub])]
+    .sort((a, b) => a.localeCompare(b))
+    .map(construirNo)
+    .filter((no) => no.rows.length > 0 || no.subAreas.length > 0);
+
+  const usadasNaoRegistradas = [...groups.keys()]
+    .filter((nome) => !registroPorNome.has(nome) && nome !== SEM_AREA_DEFINIDA)
+    .sort((a, b) => a.localeCompare(b))
+    .map(construirNo)
+    .filter((no) => no.rows.length > 0);
+
+  const areaTree: AreaNode[] = [...arvoreRegistrada, ...usadasNaoRegistradas];
+  if (groups.has(SEM_AREA_DEFINIDA)) {
+    areaTree.push(construirNo(SEM_AREA_DEFINIDA));
+  }
+
+  const filtersActive = Boolean(filters.busca || filters.area || filters.localidade || filters.situacao);
 
   return (
     <PageContainer>
@@ -222,18 +292,34 @@ export default async function VoluntariosPage({
         </>
       ) : (
         <div className="flex w-full flex-col gap-5">
-          <VoluntariosFilters areaOptions={areaOptions} currentFilters={filters} />
+          <VoluntariosFilters
+            areaOptions={areaOptions}
+            localidadeOptions={localidadeOptions}
+            currentFilters={filters}
+          />
 
           <VoluntariosListClient
-            grouped={grouped}
+            areas={areaTree}
             all={all}
             ativos={ativos}
+            ociosos={ociosos}
             afastados={afastados}
             vinculados={vinculados}
             equipeDip={equipeDip}
+            totalEctolab={totalEctolab}
+            totalDip={totalDip}
             canManage={canManage}
             areaOptions={areaOptions}
           />
+
+          {role === "coordenador_geral" && (
+            <LocalidadesVoluntarioConfig
+              localidades={(localidadesCadastradas ?? []).map((l) => ({
+                id: l.id,
+                nome: l.nome,
+              }))}
+            />
+          )}
         </div>
       )}
     </PageContainer>

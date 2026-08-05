@@ -2,7 +2,7 @@
 
 import { useState, useActionState } from "react";
 import Link from "next/link";
-import { Users, UserRoundCheck, ChevronDown, ChevronUp, Pencil, ShieldCheck, CalendarClock, Settings2, X, CheckSquare, Square } from "lucide-react";
+import { Users, UserRoundCheck, Pencil, ShieldCheck, CalendarClock, Settings2, X, CheckSquare, Square, Sparkles, CheckCircle2, Plus, Minus, MoonStar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { roleLabel } from "@/lib/role-labels";
@@ -21,10 +21,19 @@ type VoluntarioRow = {
   area_atuacao: string | null;
   role: string | null;
   ativo: boolean;
+  situacao: string | null;
   profiles: { email: string; role: string }[] | { email: string; role: string } | null;
 };
 
 const SEM_AREA_DEFINIDA = "Sem área definida";
+
+// Árvore de áreas (registro institucional): uma área mãe com suas subáreas
+// aninhadas e os voluntários de cada nível.
+export type AreaNode = {
+  nome: string;
+  rows: VoluntarioRow[];
+  subAreas: AreaNode[];
+};
 
 function linkedProfile(row: VoluntarioRow) {
   if (!row.profiles) return null;
@@ -37,28 +46,48 @@ function formatData(iso: string | null): string | null {
 }
 
 export default function VoluntariosListClient({
-  grouped,
+  areas,
   all,
   ativos,
+  ociosos,
   afastados,
   vinculados,
   equipeDip,
+  totalEctolab,
+  totalDip,
   canManage,
   areaOptions,
 }: {
-  grouped: [string, VoluntarioRow[]][];
+  // Árvore de áreas (mãe → subáreas) já montada pelo servidor.
+  areas: AreaNode[];
   all: VoluntarioRow[];
   ativos: number;
+  ociosos: number;
   afastados: number;
   vinculados: number;
   // Voluntários da equipe DIP (org_depto com "DIP") — seção separada das
   // áreas institucionais, com contagem própria.
   equipeDip: VoluntarioRow[];
+  // Voluntários institucionais (ECTOLAB) vs equipe DIP — contagens
+  // separadas ao lado do total geral.
+  totalEctolab: number;
+  totalDip: number;
   canManage: boolean;
   areaOptions: string[];
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [collapsedAreas, setCollapsedAreas] = useState<Set<string>>(new Set());
+  // Todas as áreas começam recolhidas, exceto a primeira da árvore.
+  const [collapsedAreas, setCollapsedAreas] = useState<Set<string>>(() => {
+    const nomes: string[] = [];
+    function coletar(nos: AreaNode[]) {
+      for (const no of nos) {
+        nomes.push(no.nome);
+        coletar(no.subAreas);
+      }
+    }
+    coletar(areas);
+    return new Set(nomes.slice(1));
+  });
   const [showBulkPanel, setShowBulkPanel] = useState(false);
   const [bulkAcao, setBulkAcao] = useState<"desativar" | "ativar" | "migrar_area" | null>(null);
   const [bulkState, bulkAction] = useActionState<BulkState, FormData>(atualizarVoluntariosEmMassa, { ok: false, message: "", processados: 0 });
@@ -98,49 +127,68 @@ export default function VoluntariosListClient({
 
   const selectedIdsArr = [...selectedIds];
 
-  function renderSection(area: string, rowsInArea: VoluntarioRow[]) {
-    const isCollapsed = collapsedAreas.has(area);
-    const allSelected = rowsInArea.every((r) => selectedIds.has(r.id));
-    const someSelected = rowsInArea.some((r) => selectedIds.has(r.id));
+  // Todas as linhas de um nó (as próprias + as das subáreas) — usadas para
+  // a contagem e a seleção em massa do nó inteiro.
+  function rowsDoNo(no: AreaNode): VoluntarioRow[] {
+    return [...no.rows, ...no.subAreas.flatMap(rowsDoNo)];
+  }
+
+  function renderNo(no: AreaNode, nivel: number) {
+    const isCollapsed = collapsedAreas.has(no.nome);
+    const branchRows = rowsDoNo(no);
+    const allSelected = branchRows.length > 0 && branchRows.every((r) => selectedIds.has(r.id));
+    const someSelected = branchRows.some((r) => selectedIds.has(r.id));
+    const isSemArea = no.nome === SEM_AREA_DEFINIDA;
 
     return (
-      <section key={area} className="flex w-full flex-col gap-3">
+      <section key={no.nome} className={`flex w-full flex-col gap-3 ${nivel > 0 ? "ml-4 border-l-2 border-zinc-100 pl-4" : ""}`}>
         <button
           type="button"
-          onClick={() => toggleCollapse(area)}
+          onClick={() => toggleCollapse(no.nome)}
           className="flex w-full items-center gap-3 text-left"
         >
-          <span className="h-8 w-1.5 rounded-full bg-blue-600" aria-hidden="true" />
-          <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl flex-1">{area}</h2>
+          <span
+            className={`rounded-full ${isCollapsed ? "bg-zinc-200 text-zinc-600" : "bg-blue-100 text-blue-700"}`}
+            aria-hidden="true"
+          >
+            {isCollapsed ? <Plus size={20} className="m-1" /> : <Minus size={20} className="m-1" />}
+          </span>
+          <h2 className={`flex-1 ${nivel > 0 ? "text-xl sm:text-2xl" : "text-2xl font-semibold sm:text-3xl"} ${isSemArea ? "font-semibold text-zinc-500" : "font-semibold text-zinc-900"}`}>
+            {no.nome}
+          </h2>
           <span className="rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
-            {rowsInArea.length} {rowsInArea.length === 1 ? "voluntário" : "voluntários"}
+            {branchRows.length} {branchRows.length === 1 ? "voluntário" : "voluntários"}
           </span>
           {canManage && (
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); selectAllInArea(rowsInArea); }}
+              onClick={(e) => { e.stopPropagation(); selectAllInArea(branchRows); }}
               className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
             >
               {allSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-              {allSelected ? "Todos" : someSelected ? `${rowsInArea.filter((r) => selectedIds.has(r.id)).length}` : "Selecionar"}
+              {allSelected ? "Todos" : someSelected ? `${branchRows.filter((r) => selectedIds.has(r.id)).length}` : "Selecionar"}
             </button>
           )}
-          {isCollapsed ? <ChevronDown size={22} className="text-zinc-500 transition-transform" /> : <ChevronUp size={22} className="text-zinc-500 transition-transform" />}
         </button>
 
         {!isCollapsed && (
-          <div className="flex w-full flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-            {rowsInArea.map((row, index) => (
-              <VoluntarioCard
-                key={row.id}
-                row={row}
-                isLast={index === rowsInArea.length - 1}
-                isSelected={selectedIds.has(row.id)}
-                onToggleSelect={() => toggleSelect(row.id)}
-                showCheckbox={canManage}
-              />
-            ))}
-          </div>
+          <>
+            {no.rows.length > 0 && (
+              <div className="flex w-full flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+                {no.rows.map((row, index) => (
+                  <VoluntarioCard
+                    key={row.id}
+                    row={row}
+                    isLast={index === no.rows.length - 1}
+                    isSelected={selectedIds.has(row.id)}
+                    onToggleSelect={() => toggleSelect(row.id)}
+                    showCheckbox={canManage}
+                  />
+                ))}
+              </div>
+            )}
+            {no.subAreas.map((sub) => renderNo(sub, nivel + 1))}
+          </>
         )}
       </section>
     );
@@ -148,9 +196,12 @@ export default function VoluntariosListClient({
 
   return (
     <>
-      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatPill icon={<Users size={22} className="text-zinc-500" />} label="Equipe" value={all.length} />
-        <StatPill icon={<ShieldCheck size={22} className="text-green-500" />} label="Ativos" value={ativos} />
+      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+        <StatPill icon={<Users size={22} className="text-zinc-500" />} label="Total geral" value={all.length} />
+        <StatPill icon={<ShieldCheck size={22} className="text-blue-600" />} label="Voluntários ECTOLAB" value={totalEctolab} />
+        <StatPill icon={<Sparkles size={22} className="text-purple-600" />} label="Voluntários DIP" value={totalDip} />
+        <StatPill icon={<CheckCircle2 size={22} className="text-green-500" />} label="Ativos" value={ativos} />
+        <StatPill icon={<MoonStar size={22} className="text-amber-500" />} label="Ociosos" value={ociosos} />
         <StatPill icon={<CalendarClock size={22} className="text-amber-500" />} label="Com saída marcada" value={afastados} />
         <StatPill icon={<UserRoundCheck size={22} className="text-blue-500" />} label="Vinculados" value={vinculados} />
       </div>
@@ -258,8 +309,8 @@ export default function VoluntariosListClient({
       )}
 
       <div className="flex w-full flex-col gap-6">
-        {equipeDip.length > 0 && renderSection("Equipe DIP", equipeDip)}
-        {grouped.map(([area, rowsInArea]) => renderSection(area, rowsInArea))}
+        {equipeDip.length > 0 && renderNo({ nome: "Equipe DIP", rows: equipeDip, subAreas: [] }, 0)}
+        {areas.map((no) => renderNo(no, 0))}
       </div>
     </>
   );
@@ -311,6 +362,12 @@ function VoluntarioCard({
             <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-base font-medium text-blue-800 ring-1 ring-blue-200/60">
               <UserRoundCheck size={14} aria-hidden="true" />
               Vinculado
+            </span>
+          )}
+          {row.situacao === "ocioso" && (
+            <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-base font-medium text-amber-800 ring-1 ring-amber-200/60">
+              <MoonStar size={14} aria-hidden="true" />
+              Ocioso
             </span>
           )}
           {afastado && (

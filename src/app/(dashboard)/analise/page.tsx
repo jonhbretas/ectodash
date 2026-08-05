@@ -28,7 +28,7 @@ export default async function AnalisePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [profileResult, demandasResult, eventosResult, linksResult, financeiroResult] =
+  const [profileResult, demandasResult, eventosResult, linksResult, financeiroResult, voluntariosResult] =
     await Promise.all([
       supabase.from("profiles").select("role").eq("id", user.id).single(),
       supabase.from("demandas_com_status")
@@ -37,6 +37,7 @@ export default async function AnalisePage() {
       supabase.from("demanda_responsaveis")
         .select("demanda_id, profile_id, profiles(email, full_name)"),
       supabase.from("financial_entries").select("tipo, valor, data"),
+      supabase.from("voluntarios").select("unidade, org_depto, ativo"),
     ]);
 
   const role = profileResult.data?.role;
@@ -137,6 +138,22 @@ export default async function AnalisePage() {
       })
     : [];
 
+  // Voluntários por região (localidade = unidade) — total, ativos e equipe
+  // DIP por localidade, para o coordenador visualizar a distribuição.
+  const porRegiao = new Map<string, { total: number; ativos: number; dip: number }>();
+  for (const v of voluntariosResult.data ?? []) {
+    const regiao = v.unidade?.trim() || "Sem localidade";
+    const current = porRegiao.get(regiao) ?? { total: 0, ativos: 0, dip: 0 };
+    current.total += 1;
+    if (v.ativo) current.ativos += 1;
+    if (v.org_depto?.toLowerCase().includes("dip")) current.dip += 1;
+    porRegiao.set(regiao, current);
+  }
+  const regiaoRows = [...porRegiao.entries()]
+    .map(([regiao, counts]) => ({ regiao, ...counts }))
+    .sort((a, b) => b.total - a.total || a.regiao.localeCompare(b.regiao));
+  const maxRegiao = Math.max(1, ...regiaoRows.map((r) => r.total));
+
   return (
     <PageContainer>
       <div className="flex w-full flex-col gap-2">
@@ -199,6 +216,29 @@ export default async function AnalisePage() {
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${(row.total / maxVoluntario) * 100}%` }} role="img" aria-label={`${row.nome}: ${row.total} demandas, ${row.feitas} concluidas`} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="flex w-full flex-col gap-3">
+        <h2 className="text-lg font-semibold tracking-tight text-slate-900">Voluntários por região</h2>
+        {regiaoRows.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhum voluntário cadastrado.</p>
+        ) : (
+          <div className="rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60">
+            {regiaoRows.map((row, index) => (
+              <div key={row.regiao} className={`flex flex-col gap-1.5 ${index > 0 ? "border-t border-slate-100 pt-3" : ""} ${index < regiaoRows.length - 1 ? "pb-3" : ""}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-medium text-slate-900" title={row.regiao}>{row.regiao}</span>
+                  <span className="shrink-0 text-xs text-slate-500">
+                    {row.ativos} ativos · {row.dip > 0 ? `${row.dip} DIP · ` : ""}{row.total} total
+                  </span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500" style={{ width: `${(row.total / maxRegiao) * 100}%` }} role="img" aria-label={`${row.regiao}: ${row.total} voluntários, ${row.ativos} ativos`} />
                 </div>
               </div>
             ))}
