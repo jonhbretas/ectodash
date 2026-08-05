@@ -23,6 +23,7 @@ import {
   ataAnaliseEnvelopeSchema,
   type AtaAnalise,
   type AtaSalvarDemanda,
+  type AtaSalvarEvento,
   type AtaSalvarAtualizacao,
   type AtaSalvarDip,
 } from "./analise-schema";
@@ -63,8 +64,9 @@ const pasteSchema = z.object({
 
 const AI_SYSTEM_PROMPT =
   "Você analisa transcrições de reunião e responde APENAS com JSON. " +
-  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}]}}. ' +
+  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}]}}. ' +
   "Regras: demandas = deliberações NOVAS com responsável e prazo claros. " +
+  "eventos = eventos institucionais mencionados (ex.: qualificações, encontros, DIPs comemorativas, cursos, workshops, lives). Extraia titulo, data, local e descricao quando disponíveis. " +
   "atualizacoes = menções a demandas JÁ EXISTENTES (ex.: 'atualizar demanda X', 'a demanda Y avançou'); titulo deve ser o título da demanda existente; comentario descreve o que mudou. " +
   "dips = menções à Dinâmica DIP (localidades, países, datas, quantos participantes). " +
   "Se uma seção não tiver itens, use o array vazio. Não escreva nada fora do JSON.";
@@ -240,6 +242,17 @@ const salvarDipsSchema = z
   )
   .max(100);
 
+const salvarEventosSchema = z
+  .array(
+    z.object({
+      titulo: z.string().trim().min(1).max(200),
+      data: z.string().regex(dataRegex).nullable(),
+      local: z.string().trim().max(300).nullable(),
+      descricao: z.string().trim().max(3000).nullable(),
+    })
+  )
+  .max(50);
+
 function parseJsonField(formData: FormData, key: string): unknown {
   const raw = formData.get(key);
   if (typeof raw !== "string" || raw.trim().length === 0) return [];
@@ -280,12 +293,14 @@ export async function salvarAtaAnalise(
     parseJsonField(formData, "atualizacoes")
   );
   const dips = salvarDipsSchema.safeParse(parseJsonField(formData, "dips"));
+  const eventos = salvarEventosSchema.safeParse(parseJsonField(formData, "eventos"));
 
   if (
     !ata.success ||
     !demandas.success ||
     !atualizacoes.success ||
-    !dips.success
+    !dips.success ||
+    !eventos.success
   ) {
     return {
       ok: false,
@@ -379,6 +394,23 @@ export async function salvarAtaAnalise(
     }
   }
 
+  // Event records — one row per event mentioned in the meeting.
+  const eventoRows = (eventos.data as AtaSalvarEvento[])
+    .filter((evento) => evento.titulo.trim() && evento.data)
+    .map((evento) => ({
+      titulo: evento.titulo,
+      data_evento: evento.data,
+      local: evento.local || null,
+      descricao: evento.descricao || null,
+    }));
+
+  if (eventoRows.length > 0) {
+    const { error: eventosError } = await supabase.from("eventos").insert(eventoRows);
+    if (eventosError) {
+      console.error("salvarAtaAnalise: eventos insert failed", eventosError);
+    }
+  }
+
   // DIP records — one row per mention (user decision 2026-08-04).
   const dipRows = (dips.data as AtaSalvarDip[])
     .filter((dip) => dip.localidade.trim() && dip.pais.trim())
@@ -399,6 +431,7 @@ export async function salvarAtaAnalise(
   }
 
   revalidatePath("/reunioes");
+  revalidatePath("/eventos");
   revalidatePath("/dips");
   revalidatePath("/");
 

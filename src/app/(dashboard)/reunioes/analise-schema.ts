@@ -9,6 +9,8 @@
 //   atualizacoes — mentions of EXISTING demandas ("atualizar demanda X")
 //                that become comments on the matching demanda
 //                (user decision 2026-08-04: comment, never field edit);
+//   eventos    — events mentioned in the meeting (titulo, data, local,
+//                descricao) that should be created/catalogued;
 //   dips       — DIP mentions, one record per mention (localidade, pais,
 //                data, participantes, observacoes).
 import { z } from "zod";
@@ -37,6 +39,20 @@ export const ataAnaliseSchema = z.object({
     resumo: z.string().trim().min(1).max(10000),
   }),
   demandas: extractionResponseSchema,
+  eventos: z
+    .array(
+      z.object({
+        titulo: z.string().trim().min(1).max(200),
+        data: z
+          .string()
+          .regex(dataRegex, "data deve ser yyyy-MM-dd")
+          .optional()
+          .or(z.literal("")),
+        local: z.string().trim().max(300).optional().or(z.literal("")),
+        descricao: z.string().trim().max(3000).optional().or(z.literal("")),
+      })
+    )
+    .max(50),
   atualizacoes: z
     .array(
       z.object({
@@ -66,6 +82,7 @@ export const ataAnaliseSchema = z.object({
 
 export type AtaAnalise = z.infer<typeof ataAnaliseSchema>;
 export type AtaAnaliseDemanda = AtaAnalise["demandas"][number];
+export type AtaAnaliseEvento = AtaAnalise["eventos"][number];
 export type AtaAnaliseAtualizacao = AtaAnalise["atualizacoes"][number];
 export type AtaAnaliseDip = AtaAnalise["dips"][number];
 
@@ -95,4 +112,11 @@ export type AtaSalvarDip = {
   data: string | null;
   participantes: number | null;
   observacoes: string;
+};
+
+export type AtaSalvarEvento = {
+  titulo: string;
+  data: string | null;
+  local: string | null;
+  descricao: string | null;
 };

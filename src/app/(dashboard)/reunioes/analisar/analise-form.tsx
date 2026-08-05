@@ -15,6 +15,7 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
+  CalendarDays,
   FileUp,
   Loader2,
   MessageSquareText,
@@ -116,8 +117,9 @@ export default function AnaliseForm({
           </h1>
           <p className="max-w-2xl text-xl text-zinc-500">
             Envie a transcrição e a IA separa tudo no lugar certo: resumo da
-            ata, deliberações viram demandas, atualizações de demandas
-            existentes e registros da Dinâmica DIP.
+            ata, deliberações viram demandas, eventos mencionados,
+            atualizações de demandas existentes e registros da Dinâmica
+            DIP.
           </p>
         </div>
         <Link
@@ -273,6 +275,15 @@ type DipReview = {
   observacoes: string;
 };
 
+type EventoReview = {
+  id: number;
+  incluido: boolean;
+  titulo: string;
+  data: string;
+  local: string;
+  descricao: string;
+};
+
 const fieldClassName =
   "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700";
 const labelClassName = "text-lg font-medium text-zinc-900";
@@ -317,6 +328,16 @@ function ReviewScreen({
       observacoes: dip.observacoes || "",
     }))
   );
+  const [eventos, setEventos] = useState<EventoReview[]>(() =>
+    analise.eventos.map((evento, index) => ({
+      id: index,
+      incluido: true,
+      titulo: evento.titulo,
+      data: evento.data || "",
+      local: evento.local || "",
+      descricao: evento.descricao || "",
+    }))
+  );
 
   const salvarDemandas = demandas
     .filter((d) => d.incluida && d.titulo.trim().length > 0)
@@ -339,6 +360,15 @@ function ReviewScreen({
       observacoes: d.observacoes,
     }));
 
+  const salvarEventos = eventos
+    .filter((e) => e.incluido && e.titulo.trim().length > 0)
+    .map((e) => ({
+      titulo: e.titulo,
+      data: e.data || null,
+      local: e.local || null,
+      descricao: e.descricao || null,
+    }));
+
   function buildFormData(): FormData {
     const formData = new FormData();
     formData.set("titulo", titulo);
@@ -351,6 +381,7 @@ function ReviewScreen({
     formData.set("texto", texto);
     formData.set("arquivo_nome", arquivoNome ?? "");
     formData.set("demandas", JSON.stringify(salvarDemandas));
+    formData.set("eventos", JSON.stringify(salvarEventos));
     formData.set("atualizacoes", JSON.stringify(analise.atualizacoes));
     formData.set("dips", JSON.stringify(salvarDips));
     return formData;
@@ -614,6 +645,123 @@ function ReviewScreen({
                         className={`${fieldClassName} disabled:cursor-not-allowed`}
                       />
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Eventos mencionados */}
+        <section className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+              <CalendarDays size={24} aria-hidden="true" />
+              Eventos mencionados
+            </h2>
+            <span className="text-base text-zinc-500">
+              {salvarEventos.length} {salvarEventos.length === 1 ? "evento" : "eventos"}
+            </span>
+          </div>
+          {eventos.length === 0 ? (
+            <p className="text-lg text-zinc-600">
+              Nenhum evento institucional identificado.
+            </p>
+          ) : (
+            <div className="flex w-full flex-col gap-3">
+              {eventos.map((evento) => (
+                <div
+                  key={evento.id}
+                  className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
+                    evento.incluido
+                      ? "border-zinc-200 bg-white"
+                      : "border-dashed border-zinc-300 bg-zinc-50 opacity-70"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      id={`evento-incluido-${evento.id}`}
+                      type="checkbox"
+                      checked={evento.incluido}
+                      onChange={() =>
+                        setEventos((prev) =>
+                          prev.map((e) =>
+                            e.id === evento.id ? { ...e, incluido: !e.incluido } : e
+                          )
+                        )
+                      }
+                      className="h-6 w-6 shrink-0 cursor-pointer accent-blue-700"
+                    />
+                    <input
+                      aria-label={`Título do evento ${evento.id + 1}`}
+                      value={evento.titulo}
+                      onChange={(e2) =>
+                        setEventos((prev) =>
+                          prev.map((e) =>
+                            e.id === evento.id ? { ...e, titulo: e2.target.value } : e
+                          )
+                        )
+                      }
+                      disabled={!evento.incluido}
+                      className={`${fieldClassName} disabled:cursor-not-allowed`}
+                    />
+                  </div>
+                  <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor={`evento-data-${evento.id}`} className={labelClassName}>
+                        Data
+                      </label>
+                      <input
+                        id={`evento-data-${evento.id}`}
+                        type="date"
+                        value={evento.data}
+                        onChange={(e2) =>
+                          setEventos((prev) =>
+                            prev.map((e) =>
+                              e.id === evento.id ? { ...e, data: e2.target.value } : e
+                            )
+                          )
+                        }
+                        disabled={!evento.incluido}
+                        className={`${fieldClassName} disabled:cursor-not-allowed`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor={`evento-local-${evento.id}`} className={labelClassName}>
+                        Local
+                      </label>
+                      <input
+                        id={`evento-local-${evento.id}`}
+                        value={evento.local}
+                        onChange={(e2) =>
+                          setEventos((prev) =>
+                            prev.map((e) =>
+                              e.id === evento.id ? { ...e, local: e2.target.value } : e
+                            )
+                          )
+                        }
+                        disabled={!evento.incluido}
+                        className={`${fieldClassName} disabled:cursor-not-allowed`}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor={`evento-descricao-${evento.id}`} className={labelClassName}>
+                      Descrição
+                    </label>
+                    <input
+                      id={`evento-descricao-${evento.id}`}
+                      value={evento.descricao}
+                      onChange={(e2) =>
+                        setEventos((prev) =>
+                          prev.map((e) =>
+                            e.id === evento.id ? { ...e, descricao: e2.target.value } : e
+                          )
+                        )
+                      }
+                      disabled={!evento.incluido}
+                      className={`${fieldClassName} disabled:cursor-not-allowed`}
+                    />
                   </div>
                 </div>
               ))}
