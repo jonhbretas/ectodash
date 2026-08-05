@@ -52,13 +52,31 @@ export default async function DipsPage({
     };
   });
 
-  const paises = [...new Set(rows.map((r) => r.pais))].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  const localidades = [...new Set(rows.map((r) => r.localidade))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  // Localidades: as cadastradas no registro (dip_localidades) aparecem SEMPRE,
+  // mesmo sem registros ainda — "se foi criada, é porque vai ter algo". As que
+  // só existem nos registros também entram. O país vem do registro quando há.
+  const localidadePais = new Map<string, string>();
+  for (const l of localidadesCadastradas) {
+    localidadePais.set(l.localidade, l.pais);
+  }
+  for (const row of rows) {
+    if (!localidadePais.has(row.localidade)) {
+      localidadePais.set(row.localidade, row.pais);
+    }
+  }
+
+  const paises = [...new Set(localidadePais.values())].sort((a, b) =>
+    a.localeCompare(b, "pt-BR")
+  );
+  const localidades = [...localidadePais.keys()].sort((a, b) =>
+    a.localeCompare(b, "pt-BR")
+  );
   const totalParticipantes = rows.reduce((sum, row) => sum + (row.participantes ?? 0), 0);
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Group: país → localidade → agenda (past + future)
+  // Group: país → localidade → agenda (past + future). Localidades do
+  // registro sem registros viram cards com agenda vazia.
   const filteredLocalidades = filterLocalidade
     ? localidades.filter((l) => l === filterLocalidade)
     : localidades;
@@ -67,10 +85,10 @@ export default async function DipsPage({
     .map((pais) => ({
       pais,
       localidades: filteredLocalidades
-        .filter((localidade) => rows.some((row) => row.pais === pais && row.localidade === localidade))
+        .filter((localidade) => localidadePais.get(localidade) === pais)
         .map((localidade) => {
           const todos = rows
-            .filter((row) => row.pais === pais && row.localidade === localidade)
+            .filter((row) => row.localidade === localidade)
             .sort((a, b) => (b.data_dip ?? "").localeCompare(a.data_dip ?? ""));
           const passados = todos.filter((r) => (r.data_dip ?? "") <= today);
           const futuros = todos.filter((r) => (r.data_dip ?? "") > today);
@@ -168,6 +186,13 @@ export default async function DipsPage({
                         {local.todos.length} {local.todos.length === 1 ? "registro" : "registros"}
                       </span>
                     </h3>
+
+                    {local.todos.length === 0 && (
+                      <p className="rounded-xl border border-dashed border-zinc-300 p-4 text-base text-zinc-500">
+                        Nenhum registro ainda — quando uma reunião analisada
+                        mencionar esta localidade, a agenda aparece aqui.
+                      </p>
+                    )}
 
                     {local.futuros.length > 0 && (
                       <div className="flex flex-col gap-2">

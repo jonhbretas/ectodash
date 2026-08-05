@@ -50,9 +50,13 @@ export default async function DipLocalidadePage({
   }));
   const ataById = new Map((atasResult.data ?? []).map((ata) => [ata.id, ata]));
 
-  // Resolve o slug para a localidade real — exige match ÚNICO.
+  // Resolve o slug para a localidade real — exige match ÚNICO, considerando
+  // TAMBÉM as localidades cadastradas (dip_localidades), mesmo sem registros.
   const localidades = [
-    ...new Set((dipsResult.data ?? []).map((dip) => dip.localidade)),
+    ...new Set([
+      ...(localidadesCadastradas ?? []).map((l) => l.localidade),
+      ...(dipsResult.data ?? []).map((dip) => dip.localidade),
+    ]),
   ];
   const correspondentes = localidades.filter(
     (localidade) => slugify(localidade) === slug
@@ -96,9 +100,15 @@ export default async function DipLocalidadePage({
       };
     });
 
-  const paises = [...new Set(rows.map((r) => r.pais))].sort((a, b) =>
-    a.localeCompare(b, "pt-BR")
-  );
+  const paises =
+    rows.length > 0
+      ? [...new Set(rows.map((r) => r.pais))].sort((a, b) =>
+          a.localeCompare(b, "pt-BR")
+        )
+      : [
+          localidadesCadastradas.find((l) => l.localidade === localidade)
+            ?.pais ?? "",
+        ].filter(Boolean);
   const totalParticipantes = rows.reduce(
     (sum, row) => sum + (row.participantes ?? 0),
     0
