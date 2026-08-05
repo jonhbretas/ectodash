@@ -102,7 +102,7 @@ function KanbanCard({
           event.dataTransfer.setData("text/plain", String(demanda.id));
           event.dataTransfer.effectAllowed = "move";
         }}
-        className="group rounded-xl bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:ring-zinc-300 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-700"
+        className="group rounded-xl bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-150 hover:ring-blue-200 hover:shadow-[0_1px_4px_rgba(37,99,235,0.06)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-700"
       >
         <Link
           href={`/demandas/${demanda.id}/editar`}
@@ -111,7 +111,8 @@ function KanbanCard({
           {demanda.titulo}
         </Link>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+        {/* Prazo + atraso */}
+        <div className="mt-2 flex items-center gap-2">
           <span
             className={`flex items-center gap-1 text-base ${
               demanda.atrasada ? "font-medium text-red-700" : "text-zinc-500"
@@ -123,7 +124,8 @@ function KanbanCard({
           {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {/* Responsável à esquerda, mover coluna à direita (inline) */}
+        <div className="mt-2 flex items-center gap-1.5">
           {responsavel ? (
             <span className="flex min-w-0 items-center gap-1.5 text-base text-zinc-700">
               <span
@@ -145,6 +147,28 @@ function KanbanCard({
               Sem responsável
             </span>
           )}
+
+          <span className="ml-auto flex shrink-0 items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => onMove(demanda.id, STATUS_ORDER[currentIndex - 1])}
+              disabled={!canMoveLeft || pending}
+              aria-label={`Mover "${demanda.titulo}" para ${COLUMNS[currentIndex - 1]?.label ?? ""}`}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-all duration-150 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              <ChevronLeft size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onMove(demanda.id, STATUS_ORDER[currentIndex + 1])}
+              disabled={!canMoveRight || pending}
+              aria-label={`Mover "${demanda.titulo}" para ${COLUMNS[currentIndex + 1]?.label ?? ""}`}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-all duration-150 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
+            {pending && <span className="text-base text-zinc-400">Movendo...</span>}
+          </span>
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -182,28 +206,6 @@ function KanbanCard({
             </span>
           </div>
         )}
-
-        <div className="mt-2.5 flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onMove(demanda.id, STATUS_ORDER[currentIndex - 1])}
-            disabled={!canMoveLeft || pending}
-            aria-label={`Mover "${demanda.titulo}" para ${COLUMNS[currentIndex - 1]?.label ?? ""}`}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          >
-            <ChevronLeft size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onMove(demanda.id, STATUS_ORDER[currentIndex + 1])}
-            disabled={!canMoveRight || pending}
-            aria-label={`Mover "${demanda.titulo}" para ${COLUMNS[currentIndex + 1]?.label ?? ""}`}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-          >
-            <ChevronRight size={18} aria-hidden="true" />
-          </button>
-          {pending && <span className="text-base text-zinc-400">Movendo...</span>}
-        </div>
       </div>
     </li>
   );

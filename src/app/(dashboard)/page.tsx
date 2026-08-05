@@ -250,7 +250,10 @@ export default async function DashboardPage({
       filters.status
   );
 
-  const view: DemandaView = filters.view ?? "kanban";
+  // "lista" is the ABSENCE of the ?view param (demanda-filter-schema.ts) —
+  // the toggle deletes it, so the fallback here must be "lista", not
+  // "kanban", or the Lista button would never take effect.
+  const view: DemandaView = filters.view ?? "lista";
 
   const stats = {
     total: demandaList.length,
@@ -354,7 +357,7 @@ export default async function DashboardPage({
           currentFilters={filters}
         />
 
-        <div className="flex w-full items-center justify-end">
+        <div className="flex w-full items-center justify-center">
           <DemandaViewToggle currentView={view} />
         </div>
 
