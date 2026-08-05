@@ -136,11 +136,11 @@ export default function VoluntarioForm({
   return (
     <form
       action={formAction}
-      className="flex w-full max-w-3xl flex-col gap-4"
+      className="flex w-full flex-col gap-5"
       aria-live="polite"
     >
-      <div className="grid grid-cols-1 gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 sm:grid-cols-2">
-        <div className="sm:col-span-2">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-5 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="sm:col-span-2 lg:col-span-3">
           <Field id="nome" label="Nome completo">
             <input
               id="nome"
@@ -174,17 +174,6 @@ export default function VoluntarioForm({
           />
         </Field>
 
-        <Field id="org_depto" label="Org Depto">
-          <FormCombobox
-            name="org_depto"
-            value={orgDepto}
-            onChange={setOrgDepto}
-            options={orgDeptOptions}
-            placeholder="Ex: ECTOLAB \ Paratecnológico \ DIP"
-            ariaLabel="Org Depto"
-          />
-        </Field>
-
         <Field id="funcao" label="Função">
           <input
             id="funcao"
@@ -194,6 +183,19 @@ export default function VoluntarioForm({
             className={inputClassName}
           />
         </Field>
+
+        <div className="sm:col-span-2 lg:col-span-2">
+          <Field id="org_depto" label="Org Depto">
+            <FormCombobox
+              name="org_depto"
+              value={orgDepto}
+              onChange={setOrgDepto}
+              options={orgDeptOptions}
+              placeholder="Ex: ECTOLAB \ Paratecnológico \ DIP"
+              ariaLabel="Org Depto"
+            />
+          </Field>
+        </div>
 
         <Field id="data_inicio" label="Data de início">
           <DateFieldBr
@@ -231,7 +233,7 @@ export default function VoluntarioForm({
           />
         </Field>
 
-        <div className="sm:col-span-2">
+        <div className="sm:col-span-2 lg:col-span-3">
           <Field id="area_atuacao" label="Área de atuação principal">
             <FormCombobox
               name="area_atuacao"
@@ -244,7 +246,7 @@ export default function VoluntarioForm({
           </Field>
         </div>
 
-        <div className="sm:col-span-2">
+        <div className="sm:col-span-2 lg:col-span-3">
           <span className={labelClassName}>Outras áreas (opcional)</span>
           <div className="flex flex-wrap gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
             {outrasAreasOptions.length === 0 && (
@@ -283,7 +285,7 @@ export default function VoluntarioForm({
           />
         </div>
 
-        <div className="sm:col-span-2">
+        <div className="sm:col-span-2 lg:col-span-3">
           <Field id="obs" label="Observações">
             <textarea
               id="obs"
@@ -314,24 +316,26 @@ export default function VoluntarioForm({
               />
             </Field>
 
-            <Field id="areas_lideradas" label="Áreas de coordenação">
-              <input
-                id="areas_lideradas"
-                name="areas_lideradas"
-                defaultValue={values.areasLideradas.join(", ")}
-                placeholder="Ex: Paratecnológico - DIP, Eventos"
-                className={inputClassName}
-              />
-              <p className="text-base text-zinc-600">
-                Separe por vírgula. Vale apenas para o papel Coordenador de
-                área. Será aplicado quando o voluntário vincular o cadastro.
-              </p>
-            </Field>
+            <div className="sm:col-span-2 lg:col-span-2">
+              <Field id="areas_lideradas" label="Áreas de coordenação">
+                <input
+                  id="areas_lideradas"
+                  name="areas_lideradas"
+                  defaultValue={values.areasLideradas.join(", ")}
+                  placeholder="Ex: Paratecnológico - DIP, Eventos"
+                  className={inputClassName}
+                />
+                <p className="text-base text-zinc-600">
+                  Separe por vírgula. Vale apenas para o papel Coordenador de
+                  área. Será aplicado quando o voluntário vincular o cadastro.
+                </p>
+              </Field>
+            </div>
           </>
         )}
 
         {mode === "editar" && (
-          <div className="flex items-center gap-3 sm:col-span-2">
+          <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-3">
             <input
               id="ativo"
               name="ativo"

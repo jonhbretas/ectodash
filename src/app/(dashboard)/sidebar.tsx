@@ -53,7 +53,7 @@ function SidebarLinks({
       title={collapsed ? item.label : undefined}
     >
       <item.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
-      <span className="truncate">{item.label}</span>
+      {!collapsed && <span className="truncate">{item.label}</span>}
     </Link>
   );
 

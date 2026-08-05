@@ -146,7 +146,7 @@ export default async function EditarVoluntarioPage({
 
   return (
     <PageContainer>
-      <div className="flex w-full max-w-3xl flex-col gap-2">
+      <div className="flex w-full max-w-5xl flex-col gap-2">
         <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
           <Pencil size={30} aria-hidden="true" />
           Editar voluntário
