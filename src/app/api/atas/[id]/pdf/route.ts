@@ -299,6 +299,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Content-Length": String(pdf.length),
+      // Never let the browser's PDF viewer or the CDN serve a stale copy
+      // (the old file kept reappearing after a redesign).
+      "Cache-Control": "no-store, max-age=0",
     },
   });
 }
