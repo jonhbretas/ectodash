@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ClipboardList, Clock, Circle, Lock } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardList, Clock, Circle, Lock, Users, Sparkles, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import StatCard from "@/components/stat-card";
 import PageContainer from "../page-container";
@@ -130,6 +130,17 @@ async function PainelContent({ rows, supabase }: { rows: PainelRow[]; supabase: 
     .order("started_at", { ascending: false }).limit(20);
   const sheetSyncRuns: SheetSyncRunRow[] = (sheetSyncRunRows ?? []).map((row) => ({ id: row.id, startedAt: row.started_at, finishedAt: row.finished_at, status: row.status, entriesCount: row.entries_count, errorMessage: row.error_message }));
 
+  // Equipe DIP vs voluntários das áreas institucionais — contagem separada
+  // (mesmo critério da tela de voluntários: org_depto com "DIP").
+  const { data: voluntariosRows } = await supabase
+    .from("voluntarios")
+    .select("org_depto");
+  const totalVoluntarios = voluntariosRows?.length ?? 0;
+  const equipeDip = (voluntariosRows ?? []).filter((v) =>
+    v.org_depto?.toLowerCase().includes("dip")
+  ).length;
+  const voluntariosAreas = totalVoluntarios - equipeDip;
+
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -138,6 +149,12 @@ async function PainelContent({ rows, supabase }: { rows: PainelRow[]; supabase: 
         <StatCard label="Pendentes" value={pendentes} Icon={Circle} iconClassName="text-amber-600" />
         <StatCard label="Em andamento" value={emAndamento} Icon={Clock} iconClassName="text-blue-600" />
         <StatCard label="Concluidas" value={concluidas} Icon={CheckCircle2} iconClassName="text-green-600" />
+      </div>
+
+      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatCard label="Equipe total" value={totalVoluntarios} Icon={Users} iconClassName="text-zinc-600" />
+        <StatCard label="Equipe DIP" value={equipeDip} Icon={Sparkles} iconClassName="text-purple-600" />
+        <StatCard label="Voluntários de áreas" value={voluntariosAreas} Icon={MapPin} iconClassName="text-blue-600" />
       </div>
 
       <PainelTabs

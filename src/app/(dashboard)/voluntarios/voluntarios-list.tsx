@@ -42,6 +42,7 @@ export default function VoluntariosListClient({
   ativos,
   afastados,
   vinculados,
+  equipeDip,
   canManage,
   areaOptions,
 }: {
@@ -50,6 +51,9 @@ export default function VoluntariosListClient({
   ativos: number;
   afastados: number;
   vinculados: number;
+  // Voluntários da equipe DIP (org_depto com "DIP") — seção separada das
+  // áreas institucionais, com contagem própria.
+  equipeDip: VoluntarioRow[];
   canManage: boolean;
   areaOptions: string[];
 }) {
@@ -94,6 +98,54 @@ export default function VoluntariosListClient({
 
   const selectedIdsArr = [...selectedIds];
 
+  function renderSection(area: string, rowsInArea: VoluntarioRow[]) {
+    const isCollapsed = collapsedAreas.has(area);
+    const allSelected = rowsInArea.every((r) => selectedIds.has(r.id));
+    const someSelected = rowsInArea.some((r) => selectedIds.has(r.id));
+
+    return (
+      <section key={area} className="flex w-full flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => toggleCollapse(area)}
+          className="flex w-full items-center gap-3 text-left"
+        >
+          <span className="h-8 w-1.5 rounded-full bg-blue-600" aria-hidden="true" />
+          <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl flex-1">{area}</h2>
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
+            {rowsInArea.length} {rowsInArea.length === 1 ? "voluntário" : "voluntários"}
+          </span>
+          {canManage && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); selectAllInArea(rowsInArea); }}
+              className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
+            >
+              {allSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+              {allSelected ? "Todos" : someSelected ? `${rowsInArea.filter((r) => selectedIds.has(r.id)).length}` : "Selecionar"}
+            </button>
+          )}
+          {isCollapsed ? <ChevronDown size={22} className="text-zinc-500 transition-transform" /> : <ChevronUp size={22} className="text-zinc-500 transition-transform" />}
+        </button>
+
+        {!isCollapsed && (
+          <div className="flex w-full flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            {rowsInArea.map((row, index) => (
+              <VoluntarioCard
+                key={row.id}
+                row={row}
+                isLast={index === rowsInArea.length - 1}
+                isSelected={selectedIds.has(row.id)}
+                onToggleSelect={() => toggleSelect(row.id)}
+                showCheckbox={canManage}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <>
       <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
@@ -104,7 +156,7 @@ export default function VoluntariosListClient({
       </div>
 
       {selectedIdsArr.length > 0 && (
-        <div className="flex w-full flex-wrap items-center gap-3 rounded-2xl bg-blue-50 p-4 ring-1 ring-blue-200/60">
+        <div className="sticky top-2 z-30 flex w-full flex-wrap items-center gap-3 rounded-2xl bg-blue-50 p-4 shadow-[0_4px_12px_rgba(37,99,235,0.15)] ring-1 ring-blue-200/60">
           <span className="text-lg font-medium text-blue-900">
             {selectedIdsArr.length} {selectedIdsArr.length === 1 ? "selecionado" : "selecionados"}
           </span>
@@ -204,53 +256,8 @@ export default function VoluntariosListClient({
       )}
 
       <div className="flex w-full flex-col gap-6">
-        {grouped.map(([area, rowsInArea]) => {
-          const isCollapsed = collapsedAreas.has(area);
-          const allSelected = rowsInArea.every((r) => selectedIds.has(r.id));
-          const someSelected = rowsInArea.some((r) => selectedIds.has(r.id));
-
-          return (
-            <section key={area} className="flex w-full flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => toggleCollapse(area)}
-                className="flex w-full items-center gap-3 text-left"
-              >
-                <span className="h-8 w-1.5 rounded-full bg-blue-600" aria-hidden="true" />
-                <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl flex-1">{area}</h2>
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-base font-medium text-blue-800">
-                  {rowsInArea.length} {rowsInArea.length === 1 ? "voluntário" : "voluntários"}
-                </span>
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); selectAllInArea(rowsInArea); }}
-                    className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
-                  >
-                    {allSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-                    {allSelected ? "Todos" : someSelected ? `${rowsInArea.filter((r) => selectedIds.has(r.id)).length}` : "Selecionar"}
-                  </button>
-                )}
-                {isCollapsed ? <ChevronDown size={22} className="text-zinc-500 transition-transform" /> : <ChevronUp size={22} className="text-zinc-500 transition-transform" />}
-              </button>
-
-              {!isCollapsed && (
-                <div className="flex w-full flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-                  {rowsInArea.map((row, index) => (
-                    <VoluntarioCard
-                      key={row.id}
-                      row={row}
-                      isLast={index === rowsInArea.length - 1}
-                      isSelected={selectedIds.has(row.id)}
-                      onToggleSelect={() => toggleSelect(row.id)}
-                      showCheckbox={canManage}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })}
+        {equipeDip.length > 0 && renderSection("Equipe DIP", equipeDip)}
+        {grouped.map(([area, rowsInArea]) => renderSection(area, rowsInArea))}
       </div>
     </>
   );

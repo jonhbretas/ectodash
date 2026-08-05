@@ -134,8 +134,16 @@ export default async function VoluntariosPage({
     return Boolean(linked);
   }).length;
 
+  // Equipe DIP = voluntários cujo departamento é da Dinâmica DIP
+  // (ex.: "ECTOLAB \ Paratecnológico \ DIP") — exibidos em seção própria,
+  // separados dos voluntários das áreas institucionais.
+  const equipeDip = all.filter((row) =>
+    row.org_depto?.toLowerCase().includes("dip")
+  );
+  const demais = all.filter((row) => !row.org_depto?.toLowerCase().includes("dip"));
+
   const groups = new Map<string, VoluntarioRow[]>();
-  for (const row of all) {
+  for (const row of demais) {
     const key = row.area_atuacao?.trim() || SEM_AREA_DEFINIDA;
     const bucket = groups.get(key) ?? [];
     bucket.push(row);
@@ -211,6 +219,7 @@ export default async function VoluntariosPage({
             ativos={ativos}
             afastados={afastados}
             vinculados={vinculados}
+            equipeDip={equipeDip}
             canManage={canManage}
             areaOptions={areaOptions}
           />

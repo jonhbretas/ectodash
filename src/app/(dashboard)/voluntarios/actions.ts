@@ -224,6 +224,51 @@ export async function atualizarVoluntario(
 
 export type BulkState = { ok: boolean; message: string; processados: number };
 
+type VoluntarioBulkRow = {
+  id: number;
+  nome: string;
+  codigo_pf: string | null;
+  unidade: string | null;
+  org_depto: string | null;
+  funcao: string | null;
+  data_inicio: string | null;
+  data_saida: string | null;
+  obs: string | null;
+  area_atuacao: string | null;
+  role: string | null;
+  ativo: boolean;
+  areas_lideradas: string[] | null;
+};
+
+// atualizar_voluntario() sobrescreve TODOS os campos (nome = trim(p_nome),
+// ativo = p_ativo, ...) — parâmetro não passado vira NULL e quebra as
+// constraints (o bug do "0 voluntários migrados"). A ação em massa então
+// repassa os valores ATUAIS de cada voluntário, alterando apenas o campo
+// da ação escolhida. O retorno booleano da RPC (false = sem permissão /
+// não encontrado) é o que define "processado", não a ausência de erro.
+function paramsDaAcao(
+  row: VoluntarioBulkRow,
+  acao: string,
+  novaArea?: string
+) {
+  return {
+    p_cadastro_id: row.id,
+    p_nome: row.nome,
+    p_codigo_pf: row.codigo_pf,
+    p_unidade: row.unidade,
+    p_org_depto: row.org_depto,
+    p_funcao: row.funcao,
+    p_data_inicio: row.data_inicio,
+    p_data_saida: row.data_saida,
+    p_obs: row.obs,
+    p_area_atuacao: acao === "migrar_area" ? (novaArea ?? row.area_atuacao) : row.area_atuacao,
+    p_papel: row.role,
+    p_areas_lideradas: row.areas_lideradas ?? [],
+    p_ativo:
+      acao === "ativar" ? true : acao === "desativar" ? false : row.ativo,
+  };
+}
+
 export async function atualizarVoluntariosEmMassa(
   prevState: BulkState,
   formData: FormData
@@ -244,52 +289,58 @@ export async function atualizarVoluntariosEmMassa(
 
   const acao = formData.get("acao");
 
-  if (acao === "desativar") {
-    let processados = 0;
-    for (const id of ids) {
-      const { error } = await supabase.rpc("atualizar_voluntario", {
-        p_cadastro_id: id,
-        p_nome: undefined,
-        p_ativo: false,
-      });
-      if (!error) processados++;
-    }
-    revalidatePath("/voluntarios");
-    return { ok: true, message: `${processados} voluntário(s) desativado(s).`, processados };
-  }
-
-  if (acao === "ativar") {
-    let processados = 0;
-    for (const id of ids) {
-      const { error } = await supabase.rpc("atualizar_voluntario", {
-        p_cadastro_id: id,
-        p_nome: undefined,
-        p_ativo: true,
-      });
-      if (!error) processados++;
-    }
-    revalidatePath("/voluntarios");
-    return { ok: true, message: `${processados} voluntário(s) ativado(s).`, processados };
-  }
-
+  let novaArea: string | undefined;
   if (acao === "migrar_area") {
-    const novaArea = formData.get("nova_area");
-    if (typeof novaArea !== "string" || !novaArea.trim()) {
+    const raw = formData.get("nova_area");
+    if (typeof raw !== "string" || !raw.trim()) {
       return { ok: false, message: "Escolha a nova área.", processados: 0 };
     }
-
-    let processados = 0;
-    for (const id of ids) {
-      const { error } = await supabase.rpc("atualizar_voluntario", {
-        p_cadastro_id: id,
-        p_nome: undefined,
-        p_area_atuacao: novaArea.trim(),
-      });
-      if (!error) processados++;
-    }
-    revalidatePath("/voluntarios");
-    return { ok: true, message: `${processados} voluntário(s) migrados para "${novaArea.trim()}".`, processados };
+    novaArea = raw.trim();
   }
 
-  return { ok: false, message: "Ação desconhecida.", processados: 0 };
+  if (acao !== "ativar" && acao !== "desativar" && acao !== "migrar_area") {
+    return { ok: false, message: "Ação desconhecida.", processados: 0 };
+  }
+
+  const { data: rows } = await supabase
+    .from("voluntarios")
+    .select(
+      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, areas_lideradas"
+    )
+    .in("id", ids);
+
+  const porId = new Map((rows ?? []).map((row) => [row.id, row]));
+
+  let processados = 0;
+  let negados = 0;
+  for (const id of ids) {
+    const row = porId.get(id) as VoluntarioBulkRow | undefined;
+    if (!row) continue;
+    const { data, error } = await supabase.rpc(
+      "atualizar_voluntario",
+      paramsDaAcao(row, acao, novaArea)
+    );
+    if (error) {
+      console.error("atualizarVoluntariosEmMassa: rpc failed", error, { id });
+      continue;
+    }
+    if (data === true) processados++;
+    else negados++;
+  }
+
+  revalidatePath("/voluntarios");
+  revalidatePath("/");
+  revalidatePath("/painel");
+
+  const acaoLabel =
+    acao === "ativar" ? "ativado(s)" : acao === "desativar" ? "desativado(s)" : `migrados para "${novaArea}"`;
+  const negadosLabel =
+    negados > 0
+      ? ` · ${negados} sem permissão de edição`
+      : "";
+  return {
+    ok: true,
+    message: `${processados} voluntário(s) ${acaoLabel}.${negadosLabel}`,
+    processados,
+  };
 }
