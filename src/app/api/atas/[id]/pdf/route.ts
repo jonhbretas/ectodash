@@ -129,11 +129,12 @@ export async function GET(_request: Request, { params }: RouteContext) {
       { ...footerOptions, width: 120, align: "right" }
     );
 
-    if (prev.fontSource) {
+    const fontSource = prev.fontSource;
+    if (fontSource) {
       if (prev.fontFamily) {
-        doc.font(prev.fontSource, prev.fontFamily);
+        doc.font(fontSource, prev.fontFamily);
       } else {
-        doc.font(prev.fontSource);
+        doc.font(fontSource);
       }
     }
     doc.fontSize(prev.fontSize);
