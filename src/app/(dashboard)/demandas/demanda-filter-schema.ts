@@ -61,7 +61,20 @@ export const demandaFilterSchema = z.object({
       .regex(/^\d+$/, "responsavel deve ser um id numérico")
       .optional()
   ),
-  status: z.enum(["pendente", "em_andamento", "concluida"]).optional(),
+  // status: MULTIPLE statuses, comma-separated in canonical order
+  // (pendente,em_andamento,concluida) — e.g. ?status=pendente,em_andamento
+  // to hide concluded demandas. Validated against the closed enum, never
+  // raw text.
+  status: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(
+        /^(pendente|em_andamento|concluida)(,(pendente|em_andamento|concluida))*$/,
+        "status inválido"
+      )
+      .optional()
+  ),
   agrupar: z.enum(["area", "responsavel"]).optional(),
   view: z.enum(["lista", "kanban", "calendario"]).optional(),
 });

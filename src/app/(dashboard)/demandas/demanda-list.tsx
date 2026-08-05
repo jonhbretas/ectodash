@@ -64,7 +64,8 @@ function compareDemandas(a: Demanda, b: Demanda): number {
 // simplest defensible rule is applied: the demanda appears once in every
 // group for each of its responsáveis. This choice is documented in
 // 05-02-SUMMARY.md since 05-UI-SPEC.md does not explicitly resolve it.
-function groupDemandas(
+// Exported so the kanban view groups by the same rule.
+export function groupDemandas(
   demandas: Demanda[],
   groupBy: "area" | "responsavel"
 ): { label: string; items: Demanda[] }[] {

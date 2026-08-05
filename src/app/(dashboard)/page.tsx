@@ -14,6 +14,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { parseDemandaFilters } from "./demandas/demanda-filter-schema";
+import { groupDemandas } from "./demandas/demanda-list";
 import { cn } from "@/lib/utils";
 
 export default async function DashboardPage({
@@ -92,7 +93,7 @@ export default async function DashboardPage({
     query = query.eq("etiqueta_id", Number(filters.etiqueta));
   }
   if (filters.status) {
-    query = query.eq("status", filters.status);
+    query = query.in("status", filters.status.split(","));
   }
 
   const { data: baseDemandas } = await supabase
@@ -340,7 +341,30 @@ export default async function DashboardPage({
         )}
 
         {view === "kanban" ? (
-          <KanbanBoard key={boardKey} demandas={demandaList} />
+          filters.agrupar ? (
+            <div className="flex w-full flex-col gap-8">
+              {groupDemandas(demandaList, filters.agrupar).map((group) => (
+                <div key={group.label} className="flex w-full flex-col gap-4">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-semibold text-zinc-900">
+                      {group.label}
+                    </h3>
+                    <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-base font-medium text-zinc-600">
+                      {group.items.length === 1
+                        ? "1 demanda"
+                        : `${group.items.length} demandas`}
+                    </span>
+                  </div>
+                  <KanbanBoard
+                    key={`${boardKey}-${group.label}`}
+                    demandas={group.items}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <KanbanBoard key={boardKey} demandas={demandaList} />
+          )
         ) : view === "calendario" ? (
           <CalendarioView demandas={demandaList} />
         ) : (

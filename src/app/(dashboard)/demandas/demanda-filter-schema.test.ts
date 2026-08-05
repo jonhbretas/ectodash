@@ -70,6 +70,18 @@ describe("demandaFilterSchema", () => {
     expect(() => demandaFilterSchema.parse({ view: "calendario" })).not.toThrow();
     expect(() => demandaFilterSchema.parse({ view: "tabela" })).toThrow();
   });
+
+  it("accepts one or multiple comma-separated statuses and rejects anything else", () => {
+    expect(() => demandaFilterSchema.parse({ status: "pendente" })).not.toThrow();
+    expect(() =>
+      demandaFilterSchema.parse({ status: "pendente,em_andamento" })
+    ).not.toThrow();
+    expect(() =>
+      demandaFilterSchema.parse({ status: "pendente,concluida" })
+    ).not.toThrow();
+    expect(() => demandaFilterSchema.parse({ status: "pendente,,em_andamento" })).toThrow();
+    expect(() => demandaFilterSchema.parse({ status: "atrasada" })).toThrow();
+  });
 });
 
 describe("parseDemandaFilters", () => {

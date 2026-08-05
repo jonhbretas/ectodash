@@ -30,6 +30,18 @@ import type { DemandaFilters } from "./demanda-filter-schema";
 const ALL_VALUE = "__todas__";
 const NO_GROUPING_VALUE = "__sem_agrupamento__";
 
+// Status multi-select — canonical order is the URL order, so toggling
+// always rebuilds the param in this sequence.
+const STATUS_OPTIONS: Array<{ value: "pendente" | "em_andamento" | "concluida"; label: string }> = [
+  { value: "pendente", label: "Pendente" },
+  { value: "em_andamento", label: "Em andamento" },
+  { value: "concluida", label: "Concluída" },
+];
+
+const STATUS_LABEL: Record<string, string> = Object.fromEntries(
+  STATUS_OPTIONS.map((s) => [s.value, s.label])
+);
+
 function dataEventoLabel(data: string): string {
   const [ano, mes, dia] = data.split("-");
   return `${dia}/${mes}/${ano}`;
@@ -102,6 +114,19 @@ export default function DemandaFilters({
     router.push("/");
   }
 
+  const statusAtivos = (currentFilters.status ?? "").split(",").filter(Boolean);
+
+  function toggleStatus(value: string) {
+    const atual = new Set(statusAtivos);
+    if (atual.has(value)) {
+      atual.delete(value);
+    } else {
+      atual.add(value);
+    }
+    const proximo = STATUS_OPTIONS.map((s) => s.value).filter((v) => atual.has(v));
+    navigateWith({ status: proximo.length > 0 ? proximo.join(",") : undefined });
+  }
+
   const responsavelLabelById = new Map(
     responsavelOptions.map((option) => [option.id, option.label])
   );
@@ -155,11 +180,9 @@ export default function DemandaFilters({
     {
       key: "status" as const,
       label: `Status: ${
-        currentFilters.status === "em_andamento"
-          ? "Em andamento"
-          : currentFilters.status === "concluida"
-            ? "Concluída"
-            : "Pendente"
+        statusAtivos.length > 0
+          ? statusAtivos.map((s) => STATUS_LABEL[s] ?? s).join(" + ")
+          : ""
       }`,
       title: "Status",
     },
@@ -359,18 +382,39 @@ export default function DemandaFilters({
                 ))
               )}
 
-              {selectControl(
-                "Filtrar por status",
-                currentFilters.status,
-                ALL_VALUE,
-                "Todos os status",
-                (value) => navigateWith({ status: value }),
-                <>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="em_andamento">Em andamento</SelectItem>
-                  <SelectItem value="concluida">Concluída</SelectItem>
-                </>
-              )}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-base font-medium text-zinc-500">
+                  Filtrar por status
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {STATUS_OPTIONS.map((status) => {
+                    const ativo = statusAtivos.includes(status.value);
+                    return (
+                      <button
+                        key={status.value}
+                        type="button"
+                        aria-pressed={ativo}
+                        onClick={() => toggleStatus(status.value)}
+                        className={`min-h-11 rounded-full px-4 text-base font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
+                          ativo
+                            ? "bg-blue-700 text-white ring-blue-700"
+                            : "bg-white text-zinc-700 ring-zinc-300 hover:bg-zinc-50"
+                        }`}
+                      >
+                        {status.label}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => navigateWith({ status: undefined })}
+                    disabled={statusAtivos.length === 0}
+                    className="min-h-11 rounded-full px-4 text-base font-medium text-zinc-500 ring-1 ring-transparent transition-colors hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-50"
+                  >
+                    Todos
+                  </button>
+                </div>
+              </div>
 
               {selectControl(
                 "Agrupar por",
