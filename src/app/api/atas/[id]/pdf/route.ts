@@ -130,7 +130,11 @@ export async function GET(_request: Request, { params }: RouteContext) {
     );
 
     if (prev.fontSource) {
-      doc.font(prev.fontSource, prev.fontFamily);
+      if (prev.fontFamily) {
+        doc.font(prev.fontSource, prev.fontFamily);
+      } else {
+        doc.font(prev.fontSource);
+      }
     }
     doc.fontSize(prev.fontSize);
     doc.fillColor(prev.fillColor[0], prev.fillColor[1]);
