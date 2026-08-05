@@ -1,4 +1,4 @@
-// /voluntarios/[id]/editar — coordinator-side volunteer edit. Reads the
+﻿// /voluntarios/[id]/editar — coordinator-side volunteer edit. Reads the
 // roster row (RLS 0017 decides visibility: coordenador_geral/voluntariado
 // see any row, coordenador_area only their own áreas) and submits through
 // the atualizar_voluntario SECURITY DEFINER function. The papel/áreas
@@ -62,7 +62,7 @@ export default async function EditarVoluntarioPage({
     supabase
       .from("voluntarios")
       .select(
-        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, telefone1, telefone2, profiles(email)"
+        "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, telefone_1, telefone_2, profiles(email)"
       )
       .eq("id", Number(id))
       .maybeSingle(),
@@ -140,9 +140,8 @@ export default async function EditarVoluntarioPage({
     areasLideradas: [],
     ativo: voluntario.ativo,
     areas: areasExtras,
-    email: voluntario.email ?? null,
-    telefone1: voluntario.telefone1 ?? null,
-    telefone2: voluntario.telefone2 ?? null,
+    telefone_1: voluntario.telefone_1 ?? null,
+    telefone_2: voluntario.telefone_2 ?? null,
   };
 
   return (

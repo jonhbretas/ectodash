@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+﻿import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Phone, Mail } from "lucide-react";
 import { roleLabel } from "@/lib/role-labels";
@@ -17,8 +17,8 @@ type VoluntarioRow = {
   area_atuacao: string | null;
   role: string | null;
   ativo: boolean;
-  telefone1: string | null;
-  telefone2: string | null;
+  telefone_1: string | null;
+  telefone_2: string | null;
   profiles:
     | { email: string; role: string }[]
     | { email: string; role: string }
@@ -80,19 +80,19 @@ export default function MeuCadastroCard({ row, role }: { row: VoluntarioRow; rol
                 <dd className="text-xl text-zinc-900">{value ?? "—"}</dd>
               </div>
             ))}
-            {row.telefone1 && (
+            {row.telefone_1 && (
               <div className="flex flex-col gap-0.5">
                 <dt className="text-base text-zinc-500">Telefone 1</dt>
                 <dd className="text-xl">
-                  <PhoneLink phone={row.telefone1} label="Tel 1" />
+                  <PhoneLink phone={row.telefone_1} label="Tel 1" />
                 </dd>
               </div>
             )}
-            {row.telefone2 && (
+            {row.telefone_2 && (
               <div className="flex flex-col gap-0.5">
                 <dt className="text-base text-zinc-500">Telefone 2</dt>
                 <dd className="text-xl">
-                  <PhoneLink phone={row.telefone2} label="Tel 2" />
+                  <PhoneLink phone={row.telefone_2} label="Tel 2" />
                 </dd>
               </div>
             )}

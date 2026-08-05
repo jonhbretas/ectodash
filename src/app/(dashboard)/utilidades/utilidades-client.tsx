@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { PlusCircle, X } from "lucide-react";
 import { criarUtilidadeItem, type UtilidadeState } from "./utilidades-actions";
 
+type Area = { id: number; nome: string };
+
 const initial: UtilidadeState = { ok: false, message: "" };
 
 const CATEGORIES = [
@@ -18,7 +20,7 @@ const CATEGORIES = [
 
 const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4883a]";
 
-export default function UtilidadesClient() {
+export default function UtilidadesClient({ areas }: { areas: Area[] }) {
   const [show, setShow] = useState(false);
   const [state, formAction] = useActionState(criarUtilidadeItem, initial);
 
@@ -46,6 +48,13 @@ export default function UtilidadesClient() {
 
       <input name="titulo" required placeholder="Título do item" className={inputClass} />
 
+      <select name="area_id" className={inputClass}>
+        <option value="">Escolha a área (opcional)</option>
+        {areas.map((area) => (
+          <option key={area.id} value={area.id}>{area.nome}</option>
+        ))}
+      </select>
+
       <select name="categoria" required className={inputClass}>
         <option value="">Escolha a categoria</option>
         {CATEGORIES.map((cat) => (
@@ -54,6 +63,8 @@ export default function UtilidadesClient() {
       </select>
 
       <input name="url" placeholder="URL (link para o documento ou site)" className={inputClass} />
+
+      <input name="tags" placeholder="Tags separadas por vírgula (ex: logo, horizontal, azul)" className={inputClass} />
 
       <textarea name="descricao" rows={3} placeholder="Descrição (opcional)" className={`${inputClass} min-h-20 resize-y py-3`} />
 

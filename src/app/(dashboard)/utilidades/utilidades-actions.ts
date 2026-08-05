@@ -33,11 +33,24 @@ export async function criarUtilidadeItem(
   const descricaoRaw = formData.get("descricao");
   const descricao = typeof descricaoRaw === "string" ? descricaoRaw.trim() : null;
 
+  const areaIdRaw = formData.get("area_id");
+  const area_id = typeof areaIdRaw === "string" && areaIdRaw.trim() !== ""
+    ? Number(areaIdRaw)
+    : null;
+
+  const tagsRaw = formData.get("tags");
+  const tagsStr = typeof tagsRaw === "string" ? tagsRaw.trim() : "";
+  const tags = tagsStr
+    ? tagsStr.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
+
   const { error } = await supabase.from("utilidades_itens").insert({
     titulo: titulo.data,
     descricao: descricao || null,
     categoria: categoria.data,
     url: url || null,
+    area_id: area_id && Number.isFinite(area_id) ? area_id : null,
+    tags,
   });
 
   if (error) return { ok: false, message: "Não foi possível salvar o item." };

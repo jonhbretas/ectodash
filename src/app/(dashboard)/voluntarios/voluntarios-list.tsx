@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useActionState } from "react";
 import Link from "next/link";
@@ -22,8 +22,8 @@ type VoluntarioRow = {
   role: string | null;
   ativo: boolean;
   situacao: string | null;
-  telefone1: string | null;
-  telefone2: string | null;
+  telefone_1: string | null;
+  telefone_2: string | null;
   profiles: { email: string; role: string }[] | { email: string; role: string } | null;
 };
 
@@ -395,30 +395,30 @@ function VoluntarioCard({
         <span className="truncate text-base text-zinc-500">
           {row.org_depto ?? "—"} · Desde {formatData(row.data_inicio) ?? "—"}
         </span>
-        {(row.telefone1 || row.telefone2) && (
+        {(row.telefone_1 || row.telefone_2) && (
           <span className="flex flex-wrap items-center gap-2 text-base">
-            {row.telefone1 && (
+            {row.telefone_1 && (
               <a
-                href={`https://wa.me/${phoneToDigits(row.telefone1).startsWith("55") ? phoneToDigits(row.telefone1) : "55" + phoneToDigits(row.telefone1)}`}
+                href={`https://wa.me/${phoneToDigits(row.telefone_1).startsWith("55") ? phoneToDigits(row.telefone_1) : "55" + phoneToDigits(row.telefone_1)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1 text-green-700 hover:text-green-900 hover:underline"
               >
                 <MessageCircle size={14} aria-hidden="true" />
-                {formatPhoneDisplay(row.telefone1)}
+                {formatPhoneDisplay(row.telefone_1)}
               </a>
             )}
-            {row.telefone2 && (
+            {row.telefone_2 && (
               <a
-                href={`https://wa.me/${phoneToDigits(row.telefone2).startsWith("55") ? phoneToDigits(row.telefone2) : "55" + phoneToDigits(row.telefone2)}`}
+                href={`https://wa.me/${phoneToDigits(row.telefone_2).startsWith("55") ? phoneToDigits(row.telefone_2) : "55" + phoneToDigits(row.telefone_2)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1 text-green-700 hover:text-green-900 hover:underline"
               >
                 <MessageCircle size={14} aria-hidden="true" />
-                {formatPhoneDisplay(row.telefone2)}
+                {formatPhoneDisplay(row.telefone_2)}
               </a>
             )}
           </span>

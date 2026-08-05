@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 // Shared volunteer form (create + edit) — all roster data fields from
 // migration 0017 (nome, código PF, unidade, org depto, função, datas, obs,
@@ -29,8 +29,9 @@ export type VoluntarioFormValues = {
   areasLideradas: string[];
   ativo: boolean;
   areas: string[];
-  telefone1: string | null;
-  telefone2: string | null;
+
+  telefone_1: string | null;
+  telefone_2: string | null;
 };
 
 const initialState = { ok: false, message: "" };
@@ -210,21 +211,21 @@ export default function VoluntarioForm({
           />
         </Field>
 
-        <Field id="telefone1" label="Telefone 1">
+        <Field id="telefone_1" label="Telefone 1">
           <input
-            id="telefone1"
-            name="telefone1"
-            defaultValue={values.telefone1 ?? ""}
+            id="telefone_1"
+            name="telefone_1"
+            defaultValue={values.telefone_1 ?? ""}
             placeholder="(45) 99999-9999"
             className={inputClassName}
           />
         </Field>
 
-        <Field id="telefone2" label="Telefone 2">
+        <Field id="telefone_2" label="Telefone 2">
           <input
-            id="telefone2"
-            name="telefone2"
-            defaultValue={values.telefone2 ?? ""}
+            id="telefone_2"
+            name="telefone_2"
+            defaultValue={values.telefone_2 ?? ""}
             placeholder="(45) 99999-9999"
             className={inputClassName}
           />
