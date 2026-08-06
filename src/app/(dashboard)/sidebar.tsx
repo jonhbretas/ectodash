@@ -82,7 +82,7 @@ function SidebarBrand({ collapsed }: { collapsed: boolean }) {
       }`}
     >
       <img
-        src="/logo-ectolab.png"
+        src={collapsed ? "/favicon.png" : "/logo-ectolab.png"}
         alt="EctoLab"
         className={`shrink-0 ${collapsed ? "h-9 w-9" : "h-10"}`}
       />

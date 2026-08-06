@@ -18,6 +18,7 @@ import {
   Sparkles,
   Globe2,
   GraduationCap,
+  ShoppingCart,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -41,6 +42,7 @@ export const navItems: NavItem[] = [
   { href: "/analise", label: "Análise", Icon: BarChart3 },
   { href: "/analisar", label: "Analisar com IA", Icon: Sparkles },
   { href: "/utilidades", label: "Utilidades", Icon: Wrench },
+  { href: "/vendas", label: "Vendas ECTOLAB", Icon: ShoppingCart, visibleTo: "coordenador" },
   { href: "/financeiro", label: "Financeiro", Icon: Wallet, visibleTo: "financeiro" },
   { href: "/perfil", label: "Meu perfil", Icon: UserRound },
 ];
