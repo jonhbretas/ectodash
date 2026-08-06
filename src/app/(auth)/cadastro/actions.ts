@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { resend } from "@/lib/resend";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type CadastroState = {
   message: string;
@@ -40,25 +40,31 @@ export async function signUp(
     return { ok: false, message: firstError };
   }
 
+  // Verificar se o e-mail já está cadastrado usando o admin client
+  const admin = createAdminClient();
+  const { data: existingUsers } = await admin.auth.admin.listUsers({
+    filters: { email: parsed.data.email },
+  });
+
+  if (existingUsers && existingUsers.users.length > 0) {
+    return {
+      ok: false,
+      message: "Este e-mail já está cadastrado. Faça login ou use outro e-mail.",
+    };
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm`,
     },
   });
 
   if (error) {
     console.error("signUp failed", error);
-
-    if (error.message.includes("already registered")) {
-      return {
-        ok: false,
-        message: "Este e-mail já está cadastrado. Faça login ou use outro e-mail.",
-      };
-    }
 
     return {
       ok: false,
