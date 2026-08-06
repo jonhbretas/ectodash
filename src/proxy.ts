@@ -3,7 +3,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 
 // Redirect do domínio antigo para o novo
 const OLD_DOMAIN = "ectodash.vercel.app";
-const NEW_DOMAIN = "painel.ecolab.org";
+const NEW_DOMAIN = "painel.ectolab.org";
 
 function isPublicPath(pathname: string): boolean {
   // /api/cron/* has NO end-user session by construction (a Vercel Cron
