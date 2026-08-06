@@ -18,11 +18,13 @@ export async function GET(req: NextRequest) {
   const role = req.nextUrl.searchParams.get("role");
   const supabase = await createClient();
   let query = supabase.from("proep_assignments").select("*").order("sort_order");
-  if (editionId && !isNaN(editionId)) query = query.eq("edition_id", editionId);
   if (role) query = query.eq("role", role);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: `[${LABEL} GET] ${error.message}` }, { status: 500 });
-  return NextResponse.json(data);
+  const filtered = editionId && !isNaN(editionId)
+    ? (data ?? []).filter((r) => r.edition_id === editionId)
+    : data ?? [];
+  return NextResponse.json(filtered);
 }
 
 export async function POST(req: NextRequest) {

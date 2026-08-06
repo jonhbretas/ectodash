@@ -26,11 +26,12 @@ export async function POST(req: NextRequest) {
 
     if (studentError || !student) return NextResponse.json({ error: "Aluno não encontrado" }, { status: 404 });
 
-    const { data: templates } = await supabase
+    const { data: allTemplates } = await supabase
       .from("proep_materials")
       .select("*")
-      .eq("is_template", true)
-      .eq("edition_id", edition_id || student.edition_id);
+      .eq("is_template", true);
+    const targetEdition = edition_id || student.edition_id;
+    const templates = (allTemplates ?? []).filter((t) => t.edition_id === targetEdition);
 
     const results: Record<string, string> = {};
 
