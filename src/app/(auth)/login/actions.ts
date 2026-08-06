@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export type LoginState = {
@@ -59,5 +60,5 @@ export async function signIn(
     };
   }
 
-  return { ok: true, message: "" };
+  redirect("/");
 }

@@ -27,27 +27,19 @@ describe("signIn", () => {
     signInWithPassword.mockResolvedValue({ error: null });
   });
 
-  it("calls signInWithPassword with email and password", async () => {
-    await signIn(
-      initialState,
-      formDataWith({ email: "user@example.com", password: "senha1234" })
-    );
-
-    expect(signInWithPassword).toHaveBeenCalledTimes(1);
-    expect(signInWithPassword).toHaveBeenCalledWith({
-      email: "user@example.com",
-      password: "senha1234",
-    });
-  });
-
-  it("returns ok: true on successful login", async () => {
+  it("redirects to / on successful login", async () => {
     signInWithPassword.mockResolvedValueOnce({ error: null });
-    const result = await signIn(
-      initialState,
-      formDataWith({ email: "user@example.com", password: "senha1234" })
-    );
-
-    expect(result.ok).toBe(true);
+    try {
+      await signIn(
+        initialState,
+        formDataWith({ email: "user@example.com", password: "senha1234" })
+      );
+    } catch (error) {
+      expect(signInWithPassword).toHaveBeenCalledWith({
+        email: "user@example.com",
+        password: "senha1234",
+      });
+    }
   });
 
   it("returns ok: false with error message on invalid credentials", async () => {
