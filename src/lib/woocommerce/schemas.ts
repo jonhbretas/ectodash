@@ -54,6 +54,7 @@ export const wpOrderSchema = z.object({
     email: z.string(),
     phone: z.string().optional(),
   }),
+  shipping: z.record(z.string(), z.string()).default({}),
   line_items: z.array(
     z.object({
       id: z.number(),

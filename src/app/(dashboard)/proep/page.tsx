@@ -10,12 +10,12 @@ import {
   Users, BookOpen, ClipboardCheck, GraduationCap, ArrowRight,
   ExternalLink, Plus, Trash2, Sparkles, FolderOpen,
   FileSpreadsheet, FileText, Printer, CheckCircle2, Circle,
-  Zap, Brain, Eye, Loader2, CalendarDays,
+  Zap, Brain, Eye, Loader2, CalendarDays, ShoppingCart,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Edition { id: number; name: string; start_date: string | null; description: string | null; location: string | null; drive_folder_url: string | null; }
-interface Student { id: string; edition_id: number; name: string; email: string | null; phone: string | null; role: string; drive_folder_url: string | null; planilha_url: string | null; parapercepciograma_url: string | null; form_responder_url: string | null; status: string; }
+interface Student { id: string; edition_id: number; name: string; email: string | null; phone: string | null; role: string; drive_folder_url: string | null; planilha_url: string | null; parapercepciograma_url: string | null; form_responder_url: string | null; status: string; source: string | null; wp_customer_id: number | null; }
 interface Material { id: string; edition_id: number | null; category: string; title: string; description: string | null; url: string | null; file_id: string | null; file_type: string | null; is_template: boolean; sort_order: number; }
 interface ChecklistItem { id: string; edition_id: number; day_number: number; phase: string; title: string; description: string | null; done: boolean; sort_order: number; }
 interface Assignment { id: string; edition_id: number; role: string; title: string; description: string | null; sort_order: number; }
@@ -123,6 +123,9 @@ function StudentCard({ student, onProvision, onEdit, onDelete }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-slate-900">{student.name}</span>
+            {student.source === "store" && (
+              <Badge variant="outline" className="text-[#2195B9] border-[#2195B9]/30 bg-[#2195B9]/5">Loja</Badge>
+            )}
             <Badge variant={student.role === "participant" ? "secondary" : "default"}>{roleLabel(student.role)}</Badge>
           </div>
           {student.email && <p className="text-xs text-slate-500 mt-0.5">{student.email}</p>}
@@ -210,6 +213,22 @@ export default function ProepPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [centralFolderUrl, setCentralFolderUrl] = useState<string | null>(null);
   const [driveBusy, setDriveBusy] = useState(false);
+  const [importingStore, setImportingStore] = useState(false);
+
+  async function importFromStore() {
+    setImportingStore(true);
+    setError(null);
+    try {
+      const d = await api("/api/proep/import-from-store", { method: "POST" });
+      if (d.participantsCreated > 0) {
+        const params = `edition_id=${selectedEdition}`;
+        const s = await api(`/api/proep/students?${params}`);
+        setStudents(s);
+      }
+      setError(`${d.participantsCreated} participante(s) importado(s) da loja`);
+    } catch (e: any) { setError(e.message || "Erro ao importar da loja"); }
+    finally { setImportingStore(false); }
+  }
 
   useEffect(() => {
     api("/api/proep/drive/setup").then((d: { central_folder_url?: string | null }) => {
@@ -556,9 +575,15 @@ export default function ProepPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-500">{students.length} aluno{students.length !== 1 ? "s" : ""}</p>
-                <Button variant="secondary" size="sm" onClick={() => { setEditingStudent(null); setFormError(null); setShowStudentModal(true); }}>
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Aluno
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={importFromStore} disabled={importingStore}>
+                    {importingStore ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5 mr-1" />}
+                    Importar da loja
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => { setEditingStudent(null); setFormError(null); setShowStudentModal(true); }}>
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Aluno
+                  </Button>
+                </div>
               </div>
               {students.length === 0 ? (
                 <div className="text-center py-8 px-4 text-slate-500">

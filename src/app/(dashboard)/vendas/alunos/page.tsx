@@ -21,6 +21,7 @@ type CustomerRow = {
   orders_count: number;
   total_spent: number;
   date_created: string;
+  courses: string[] | null;
 };
 
 export default async function AlunosPage({
@@ -116,11 +117,12 @@ export default async function AlunosPage({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-          <table className="w-full min-w-[40rem] text-left">
+          <table className="w-full min-w-[52rem] text-left">
             <thead>
               <tr className="border-b border-zinc-100 text-sm uppercase tracking-wide text-zinc-500">
                 <th scope="col" className="px-4 py-3 font-medium">Aluno</th>
                 <th scope="col" className="px-4 py-3 font-medium">Email</th>
+                <th scope="col" className="px-4 py-3 font-medium">Cursos</th>
                 <th scope="col" className="px-4 py-3 font-medium text-center">Pedidos</th>
                 <th scope="col" className="px-4 py-3 font-medium text-right">Total gasto</th>
                 <th scope="col" className="px-4 py-3 font-medium">Cadastro</th>
@@ -137,8 +139,30 @@ export default async function AlunosPage({
                       .filter(Boolean)
                       .join(" ") || "—"}
                   </td>
-                  <td className="max-w-[18rem] truncate px-4 py-3 text-zinc-500">
+                  <td className="max-w-[16rem] truncate px-4 py-3 text-zinc-500">
                     {customer.email || "—"}
+                  </td>
+                  <td className="max-w-[20rem] px-4 py-3">
+                    {customer.courses && customer.courses.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {customer.courses.slice(0, 3).map((course) => (
+                          <span
+                            key={course}
+                            title={course}
+                            className="max-w-full truncate rounded-full bg-[#2195B9]/10 px-2 py-0.5 text-sm font-medium text-[#2195B9] ring-1 ring-[#2195B9]/20"
+                          >
+                            {course}
+                          </span>
+                        ))}
+                        {customer.courses.length > 3 && (
+                          <span className="text-sm text-zinc-400">
+                            +{customer.courses.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center text-zinc-600">
                     {customer.orders_count}

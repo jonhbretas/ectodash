@@ -19,6 +19,7 @@ import {
   validateProducts,
   validateOrders,
 } from "@/lib/woocommerce/schemas";
+import { linkStoreToProep } from "@/lib/woocommerce/proep-link";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -219,14 +220,19 @@ export async function POST(request: NextRequest) {
         last_name: string;
         orders_count: number;
         total_spent: number;
+        billing: Record<string, string>;
+        shipping: Record<string, string>;
+        courses: Set<string>;
       }>();
 
       for (const order of uniqueOrders) {
         if (!order.customer_id) continue;
         const existing = customerMap.get(order.customer_id);
+        const itemNames = (order.line_items ?? []).map((li) => li.name).filter(Boolean);
         if (existing) {
           existing.orders_count += 1;
           existing.total_spent += order.total;
+          for (const n of itemNames) existing.courses.add(n);
         } else {
           customerMap.set(order.customer_id, {
             wp_customer_id: order.customer_id,
@@ -235,6 +241,9 @@ export async function POST(request: NextRequest) {
             last_name: order.billing.last_name,
             orders_count: 1,
             total_spent: order.total,
+            billing: order.billing,
+            shipping: order.shipping,
+            courses: new Set(itemNames),
           });
         }
       }
@@ -323,10 +332,11 @@ export async function POST(request: NextRequest) {
                   email: c.email,
                   first_name: c.first_name,
                   last_name: c.last_name,
-                  billing: {},
-                  shipping: {},
+                  billing: JSON.parse(JSON.stringify(c.billing || {})),
+                  shipping: JSON.parse(JSON.stringify(c.shipping || {})),
                   orders_count: c.orders_count,
                   total_spent: c.total_spent,
+                  courses: [...c.courses],
                   date_created: null,
                   synced_at: new Date().toISOString(),
                 })),
@@ -342,6 +352,13 @@ export async function POST(request: NextRequest) {
         .from("wp_stores")
         .update({ last_sync_at: new Date().toISOString() })
         .eq("id", store.id);
+
+      // Vínculo com o PROEP: cursos dos clientes + participantes por turma
+      try {
+        await linkStoreToProep(admin, store.id);
+      } catch (e: any) {
+        console.error(`[sync] vínculo PROEP falhou (store ${store.id}):`, e.message);
+      }
     }
 
     await finalize("success", totals);

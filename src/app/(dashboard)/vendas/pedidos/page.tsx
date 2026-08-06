@@ -21,6 +21,7 @@ type OrderRow = {
   customer_email: string;
   coupon_codes: string[];
   date_created: string;
+  items_summary: { name: string; qty: number; subtotal: number }[] | null;
 };
 
 export default async function PedidosPage({
@@ -156,6 +157,7 @@ export default async function PedidosPage({
                 <th scope="col" className="px-4 py-3 font-medium">Pedido</th>
                 <th scope="col" className="px-4 py-3 font-medium">Data</th>
                 <th scope="col" className="px-4 py-3 font-medium">Aluno</th>
+                <th scope="col" className="px-4 py-3 font-medium">Curso</th>
                 <th scope="col" className="px-4 py-3 font-medium">Email</th>
                 <th scope="col" className="px-4 py-3 font-medium">Status</th>
                 <th scope="col" className="px-4 py-3 font-medium">Cupom</th>
@@ -176,6 +178,31 @@ export default async function PedidosPage({
                   </td>
                   <td className="max-w-[14rem] truncate px-4 py-3 font-medium">
                     {order.customer_name || "—"}
+                  </td>
+                  <td className="max-w-[18rem] px-4 py-3">
+                    {order.items_summary && order.items_summary.length > 0 ? (
+                      <div className="flex flex-col gap-0.5">
+                        {order.items_summary.slice(0, 2).map((item, i) => (
+                          <span
+                            key={i}
+                            title={item.name}
+                            className="truncate text-base text-zinc-700"
+                          >
+                            {item.qty > 1 && (
+                              <span className="mr-1 text-zinc-400">{item.qty}×</span>
+                            )}
+                            {item.name}
+                          </span>
+                        ))}
+                        {order.items_summary.length > 2 && (
+                          <span className="text-sm text-zinc-400">
+                            +{order.items_summary.length - 2} item(ns)
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
                   </td>
                   <td className="max-w-[16rem] truncate px-4 py-3 text-zinc-500">
                     {order.customer_email || "—"}
