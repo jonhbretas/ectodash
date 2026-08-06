@@ -32,3 +32,11 @@ export async function setLinkSharing(fileId: string, role: "reader" | "writer" =
     body: JSON.stringify({ type: "anyone", role }),
   });
 }
+
+/** Share a file/folder with a specific user by email (e.g. teachers). */
+export async function shareWithEmail(fileId: string, email: string, role: "reader" | "writer" = "reader") {
+  return googleApiRequest(`${DRIVE_API}/files/${fileId}/permissions`, {
+    method: "POST",
+    body: JSON.stringify({ type: "user", role, emailAddress: email }),
+  });
+}

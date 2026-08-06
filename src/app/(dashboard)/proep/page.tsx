@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Edition { id: number; name: string; start_date: string | null; description: string | null; location: string | null; }
+interface Edition { id: number; name: string; start_date: string | null; description: string | null; location: string | null; drive_folder_url: string | null; }
 interface Student { id: string; edition_id: number; name: string; email: string | null; phone: string | null; role: string; drive_folder_url: string | null; planilha_url: string | null; parapercepciograma_url: string | null; form_responder_url: string | null; status: string; }
 interface Material { id: string; edition_id: number | null; category: string; title: string; description: string | null; url: string | null; file_id: string | null; file_type: string | null; is_template: boolean; sort_order: number; }
 interface ChecklistItem { id: string; edition_id: number; day_number: number; phase: string; title: string; description: string | null; done: boolean; sort_order: number; }
@@ -208,6 +208,34 @@ export default function ProepPage() {
   const [materialFilter, setMaterialFilter] = useState<string>("student");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [centralFolderUrl, setCentralFolderUrl] = useState<string | null>(null);
+  const [driveBusy, setDriveBusy] = useState(false);
+
+  useEffect(() => {
+    api("/api/proep/drive/setup").then((d: { central_folder_url?: string | null }) => {
+      setCentralFolderUrl(d.central_folder_url || null);
+    }).catch(() => {});
+  }, []);
+
+  async function openCentralFolder() {
+    setDriveBusy(true);
+    try {
+      const d = await api("/api/proep/drive/setup", { method: "POST" });
+      if (d.central_folder_url) window.open(d.central_folder_url, "_blank");
+    } catch (e: any) { setError(e.message || "Erro ao preparar pasta central"); }
+    finally { setDriveBusy(false); }
+  }
+
+  async function openEditionFolder() {
+    if (!selectedEdition) return;
+    setDriveBusy(true);
+    try {
+      const d = await api("/api/proep/drive/setup", { method: "POST", body: JSON.stringify({ edition_id: Number(selectedEdition) }) });
+      if (d.edition_folder_url) window.open(d.edition_folder_url, "_blank");
+      api("/api/proep/editions").then((data: Edition[]) => setEditions(data)).catch(() => {});
+    } catch (e: any) { setError(e.message || "Erro ao preparar pasta da turma"); }
+    finally { setDriveBusy(false); }
+  }
 
   useEffect(() => {
     api("/api/proep/editions").then((data: Edition[]) => {
@@ -409,6 +437,37 @@ export default function ProepPage() {
           <p className="text-sm text-slate-500 mt-0.5">Programa de Estimulação Parapsíquica Ectoplásmica</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {centralFolderUrl && (
+            <a
+              href={centralFolderUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 transition-colors hover:border-[#2195B9]/40 hover:text-[#2195B9]"
+              title="Pasta central do PROEP no Drive"
+            >
+              <FolderOpen className="h-4 w-4" /> Central
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={openCentralFolder}
+            disabled={driveBusy}
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 transition-colors hover:border-[#2195B9]/40 hover:text-[#2195B9] disabled:opacity-50"
+            title="Criar/abrir a pasta central do PROEP no Drive"
+          >
+            {driveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderOpen className="h-4 w-4" />}
+            Central
+          </button>
+          <button
+            type="button"
+            onClick={openEditionFolder}
+            disabled={driveBusy || !selectedEdition}
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#2195B9]/30 bg-[#2195B9]/5 px-3 text-sm font-medium text-[#2195B9] transition-colors hover:bg-[#2195B9]/10 disabled:opacity-50"
+            title="Criar/abrir a pasta desta turma no Drive"
+          >
+            {driveBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderOpen className="h-4 w-4" />}
+            Pasta da turma
+          </button>
           <select
             value={selectedEdition}
             onChange={e => setSelectedEdition(e.target.value)}
@@ -441,7 +500,19 @@ export default function ProepPage() {
                   </p>
                 </div>
               </div>
-              <Badge variant="default">Ativa</Badge>
+              <div className="flex items-center gap-2">
+                {currentEdition.drive_folder_url && (
+                  <a
+                    href={currentEdition.drive_folder_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#2195B9]/10 px-3 py-1.5 text-xs font-medium text-[#2195B9] transition-colors hover:bg-[#2195B9]/20"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" /> Abrir pasta da turma
+                  </a>
+                )}
+                <Badge variant="default">Ativa</Badge>
+              </div>
             </div>
           </CardContent>
         </Card>

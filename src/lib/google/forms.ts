@@ -9,11 +9,14 @@ const FORMS_API = "https://forms.googleapis.com/v1";
 export async function duplicateForm(
   sourceFormId: string,
   newTitle: string,
+  parentFolderId?: string,
 ): Promise<{ formId: string; responderUri: string }> {
-  // 1. Copy via Drive API
+  // 1. Copy via Drive API (with optional parent folder)
+  const body: Record<string, unknown> = { name: newTitle };
+  if (parentFolderId) body.parents = [parentFolderId];
   const copyResult = await googleApiRequest(
     `https://www.googleapis.com/drive/v3/files/${sourceFormId}/copy`,
-    { method: "POST", body: JSON.stringify({ name: newTitle }) },
+    { method: "POST", body: JSON.stringify(body) },
   );
   const newFormId = copyResult.id as string;
 
