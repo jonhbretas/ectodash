@@ -2,6 +2,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function requireUuid(id: string | null, label = "id") {
+  if (!id || !UUID_RE.test(id)) {
+    throw NextResponse.json({ error: `${label} deve ser um UUID válido` }, { status: 400 });
+  }
+  return id;
+}
+
 export async function GET(req: NextRequest) {
   const editionId = req.nextUrl.searchParams.get("edition_id");
   const role = req.nextUrl.searchParams.get("role");
@@ -34,7 +42,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
+  try { requireUuid(id, "id"); } catch (e) { return e as NextResponse; }
   const supabase = await createClient();
   const { error } = await supabase.from("proep_assignments").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

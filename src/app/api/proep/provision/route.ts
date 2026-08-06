@@ -12,7 +12,9 @@ import { duplicateForm } from "@/lib/google/forms";
 export async function POST(req: NextRequest) {
   try {
     const { student_id, edition_id } = await req.json();
-    if (!student_id) return NextResponse.json({ error: "student_id obrigatório" }, { status: 400 });
+    if (!student_id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(student_id)) {
+      return NextResponse.json({ error: "student_id deve ser um UUID válido" }, { status: 400 });
+    }
 
     const supabase = await createClient();
 
