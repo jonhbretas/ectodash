@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+// Redirect do domínio antigo para o novo
+const OLD_DOMAIN = "ectodash.vercel.app";
+const NEW_DOMAIN = "painel.ecolab.org";
+
 function isPublicPath(pathname: string): boolean {
   // /api/cron/* has NO end-user session by construction (a Vercel Cron
   // invocation, not a browser request) — it authenticates the REQUEST
@@ -11,6 +15,8 @@ function isPublicPath(pathname: string): boolean {
   // exists for a cron-triggered request.
   return (
     pathname === "/login" ||
+    pathname === "/cadastro" ||
+    pathname === "/recuperar-senha" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api/cron")
   );
@@ -24,9 +30,18 @@ function isPublicPath(pathname: string): boolean {
 // registered in the dev middleware manifest but never actually intercepted
 // requests under either Turbopack or webpack).
 export async function proxy(request: NextRequest) {
+  const { hostname, pathname } = request.nextUrl;
+
+  // Redirecionar domínio antigo para o novo (301 = permanente)
+  if (hostname === OLD_DOMAIN) {
+    const url = request.nextUrl.clone();
+    url.hostname = NEW_DOMAIN;
+    return NextResponse.redirect(url, 301);
+  }
+
   const { response, user } = await updateSession(request);
 
-  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+  if (!user && !isPublicPath(pathname)) {
     const loginUrl = new URL("/login", request.url);
     const redirectResponse = NextResponse.redirect(loginUrl);
 

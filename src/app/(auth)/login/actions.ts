@@ -8,55 +8,56 @@ export type LoginState = {
   ok: boolean;
 };
 
-const emailSchema = z.string().email();
+const loginSchema = z.object({
+  email: z.string().email("Digite um e-mail válido."),
+  password: z.string().min(1, "Digite sua senha."),
+});
 
-// Identical on every outcome (existing address, non-existing address, or a
-// Supabase-side error) so the login form cannot be used to enumerate
-// institutional e-mail addresses (RESEARCH.md Security Domain, Information
-// Disclosure row; github.com/supabase/auth/issues/1547).
-const GENERIC_SUCCESS_MESSAGE =
-  "Você receberá um link de acesso no e-mail. Na primeira vez, você escolherá seu nome na lista de voluntários.";
-
-export async function requestMagicLink(
+export async function signIn(
   prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
   const rawEmail = formData.get("email");
-  const email =
-    typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+  const rawPassword = formData.get("password");
 
-  const parsed = emailSchema.safeParse(email);
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+  const password = typeof rawPassword === "string" ? rawPassword : "";
+
+  const parsed = loginSchema.safeParse({ email, password });
   if (!parsed.success) {
-    return { ok: false, message: "Digite um e-mail válido." };
+    const firstError = parsed.error.issues[0]?.message || "Dados inválidos.";
+    return { ok: false, message: firstError };
   }
 
-  // The redirect target is built only from this server-controlled env var —
-  // never from formData, search params, or headers. This closes the
-  // open-redirect path (RESEARCH.md Security Domain, Tampering row).
-  const emailRedirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
-
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
-    email: parsed.data,
-    options: {
-      // Self-signup (user decision, 2026-08-04): volunteers register by the
-      // magic link and then link their account to their name in the
-      // institutional roster at /vincular (migration 0017). A first-time
-      // address therefore CREATES the account — shouldCreateUser: true
-      // replaces D-02's invite-only mode. New accounts start with
-      // vincular_pendente = true (handle_new_user trigger) and the
-      // dashboard layout redirects them to /vincular until they link.
-      shouldCreateUser: true,
-      emailRedirectTo,
-    },
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
   });
 
   if (error) {
-    console.error("requestMagicLink: signInWithOtp failed", error);
+    console.error("signIn failed", error);
+
+    if (error.message.includes("Invalid login credentials")) {
+      return {
+        ok: false,
+        message: "E-mail ou senha incorretos. Verifique seus dados e tente novamente.",
+      };
+    }
+
+    if (error.message.includes("Email not confirmed")) {
+      return {
+        ok: false,
+        message: "Confirme seu e-mail antes de fazer login. Verifique sua caixa de entrada.",
+      };
+    }
+
+    return {
+      ok: false,
+      message: "Erro ao fazer login. Tente novamente.",
+    };
   }
 
-  // Same success-shaped state on every outcome — never branch the
-  // user-visible copy, the HTTP status, or the control flow on whether the
-  // address exists.
-  return { ok: true, message: GENERIC_SUCCESS_MESSAGE };
+  return { ok: true, message: "" };
 }
