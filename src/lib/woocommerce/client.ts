@@ -2,7 +2,7 @@
 // WooCommerce WCFM REST API client — read-only, server-side only.
 // Optimized for speed: per_page=1000, 200ms rate limit, 30s timeout.
 const RATE_LIMIT_MS = 200;
-const PER_PAGE = "1000";
+const PER_PAGE = "100";
 const REQUEST_TIMEOUT_MS = 30_000;
 
 type WpStore = {
