@@ -96,7 +96,10 @@ export async function fetchProducts(
 ): Promise<WpProduct[]> {
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
-  return wpGet<WpProduct>(store, "/wp-json/wcfmmp/v1/products", params);
+  // Use vendor-specific endpoint to ensure ONLY this vendor's products.
+  const vendorId = store.vendor_id;
+  if (!vendorId) throw new Error("vendor_id não configurado na loja");
+  return wpGet<WpProduct>(store, `/wp-json/wcfmmp/v1/store-vendors/${vendorId}/products`, params);
 }
 
 // ── Orders ────────────────────────────────────────────────────────────

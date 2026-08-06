@@ -7,12 +7,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   fetchProducts,
   fetchOrders,
-  fetchCustomers,
 } from "@/lib/woocommerce/client";
 import {
   validateProducts,
   validateOrders,
-  validateCustomers,
 } from "@/lib/woocommerce/schemas";
 
 export async function POST(request: NextRequest) {
@@ -104,13 +102,12 @@ export async function POST(request: NextRequest) {
         ? new Date(store.last_sync_at).toISOString()
         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Fetch all three in parallel — the rate limiter in the client
-      // serializes the actual HTTP requests, but the validation and
-      // DB writes for each can overlap.
-      const [rawProducts, rawOrders, rawCustomers] = await Promise.all([
+      // Fetch products and orders in parallel.
+      // Customers are extracted from orders (not fetched separately)
+      // to ensure ONLY this vendor's customers are included.
+      const [rawProducts, rawOrders] = await Promise.all([
         fetchProducts(creds, modifiedAfter),
         fetchOrders(creds, modifiedAfter),
-        fetchCustomers(creds),
       ]);
 
       // Validate
@@ -120,117 +117,132 @@ export async function POST(request: NextRequest) {
       const orders = validateOrders(rawOrders);
       if (orders === null) throw new Error("Dados de pedido inválidos");
 
-      const customers = validateCustomers(rawCustomers);
-      if (customers === null) throw new Error("Dados de cliente inválidos");
+      // Extract unique customers from orders (vendor-scoped).
+      const customerMap = new Map<number, {
+        wp_customer_id: number;
+        email: string;
+        first_name: string;
+        last_name: string;
+        orders_count: number;
+        total_spent: number;
+      }>();
 
-      // Upsert all three in parallel
-      const upserts: Promise<{ error: { message: string } | null }>[] = [];
-
-      if (products.length > 0) {
-        upserts.push(
-          admin
-            .from("wp_products")
-            .upsert(
-              products.map((p) => ({
-                store_id: store.id,
-                wp_product_id: p.id,
-                name: p.name,
-                sku: p.sku,
-                price: p.price,
-                regular_price: p.regular_price,
-                sale_price: p.sale_price,
-                stock_quantity: p.stock_quantity,
-                status: p.status,
-                categories: JSON.parse(JSON.stringify(p.categories)),
-                image_url: p.images?.[0]?.src ?? null,
-                date_created: p.date_created,
-                date_modified: p.date_modified,
-                synced_at: new Date().toISOString(),
-              })),
-              { onConflict: "store_id,wp_product_id" }
-            )
-            .then((r) => {
-              if (r.error) throw new Error(`wp_products: ${r.error.message}`);
-              return r;
-            })
-        );
-        totals.products += products.length;
+      for (const order of orders) {
+        if (!order.customer_id) continue;
+        const existing = customerMap.get(order.customer_id);
+        if (existing) {
+          existing.orders_count += 1;
+          existing.total_spent += order.total;
+        } else {
+          customerMap.set(order.customer_id, {
+            wp_customer_id: order.customer_id,
+            email: order.billing.email,
+            first_name: order.billing.first_name,
+            last_name: order.billing.last_name,
+            orders_count: 1,
+            total_spent: order.total,
+          });
+        }
       }
 
-      if (orders.length > 0) {
-        upserts.push(
-          admin
-            .from("wp_orders")
-            .upsert(
-              orders.map((o) => ({
-                store_id: store.id,
-                wp_order_id: o.id,
-                status: o.status,
-                total: o.total,
-                total_tax: o.total_tax,
-                discount_total: o.discount_total,
-                currency: o.currency,
-                payment_method: o.payment_method,
-                commission_amount: o.vendor_order_details
-                  ? parseFloat(o.vendor_order_details.commission_amount) || null
-                  : null,
-                commission_status: o.vendor_order_details?.commission_status ?? null,
-                customer_id: o.customer_id,
-                customer_email: o.billing.email,
-                customer_name: `${o.billing.first_name} ${o.billing.last_name}`.trim(),
-                items_summary: JSON.parse(
-                  JSON.stringify(
-                    o.line_items.map((li) => ({
-                      name: li.name,
-                      qty: li.quantity,
-                      subtotal: parseFloat(li.total) || 0,
-                    }))
-                  )
-                ),
-                coupon_codes: o.coupon_lines.map((c) => c.code),
-                date_created: o.date_created,
-                date_modified: o.date_modified,
-                synced_at: new Date().toISOString(),
-              })),
-              { onConflict: "store_id,wp_order_id" }
-            )
-            .then((r) => {
-              if (r.error) throw new Error(`wp_orders: ${r.error.message}`);
-              return r;
-            })
-        );
-        totals.orders += orders.length;
-      }
+      const customers = [...customerMap.values()];
 
-      if (customers.length > 0) {
-        upserts.push(
-          admin
-            .from("wp_customers")
-            .upsert(
-              customers.map((c) => ({
-                store_id: store.id,
-                wp_customer_id: c.id,
-                email: c.email,
-                first_name: c.first_name,
-                last_name: c.last_name,
-                billing: JSON.parse(JSON.stringify(c.billing)),
-                shipping: JSON.parse(JSON.stringify(c.shipping)),
-                orders_count: c.orders_count,
-                total_spent: c.total_spent,
-                date_created: c.date_created,
-                synced_at: new Date().toISOString(),
-              })),
-              { onConflict: "store_id,wp_customer_id" }
-            )
-            .then((r) => {
-              if (r.error) throw new Error(`wp_customers: ${r.error.message}`);
-              return r;
-            })
-        );
-        totals.customers += customers.length;
-      }
+      totals.products += products.length;
+      totals.orders += orders.length;
+      totals.customers += customers.length;
 
-      await Promise.all(upserts);
+      // Upsert products, orders, and customers in parallel.
+      await Promise.all([
+        products.length > 0
+          ? admin
+              .from("wp_products")
+              .upsert(
+                products.map((p) => ({
+                  store_id: store.id,
+                  wp_product_id: p.id,
+                  name: p.name,
+                  sku: p.sku,
+                  price: p.price,
+                  regular_price: p.regular_price,
+                  sale_price: p.sale_price,
+                  stock_quantity: p.stock_quantity,
+                  status: p.status,
+                  categories: JSON.parse(JSON.stringify(p.categories)),
+                  image_url: p.images?.[0]?.src ?? null,
+                  date_created: p.date_created,
+                  date_modified: p.date_modified,
+                  synced_at: new Date().toISOString(),
+                })),
+                { onConflict: "store_id,wp_product_id" }
+              )
+              .then((r) => {
+                if (r.error) throw new Error(`wp_products: ${r.error.message}`);
+              })
+          : null,
+        orders.length > 0
+          ? admin
+              .from("wp_orders")
+              .upsert(
+                orders.map((o) => ({
+                  store_id: store.id,
+                  wp_order_id: o.id,
+                  status: o.status,
+                  total: o.total,
+                  total_tax: o.total_tax,
+                  discount_total: o.discount_total,
+                  currency: o.currency,
+                  payment_method: o.payment_method,
+                  commission_amount: o.vendor_order_details
+                    ? parseFloat(o.vendor_order_details.commission_amount) || null
+                    : null,
+                  commission_status: o.vendor_order_details?.commission_status ?? null,
+                  customer_id: o.customer_id,
+                  customer_email: o.billing.email,
+                  customer_name: `${o.billing.first_name} ${o.billing.last_name}`.trim(),
+                  items_summary: JSON.parse(
+                    JSON.stringify(
+                      o.line_items.map((li) => ({
+                        name: li.name,
+                        qty: li.quantity,
+                        subtotal: parseFloat(li.total) || 0,
+                      }))
+                    )
+                  ),
+                  coupon_codes: o.coupon_lines.map((c) => c.code),
+                  date_created: o.date_created,
+                  date_modified: o.date_modified,
+                  synced_at: new Date().toISOString(),
+                })),
+                { onConflict: "store_id,wp_order_id" }
+              )
+              .then((r) => {
+                if (r.error) throw new Error(`wp_orders: ${r.error.message}`);
+              })
+          : null,
+        customers.length > 0
+          ? admin
+              .from("wp_customers")
+              .upsert(
+                customers.map((c) => ({
+                  store_id: store.id,
+                  wp_customer_id: c.wp_customer_id,
+                  email: c.email,
+                  first_name: c.first_name,
+                  last_name: c.last_name,
+                  billing: {},
+                  shipping: {},
+                  orders_count: c.orders_count,
+                  total_spent: c.total_spent,
+                  date_created: null,
+                  synced_at: new Date().toISOString(),
+                })),
+                { onConflict: "store_id,wp_customer_id" }
+              )
+              .then((r) => {
+                if (r.error) throw new Error(`wp_customers: ${r.error.message}`);
+              })
+          : null,
+      ]);
 
       await admin
         .from("wp_stores")

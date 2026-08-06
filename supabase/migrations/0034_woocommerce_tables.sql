@@ -104,11 +104,11 @@ create table if not exists wp_sync_log (
 -- If the row already exists (idempotent), it is not re-inserted.
 insert into wp_stores (name, url, auth_user, auth_password, vendor_id, is_active)
 values (
-  'ECTOLAB',
+  'Ectolab',
   'https://store.conscienciologia.org.br',
   'jonathan.bretas',
   '3H9R Lp4r dzBA 2yH4 Fvmr aRO2',
-  18,
+  17,
   true
 )
 on conflict do nothing;
