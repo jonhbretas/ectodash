@@ -106,6 +106,10 @@ export async function GET(request: NextRequest) {
       const orders = validateOrders(rawOrders);
       if (orders === null) throw new Error("Dados de pedido inválidos");
 
+      // Deduplicate by ID (WCFM can return duplicates in pagination).
+      const uniqueOrders = [...new Map(orders.map((o) => [o.id, o])).values()];
+      const uniqueProducts = [...new Map(products.map((p) => [p.id, p])).values()];
+
       // Extract unique customers from orders (vendor-scoped).
       const customerMap = new Map<number, {
         wp_customer_id: number;
@@ -116,7 +120,7 @@ export async function GET(request: NextRequest) {
         total_spent: number;
       }>();
 
-      for (const order of orders) {
+      for (const order of uniqueOrders) {
         if (!order.customer_id) continue;
         const existing = customerMap.get(order.customer_id);
         if (existing) {
@@ -136,17 +140,17 @@ export async function GET(request: NextRequest) {
 
       const customers = [...customerMap.values()];
 
-      totals.products += products.length;
-      totals.orders += orders.length;
+      totals.products += uniqueProducts.length;
+      totals.orders += uniqueOrders.length;
       totals.customers += customers.length;
 
       // Upsert products, orders, and customers in parallel.
       await Promise.all([
-        products.length > 0
+        uniqueProducts.length > 0
           ? supabase
               .from("wp_products")
               .upsert(
-                products.map((p) => ({
+                uniqueProducts.map((p) => ({
                   store_id: store.id,
                   wp_product_id: p.id,
                   name: p.name,
@@ -168,11 +172,11 @@ export async function GET(request: NextRequest) {
                 if (error) throw new Error(`wp_products: ${error.message}`);
               })
           : null,
-        orders.length > 0
+        uniqueOrders.length > 0
           ? supabase
               .from("wp_orders")
               .upsert(
-                orders.map((o) => ({
+                uniqueOrders.map((o) => ({
                   store_id: store.id,
                   wp_order_id: o.id,
                   status: o.status,
