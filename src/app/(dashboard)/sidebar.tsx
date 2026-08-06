@@ -8,6 +8,7 @@ import {
   PanelLeftOpen,
   X,
   ChevronDown,
+  ArrowRight,
 } from "lucide-react";
 import {
   filterEntries,
@@ -120,63 +121,40 @@ function SidebarLinks({
 
   const renderGroup = (group: NavGroup) => {
     const open = expanded.has(group.label);
-    const hasLink = !!group.href;
+    const active = isGroupActive(group, pathname);
 
     return (
       <div key={group.label}>
-        {/* Group header */}
-        {hasLink ? (
-          <Link
-            href={group.href!}
-            onClick={onNavigate}
-            className={groupHeaderClassName(isGroupActive(group, pathname))}
-            title={collapsed ? group.label : undefined}
-          >
-            <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
-            {!collapsed && (
-              <>
-                <span className="flex-1 truncate">{group.label}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleGroup(group.label);
-                  }}
-                  aria-label={open ? "Recolher submenu" : "Expandir submenu"}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-white/20"
+        {/* Group header — always a button to avoid <a> capturing child clicks */}
+        <button
+          type="button"
+          onClick={() => toggleGroup(group.label)}
+          className={groupHeaderClassName(active)}
+          title={collapsed ? group.label : undefined}
+        >
+          <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
+          {!collapsed && (
+            <>
+              <span className="flex-1 truncate text-left">{group.label}</span>
+              {group.href && (
+                <Link
+                  href={group.href}
+                  onClick={(e) => { e.stopPropagation(); onNavigate?.(); }}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
+                  title={`Ir para ${group.label}`}
                 >
-                  <ChevronDown
-                    size={14}
-                    className={`transition-transform duration-200 ${
-                      open ? "" : "-rotate-90"
-                    }`}
-                  />
-                </button>
-              </>
-            )}
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => toggleGroup(group.label)}
-            className={groupHeaderClassName(isGroupActive(group, pathname))}
-            title={collapsed ? group.label : undefined}
-          >
-            <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
-            {!collapsed && (
-              <>
-                <span className="flex-1 truncate text-left">{group.label}</span>
-                <ChevronDown
-                  size={14}
-                  className={`shrink-0 transition-transform duration-200 ${
-                    open ? "" : "-rotate-90"
-                  }`}
-                />
-              </>
-            )}
-          </button>
-        )}
+                  <ArrowRight size={14} aria-hidden="true" />
+                </Link>
+              )}
+              <ChevronDown
+                size={14}
+                className={`shrink-0 transition-transform duration-200 ${
+                  open ? "" : "-rotate-90"
+                }`}
+              />
+            </>
+          )}
+        </button>
 
         {/* Children */}
         {!collapsed && open && (
