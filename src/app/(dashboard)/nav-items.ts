@@ -24,48 +24,149 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+// ── Type definitions ──────────────────────────────────────────────
+
 export type NavItem = {
+  type?: "item"; // default
   href: string;
   label: string;
   Icon: LucideIcon;
-  // undefined = visible to every authenticated role
   visibleTo?: "coordenador" | "financeiro";
 };
 
-export const navItems: NavItem[] = [
-  { href: "/", label: "Demandas", Icon: ClipboardList },
-  { href: "/reunioes", label: "Atas de Reuniões", Icon: NotebookPen },
-  { href: "/dips", label: "Dinâmica DIP", Icon: Globe2 },
-  { href: "/voluntarios", label: "Voluntários", Icon: Users },
-  { href: "/projetos", label: "Projetos", Icon: FolderKanban },
-  { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical },
-  { href: "/eventos", label: "Eventos", Icon: CalendarDays },
-  { href: "/proep", label: "PROEP", Icon: GraduationCap },
-  { href: "/analise", label: "Análise", Icon: BarChart3 },
-  { href: "/analisar", label: "Analisar com IA", Icon: Sparkles },
-  { href: "/utilidades", label: "Utilidades", Icon: Wrench },
-  { href: "/vendas", label: "Vendas ECTOLAB", Icon: ShoppingCart, visibleTo: "coordenador" },
-  { href: "/vendas/produtos", label: "  Produtos", Icon: Package, visibleTo: "coordenador" },
-  { href: "/vendas/pedidos", label: "  Pedidos", Icon: Receipt, visibleTo: "coordenador" },
-  { href: "/vendas/alunos", label: "  Alunos", Icon: Users, visibleTo: "coordenador" },
+export type NavGroup = {
+  type: "group";
+  label: string;
+  Icon: LucideIcon;
+  href?: string; // parent link (e.g. /vendas); undefined = container-only
+  children: NavItem[];
+  visibleTo?: "coordenador" | "financeiro";
+};
+
+export type SidebarEntry = NavItem | NavGroup;
+
+// ── Sidebar structure (grouped for clarity) ───────────────────────
+
+export const navEntries: SidebarEntry[] = [
+  // ─── Gestão Operacional ───
+  {
+    type: "group",
+    label: "Gestão Operacional",
+    Icon: ClipboardList,
+    children: [
+      { href: "/", label: "Demandas", Icon: ClipboardList },
+      { href: "/reunioes", label: "Atas de Reuniões", Icon: NotebookPen },
+      { href: "/dips", label: "Dinâmica DIP", Icon: Globe2 },
+    ],
+  },
+
+  // ─── Pessoas e Engajamento ───
+  {
+    type: "group",
+    label: "Engajamento",
+    Icon: Users,
+    children: [
+      { href: "/voluntarios", label: "Voluntários", Icon: Users },
+      { href: "/eventos", label: "Eventos", Icon: CalendarDays },
+    ],
+  },
+
+  // ─── Projetos e Conhecimento ───
+  {
+    type: "group",
+    label: "Conhecimento",
+    Icon: FolderKanban,
+    children: [
+      { href: "/projetos", label: "Projetos", Icon: FolderKanban },
+      { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical },
+      { href: "/proep", label: "PROEP", Icon: GraduationCap },
+    ],
+  },
+
+  // ─── Inteligência ───
+  {
+    type: "group",
+    label: "Inteligência",
+    Icon: BarChart3,
+    children: [
+      { href: "/analise", label: "Análise", Icon: BarChart3 },
+      { href: "/analisar", label: "Analisar com IA", Icon: Sparkles },
+    ],
+  },
+
+  // ─── Vendas ECTOLAB (coordenador) ───
+  {
+    type: "group",
+    label: "Vendas ECTOLAB",
+    Icon: ShoppingCart,
+    href: "/vendas",
+    visibleTo: "coordenador",
+    children: [
+      { href: "/vendas", label: "Visão geral", Icon: ShoppingCart, visibleTo: "coordenador" },
+      { href: "/vendas/produtos", label: "Produtos", Icon: Package, visibleTo: "coordenador" },
+      { href: "/vendas/pedidos", label: "Pedidos", Icon: Receipt, visibleTo: "coordenador" },
+      { href: "/vendas/alunos", label: "Alunos", Icon: Users, visibleTo: "coordenador" },
+    ],
+  },
+
+  // ─── Financeiro ───
   { href: "/financeiro", label: "Financeiro", Icon: Wallet, visibleTo: "financeiro" },
+
+  // ─── Ferramentas ───
+  { href: "/utilidades", label: "Utilidades", Icon: Wrench },
+
+  // ─── Perfil ───
   { href: "/perfil", label: "Meu perfil", Icon: UserRound },
 ];
 
 // Coordenador-only entry points live in their own section at the bottom of
 // the sidebar, visually separated from the main menu.
-export const coordinatorItems: NavItem[] = [
+export const coordinatorEntries: SidebarEntry[] = [
   { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard, visibleTo: "coordenador" },
 ];
 
-export function filterNavItems(
-  items: NavItem[],
+// ── Helpers ───────────────────────────────────────────────────────
+
+function isVisible(
+  item: SidebarEntry,
   isCoordenador: boolean,
   isFinanceiro: boolean
-): NavItem[] {
-  return items.filter((item) => {
-    if (item.visibleTo === "coordenador") return isCoordenador;
-    if (item.visibleTo === "financeiro") return isCoordenador || isFinanceiro;
-    return true;
+): boolean {
+  if (item.visibleTo === "coordenador") return isCoordenador;
+  if (item.visibleTo === "financeiro") return isCoordenador || isFinanceiro;
+  return true;
+}
+
+export function filterEntries(
+  entries: SidebarEntry[],
+  isCoordenador: boolean,
+  isFinanceiro: boolean
+): SidebarEntry[] {
+  return entries
+    .filter((e) => isVisible(e, isCoordenador, isFinanceiro))
+    .map((e) => {
+      if (e.type === "group") {
+        const children = e.children.filter((c) =>
+          isVisible(c, isCoordenador, isFinanceiro)
+        );
+        return { ...e, children };
+      }
+      return e;
+    })
+    // Remove groups that ended up with no visible children
+    .filter((e) => e.type !== "group" || e.children.length > 0);
+}
+
+/** Check if any child in the group is currently active */
+export function isGroupActive(group: NavGroup, pathname: string): boolean {
+  if (group.href) {
+    const active =
+      group.href === "/" ? pathname === "/" : pathname.startsWith(group.href);
+    if (active) return true;
+  }
+  return group.children.some((child) => {
+    const active =
+      child.href === "/" ? pathname === "/" : pathname.startsWith(child.href);
+    return active;
   });
 }

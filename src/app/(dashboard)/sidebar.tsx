@@ -2,9 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { PanelLeftClose, PanelLeftOpen, X, ChevronRight } from "lucide-react";
-import { filterNavItems, navItems, coordinatorItems } from "./nav-items";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  X,
+  ChevronDown,
+} from "lucide-react";
+import {
+  filterEntries,
+  isGroupActive,
+  navEntries,
+  coordinatorEntries,
+  type NavGroup,
+  type NavItem,
+  type SidebarEntry,
+} from "./nav-items";
 import { useStoredPreference } from "@/lib/use-stored-preference";
 import SignOutButton from "./sign-out-button";
 
@@ -28,15 +41,50 @@ function SidebarLinks({
   collapsed: boolean;
   onNavigate?: () => void;
 }) {
-  const main = filterNavItems(navItems, isCoordenador, isFinanceiro);
-  const coord = filterNavItems(coordinatorItems, isCoordenador, isFinanceiro);
+  const main = filterEntries(navEntries, isCoordenador, isFinanceiro);
+  const coord = filterEntries(coordinatorEntries, isCoordenador, isFinanceiro);
 
-  const linkClassName = (href: string) => {
+  // Auto-expand groups whose children include the current route
+  const defaultExpanded = useMemo(() => {
+    const set = new Set<string>();
+    for (const entry of main) {
+      if (entry.type === "group" && isGroupActive(entry, pathname)) {
+        set.add(entry.label);
+      }
+    }
+    return set;
+  }, [main, pathname]);
+
+  const [expanded, setExpanded] = useState<Set<string>>(defaultExpanded);
+
+  // Keep in sync when pathname changes (e.g. navigating between children)
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      for (const entry of main) {
+        if (entry.type === "group" && isGroupActive(entry, pathname)) {
+          next.add(entry.label);
+        }
+      }
+      return next;
+    });
+  }, [main, pathname]);
+
+  function toggleGroup(label: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
+
+  const linkClassName = (href: string, indent = false) => {
     const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
     return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
       collapsed
         ? "flex-col justify-center gap-0.5 px-0 text-center"
-        : "gap-3 px-3 text-sm"
+        : `gap-3 text-sm ${indent ? "pl-10 pr-3" : "px-3"}`
     } ${
       active
         ? "bg-[#2195B9] text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)]"
@@ -44,12 +92,12 @@ function SidebarLinks({
     }`;
   };
 
-  const renderLink = (item: (typeof navItems)[number]) => (
+  const renderLink = (item: NavItem, indent = false) => (
     <Link
       key={item.href}
       href={item.href}
       onClick={onNavigate}
-      className={linkClassName(item.href)}
+      className={linkClassName(item.href, indent)}
       title={collapsed ? item.label : undefined}
     >
       <item.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
@@ -57,14 +105,97 @@ function SidebarLinks({
     </Link>
   );
 
+  const renderGroup = (group: NavGroup) => {
+    const open = expanded.has(group.label);
+    const hasLink = !!group.href;
+
+    return (
+      <div key={group.label}>
+        {/* Group header */}
+        {hasLink ? (
+          <Link
+            href={group.href!}
+            onClick={onNavigate}
+            className={linkClassName(group.href!)}
+            title={collapsed ? group.label : undefined}
+          >
+            <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
+            {!collapsed && (
+              <>
+                <span className="flex-1 truncate">{group.label}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleGroup(group.label);
+                  }}
+                  aria-label={open ? "Recolher submenu" : "Expandir submenu"}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-white/20"
+                >
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 ${
+                      open ? "" : "-rotate-90"
+                    }`}
+                  />
+                </button>
+              </>
+            )}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => toggleGroup(group.label)}
+            className={`flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
+              collapsed
+                ? "flex-col justify-center gap-0.5 px-0 text-center"
+                : "gap-3 px-3 text-sm"
+            } ${
+              isGroupActive(group, pathname)
+                ? "text-slate-900"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+            title={collapsed ? group.label : undefined}
+          >
+            <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
+            {!collapsed && (
+              <>
+                <span className="flex-1 truncate text-left">{group.label}</span>
+                <ChevronDown
+                  size={14}
+                  className={`shrink-0 transition-transform duration-200 ${
+                    open ? "" : "-rotate-90"
+                  }`}
+                />
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Children */}
+        {!collapsed && open && (
+          <div className="mt-0.5 flex flex-col gap-0.5">
+            {group.children.map((child) => renderLink(child, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderEntry = (entry: SidebarEntry) => {
+    if (entry.type === "group") return renderGroup(entry);
+    return renderLink(entry);
+  };
+
   return (
     <nav aria-label="Menu principal" className="flex w-full flex-col gap-0.5">
-      {main.map(renderLink)}
+      {main.map(renderEntry)}
 
       {coord.length > 0 && (
         <>
           <div role="separator" className="my-2 h-px w-full bg-slate-200" />
-          {coord.map(renderLink)}
+          {coord.map(renderEntry)}
         </>
       )}
     </nav>
