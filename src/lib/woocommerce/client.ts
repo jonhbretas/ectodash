@@ -1,15 +1,9 @@
 // src/lib/woocommerce/client.ts
 // WooCommerce WCFM REST API client — read-only, server-side only.
-// Follows the same pattern as src/lib/sheets/client.ts: built only inside
-// api/cron/ or api/wp/ contexts, never imported into dashboard components.
-//
-// Authentication: HTTP Basic Auth via WordPress Application Passwords.
-// WCFM endpoints are scoped to the authenticated vendor — only ECTOLAB
-// data is returned when using the ECTOLAB vendor credentials.
-//
-// Rate limiting: 1 request per second to avoid overwhelming the WordPress
-// server. Pagination: WCFM/WC return max 100 items per page.
-const RATE_LIMIT_MS = 1000;
+// Optimized for speed: per_page=1000, 200ms rate limit, 30s timeout.
+const RATE_LIMIT_MS = 200;
+const PER_PAGE = "1000";
+const REQUEST_TIMEOUT_MS = 30_000;
 
 type WpStore = {
   id: string;
@@ -21,14 +15,26 @@ type WpStore = {
 
 let lastRequestAt = 0;
 
-async function rateLimitedFetch(url: string, init?: RequestInit): Promise<Response> {
+async function wpFetch(url: string, init?: RequestInit): Promise<Response> {
   const now = Date.now();
   const elapsed = now - lastRequestAt;
   if (elapsed < RATE_LIMIT_MS) {
     await new Promise((r) => setTimeout(r, RATE_LIMIT_MS - elapsed));
   }
   lastRequestAt = Date.now();
-  return fetch(url, { ...init, cache: "no-store" });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function basicAuth(user: string, password: string): string {
@@ -44,9 +50,9 @@ async function wpGet<T>(
   let page = 1;
 
   while (true) {
-    const qs = new URLSearchParams({ per_page: "100", page: String(page), ...params });
+    const qs = new URLSearchParams({ per_page: PER_PAGE, page: String(page), ...params });
     const url = `${store.url}${path}?${qs}`;
-    const res = await rateLimitedFetch(url, {
+    const res = await wpFetch(url, {
       headers: {
         Authorization: basicAuth(store.auth_user, store.auth_password),
         "Content-Type": "application/json",
@@ -61,7 +67,7 @@ async function wpGet<T>(
     const data = (await res.json()) as T[];
     if (!Array.isArray(data) || data.length === 0) break;
     out.push(...data);
-    if (data.length < 100) break;
+    if (data.length < Number(PER_PAGE)) break;
     page++;
   }
 
