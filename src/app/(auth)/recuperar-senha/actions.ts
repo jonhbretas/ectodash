@@ -29,10 +29,10 @@ export async function resetPassword(
   });
 
   if (error) {
-    console.error("resetPassword failed", error);
+    console.error("resetPassword failed:", error.message, error.status);
     return {
       ok: false,
-      message: "Erro ao enviar e-mail. Tente novamente.",
+      message: `Erro ao enviar e-mail: ${error.message}. Verifique se o e-mail está cadastrado.`,
     };
   }
 
