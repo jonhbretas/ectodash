@@ -57,6 +57,7 @@ export const wpOrderSchema = z.object({
   line_items: z.array(
     z.object({
       id: z.number(),
+      product_id: z.number(),
       name: z.string(),
       quantity: z.number(),
       total: z.string(),

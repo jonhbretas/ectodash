@@ -44,7 +44,8 @@ function basicAuth(user: string, password: string): string {
 async function wpGet<T>(
   store: WpStore,
   path: string,
-  params?: Record<string, string>
+  params?: Record<string, string>,
+  maxPages?: number
 ): Promise<T[]> {
   const out: T[] = [];
   let page = 1;
@@ -68,6 +69,7 @@ async function wpGet<T>(
     if (!Array.isArray(data) || data.length === 0) break;
     out.push(...data);
     if (data.length < Number(PER_PAGE)) break;
+    if (maxPages && page >= maxPages) break;
     page++;
   }
 
@@ -121,6 +123,7 @@ export type WpOrder = {
   };
   line_items: Array<{
     id: number;
+    product_id: number;
     name: string;
     quantity: number;
     total: string;
@@ -142,7 +145,9 @@ export async function fetchOrders(
 ): Promise<WpOrder[]> {
   const params: Record<string, string> = {};
   if (after) params.after = after;
-  return wpGet<WpOrder>(store, "/wp-json/wcfmmp/v1/orders", params);
+  // Limit to 5 pages (500 orders) to avoid Vercel timeout.
+  // WCFM /orders returns ALL marketplace orders — we filter by vendor product IDs after.
+  return wpGet<WpOrder>(store, "/wp-json/wcfmmp/v1/orders", params, 5);
 }
 
 // ── Customers (WooCommerce standard — WCFM has no customer endpoint) ──
