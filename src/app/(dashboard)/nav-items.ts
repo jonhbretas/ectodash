@@ -94,10 +94,10 @@ export const navEntries: SidebarEntry[] = [
     ],
   },
 
-  // ─── Vendas ECTOLAB (coordenador) ───
+  // ─── Loja Ectolab (coordenador) ───
   {
     type: "group",
-    label: "Vendas ECTOLAB",
+    label: "Loja Ectolab",
     Icon: ShoppingCart,
     href: "/vendas",
     visibleTo: "coordenador",

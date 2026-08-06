@@ -288,7 +288,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
         ref={sidebarRef}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className={`sticky top-0 z-30 hidden h-dvh shrink-0 flex-col gap-5 overflow-hidden border-r border-slate-200/60 bg-white/95 backdrop-blur-xl py-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
+        className={`sticky top-0 z-30 hidden h-dvh shrink-0 flex-col gap-5 border-r border-slate-200/60 bg-white/95 backdrop-blur-xl py-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
           visuallyCollapsed ? "w-18 px-2" : "w-64 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
         }`}
       >

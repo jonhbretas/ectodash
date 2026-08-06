@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Search, ArrowLeft, Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
+import MonthPicker from "../month-picker";
+import { parseProductName } from "@/lib/woocommerce/parse-product";
 
-export const metadata = { title: "Produtos — Vendas ECTOLAB" };
+export const metadata = { title: "Produtos — Loja Ectolab" };
 
 const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -24,6 +26,7 @@ type ProductRow = {
   image_url: string | null;
   categories: Array<{ id: number; name: string }>;
   synced_at: string;
+  date_created: string | null;
 };
 
 export default async function ProdutosPage({
@@ -34,6 +37,7 @@ export default async function ProdutosPage({
   const params = await searchParams;
   const search = typeof params.search === "string" ? params.search.trim() : "";
   const status = typeof params.status === "string" ? params.status.trim() : "";
+  const monthFilter = typeof params.month === "string" ? params.month : "";
 
   const supabase = await createClient();
   const {
@@ -54,7 +58,17 @@ export default async function ProdutosPage({
   }
 
   const { data: products } = await query;
-  const items: ProductRow[] = (products ?? []) as ProductRow[];
+  let items: ProductRow[] = (products ?? []) as ProductRow[];
+
+  // Filter by month if specified.
+  if (monthFilter) {
+    items = items.filter((p) => {
+      if (!p.date_created) return false;
+      const d = new Date(p.date_created);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      return ym === monthFilter;
+    });
+  }
 
   return (
     <PageContainer>
@@ -74,6 +88,7 @@ export default async function ProdutosPage({
         </div>
       </header>
 
+      <MonthPicker />
       {/* Filters */}
       <form className="flex flex-wrap gap-3" method="GET">
         <div className="relative flex-1 min-w-[200px]">
@@ -119,7 +134,7 @@ export default async function ProdutosPage({
           <p className="max-w-md text-xl text-zinc-700">
             {search || status
               ? "Tente outros filtros."
-              : "Aguarde a sincronização com a loja WooCommerce."}
+              : "Aguarde a sincronização com a loja Ectolab."}
           </p>
         </div>
       ) : (
@@ -132,6 +147,7 @@ export default async function ProdutosPage({
                 <th scope="col" className="px-4 py-3 font-medium">Preço</th>
                 <th scope="col" className="px-4 py-3 font-medium">Estoque</th>
                 <th scope="col" className="px-4 py-3 font-medium">Status</th>
+                <th scope="col" className="px-4 py-3 font-medium">Vinculação</th>
                 <th scope="col" className="px-4 py-3 font-medium">Categorias</th>
               </tr>
             </thead>
@@ -186,6 +202,19 @@ export default async function ProdutosPage({
                   </td>
                   <td className="px-4 py-3 text-zinc-600">
                     {product.categories?.map((c) => c.name).join(", ") || "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const parsed = parseProductName(product.name);
+                      if (parsed.isProep && parsed.label) {
+                        return (
+                          <span className="inline-flex items-center rounded-full bg-purple-50 px-2.5 py-0.5 text-base font-medium text-purple-700 ring-1 ring-purple-200/60">
+                            {parsed.label}
+                          </span>
+                        );
+                      }
+                      return <span className="text-zinc-400">—</span>;
+                    })()}
                   </td>
                 </tr>
               ))}

@@ -3,8 +3,9 @@ import Link from "next/link";
 import { Search, ArrowLeft, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
+import MonthPicker from "../month-picker";
 
-export const metadata = { title: "Alunos — Vendas ECTOLAB" };
+export const metadata = { title: "Alunos — Loja Ectolab" };
 
 const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -29,6 +30,7 @@ export default async function AlunosPage({
 }) {
   const params = await searchParams;
   const search = typeof params.search === "string" ? params.search.trim() : "";
+  const monthFilter = typeof params.month === "string" ? params.month : "";
 
   const supabase = await createClient();
   const {
@@ -73,6 +75,8 @@ export default async function AlunosPage({
         </div>
       </header>
 
+      <MonthPicker />
+
       {/* Search */}
       <form className="flex flex-wrap gap-3" method="GET">
         <div className="relative flex-1 min-w-[200px]">
@@ -107,7 +111,7 @@ export default async function AlunosPage({
           <p className="max-w-md text-xl text-zinc-700">
             {search
               ? "Tente outros termos de busca."
-              : "Aguarde a sincronização com a loja WooCommerce."}
+              : "Aguarde a sincronização com a loja Ectolab."}
           </p>
         </div>
       ) : (

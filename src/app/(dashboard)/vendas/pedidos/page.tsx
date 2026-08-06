@@ -3,8 +3,9 @@ import Link from "next/link";
 import { Search, ArrowLeft, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
+import MonthPicker from "../month-picker";
 
-export const metadata = { title: "Pedidos — Vendas ECTOLAB" };
+export const metadata = { title: "Pedidos — Loja Ectolab" };
 
 const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -31,6 +32,7 @@ export default async function PedidosPage({
   const search = typeof params.search === "string" ? params.search.trim() : "";
   const status = typeof params.status === "string" ? params.status.trim() : "";
   const coupon = typeof params.coupon === "string" ? params.coupon.trim() : "";
+  const monthFilter = typeof params.month === "string" ? params.month : "";
 
   const supabase = await createClient();
   const {
@@ -56,7 +58,17 @@ export default async function PedidosPage({
   }
 
   const { data: orders } = await query;
-  const items: OrderRow[] = (orders ?? []) as OrderRow[];
+  let items: OrderRow[] = (orders ?? []) as OrderRow[];
+
+  // Filter by month if specified.
+  if (monthFilter) {
+    items = items.filter((o) => {
+      if (!o.date_created) return false;
+      const d = new Date(o.date_created);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      return ym === monthFilter;
+    });
+  }
 
   return (
     <PageContainer>
@@ -75,6 +87,8 @@ export default async function PedidosPage({
           </p>
         </div>
       </header>
+
+      <MonthPicker />
 
       {/* Filters */}
       <form className="flex flex-wrap gap-3" method="GET">
@@ -131,7 +145,7 @@ export default async function PedidosPage({
           <p className="max-w-md text-xl text-zinc-700">
             {search || status || coupon
               ? "Tente outros filtros."
-              : "Aguarde a sincronização com a loja WooCommerce."}
+              : "Aguarde a sincronização com a loja Ectolab."}
           </p>
         </div>
       ) : (

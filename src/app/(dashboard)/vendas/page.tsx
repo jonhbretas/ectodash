@@ -13,8 +13,9 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import SyncButton from "./sync-button";
+import MonthPicker from "./month-picker";
 
-export const metadata = { title: "Vendas ECTOLAB — EctoDash" };
+export const metadata = { title: "Loja Ectolab — EctoDash" };
 
 const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -44,7 +45,14 @@ type SyncLogRow = {
   error: string | null;
 };
 
-export default async function VendasPage() {
+export default async function VendasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const monthFilter = typeof params.month === "string" ? params.month : "";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -70,7 +78,7 @@ export default async function VendasPage() {
             Este painel é exclusivo das finanças
           </h1>
           <p className="max-w-md text-xl text-zinc-700">
-            Você não tem acesso às vendas da ECTOLAB.
+            Você não tem acesso à loja Ectolab.
           </p>
           <Link
             href="/"
@@ -107,17 +115,27 @@ export default async function VendasPage() {
   const customersCount = (customersResult.data ?? []).length;
   const syncLogs: SyncLogRow[] = (syncResult.data ?? []) as SyncLogRow[];
 
+  // Filter orders by month if specified.
+  const filteredOrders = monthFilter
+    ? orders.filter((o) => {
+        if (!o.date_created) return false;
+        const d = new Date(o.date_created);
+        const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        return ym === monthFilter;
+      })
+    : orders;
+
   // ── KPIs ──────────────────────────────────────────────────────────
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.total ?? 0), 0);
-  const totalOrders = orders.length;
+  const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.total ?? 0), 0);
+  const totalOrders = filteredOrders.length;
   const uniqueCustomers = new Set(
-    orders.filter((o) => o.customer_email).map((o) => o.customer_email)
+    filteredOrders.filter((o) => o.customer_email).map((o) => o.customer_email)
   ).size;
   const avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   // ── Top products by revenue ───────────────────────────────────────
   const productCountMap = new Map<string, { name: string; count: number; revenue: number }>();
-  for (const order of orders) {
+  for (const order of filteredOrders) {
     const items = order.items_summary ?? [];
     for (const item of items) {
       const existing = productCountMap.get(item.name) ?? {
@@ -135,7 +153,7 @@ export default async function VendasPage() {
     .slice(0, 5);
 
   // ── Recent orders (last 10) ───────────────────────────────────────
-  const recentOrders = orders
+  const recentOrders = filteredOrders
     .sort(
       (a, b) =>
         new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
@@ -145,6 +163,7 @@ export default async function VendasPage() {
   return (
     <PageContainer>
       <Header />
+      <MonthPicker />
 
       {/* KPIs */}
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -350,10 +369,10 @@ function Header() {
     <header className="flex w-full flex-wrap items-start justify-between gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-semibold text-zinc-900">
-          Vendas ECTOLAB
+          Loja Ectolab
         </h1>
         <p className="text-xl text-zinc-500">
-          Dados da loja WooCommerce, sincronizados automaticamente.
+          Dados da loja Ectolab, sincronizados automaticamente.
         </p>
       </div>
       <SyncButton />
