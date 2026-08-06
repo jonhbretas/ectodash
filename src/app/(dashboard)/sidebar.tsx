@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   PanelLeftClose,
@@ -80,6 +80,8 @@ function SidebarLinks({
     });
   }
 
+  const router = useRouter();
+
   const linkClassName = (href: string) => {
     const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
     return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
@@ -106,11 +108,17 @@ function SidebarLinks({
     }`;
   };
 
+  function handleNavClick(href: string, e: React.MouseEvent) {
+    e.preventDefault();
+    router.push(href);
+    onNavigate?.();
+  }
+
   const renderLink = (item: NavItem) => (
     <Link
       key={item.href}
       href={item.href}
-      onClick={onNavigate}
+      onClick={(e) => handleNavClick(item.href, e)}
       className={linkClassName(item.href)}
       title={collapsed ? item.label : undefined}
     >
@@ -139,7 +147,7 @@ function SidebarLinks({
               {group.href && (
                 <Link
                   href={group.href}
-                  onClick={(e) => { e.stopPropagation(); onNavigate?.(); }}
+                  onClick={(e) => { e.preventDefault(); router.push(group.href!); e.stopPropagation(); onNavigate?.(); }}
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
                   title={`Ir para ${group.label}`}
                 >
