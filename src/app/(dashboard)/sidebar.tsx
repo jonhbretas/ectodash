@@ -79,12 +79,12 @@ function SidebarLinks({
     });
   }
 
-  const linkClassName = (href: string, indent = false) => {
+  const linkClassName = (href: string) => {
     const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
     return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
       collapsed
         ? "flex-col justify-center gap-0.5 px-0 text-center"
-        : `gap-3 text-sm ${indent ? "pl-10 pr-3" : "px-3"}`
+        : `gap-3 text-sm px-3`
     } ${
       active
         ? "bg-[#2195B9] text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)]"
@@ -92,12 +92,25 @@ function SidebarLinks({
     }`;
   };
 
-  const renderLink = (item: NavItem, indent = false) => (
+  // Group headers never get the active background — only text weight changes
+  const groupHeaderClassName = (active: boolean) => {
+    return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
+      collapsed
+        ? "flex-col justify-center gap-0.5 px-0 text-center"
+        : "gap-3 px-3 text-sm"
+    } ${
+      active
+        ? "text-slate-900 font-semibold"
+        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    }`;
+  };
+
+  const renderLink = (item: NavItem) => (
     <Link
       key={item.href}
       href={item.href}
       onClick={onNavigate}
-      className={linkClassName(item.href, indent)}
+      className={linkClassName(item.href)}
       title={collapsed ? item.label : undefined}
     >
       <item.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
@@ -116,7 +129,7 @@ function SidebarLinks({
           <Link
             href={group.href!}
             onClick={onNavigate}
-            className={linkClassName(group.href!)}
+            className={groupHeaderClassName(isGroupActive(group, pathname))}
             title={collapsed ? group.label : undefined}
           >
             <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
@@ -147,15 +160,7 @@ function SidebarLinks({
           <button
             type="button"
             onClick={() => toggleGroup(group.label)}
-            className={`flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
-              collapsed
-                ? "flex-col justify-center gap-0.5 px-0 text-center"
-                : "gap-3 px-3 text-sm"
-            } ${
-              isGroupActive(group, pathname)
-                ? "text-slate-900"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-            }`}
+            className={groupHeaderClassName(isGroupActive(group, pathname))}
             title={collapsed ? group.label : undefined}
           >
             <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
@@ -175,8 +180,8 @@ function SidebarLinks({
 
         {/* Children */}
         {!collapsed && open && (
-          <div className="mt-0.5 flex flex-col gap-0.5">
-            {group.children.map((child) => renderLink(child, true))}
+          <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l-2 border-slate-200 pl-1">
+            {group.children.map((child) => renderLink(child))}
           </div>
         )}
       </div>
