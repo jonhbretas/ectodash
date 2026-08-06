@@ -117,8 +117,14 @@ export async function POST(request: NextRequest) {
       const orders = validateOrders(rawOrders);
       if (orders === null) throw new Error("Dados de pedido inválidos");
 
+      // Filter: only orders belonging to THIS vendor (WCFM /orders doesn't filter by auth).
+      const vendorId = String(store.vendor_id);
+      const vendorOrders = orders.filter(
+        (o) => o.vendor_order_details?.vendor_id === vendorId
+      );
+
       // Deduplicate by ID (WCFM can return duplicates in pagination).
-      const uniqueOrders = [...new Map(orders.map((o) => [o.id, o])).values()];
+      const uniqueOrders = [...new Map(vendorOrders.map((o) => [o.id, o])).values()];
       const uniqueProducts = [...new Map(products.map((p) => [p.id, p])).values()];
 
       // Extract unique customers from orders (vendor-scoped).
