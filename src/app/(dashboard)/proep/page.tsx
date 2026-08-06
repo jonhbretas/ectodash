@@ -230,14 +230,13 @@ export default function ProepPage() {
     }).catch(e => setError(e.message));
   }, [selectedEdition]);
 
-  async function saveStudent(form: HTMLFormElement) {
-    const fd = new FormData(form);
+  async function saveStudent(formData: FormData) {
     const payload: Record<string, unknown> = {
       edition_id: Number(selectedEdition),
-      name: fd.get("name"),
-      email: fd.get("email") || null,
-      phone: fd.get("phone") || null,
-      role: fd.get("role") || "participant",
+      name: formData.get("name"),
+      email: formData.get("email") || null,
+      phone: formData.get("phone") || null,
+      role: formData.get("role") || "participant",
     };
     if (editingStudent) payload.id = editingStudent.id;
     setSubmitting(true);
@@ -270,18 +269,17 @@ export default function ProepPage() {
     return result;
   }
 
-  async function saveMaterial(form: HTMLFormElement) {
-    const fd = new FormData(form);
+  async function saveMaterial(formData: FormData) {
     const payload: Record<string, unknown> = {
       edition_id: Number(selectedEdition),
-      category: fd.get("category"),
-      title: fd.get("title"),
-      description: fd.get("description") || null,
-      url: fd.get("url") || null,
-      file_id: fd.get("file_id") || null,
-      file_type: fd.get("file_type") || null,
-      is_template: fd.get("is_template") === "on",
-      sort_order: Number(fd.get("sort_order") || 0),
+      category: formData.get("category"),
+      title: formData.get("title"),
+      description: formData.get("description") || null,
+      url: formData.get("url") || null,
+      file_id: formData.get("file_id") || null,
+      file_type: formData.get("file_type") || null,
+      is_template: formData.get("is_template") === "on",
+      sort_order: Number(formData.get("sort_order") || 0),
     };
     if (editingMaterial) payload.id = editingMaterial.id;
     setSubmitting(true);
@@ -713,7 +711,7 @@ export default function ProepPage() {
       {/* Student Modal */}
       {showStudentModal && (
         <Modal title={editingStudent ? "Editar Aluno" : "Novo Aluno"} onClose={() => { setShowStudentModal(false); setEditingStudent(null); setFormError(null); }}>
-          <form onSubmit={async (e) => { e.preventDefault(); await saveStudent(e.currentTarget); }} className="space-y-3">
+          <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); await saveStudent(fd); }} className="space-y-3">
             <Input name="name" placeholder="Nome completo" defaultValue={editingStudent?.name || ""} required />
             <Input name="email" type="email" placeholder="E-mail (opcional)" defaultValue={editingStudent?.email || ""} />
             <Input name="phone" placeholder="Telefone (opcional)" defaultValue={editingStudent?.phone || ""} />
@@ -737,7 +735,7 @@ export default function ProepPage() {
       {/* Material Modal */}
       {showMaterialModal && (
         <Modal title={editingMaterial ? "Editar Material" : "Novo Material"} onClose={() => { setShowMaterialModal(false); setEditingMaterial(null); setFormError(null); }}>
-          <form onSubmit={async (e) => { e.preventDefault(); await saveMaterial(e.currentTarget); }} className="space-y-3">
+          <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); await saveMaterial(fd); }} className="space-y-3">
             <Input name="title" placeholder="Título do material" defaultValue={editingMaterial?.title || ""} required />
             <Input name="description" placeholder="Descrição (opcional)" defaultValue={editingMaterial?.description || ""} />
             <select name="category" defaultValue={editingMaterial?.category || materialFilter} className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
