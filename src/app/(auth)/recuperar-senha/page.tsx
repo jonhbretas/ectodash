@@ -9,7 +9,9 @@ export default function RecuperarSenhaPage() {
         className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-[#28627B] via-[#28627B] to-[#2195B9] p-12 text-white lg:flex"
       >
         <div className="flex items-center gap-3">
-          <img src="/logo-ectolab.png" alt="EctoLab" className="h-12" />
+          <div className="rounded-xl bg-white p-2">
+            <img src="/logo-ectolab.png" alt="EctoLab" className="h-10" />
+          </div>
         </div>
 
         <div className="flex flex-col gap-6">
