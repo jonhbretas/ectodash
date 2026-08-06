@@ -284,14 +284,22 @@ export default function ProepPage() {
       sort_order: Number(fd.get("sort_order") || 0),
     };
     if (editingMaterial) payload.id = editingMaterial.id;
-    const result = await api("/api/proep/materials", { method: editingMaterial ? "PATCH" : "POST", body: JSON.stringify(payload) });
-    setMaterials(prev => {
-      const idx = prev.findIndex(m => m.id === result.id);
-      if (idx >= 0) { const next = [...prev]; next[idx] = result; return next; }
-      return [...prev, result];
-    });
-    setShowMaterialModal(false);
-    setEditingMaterial(null);
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      const result = await api("/api/proep/materials", { method: editingMaterial ? "PATCH" : "POST", body: JSON.stringify(payload) });
+      setMaterials(prev => {
+        const idx = prev.findIndex(m => m.id === result.id);
+        if (idx >= 0) { const next = [...prev]; next[idx] = result; return next; }
+        return [...prev, result];
+      });
+      setShowMaterialModal(false);
+      setEditingMaterial(null);
+    } catch (e: unknown) {
+      setFormError(e instanceof Error ? e.message : "Erro ao salvar material");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function deleteMaterial(id: string) {
@@ -522,7 +530,7 @@ export default function ProepPage() {
                     </button>
                   ))}
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => { setEditingMaterial(null); setShowMaterialModal(true); }}>
+                <Button variant="secondary" size="sm" onClick={() => { setEditingMaterial(null); setFormError(null); setShowMaterialModal(true); }}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Material
                 </Button>
               </div>
@@ -728,7 +736,7 @@ export default function ProepPage() {
 
       {/* Material Modal */}
       {showMaterialModal && (
-        <Modal title={editingMaterial ? "Editar Material" : "Novo Material"} onClose={() => { setShowMaterialModal(false); setEditingMaterial(null); }}>
+        <Modal title={editingMaterial ? "Editar Material" : "Novo Material"} onClose={() => { setShowMaterialModal(false); setEditingMaterial(null); setFormError(null); }}>
           <form onSubmit={async (e) => { e.preventDefault(); await saveMaterial(e.currentTarget); }} className="space-y-3">
             <Input name="title" placeholder="Título do material" defaultValue={editingMaterial?.title || ""} required />
             <Input name="description" placeholder="Descrição (opcional)" defaultValue={editingMaterial?.description || ""} />
@@ -751,9 +759,15 @@ export default function ProepPage() {
               <input type="checkbox" name="is_template" defaultChecked={editingMaterial?.is_template || false} className="rounded" />
               Usar como template (para clonar)
             </label>
+            {formError && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</div>
+            )}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => { setShowMaterialModal(false); setEditingMaterial(null); }}>Cancelar</Button>
-              <Button type="submit">{editingMaterial ? "Salvar" : "Adicionar"}</Button>
+              <Button variant="outline" type="button" onClick={() => { setShowMaterialModal(false); setEditingMaterial(null); setFormError(null); }}>Cancelar</Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                {editingMaterial ? "Salvar" : "Adicionar"}
+              </Button>
             </div>
           </form>
         </Modal>
