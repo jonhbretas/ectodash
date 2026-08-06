@@ -19,6 +19,8 @@ import {
   Globe2,
   GraduationCap,
   ShoppingCart,
+  Package,
+  Receipt,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -43,6 +45,9 @@ export const navItems: NavItem[] = [
   { href: "/analisar", label: "Analisar com IA", Icon: Sparkles },
   { href: "/utilidades", label: "Utilidades", Icon: Wrench },
   { href: "/vendas", label: "Vendas ECTOLAB", Icon: ShoppingCart, visibleTo: "coordenador" },
+  { href: "/vendas/produtos", label: "  Produtos", Icon: Package, visibleTo: "coordenador" },
+  { href: "/vendas/pedidos", label: "  Pedidos", Icon: Receipt, visibleTo: "coordenador" },
+  { href: "/vendas/alunos", label: "  Alunos", Icon: Users, visibleTo: "coordenador" },
   { href: "/financeiro", label: "Financeiro", Icon: Wallet, visibleTo: "financeiro" },
   { href: "/perfil", label: "Meu perfil", Icon: UserRound },
 ];
