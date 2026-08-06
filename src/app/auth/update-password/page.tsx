@@ -8,8 +8,8 @@ export default async function UpdatePasswordPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const params = await searchParams;
-  const tokenHash = params.token_hash;
-  const type = params.type;
+  const tokenHash = typeof params.token_hash === "string" ? params.token_hash : null;
+  const type = typeof params.type === "string" ? params.type : null;
 
   if (tokenHash && type === "recovery") {
     const supabase = await createClient();
