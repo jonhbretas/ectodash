@@ -17,6 +17,7 @@ import {
   UserRound,
   Sparkles,
   Globe2,
+  GraduationCap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -36,6 +37,7 @@ export const navItems: NavItem[] = [
   { href: "/projetos", label: "Projetos", Icon: FolderKanban },
   { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical },
   { href: "/eventos", label: "Eventos", Icon: CalendarDays },
+  { href: "/proep", label: "PROEP", Icon: GraduationCap },
   { href: "/analise", label: "Análise", Icon: BarChart3 },
   { href: "/analisar", label: "Analisar com IA", Icon: Sparkles },
   { href: "/utilidades", label: "Utilidades", Icon: Wrench },
