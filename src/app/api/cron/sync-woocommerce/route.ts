@@ -106,10 +106,13 @@ export async function GET(request: NextRequest) {
       const orders = validateOrders(rawOrders);
       if (orders === null) throw new Error("Dados de pedido inválidos");
 
-      // Filter: only orders belonging to THIS vendor (WCFM /orders doesn't filter by auth).
+      // Filter: only orders where at least one line_item belongs to this vendor.
+      // WCFM stores vendor_id in line_items[].meta_data._vendor_id.
       const vendorId = String(store.vendor_id);
-      const vendorOrders = orders.filter(
-        (o) => o.vendor_order_details?.vendor_id === vendorId
+      const vendorOrders = orders.filter((o) =>
+        o.line_items?.some((item) =>
+          item.meta_data?.some((m) => m.key === "_vendor_id" && m.value === vendorId)
+        )
       );
 
       // Deduplicate by ID (WCFM can return duplicates in pagination).
