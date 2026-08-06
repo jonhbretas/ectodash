@@ -67,13 +67,14 @@ export async function GET(req: NextRequest) {
       if (driveRes.ok) driveTest = "✅ Funcionando";
     } catch { /* ignore */ }
 
-    // Test: list Forms to confirm access works
+    // Test: Forms API access works (the API has no list endpoint; a 404 on an
+    // unknown form ID proves auth + API are enabled, 403 would mean permission issue)
     let formsTest = "❌ Falhou";
     try {
-      const formsRes = await fetch("https://forms.googleapis.com/v1/forms", {
+      const formsRes = await fetch("https://forms.googleapis.com/v1/forms/proep-probe-do-not-exist", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (formsRes.ok) formsTest = "✅ Funcionando";
+      if (formsRes.status === 404 || formsRes.ok) formsTest = "✅ Funcionando";
     } catch { /* ignore */ }
 
     return new Response(htmlPage({
