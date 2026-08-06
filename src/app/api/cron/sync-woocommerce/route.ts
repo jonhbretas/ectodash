@@ -87,17 +87,29 @@ export async function GET(request: NextRequest) {
         vendor_id: store.vendor_id,
       };
 
-      const modifiedAfter = store.last_sync_at
+      // Products sync: use last_sync_at (or 30 days for first sync).
+      const productsModifiedAfter = store.last_sync_at
         ? new Date(store.last_sync_at).toISOString()
         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Fetch all three in parallel
+      // Orders sync: incremental — fetch only since the most recent order we have.
+      // First sync: last7 days only.
+      const { data: lastOrder } = await supabase
+        .from("wp_orders")
+        .select("date_created")
+        .eq("store_id", store.id)
+        .order("date_created", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const ordersAfter = lastOrder?.date_created
+        ? new Date(lastOrder.date_created).toISOString()
+        : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
       // Fetch products and orders in parallel.
-      // Customers are extracted from orders (not fetched separately)
-      // to ensure ONLY this vendor's customers are included.
       const [rawProducts, rawOrders] = await Promise.all([
-        fetchProducts(storeCredentials, modifiedAfter),
-        fetchOrders(storeCredentials, modifiedAfter),
+        fetchProducts(storeCredentials, productsModifiedAfter),
+        fetchOrders(storeCredentials, ordersAfter),
       ]);
 
       const products = validateProducts(rawProducts);
