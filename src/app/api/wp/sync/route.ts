@@ -1,6 +1,13 @@
 // src/app/api/wp/sync/route.ts
 // POST /api/wp/sync — manual trigger for WooCommerce sync.
 // Optimized: fetches products, orders, and customers in parallel.
+// Modes:
+//   "latest"   (default) — pulls the most recent data (last 30 days of
+//               products, last 7 days of orders), so every sync refreshes
+//               the newest records.
+//   "backfill" — goes backwards: pulls orders/products OLDER than the
+//               oldest record we already have. Click repeatedly to walk
+//               further back in history.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -12,6 +19,8 @@ import {
   validateProducts,
   validateOrders,
 } from "@/lib/woocommerce/schemas";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -37,6 +46,9 @@ export async function POST(request: NextRequest) {
       { status: 403 }
     );
   }
+
+  const body = await request.json().catch(() => ({}));
+  const mode: "latest" | "backfill" = body.mode === "backfill" ? "backfill" : "latest";
 
   const admin = createAdminClient();
   const startedAt = Date.now();
@@ -98,29 +110,78 @@ export async function POST(request: NextRequest) {
         vendor_id: store.vendor_id,
       };
 
-      // Products sync: use last_sync_at (or 30 days for first sync).
-      const productsModifiedAfter = store.last_sync_at
-        ? new Date(store.last_sync_at).toISOString()
-        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      // ── Compute the fetch window ──────────────────────────────────────
+      let productsModifiedAfter: string | undefined;
+      let productsModifiedBefore: string | undefined;
+      let ordersAfter: string | undefined;
+      let ordersBefore: string | undefined;
 
-      // Orders sync: incremental — fetch only since the most recent order we have.
-      // First sync: last7 days only.
-      const { data: lastOrder } = await admin
-        .from("wp_orders")
-        .select("date_created")
-        .eq("store_id", store.id)
-        .order("date_created", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (mode === "backfill") {
+        // Walk backwards from the oldest record we already have.
+        const [oldestOrderResult, oldestProductResult] = await Promise.all([
+          admin
+            .from("wp_orders")
+            .select("date_created")
+            .eq("store_id", store.id)
+            .order("date_created", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+          admin
+            .from("wp_products")
+            .select("date_modified")
+            .eq("store_id", store.id)
+            .order("date_modified", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+        ]);
 
-      const ordersAfter = lastOrder?.date_created
-        ? new Date(lastOrder.date_created).toISOString()
-        : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const oldestOrder = oldestOrderResult.data?.date_created as
+          | string
+          | undefined;
+        const oldestProduct = oldestProductResult.data?.date_modified as
+          | string
+          | undefined;
+
+        if (oldestOrder) {
+          ordersBefore = new Date(
+            new Date(oldestOrder).getTime() - 1
+          ).toISOString();
+        }
+        if (oldestProduct) {
+          productsModifiedBefore = new Date(
+            new Date(oldestProduct).getTime() - 1
+          ).toISOString();
+        }
+      } else {
+        // Pull the newest data: a rolling window from now, extended back to
+        // the last sync/order date when that is even older (covers gaps).
+        const lastSync = store.last_sync_at
+          ? new Date(store.last_sync_at).getTime()
+          : Date.now();
+        const windowProducts = Date.now() - 30 * DAY_MS;
+        productsModifiedAfter = new Date(
+          Math.min(lastSync, windowProducts)
+        ).toISOString();
+
+        const { data: lastOrder } = await admin
+          .from("wp_orders")
+          .select("date_created")
+          .eq("store_id", store.id)
+          .order("date_created", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const lastOrderAt = lastOrder?.date_created
+          ? new Date(lastOrder.date_created).getTime()
+          : Date.now();
+        ordersAfter = new Date(
+          Math.min(lastOrderAt, Date.now() - 7 * DAY_MS)
+        ).toISOString();
+      }
 
       // Fetch products and orders in parallel.
       const [rawProducts, rawOrders] = await Promise.all([
-        fetchProducts(creds, productsModifiedAfter),
-        fetchOrders(creds, ordersAfter),
+        fetchProducts(creds, productsModifiedAfter, productsModifiedBefore, 10),
+        fetchOrders(creds, ordersAfter, ordersBefore),
       ]);
 
       // Validate
@@ -132,7 +193,16 @@ export async function POST(request: NextRequest) {
 
       // Filter orders: keep only those containing products from THIS vendor.
       // This is more reliable than _vendor_id meta (which may be missing).
+      // In backfill mode the fetched products are older ones, so union with
+      // every product id already synced (all of them are vendor-scoped).
+      const { data: dbProducts } = await admin
+        .from("wp_products")
+        .select("wp_product_id")
+        .eq("store_id", store.id);
       const vendorProductIds = new Set(products.map((p) => p.id));
+      for (const row of dbProducts ?? []) {
+        vendorProductIds.add(row.wp_product_id as number);
+      }
       const vendorOrders = orders.filter((o) =>
         o.line_items?.some((item) => vendorProductIds.has(item.product_id))
       );

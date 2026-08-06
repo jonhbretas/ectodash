@@ -94,14 +94,17 @@ export type WpProduct = {
 
 export async function fetchProducts(
   store: WpStore,
-  modifiedAfter?: string
+  modifiedAfter?: string,
+  modifiedBefore?: string,
+  maxPages?: number
 ): Promise<WpProduct[]> {
   const params: Record<string, string> = {};
   if (modifiedAfter) params.modified_after = modifiedAfter;
+  if (modifiedBefore) params.modified_before = modifiedBefore;
   // Use vendor-specific endpoint to ensure ONLY this vendor's products.
   const vendorId = store.vendor_id;
   if (!vendorId) throw new Error("vendor_id não configurado na loja");
-  return wpGet<WpProduct>(store, `/wp-json/wcfmmp/v1/store-vendors/${vendorId}/products`, params);
+  return wpGet<WpProduct>(store, `/wp-json/wcfmmp/v1/store-vendors/${vendorId}/products`, params, maxPages);
 }
 
 // ── Orders ────────────────────────────────────────────────────────────
@@ -141,10 +144,12 @@ export type WpOrder = {
 
 export async function fetchOrders(
   store: WpStore,
-  after?: string
+  after?: string,
+  before?: string
 ): Promise<WpOrder[]> {
   const params: Record<string, string> = {};
   if (after) params.after = after;
+  if (before) params.before = before;
   // Limit to 5 pages (500 orders) to avoid Vercel timeout.
   // WCFM /orders returns ALL marketplace orders — we filter by vendor product IDs after.
   return wpGet<WpOrder>(store, "/wp-json/wcfmmp/v1/orders", params, 5);
