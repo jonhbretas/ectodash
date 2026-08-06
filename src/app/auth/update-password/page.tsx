@@ -8,15 +8,11 @@ export default async function UpdatePasswordPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const params = await searchParams;
-  const tokenHash = typeof params.token_hash === "string" ? params.token_hash : null;
-  const type = typeof params.type === "string" ? params.type : null;
+  const code = typeof params.code === "string" ? params.code : null;
 
-  if (tokenHash && type === "recovery") {
+  if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: "recovery",
-    });
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       redirect("/recuperar-senha?erro=link_invalido");
