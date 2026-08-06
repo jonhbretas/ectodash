@@ -40,13 +40,15 @@ export async function signUp(
     return { ok: false, message: firstError };
   }
 
-  // Verificar se o e-mail já está cadastrado usando o admin client
+  // Verificar se o e-mail já está cadastrado na tabela profiles
   const admin = createAdminClient();
-  const { data: existingUsers } = await admin.auth.admin.listUsers({
-    filters: { email: parsed.data.email },
-  });
+  const { data: existing } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", parsed.data.email)
+    .maybeSingle();
 
-  if (existingUsers && existingUsers.users.length > 0) {
+  if (existing) {
     return {
       ok: false,
       message: "Este e-mail já está cadastrado. Faça login ou use outro e-mail.",
