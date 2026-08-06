@@ -206,6 +206,8 @@ export default function ProepPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialFilter, setMaterialFilter] = useState<string>("student");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     api("/api/proep/editions").then((data: Edition[]) => {
@@ -238,14 +240,22 @@ export default function ProepPage() {
       role: fd.get("role") || "participant",
     };
     if (editingStudent) payload.id = editingStudent.id;
-    const result = await api("/api/proep/students", { method: editingStudent ? "PATCH" : "POST", body: JSON.stringify(payload) });
-    setStudents(prev => {
-      const idx = prev.findIndex(s => s.id === result.id);
-      if (idx >= 0) { const next = [...prev]; next[idx] = result; return next; }
-      return [...prev, result];
-    });
-    setShowStudentModal(false);
-    setEditingStudent(null);
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      const result = await api("/api/proep/students", { method: editingStudent ? "PATCH" : "POST", body: JSON.stringify(payload) });
+      setStudents(prev => {
+        const idx = prev.findIndex(s => s.id === result.id);
+        if (idx >= 0) { const next = [...prev]; next[idx] = result; return next; }
+        return [...prev, result];
+      });
+      setShowStudentModal(false);
+      setEditingStudent(null);
+    } catch (e: unknown) {
+      setFormError(e instanceof Error ? e.message : "Erro ao salvar aluno");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function deleteStudent(id: string) {
@@ -469,7 +479,7 @@ export default function ProepPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-500">{students.length} aluno{students.length !== 1 ? "s" : ""}</p>
-                <Button variant="secondary" size="sm" onClick={() => { setEditingStudent(null); setShowStudentModal(true); }}>
+                <Button variant="secondary" size="sm" onClick={() => { setEditingStudent(null); setFormError(null); setShowStudentModal(true); }}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Aluno
                 </Button>
               </div>
@@ -694,7 +704,7 @@ export default function ProepPage() {
 
       {/* Student Modal */}
       {showStudentModal && (
-        <Modal title={editingStudent ? "Editar Aluno" : "Novo Aluno"} onClose={() => { setShowStudentModal(false); setEditingStudent(null); }}>
+        <Modal title={editingStudent ? "Editar Aluno" : "Novo Aluno"} onClose={() => { setShowStudentModal(false); setEditingStudent(null); setFormError(null); }}>
           <form onSubmit={async (e) => { e.preventDefault(); await saveStudent(e.currentTarget); }} className="space-y-3">
             <Input name="name" placeholder="Nome completo" defaultValue={editingStudent?.name || ""} required />
             <Input name="email" type="email" placeholder="E-mail (opcional)" defaultValue={editingStudent?.email || ""} />
@@ -702,9 +712,15 @@ export default function ProepPage() {
             <select name="role" defaultValue={editingStudent?.role || "participant"} className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
               {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
+            {formError && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</div>
+            )}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => { setShowStudentModal(false); setEditingStudent(null); }}>Cancelar</Button>
-              <Button type="submit">{editingStudent ? "Salvar" : "Adicionar"}</Button>
+              <Button variant="outline" type="button" onClick={() => { setShowStudentModal(false); setEditingStudent(null); setFormError(null); }}>Cancelar</Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                {editingStudent ? "Salvar" : "Adicionar"}
+              </Button>
             </div>
           </form>
         </Modal>
