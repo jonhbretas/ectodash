@@ -10,15 +10,18 @@ function requireUuid(id: string | null, label = "id") {
   return id;
 }
 
+const LABEL = "proep_assignments";
+
 export async function GET(req: NextRequest) {
-  const editionId = req.nextUrl.searchParams.get("edition_id");
+  const editionIdRaw = req.nextUrl.searchParams.get("edition_id");
+  const editionId = editionIdRaw ? parseInt(editionIdRaw, 10) : null;
   const role = req.nextUrl.searchParams.get("role");
   const supabase = await createClient();
   let query = supabase.from("proep_assignments").select("*").order("sort_order");
-  if (editionId) query = query.eq("edition_id", editionId);
+  if (editionId && !isNaN(editionId)) query = query.eq("edition_id", editionId);
   if (role) query = query.eq("role", role);
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: `[${LABEL} GET] ${error.message}` }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
     })
     .select()
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: `[${LABEL} POST] ${error.message}` }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -45,6 +48,6 @@ export async function DELETE(req: NextRequest) {
   try { requireUuid(id, "id"); } catch (e) { return e as NextResponse; }
   const supabase = await createClient();
   const { error } = await supabase.from("proep_assignments").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: `[${LABEL} DELETE] ${error.message}` }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
