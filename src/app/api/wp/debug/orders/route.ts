@@ -37,15 +37,17 @@ export async function GET() {
 
   // Return: raw response, plus analysis of vendor_order_details per order.
   const analysis = Array.isArray(raw)
-    ? raw.map((o: Record<string, unknown>) => ({
+    ? raw.slice(0, 2).map((o: Record<string, unknown>) => ({
         id: o.id,
-        status: o.status,
-        customer_name: (o.billing as Record<string, string>)?.first_name
-          ? `${(o.billing as Record<string, string>).first_name} ${(o.billing as Record<string, string>).last_name}`
+        commission_head: o.commission_head,
+        order_meta_data: o.meta_data,
+        first_line_item: (o.line_items as Array<Record<string, unknown>>)?.[0]
+          ? {
+              name: (o.line_items as Array<Record<string, unknown>>)[0].name,
+              product_id: (o.line_items as Array<Record<string, unknown>>)[0].product_id,
+              meta_data: (o.line_items as Array<Record<string, unknown>>)[0].meta_data,
+            }
           : null,
-        has_vendor_order_details: o.vendor_order_details !== undefined,
-        vendor_order_details: o.vendor_order_details,
-        keys: Object.keys(o),
       }))
     : null;
 
