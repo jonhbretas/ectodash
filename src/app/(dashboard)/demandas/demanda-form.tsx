@@ -183,6 +183,15 @@ export default function DemandaForm({
     defaultValues?.status ?? "pendente"
   );
 
+  // Seleção múltipla de responsáveis e membros — checkboxes mobile-friendly
+  // substituem o <select multiple> que não funciona em iOS/Android.
+  const [responsavelIds, setResponsavelIds] = useState<string[]>(
+    defaultValues?.responsavelIds ?? []
+  );
+  const [membroIdsLocal, setMembroIdsLocal] = useState<string[]>(
+    defaultValues?.membroIds ?? []
+  );
+
   // Client-side validation runs first (react-hook-form + the shared zod
   // schema); only once it passes do we hand the native FormData off to the
   // Server Action, which re-validates the same schema server-side
@@ -194,7 +203,12 @@ export default function DemandaForm({
   ) => {
     const form = event?.target as HTMLFormElement | undefined;
     if (form) {
-      formAction(new FormData(form));
+      const fd = new FormData(form);
+      fd.delete("responsavelIds");
+      responsavelIds.forEach((id) => fd.append("responsavelIds", id));
+      fd.delete("membroIds");
+      membroIdsLocal.forEach((id) => fd.append("membroIds", id));
+      formAction(fd);
     }
   };
 
@@ -251,44 +265,76 @@ export default function DemandaForm({
           <h3 className={sectionTitleClass}>Pessoas</h3>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="responsavelIds" className={fieldLabelClass}>
-                Responsável *
-              </label>
-              <select
-                id="responsavelIds"
-                multiple
-                size={5}
-                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-                {...register("responsavelIds")}
-              >
-                {voluntarios.map((voluntario) => (
-                  <option key={voluntario.id} value={String(voluntario.id)}>
-                    {voluntario.nome}{!voluntario.temConta ? ' (sem acesso)' : ''}
-                  </option>
-                ))}
-              </select>
+              <span className={fieldLabelClass}>Responsável *</span>
+              <div className="max-h-44 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-3">
+                {voluntarios.map((voluntario) => {
+                  const id = String(voluntario.id);
+                  return (
+                    <label
+                      key={voluntario.id}
+                      className="flex min-h-12 items-center gap-3 rounded-lg px-2 py-1 text-xl text-zinc-900 transition-colors hover:bg-zinc-50"
+                    >
+                      <input
+                        type="checkbox"
+                        value={id}
+                        checked={responsavelIds.includes(id)}
+                        onChange={(e) => {
+                          setResponsavelIds((prev) =>
+                            e.target.checked
+                              ? [...prev, id]
+                              : prev.filter((v) => v !== id)
+                          );
+                        }}
+                        className="h-5 w-5 rounded border-zinc-300 accent-[#2195B9]"
+                      />
+                      <span>
+                        {voluntario.nome}
+                        {!voluntario.temConta && (
+                          <span className="text-base text-zinc-400"> (sem acesso)</span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
               {errors.responsavelIds && (
                 <span className={errorClass}>{errors.responsavelIds.message}</span>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="membroIds" className={fieldLabelClass}>
-                Membros / acompanhantes (opcional)
-              </label>
-              <select
-                id="membroIds"
-                multiple
-                size={5}
-                className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xl text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-                {...register("membroIds")}
-              >
-                {voluntarios.map((voluntario) => (
-                  <option key={voluntario.id} value={String(voluntario.id)}>
-                    {voluntario.nome}{!voluntario.temConta ? ' (sem acesso)' : ''}
-                  </option>
-                ))}
-              </select>
+              <span className={fieldLabelClass}>Membros / acompanhantes (opcional)</span>
+              <div className="max-h-44 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-3">
+                {voluntarios.map((voluntario) => {
+                  const id = String(voluntario.id);
+                  return (
+                    <label
+                      key={voluntario.id}
+                      className="flex min-h-12 items-center gap-3 rounded-lg px-2 py-1 text-xl text-zinc-900 transition-colors hover:bg-zinc-50"
+                    >
+                      <input
+                        type="checkbox"
+                        value={id}
+                        checked={membroIdsLocal.includes(id)}
+                        onChange={(e) => {
+                          setMembroIdsLocal((prev) =>
+                            e.target.checked
+                              ? [...prev, id]
+                              : prev.filter((v) => v !== id)
+                          );
+                        }}
+                        className="h-5 w-5 rounded border-zinc-300 accent-[#2195B9]"
+                      />
+                      <span>
+                        {voluntario.nome}
+                        {!voluntario.temConta && (
+                          <span className="text-base text-zinc-400"> (sem acesso)</span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
               <p className="text-base text-zinc-500">
                 Acompanhantes acompanham a demanda e recebem os mesmos
                 lembretes por e-mail.
