@@ -2,18 +2,14 @@
 // Automates Google Drive/Forms creation for a student:
 // 1. Ensure central PROEP folder + edition (turma) folder exist
 // 2. Create the student's folder INSIDE the edition folder
-// 3. Clone spreadsheet template INTO the student folder
-// 4. Duplicate Google Form INTO the student folder
-//    - Spreadsheet: anyone with link can edit (as before)
-//    - Form: NO public edit — teachers (roles M1/M2/P1/P2) get edit by email;
-//      students can only respond via the responder link
-// 5. Save links to database
+// 3. Clone templates (spreadsheet/form) INTO the student folder
+// 4. Save links to database
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { copyDriveFile, setLinkSharing, createDriveFolder, shareWithEmail } from "@/lib/google/drive";
-import { duplicateForm } from "@/lib/google/forms";
+import { createDriveFolder } from "@/lib/google/drive";
 import { ensureEditionFolder } from "@/lib/proep/drive-folders";
-import { studentFolderName, studentSpreadsheetName, studentFormName } from "@/lib/proep/naming";
+import { cloneTemplatesIntoFolder } from "@/lib/proep/clone-templates";
+import { studentFolderName } from "@/lib/proep/naming";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -53,61 +49,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Erro ao criar pasta do aluno: ${e.message}` }, { status: 500 });
     }
 
-    const results: Record<string, string> = {};
-    const { data: allTemplates } = await supabase
-      .from("proep_materials")
-      .select("*")
-      .eq("is_template", true);
-    const templates = (allTemplates ?? []).filter((t) => t.edition_id === targetEdition);
+    // 2. Clona os templates na pasta do aluno
+    const { links, errors } = await cloneTemplatesIntoFolder(
+      supabase,
+      targetEdition,
+      editionFolder.label,
+      student.name,
+      studentFolder.id,
+    );
 
-    // 2. Clone spreadsheet INTO the student folder (link = editor)
-    const spreadsheetTemplate = templates?.find(t => t.file_type === "spreadsheet" && t.file_id);
-    if (spreadsheetTemplate?.file_id) {
-      try {
-        const copy = await copyDriveFile(
-          spreadsheetTemplate.file_id,
-          studentSpreadsheetName(editionFolder.label, student.name),
-          studentFolder.id,
-        );
-        await setLinkSharing(copy.id, "writer");
-        results.planilha_url = `https://docs.google.com/spreadsheets/d/${copy.id}/edit`;
-      } catch (e: any) { results.planilha_error = e.message; }
-    }
-
-    // 3. Duplicate form INTO the student folder.
-    //    Sem permissão pública: professores (M1/M2/P1/P2) ganham edição por
-    //    e-mail; alunos apenas respondem pelo link do formulário.
-    const formTemplate = templates?.find(t => t.file_type === "form" && t.file_id);
-    if (formTemplate?.file_id) {
-      try {
-        const form = await duplicateForm(
-          formTemplate.file_id,
-          studentFormName(editionFolder.label, student.name),
-          studentFolder.id,
-        );
-        results.parapercepciograma_url = `https://docs.google.com/forms/d/${form.formId}/edit`;
-        results.form_responder_url = form.responderUri;
-
-        const { data: teachers } = await supabase
-          .from("proep_students")
-          .select("email")
-          .eq("edition_id", targetEdition)
-          .neq("role", "participant");
-        const emails = [...new Set((teachers ?? []).map((t) => t.email).filter(Boolean))] as string[];
-        for (const email of emails) {
-          try {
-            await shareWithEmail(form.formId, email, "writer");
-          } catch (e: any) { /* falha em um e-mail não aborta os demais */ }
-        }
-      } catch (e: any) { results.form_error = e.message; }
-    }
-
-    // 4. Save links
+    // 3. Save links
     const updateFields: Record<string, string> = {};
     updateFields.drive_folder_url = `https://drive.google.com/drive/folders/${studentFolder.id}`;
-    if (results.planilha_url) updateFields.planilha_url = results.planilha_url;
-    if (results.parapercepciograma_url) updateFields.parapercepciograma_url = results.parapercepciograma_url;
-    if (results.form_responder_url) updateFields.form_responder_url = results.form_responder_url;
+    if (links.planilha_url) updateFields.planilha_url = links.planilha_url;
+    if (links.parapercepciograma_url) updateFields.parapercepciograma_url = links.parapercepciograma_url;
+    if (links.form_responder_url) updateFields.form_responder_url = links.form_responder_url;
 
     if (Object.keys(updateFields).length > 0) {
       await supabase.from("proep_students").update({ ...updateFields, updated_at: new Date().toISOString() }).eq("id", student_id);
@@ -118,7 +74,7 @@ export async function POST(req: NextRequest) {
       student_id,
       links: updateFields,
       edition_folder_url: editionFolder.folder.url,
-      errors: Object.fromEntries(Object.entries(results).filter(([k]) => k.endsWith("_error"))),
+      errors,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Erro interno" }, { status: 500 });

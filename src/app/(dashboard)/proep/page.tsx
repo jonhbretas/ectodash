@@ -10,7 +10,7 @@ import {
   Users, BookOpen, ClipboardCheck, GraduationCap, ArrowRight,
   ExternalLink, Plus, Trash2, Sparkles, FolderOpen,
   FileSpreadsheet, FileText, Printer, CheckCircle2, Circle,
-  Zap, Brain, Eye, Loader2, CalendarDays, ShoppingCart,
+  Zap, Brain, Eye, Loader2, CalendarDays, ShoppingCart, Copy,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -97,18 +97,20 @@ function MaterialCard({ material, onDelete }: { material: Material; onDelete?: (
 }
 
 // ─── Student Card ─────────────────────────────────────────────────────────────
-function StudentCard({ student, onProvision, onEdit, onDelete }: {
+function StudentCard({ student, onProvision, onReclone, onEdit, onDelete }: {
   student: Student;
   onProvision?: () => void;
+  onReclone?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
   const hasLinks = Boolean(student.planilha_url || student.parapercepciograma_url || student.drive_folder_url);
-  const [provisioning, setProvisioning] = useState(false);
+  const [busy, setBusy] = useState<"" | "generate" | "clone">("");
 
-  async function handleProvision() {
-    setProvisioning(true);
-    try { await onProvision?.(); } finally { setProvisioning(false); }
+  async function run(action: "generate" | "clone", fn: (() => void | Promise<unknown>) | undefined) {
+    if (busy || !fn) return;
+    setBusy(action);
+    try { await fn(); } finally { setBusy(""); }
   }
 
   return (
@@ -154,11 +156,15 @@ function StudentCard({ student, onProvision, onEdit, onDelete }: {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {!hasLinks && (
-            <button onClick={handleProvision} disabled={provisioning} title="Criar materiais no Google" className="flex items-center gap-1 rounded-lg bg-[#2195B9]/10 px-2.5 py-1.5 text-xs font-medium text-[#2195B9] hover:bg-[#2195B9]/20 transition-colors disabled:opacity-50">
-              {provisioning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+            <button onClick={() => run("generate", onProvision)} disabled={busy === "generate"} title="Criar pasta e clonar materiais no Google" className="flex items-center gap-1 rounded-lg bg-[#2195B9]/10 px-2.5 py-1.5 text-xs font-medium text-[#2195B9] hover:bg-[#2195B9]/20 transition-colors disabled:opacity-50">
+              {busy === "generate" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
               <span className="hidden sm:inline">Gerar</span>
             </button>
           )}
+          <button onClick={() => run("clone", onReclone)} disabled={busy === "clone"} title="Clonar novamente os materiais (usando a pasta existente)" className="flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50">
+            {busy === "clone" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">Clonar</span>
+          </button>
           {onEdit && (
             <button onClick={onEdit} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 transition-colors" aria-label="Editar">
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
@@ -313,6 +319,14 @@ export default function ProepPage() {
   async function provisionStudent(studentId: string) {
     const result = await api("/api/proep/provision", { method: "POST", body: JSON.stringify({ student_id: studentId, edition_id: Number(selectedEdition) }) });
     setStudents(prev => prev.map(s => s.id === studentId ? { ...s, ...result.links } : s));
+    if (result.errors && Object.keys(result.errors).length > 0) setError(`Problema ao clonar: ${Object.values(result.errors).join(" | ")}`);
+    return result;
+  }
+
+  async function recloneStudent(studentId: string) {
+    const result = await api("/api/proep/reclone", { method: "POST", body: JSON.stringify({ student_id: studentId }) });
+    setStudents(prev => prev.map(s => s.id === studentId ? { ...s, ...result.links } : s));
+    if (result.errors && Object.keys(result.errors).length > 0) setError(`Problema ao clonar: ${Object.values(result.errors).join(" | ")}`);
     return result;
   }
 
@@ -598,6 +612,7 @@ export default function ProepPage() {
                       key={s.id}
                       student={s}
                       onProvision={() => provisionStudent(s.id)}
+                      onReclone={() => recloneStudent(s.id)}
                       onEdit={() => { setEditingStudent(s); setShowStudentModal(true); }}
                       onDelete={() => deleteStudent(s.id)}
                     />
