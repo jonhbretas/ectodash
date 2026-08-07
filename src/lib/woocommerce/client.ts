@@ -130,10 +130,11 @@ export type WpOrder = {
     name: string;
     quantity: number;
     total: string;
-    meta_data: Array<{ key: string; value: string }>;
+    meta_data: Array<{ key: string; value: unknown }>;
   }>;
   coupon_lines: Array<{ code: string }>;
   date_created: string;
+  date_created_gmt?: string;
   date_modified: string;
   vendor_order_details?: {
     vendor_id: string;
@@ -142,6 +143,12 @@ export type WpOrder = {
   };
 };
 
+// The WCFM orders endpoint (wcfmmp/v1/orders) IGNORES date filters
+// (before/after/date_min/date_max) and always returns the newest orders
+// first — so it cannot walk back in history. The native WooCommerce
+// endpoint honors before/after, so backfill goes through it.
+// date_created_gmt is stored as the order date so the cutoff math stays
+// in UTC (dates_are_gmt=true) and never drifts.
 export async function fetchOrders(
   store: WpStore,
   after?: string,
@@ -153,6 +160,23 @@ export async function fetchOrders(
   // Limit to 5 pages (500 orders) to avoid Vercel timeout.
   // WCFM /orders returns ALL marketplace orders — we filter by vendor product IDs after.
   return wpGet<WpOrder>(store, "/wp-json/wcfmmp/v1/orders", params, 5);
+}
+
+// Backfill: fetches orders OLDER than `before` (exclusive, UTC) walking
+// FORWARD from the oldest record (orderby=date&order=asc), so each page
+// is immediately usable history and pagination is bounded per click.
+export async function fetchOrdersBackfill(
+  store: WpStore,
+  before?: string,
+  maxPages = 5
+): Promise<WpOrder[]> {
+  const params: Record<string, string> = {
+    dates_are_gmt: "true",
+    orderby: "date",
+    order: "asc",
+  };
+  if (before) params.before = before;
+  return wpGet<WpOrder>(store, "/wp-json/wc/v3/orders", params, maxPages);
 }
 
 // ── Customers (WooCommerce standard — WCFM has no customer endpoint) ──

@@ -5,8 +5,10 @@
 //   "latest"   (default) — pulls the most recent data (last 30 days of
 //               products, last 7 days of orders), so every sync refreshes
 //               the newest records.
-//   "backfill" — goes backwards: pulls orders/products OLDER than the
-//               oldest record we already have. Click repeatedly to walk
+//   "backfill" — goes backwards: pulls orders OLDER than the
+//               oldest record we already have (via the native wc/v3
+//               endpoint, which honors before/after — the WCFM endpoint
+//               ignores date filters). Click repeatedly to walk
 //               further back in history.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +16,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   fetchProducts,
   fetchOrders,
+  fetchOrdersBackfill,
 } from "@/lib/woocommerce/client";
 import {
   validateProducts,
@@ -180,9 +183,14 @@ export async function POST(request: NextRequest) {
       }
 
       // Fetch products and orders in parallel.
+      // NOTE: the WCFM orders endpoint ignores before/after filters (it
+      // always returns the newest orders first), so backfill uses the
+      // native wc/v3/orders endpoint instead, which honors them.
       const [rawProducts, rawOrders] = await Promise.all([
         fetchProducts(creds, productsModifiedAfter, productsModifiedBefore, 10),
-        fetchOrders(creds, ordersAfter, ordersBefore),
+        mode === "backfill"
+          ? fetchOrdersBackfill(creds, ordersBefore)
+          : fetchOrders(creds, ordersAfter, ordersBefore),
       ]);
 
       // Validate
@@ -312,7 +320,10 @@ export async function POST(request: NextRequest) {
                     )
                   ),
                   coupon_codes: o.coupon_lines.map((c) => c.code),
-                  date_created: o.date_created,
+                  // Backfill fetches from wc/v3, where date_created is in
+                  // site timezone — store the GMT value so the cutoff math
+                  // (dates_are_gmt=true) stays consistent across clicks.
+                  date_created: o.date_created_gmt ?? o.date_created,
                   date_modified: o.date_modified,
                   synced_at: new Date().toISOString(),
                 })),

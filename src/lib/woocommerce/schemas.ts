@@ -63,7 +63,7 @@ export const wpOrderSchema = z.object({
       quantity: z.number(),
       total: z.string(),
       meta_data: z.array(
-        z.object({ key: z.string(), value: z.string() })
+        z.object({ key: z.string(), value: z.unknown() })
       ),
     })
   ),
@@ -71,6 +71,7 @@ export const wpOrderSchema = z.object({
     z.object({ code: z.string() })
   ),
   date_created: z.string(),
+  date_created_gmt: z.string().optional(),
   date_modified: z.string(),
   vendor_order_details: z
     .object({
