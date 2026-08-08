@@ -33,6 +33,11 @@ export async function setLinkSharing(fileId: string, role: "reader" | "writer" =
   });
 }
 
+/** Get file/folder metadata. Throws 404 if the account has no access. */
+export async function getFileMeta(fileId: string) {
+  return googleApiRequest(`${DRIVE_API}/files/${fileId}?fields=id,name,mimeType`) as Promise<{ id: string; name: string; mimeType: string }>;
+}
+
 /** List files inside a Drive folder (non-recursive, excludes subfolders). */
 export async function listFolderFiles(folderId: string) {
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);

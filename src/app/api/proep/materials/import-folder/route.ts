@@ -1,10 +1,11 @@
 // src/app/api/proep/materials/import-folder/route.ts
-// Importa todos os arquivos de uma pasta do Google Drive como materiais
-// (is_template=true). A pasta deve estar acessível à conta da automação
-// (ectolab@ectolab.org).
+// Importa arquivos de uma pasta do Google Drive como materiais.
+// GET  ?folder_url=... → lista os arquivos da pasta (sem gravar)
+// POST { edition_id, category, items } → cria os materiais escolhidos
+// A pasta deve estar acessível à conta da automação (ectolab@ectolab.org).
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { listFolderFiles } from "@/lib/google/drive";
+import { listFolderFiles, getFileMeta } from "@/lib/google/drive";
 
 const FOLDER_URL_RE = /\/drive\/folders\/([^/?]+)/;
 const FOLDER_ID_RE = /^[A-Za-z0-9_-]{10,}$/;
@@ -14,21 +15,40 @@ function fileTypeFromMime(mimeType: string): string | null {
     "application/vnd.google-apps.spreadsheet": "spreadsheet",
     "application/vnd.google-apps.form": "form",
     "application/vnd.google-apps.document": "doc",
+    "application/vnd.google-apps.presentation": "slides",
     "application/pdf": "pdf",
     "application/vnd.google-apps.folder": "folder",
   };
   return map[mimeType] ?? "doc";
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const { edition_id, category, folder_url } = await req.json();
-    if (!folder_url) return NextResponse.json({ error: "Informe o link da pasta do Drive" }, { status: 400 });
+function folderIdFromInput(folderUrl: string): string | null {
+  const match = folderUrl.match(FOLDER_URL_RE);
+  const id = match ? match[1] : folderUrl.trim();
+  return FOLDER_ID_RE.test(id) ? id : null;
+}
 
-    const match = folder_url.match(FOLDER_URL_RE);
-    const folderId = match ? match[1] : folder_url.trim();
-    if (!FOLDER_ID_RE.test(folderId)) {
+export type ListedFile = {
+  id: string;
+  name: string;
+  mimeType: string;
+  fileType: string;
+  webViewLink?: string;
+};
+
+export async function GET(req: NextRequest) {
+  try {
+    const folderUrl = req.nextUrl.searchParams.get("folder_url") || "";
+    const folderId = folderIdFromInput(folderUrl);
+    if (!folderId) {
       return NextResponse.json({ error: "Link de pasta inválido. Use o link de uma pasta do Google Drive (…/drive/folders/…)" }, { status: 400 });
+    }
+
+    // Confirma que a conta da automação enxerga a pasta (404 = sem acesso)
+    try {
+      await getFileMeta(folderId);
+    } catch {
+      return NextResponse.json({ error: "A conta ectolab@ectolab.org não tem acesso a esta pasta. Compartilhe a pasta com ectolab@ectolab.org (Editor) e tente de novo." }, { status: 403 });
     }
 
     let files;
@@ -38,36 +58,62 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Não foi possível acessar a pasta (a conta ectolab precisa de acesso): ${e.message}` }, { status: 500 });
     }
 
-    const fileItems = files.filter((f) => f.mimeType !== "application/vnd.google-apps.folder");
+    const fileItems: ListedFile[] = files
+      .filter((f) => f.mimeType !== "application/vnd.google-apps.folder")
+      .map((f) => ({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType,
+        fileType: fileTypeFromMime(f.mimeType) ?? "doc",
+        webViewLink: f.webViewLink,
+      }));
 
     if (fileItems.length === 0) {
       return NextResponse.json({ error: "A pasta está vazia (ou só tem subpastas)" }, { status: 404 });
     }
+    return NextResponse.json({ files: fileItems });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || "Erro interno" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { edition_id, category, items } = await req.json();
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "Nenhum arquivo selecionado" }, { status: 400 });
+    }
 
     const supabase = await createClient();
     const created: Array<Record<string, unknown>> = [];
-    for (const file of fileItems) {
-      const fileType = fileTypeFromMime(file.mimeType);
+    let sortOrder = 0;
+    for (const item of items) {
+      const fileId = String(item.file_id || "").trim();
+      const title = String(item.name || "").trim();
+      if (!fileId || !title) continue;
       const { data, error } = await supabase
         .from("proep_materials")
         .insert({
           edition_id: edition_id || null,
           category: category || "student",
-          title: file.name,
-          url: file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`,
-          file_id: file.id,
-          file_type: fileType,
-          is_template: true,
-          sort_order: created.length,
+          title,
+          url: item.url || `https://drive.google.com/file/d/${fileId}/view`,
+          file_id: fileId,
+          file_type: item.file_type || "doc",
+          is_template: Boolean(item.is_template),
+          sort_order: sortOrder++,
         })
         .select()
         .single();
       if (error) {
-        return NextResponse.json({ error: `Erro ao salvar "${file.name}": ${error.message}` }, { status: 500 });
+        return NextResponse.json({ error: `Erro ao salvar "${title}": ${error.message}` }, { status: 500 });
       }
       created.push(data);
     }
 
+    if (created.length === 0) {
+      return NextResponse.json({ error: "Nenhum arquivo válido para importar" }, { status: 400 });
+    }
     return NextResponse.json({ ok: true, imported: created }, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Erro interno" }, { status: 500 });

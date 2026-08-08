@@ -10,13 +10,14 @@ import {
   Users, BookOpen, ClipboardCheck, GraduationCap, ArrowRight,
   ExternalLink, Plus, Trash2, Sparkles, FolderOpen,
   FileSpreadsheet, FileText, Printer, CheckCircle2, Circle,
-  Zap, Brain, Eye, Loader2, CalendarDays, ShoppingCart, Copy,
+  Zap, Brain, Eye, Loader2, CalendarDays, ShoppingCart, Copy, Presentation,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Edition { id: number; name: string; start_date: string | null; description: string | null; location: string | null; drive_folder_url: string | null; }
 interface Student { id: string; edition_id: number; name: string; email: string | null; phone: string | null; role: string; drive_folder_url: string | null; planilha_url: string | null; parapercepciograma_url: string | null; form_responder_url: string | null; status: string; source: string | null; wp_customer_id: number | null; proep_student_materials?: Array<{ material_id: string; drive_url: string; proep_materials: { title: string } | null }>; }
 interface Material { id: string; edition_id: number | null; category: string; title: string; description: string | null; url: string | null; file_id: string | null; file_type: string | null; is_template: boolean; sort_order: number; }
+interface FolderFile { id: string; name: string; mimeType: string; fileType: string; webViewLink?: string; }
 interface ChecklistItem { id: string; edition_id: number; day_number: number; phase: string; title: string; description: string | null; done: boolean; sort_order: number; }
 interface Assignment { id: string; edition_id: number; role: string; title: string; description: string | null; sort_order: number; }
 interface Progression { id: string; edition_id: number | null; from_role: string; to_role: string; requirements: string | null; sort_order: number; }
@@ -36,6 +37,10 @@ const MATERIAL_CATEGORIES = [
   { value: "print", label: "Material Impresso", icon: Printer },
   { value: "checklist", label: "Checklist", icon: ClipboardCheck },
 ];
+
+const FILE_TYPE_LABELS: Record<string, string> = {
+  spreadsheet: "Planilha", form: "Formulário", doc: "Documento", slides: "Apresentação", pdf: "PDF", folder: "Pasta",
+};
 
 const TABS = [
   { key: "students", label: "Alunos", icon: Users },
@@ -58,7 +63,7 @@ async function api(path: string, init?: RequestInit) {
 // ─── Material Card ────────────────────────────────────────────────────────────
 function MaterialCard({ material, onDelete }: { material: Material; onDelete?: () => void }) {
   const typeIcons: Record<string, typeof FileSpreadsheet> = {
-    spreadsheet: FileSpreadsheet, form: FileText, doc: FileText, pdf: FileText, folder: FolderOpen,
+    spreadsheet: FileSpreadsheet, form: FileText, doc: FileText, pdf: FileText, slides: Presentation, folder: FolderOpen,
   };
   const Icon = typeIcons[material.file_type || ""] || ExternalLink;
   const isLink = Boolean(material.url);
@@ -221,6 +226,8 @@ export default function ProepPage() {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialFilter, setMaterialFilter] = useState<string>("student");
   const [importingFolder, setImportingFolder] = useState(false);
+  const [folderFiles, setFolderFiles] = useState<FolderFile[] | null>(null);
+  const [folderTpl, setFolderTpl] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [centralFolderUrl, setCentralFolderUrl] = useState<string | null>(null);
@@ -854,28 +861,69 @@ export default function ProepPage() {
         <Modal title={editingMaterial ? "Editar Material" : "Novo Material"} onClose={() => { setShowMaterialModal(false); setEditingMaterial(null); setFormError(null); }}>
           {!editingMaterial && (
             <div className="mb-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
-              <p className="text-xs font-semibold text-slate-700 mb-2">Importar de uma pasta do Drive (cria um material para cada arquivo)</p>
-              <div className="flex gap-2">
-                <Input name="folder_url" placeholder="https://drive.google.com/drive/folders/…" />
-                <Button type="button" variant="outline" size="sm" disabled={importingFolder} onClick={async (e) => {
-                  const input = (e.currentTarget.parentElement as HTMLElement).querySelector("input[name='folder_url']") as HTMLInputElement;
-                  const folderUrl = input?.value?.trim();
-                  if (!folderUrl) return;
-                  setImportingFolder(true);
-                  setFormError(null);
-                  try {
-                    const d = await api("/api/proep/materials/import-folder", { method: "POST", body: JSON.stringify({ edition_id: Number(selectedEdition), category: materialFilter, folder_url: folderUrl }) });
-                    setMaterials(prev => [...prev, ...d.imported]);
-                    setShowMaterialModal(false);
-                    setError(`${d.imported.length} material(is) importado(s) da pasta`);
-                  } catch (err: any) { setFormError(err.message || "Erro ao importar pasta"); }
-                  finally { setImportingFolder(false); }
-                }}>
-                  {importingFolder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
-                  Importar
-                </Button>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1.5">A pasta precisa estar compartilhada com <code>ectolab@ectolab.org</code>. Todos os arquivos entram como template.</p>
+              <p className="text-xs font-semibold text-slate-700 mb-2">Importar de uma pasta do Drive</p>
+              {!folderFiles ? (
+                <>
+                  <div className="flex gap-2">
+                    <Input placeholder="https://drive.google.com/drive/folders/…" />
+                    <Button type="button" variant="outline" size="sm" disabled={importingFolder} onClick={async (e) => {
+                      const input = (e.currentTarget.parentElement as HTMLElement).querySelector("input") as HTMLInputElement;
+                      const folderUrl = input?.value?.trim();
+                      if (!folderUrl) return;
+                      setImportingFolder(true);
+                      setFormError(null);
+                      try {
+                        const d = await api(`/api/proep/materials/import-folder?folder_url=${encodeURIComponent(folderUrl)}`);
+                        setFolderFiles(d.files);
+                        setFolderTpl(Object.fromEntries(d.files.map((f: FolderFile) => [f.id, true])));
+                      } catch (err: any) { setFormError(err.message || "Erro ao listar pasta"); }
+                      finally { setImportingFolder(false); }
+                    }}>
+                      {importingFolder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
+                      Listar
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1.5">A pasta precisa estar compartilhada com <code>ectolab@ectolab.org</code>. Depois você escolhe o que vira template.</p>
+                </>
+              ) : (
+                <>
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white divide-y divide-slate-100">
+                    {folderFiles.map(f => (
+                      <label key={f.id} className="flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-slate-50">
+                        <input type="checkbox" checked={folderTpl[f.id] ?? true} onChange={() => setFolderTpl(prev => ({ ...prev, [f.id]: !(prev[f.id] ?? true) }))} className="rounded" />
+                        <span className="truncate flex-1 text-slate-700">{f.name}</span>
+                        <span className="shrink-0 text-slate-400">{FILE_TYPE_LABELS[f.fileType] || f.fileType}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-2">
+                    <span className="text-[11px] text-slate-500">
+                      {folderFiles.length} arquivo(s) · {folderFiles.filter(f => folderTpl[f.id] ?? true).length} como template
+                    </span>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setFolderFiles(null)}>Voltar</Button>
+                      <Button type="button" size="sm" disabled={importingFolder} onClick={async () => {
+                        setImportingFolder(true);
+                        setFormError(null);
+                        try {
+                          const items = folderFiles.map(f => ({
+                            file_id: f.id, name: f.name, url: f.webViewLink,
+                            file_type: f.fileType, is_template: folderTpl[f.id] ?? true,
+                          }));
+                          const d = await api("/api/proep/materials/import-folder", { method: "POST", body: JSON.stringify({ edition_id: Number(selectedEdition), category: materialFilter, items }) });
+                          setMaterials(prev => [...prev, ...d.imported]);
+                          setShowMaterialModal(false);
+                          setError(`${d.imported.length} material(is) importado(s) da pasta`);
+                        } catch (err: any) { setFormError(err.message || "Erro ao importar pasta"); }
+                        finally { setImportingFolder(false); }
+                      }}>
+                        {importingFolder && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        Importar {folderFiles.length}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
           <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); await saveMaterial(fd); }} className="space-y-3">
@@ -891,6 +939,7 @@ export default function ProepPage() {
                 <option value="spreadsheet">Planilha</option>
                 <option value="form">Formulário</option>
                 <option value="doc">Documento</option>
+                <option value="slides">Apresentação</option>
                 <option value="pdf">PDF</option>
                 <option value="folder">Pasta</option>
               </select>
