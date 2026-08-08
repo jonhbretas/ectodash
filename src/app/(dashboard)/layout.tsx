@@ -51,7 +51,7 @@ export default async function DashboardLayout({
   const isFinanceiro = role === "financeiro";
 
   return (
-    <div className="flex h-dvh min-h-dvh overflow-hidden bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20">
+    <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20 lg:flex-row">
       <Sidebar isCoordenador={isCoordenador} isFinanceiro={isFinanceiro} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {children}
