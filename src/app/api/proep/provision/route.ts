@@ -50,13 +50,20 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Clona os templates na pasta do aluno
-    const { links, errors } = await cloneTemplatesIntoFolder(
+    const { links, materials, errors } = await cloneTemplatesIntoFolder(
       supabase,
       targetEdition,
       editionFolder.label,
       student.name,
       studentFolder.id,
     );
+
+    // 2b. Registra cada material clonado (link individual por template)
+    if (materials.length > 0) {
+      await supabase.from("proep_student_materials").insert(
+        materials.map((m) => ({ student_id: student_id, material_id: m.material_id, drive_url: m.drive_url })),
+      );
+    }
 
     // 3. Save links
     const updateFields: Record<string, string> = {};

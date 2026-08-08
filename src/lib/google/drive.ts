@@ -33,6 +33,13 @@ export async function setLinkSharing(fileId: string, role: "reader" | "writer" =
   });
 }
 
+/** List files inside a Drive folder (non-recursive, excludes subfolders). */
+export async function listFolderFiles(folderId: string) {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+  const res = await googleApiRequest(`${DRIVE_API}/files?q=${q}&fields=files(id,name,mimeType,webViewLink)&pageSize=100`);
+  return (res.files ?? []) as Array<{ id: string; name: string; mimeType: string; webViewLink?: string }>;
+}
+
 /** Share a file/folder with a specific user by email (e.g. teachers). */
 export async function shareWithEmail(fileId: string, email: string, role: "reader" | "writer" = "reader") {
   return googleApiRequest(`${DRIVE_API}/files/${fileId}/permissions`, {

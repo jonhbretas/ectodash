@@ -15,7 +15,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Edition { id: number; name: string; start_date: string | null; description: string | null; location: string | null; drive_folder_url: string | null; }
-interface Student { id: string; edition_id: number; name: string; email: string | null; phone: string | null; role: string; drive_folder_url: string | null; planilha_url: string | null; parapercepciograma_url: string | null; form_responder_url: string | null; status: string; source: string | null; wp_customer_id: number | null; }
+interface Student { id: string; edition_id: number; name: string; email: string | null; phone: string | null; role: string; drive_folder_url: string | null; planilha_url: string | null; parapercepciograma_url: string | null; form_responder_url: string | null; status: string; source: string | null; wp_customer_id: number | null; proep_student_materials?: Array<{ material_id: string; drive_url: string; proep_materials: { title: string } | null }>; }
 interface Material { id: string; edition_id: number | null; category: string; title: string; description: string | null; url: string | null; file_id: string | null; file_type: string | null; is_template: boolean; sort_order: number; }
 interface ChecklistItem { id: string; edition_id: number; day_number: number; phase: string; title: string; description: string | null; done: boolean; sort_order: number; }
 interface Assignment { id: string; edition_id: number; role: string; title: string; description: string | null; sort_order: number; }
@@ -147,6 +147,11 @@ function StudentCard({ student, onProvision, onReclone, onEdit, onDelete }: {
                 <Eye className="h-3 w-3" /> Formulário
               </a>
             )}
+            {student.proep_student_materials?.map((m) => (
+              <a key={m.material_id} href={m.drive_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-200 transition-colors">
+                <FolderOpen className="h-3 w-3" /> {m.proep_materials?.title || "Material"}
+              </a>
+            ))}
             {student.drive_folder_url && (
               <a href={student.drive_folder_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-medium text-purple-700 hover:bg-purple-100 transition-colors">
                 <FolderOpen className="h-3 w-3" /> Drive
@@ -211,10 +216,11 @@ export default function ProepPage() {
   const [progression, setProgression] = useState<Progression[]>([]);
 
   const [showStudentModal, setShowStudentModal] = useState(false);
-  const [showMaterialModal, setShowMaterialModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [materialFilter, setMaterialFilter] = useState<string>("student");
+  const [importingFolder, setImportingFolder] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [centralFolderUrl, setCentralFolderUrl] = useState<string | null>(null);
@@ -846,6 +852,32 @@ export default function ProepPage() {
       {/* Material Modal */}
       {showMaterialModal && (
         <Modal title={editingMaterial ? "Editar Material" : "Novo Material"} onClose={() => { setShowMaterialModal(false); setEditingMaterial(null); setFormError(null); }}>
+          {!editingMaterial && (
+            <div className="mb-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+              <p className="text-xs font-semibold text-slate-700 mb-2">Importar de uma pasta do Drive (cria um material para cada arquivo)</p>
+              <div className="flex gap-2">
+                <Input name="folder_url" placeholder="https://drive.google.com/drive/folders/…" />
+                <Button type="button" variant="outline" size="sm" disabled={importingFolder} onClick={async (e) => {
+                  const input = (e.currentTarget.parentElement as HTMLElement).querySelector("input[name='folder_url']") as HTMLInputElement;
+                  const folderUrl = input?.value?.trim();
+                  if (!folderUrl) return;
+                  setImportingFolder(true);
+                  setFormError(null);
+                  try {
+                    const d = await api("/api/proep/materials/import-folder", { method: "POST", body: JSON.stringify({ edition_id: Number(selectedEdition), category: materialFilter, folder_url: folderUrl }) });
+                    setMaterials(prev => [...prev, ...d.imported]);
+                    setShowMaterialModal(false);
+                    setError(`${d.imported.length} material(is) importado(s) da pasta`);
+                  } catch (err: any) { setFormError(err.message || "Erro ao importar pasta"); }
+                  finally { setImportingFolder(false); }
+                }}>
+                  {importingFolder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
+                  Importar
+                </Button>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1.5">A pasta precisa estar compartilhada com <code>ectolab@ectolab.org</code>. Todos os arquivos entram como template.</p>
+            </div>
+          )}
           <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); await saveMaterial(fd); }} className="space-y-3">
             <Input name="title" placeholder="Título do material" defaultValue={editingMaterial?.title || ""} required />
             <Input name="description" placeholder="Descrição (opcional)" defaultValue={editingMaterial?.description || ""} />

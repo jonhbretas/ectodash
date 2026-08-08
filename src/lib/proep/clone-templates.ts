@@ -1,17 +1,36 @@
 // src/lib/proep/clone-templates.ts
 // Clona os templates de material (is_template=true) da turma para a pasta do
 // aluno no Google Drive. Usado pelo "Gerar" (provision) e pelo "Reclonar".
+// Cada template vira uma cópia com o nome do aluno; o primeiro template de
+// cada tipo legado (spreadsheet/form) também atualiza os campos clássicos.
 import { createClient } from "@/lib/supabase/server";
 import { copyDriveFile, setLinkSharing, shareWithEmail } from "@/lib/google/drive";
 import { duplicateForm } from "@/lib/google/forms";
-import { studentSpreadsheetName, studentFormName } from "./naming";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
+export type ClonedMaterial = {
+  material_id: string;
+  title: string;
+  drive_url: string;
+};
+
 export type CloneResults = {
   links: Record<string, string>;
+  materials: ClonedMaterial[];
   errors: Record<string, string>;
 };
+
+function cloneFileName(editionLabel: string, studentName: string, title: string): string {
+  return `${editionLabel} - ${studentName} - ${title}`;
+}
+
+function driveFileUrl(mimeType: string | null, fileId: string): string {
+  if (mimeType === "spreadsheet") return `https://docs.google.com/spreadsheets/d/${fileId}/edit`;
+  if (mimeType === "form") return `https://docs.google.com/forms/d/${fileId}/edit`;
+  if (mimeType === "doc") return `https://docs.google.com/document/d/${fileId}/edit`;
+  return `https://drive.google.com/file/d/${fileId}/view`;
+}
 
 export async function cloneTemplatesIntoFolder(
   supabase: Supabase,
@@ -21,6 +40,7 @@ export async function cloneTemplatesIntoFolder(
   studentFolderId: string,
 ): Promise<CloneResults> {
   const links: Record<string, string> = {};
+  const materials: ClonedMaterial[] = [];
   const errors: Record<string, string> = {};
 
   const { data: allTemplates } = await supabase
@@ -29,47 +49,53 @@ export async function cloneTemplatesIntoFolder(
     .eq("is_template", true);
   const templates = (allTemplates ?? []).filter((t) => t.edition_id === editionId);
 
-  // 1. Planilha template (primeira) clonada para a pasta do aluno
-  const spreadsheetTemplate = templates?.find((t) => t.file_type === "spreadsheet" && t.file_id);
-  if (spreadsheetTemplate?.file_id) {
-    try {
-      const copy = await copyDriveFile(
-        spreadsheetTemplate.file_id,
-        studentSpreadsheetName(editionLabel, studentName),
-        studentFolderId,
-      );
-      await setLinkSharing(copy.id, "writer");
-      links.planilha_url = `https://docs.google.com/spreadsheets/d/${copy.id}/edit`;
-    } catch (e: any) { errors.planilha_error = e.message; }
-  }
+  // Campos legados: primeira planilha e primeiro formulário (compatibilidade
+  // com os chips Planilha/Parapercepciograma e com o compartilhamento por
+  // e-mail para professores).
+  const legacySpreadsheet = templates.find((t) => t.file_type === "spreadsheet" && t.file_id);
+  const legacyForm = templates.find((t) => t.file_type === "form" && t.file_id);
 
-  // 2. Formulário template (primeiro) duplicado para a pasta do aluno.
-  //    Sem permissão pública: professores (M1/M2/P1/P2) ganham edição por
-  //    e-mail; alunos apenas respondem pelo link do formulário.
-  const formTemplate = templates?.find((t) => t.file_type === "form" && t.file_id);
-  if (formTemplate?.file_id) {
-    try {
-      const form = await duplicateForm(
-        formTemplate.file_id,
-        studentFormName(editionLabel, studentName),
-        studentFolderId,
-      );
-      links.parapercepciograma_url = `https://docs.google.com/forms/d/${form.formId}/edit`;
-      links.form_responder_url = form.responderUri;
+  for (const template of templates) {
+    if (!template.file_id) continue;
+    const fileType = template.file_type || "doc";
+    const newName = cloneFileName(editionLabel, studentName, template.title);
 
-      const { data: teachers } = await supabase
-        .from("proep_students")
-        .select("email")
-        .eq("edition_id", editionId)
-        .neq("role", "participant");
-      const emails = [...new Set((teachers ?? []).map((t) => t.email).filter(Boolean))] as string[];
-      for (const email of emails) {
-        try {
-          await shareWithEmail(form.formId, email, "writer");
-        } catch { /* falha em um e-mail não aborta os demais */ }
+    try {
+      let driveUrl: string;
+      if (fileType === "form") {
+        const form = await duplicateForm(template.file_id, newName, studentFolderId);
+        driveUrl = form.responderUri || driveFileUrl("form", form.formId);
+
+        const { data: teachers } = await supabase
+          .from("proep_students")
+          .select("email")
+          .eq("edition_id", editionId)
+          .neq("role", "participant");
+        const emails = [...new Set((teachers ?? []).map((t) => t.email).filter(Boolean))] as string[];
+        for (const email of emails) {
+          try { await shareWithEmail(form.formId, email, "writer"); } catch { /* um e-mail não aborta os demais */ }
+        }
+
+        if (legacyForm?.id === template.id) {
+          links.parapercepciograma_url = `https://docs.google.com/forms/d/${form.formId}/edit`;
+          links.form_responder_url = form.responderUri;
+        }
+      } else {
+        const copy = await copyDriveFile(template.file_id, newName, studentFolderId);
+        if (fileType === "spreadsheet") await setLinkSharing(copy.id, "writer");
+        else await setLinkSharing(copy.id, "reader");
+        driveUrl = driveFileUrl(fileType, copy.id);
+
+        if (legacySpreadsheet?.id === template.id) {
+          links.planilha_url = driveUrl;
+        }
       }
-    } catch (e: any) { errors.form_error = e.message; }
+
+      materials.push({ material_id: template.id, title: template.title, drive_url: driveUrl });
+    } catch (e: any) {
+      errors[template.title || template.id] = e.message;
+    }
   }
 
-  return { links, errors };
+  return { links, materials, errors };
 }

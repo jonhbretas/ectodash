@@ -48,13 +48,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { links, errors } = await cloneTemplatesIntoFolder(
+    const { links, materials, errors } = await cloneTemplatesIntoFolder(
       supabase,
       student.edition_id,
       editionFolder.label,
       student.name,
       folderId,
     );
+
+    // Substitui os registros de materiais clonados (evita duplicatas ao reclonar)
+    await supabase.from("proep_student_materials").delete().eq("student_id", student_id);
+    if (materials.length > 0) {
+      await supabase.from("proep_student_materials").insert(
+        materials.map((m) => ({ student_id: student_id, material_id: m.material_id, drive_url: m.drive_url })),
+      );
+    }
 
     const updateFields: Record<string, string> = {
       drive_folder_url: `https://drive.google.com/drive/folders/${folderId}`,

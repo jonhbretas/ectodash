@@ -17,7 +17,10 @@ export async function GET(req: NextRequest) {
   const editionId = editionIdRaw ? parseInt(editionIdRaw, 10) : null;
   const supabase = await createClient();
   // Fetch all then filter in JS — PostgREST misinterprets edition_id as uuid.
-  const { data, error } = await supabase.from("proep_students").select("*").order("name");
+  const { data, error } = await supabase
+    .from("proep_students")
+    .select("*, proep_student_materials(material_id, drive_url, proep_materials(title))")
+    .order("name");
   if (error) return NextResponse.json({ error: `[${LABEL} GET] ${error.message}` }, { status: 500 });
   const filtered = editionId && !isNaN(editionId)
     ? (data ?? []).filter((s) => s.edition_id === editionId)
