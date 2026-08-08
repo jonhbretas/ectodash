@@ -69,35 +69,39 @@ function MaterialCard({ material, onDelete }: { material: Material; onDelete?: (
   const isLink = Boolean(material.url);
 
   return (
-    <a
-      href={material.url || "#"}
-      target={isLink ? "_blank" : undefined}
-      rel={isLink ? "noopener noreferrer" : undefined}
-      className={`group flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 ${
-        isLink ? "hover:border-[#2195B9]/40 hover:shadow-md cursor-pointer" : "cursor-default"
-      }`}
-    >
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
-        isLink ? "bg-[#2195B9]/10 text-[#2195B9] group-hover:bg-[#2195B9]/20" : "bg-slate-100 text-slate-400"
-      }`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900 truncate">{material.title}</span>
-          {material.is_template && <Badge variant="secondary">Template</Badge>}
+    <div className={`group flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 ${
+      isLink ? "hover:border-[#2195B9]/40 hover:shadow-md" : ""
+    }`}>
+      <a
+        href={material.url || "#"}
+        target={isLink ? "_blank" : undefined}
+        rel={isLink ? "noopener noreferrer" : undefined}
+        className={`flex min-w-0 flex-1 items-start gap-3 rounded-lg ${
+          isLink ? "cursor-pointer" : "cursor-default"
+        }`}
+      >
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+          isLink ? "bg-[#2195B9]/10 text-[#2195B9] group-hover:bg-[#2195B9]/20" : "bg-slate-100 text-slate-400"
+        }`}>
+          <Icon className="h-5 w-5" />
         </div>
-        {material.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{material.description}</p>}
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-900 truncate">{material.title}</span>
+            {material.is_template && <Badge variant="secondary">Template</Badge>}
+          </div>
+          {material.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{material.description}</p>}
+        </div>
+      </a>
+      <div className="flex shrink-0 items-center gap-1">
         {isLink && <ExternalLink className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />}
         {onDelete && (
-          <button onClick={(e) => { e.preventDefault(); onDelete(); }} className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all" aria-label="Excluir">
+          <button onClick={onDelete} className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all" aria-label="Excluir">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
-    </a>
+    </div>
   );
 }
 

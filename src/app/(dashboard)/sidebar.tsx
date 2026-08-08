@@ -41,8 +41,14 @@ function SidebarLinks({
   collapsed: boolean;
   onNavigate?: () => void;
 }) {
-  const main = filterEntries(navEntries, isCoordenador, isFinanceiro);
-  const coord = filterEntries(coordinatorEntries, isCoordenador, isFinanceiro);
+  const main = useMemo(
+    () => filterEntries(navEntries, isCoordenador, isFinanceiro),
+    [isCoordenador, isFinanceiro]
+  );
+  const coord = useMemo(
+    () => filterEntries(coordinatorEntries, isCoordenador, isFinanceiro),
+    [isCoordenador, isFinanceiro]
+  );
 
   // Auto-expand groups whose children include the current route
   const defaultExpanded = useMemo(() => {
@@ -57,18 +63,24 @@ function SidebarLinks({
 
   const [expanded, setExpanded] = useState<Set<string>>(defaultExpanded);
 
-  // Keep in sync when pathname changes (e.g. navigating between children)
-  useEffect(() => {
+  // Keep auto-expansion in sync when pathname changes (e.g. navigating
+  // between children). Adjusting state during render (not in an effect)
+  // is the React-sanctioned pattern — no extra commit, no render loop.
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setExpanded((prev) => {
+      let changed = false;
       const next = new Set(prev);
       for (const entry of main) {
-        if (entry.type === "group" && isGroupActive(entry, pathname)) {
+        if (entry.type === "group" && isGroupActive(entry, pathname) && !next.has(entry.label)) {
           next.add(entry.label);
+          changed = true;
         }
       }
-      return next;
+      return changed ? next : prev;
     });
-  }, [main, pathname]);
+  }
 
   function toggleGroup(label: string) {
     setExpanded((prev) => {
@@ -130,41 +142,58 @@ function SidebarLinks({
     const open = expanded.has(group.label);
     const active = isGroupActive(group, pathname);
 
+    if (collapsed) {
+      return (
+        <div key={group.label}>
+          <button
+            type="button"
+            onClick={() => toggleGroup(group.label)}
+            className={groupHeaderClassName(active)}
+            title={group.label}
+            aria-label={group.label}
+          >
+            <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div key={group.label}>
-        {/* Group header — always a button to avoid <a> capturing child clicks */}
-        <button
-          type="button"
-          onClick={() => toggleGroup(group.label)}
-          className={groupHeaderClassName(active)}
-          title={collapsed ? group.label : undefined}
-        >
-          <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
-          {!collapsed && (
-            <>
-              <span className="flex-1 truncate text-left">{group.label}</span>
-              {group.href && (
-                <a
-                  href={group.href}
-                  onClick={(e) => { e.stopPropagation(); onNavigate?.(); }}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
-                  title={`Ir para ${group.label}`}
-                >
-                  <ArrowRight size={14} aria-hidden="true" />
-                </a>
-              )}
-              <ChevronDown
-                size={14}
-                className={`shrink-0 transition-transform duration-200 ${
-                  open ? "" : "-rotate-90"
-                }`}
-              />
-            </>
+        {/* Group header — label/chevron toggle collapse; the parent link is
+            a sibling <a> (a link must never nest inside a <button>). */}
+        <div className={groupHeaderClassName(active)}>
+          <button
+            type="button"
+            onClick={() => toggleGroup(group.label)}
+            aria-expanded={open}
+            className="flex min-w-0 flex-1 items-center gap-3 self-stretch text-left"
+          >
+            <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
+            <span className="flex-1 truncate text-left">{group.label}</span>
+            <ChevronDown
+              size={14}
+              aria-hidden="true"
+              className={`shrink-0 transition-transform duration-200 ${
+                open ? "" : "-rotate-90"
+              }`}
+            />
+          </button>
+          {group.href && (
+            <a
+              href={group.href}
+              onClick={() => onNavigate?.()}
+              className="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
+              title={`Ir para ${group.label}`}
+              aria-label={`Ir para ${group.label}`}
+            >
+              <ArrowRight size={14} aria-hidden="true" />
+            </a>
           )}
-        </button>
+        </div>
 
         {/* Children */}
-        {!collapsed && open && (
+        {open && (
           <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l-2 border-slate-200 pl-1">
             {group.children.map((child) => renderLink(child))}
           </div>
