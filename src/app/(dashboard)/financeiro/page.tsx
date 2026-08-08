@@ -34,6 +34,7 @@ import SheetSyncPanel, {
 } from "../painel/sheet-sync-panel";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import FinancialAutomationPanel from "./automation-panel";
 
 export const metadata = { title: "Financeiro — EctoDash" };
 
@@ -232,6 +233,8 @@ export default async function FinanceiroPage({
   return (
     <PageContainer>
       <Header />
+
+      <FinancialAutomationPanel />
 
       <FinanceiroFilters
         mesOptions={mesOptions}
