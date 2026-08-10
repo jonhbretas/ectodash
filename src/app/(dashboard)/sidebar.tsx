@@ -20,6 +20,7 @@ import {
 } from "./nav-items";
 import { useStoredPreference } from "@/lib/use-stored-preference";
 import SignOutButton from "./sign-out-button";
+import QuickSearch from "./quick-search";
 
 export type SidebarProps = {
   isCoordenador?: boolean;
@@ -221,7 +222,13 @@ function SidebarLinks({
   );
 }
 
-function SidebarBrand({ collapsed }: { collapsed: boolean }) {
+function SidebarBrand({
+  collapsed,
+  size = "md",
+}: {
+  collapsed: boolean;
+  size?: "md" | "lg";
+}) {
   return (
     <a
       href="/"
@@ -234,7 +241,7 @@ function SidebarBrand({ collapsed }: { collapsed: boolean }) {
       <img
         src={collapsed ? "/favicon.png" : "/logo-ectolab.png"}
         alt="EctoLab"
-        className={`shrink-0 ${collapsed ? "h-9 w-9" : "h-10"}`}
+        className={`shrink-0 ${collapsed ? "h-9 w-9" : size === "lg" ? "h-14" : "h-10"}`}
       />
     </a>
   );
@@ -272,7 +279,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
       />
       <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-slate-200 glass-strong px-5 py-6 animate-slide-in-right">
         <div className="flex items-center justify-between">
-          <SidebarBrand collapsed={false} />
+          <SidebarBrand collapsed={false} size="lg" />
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -282,6 +289,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
             <X size={22} aria-hidden="true" />
           </button>
         </div>
+        <QuickSearch onNavigate={() => setOpen(false)} />
         <SidebarLinks
           isCoordenador={isCoordenador}
           isFinanceiro={isFinanceiro}
@@ -306,7 +314,9 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
           visuallyCollapsed ? "w-18 px-2" : "w-64 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
         }`}
       >
-        <SidebarBrand collapsed={visuallyCollapsed} />
+        <SidebarBrand collapsed={visuallyCollapsed} size="lg" />
+
+        {!visuallyCollapsed && <QuickSearch />}
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
           <SidebarLinks
