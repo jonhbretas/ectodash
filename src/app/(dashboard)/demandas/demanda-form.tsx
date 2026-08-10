@@ -354,7 +354,7 @@ export default function DemandaForm({
               <FormCombobox
                 name="area"
                 value={area}
-                onChange={(v) => setValue("area", v)}
+                onChange={(v) => { setArea(v); setValue("area", v); }}
                 options={areas}
                 placeholder="Ex: Pesquisa de Campo"
                 ariaLabel="Área"
@@ -368,7 +368,7 @@ export default function DemandaForm({
               <FormCombobox
                 name="projeto"
                 value={projeto}
-                onChange={(v) => setValue("projeto", v)}
+                onChange={(v) => { setProjeto(v); setValue("projeto", v); }}
                 options={projetos}
                 placeholder="Ex: Projeto Horta Comunitária"
                 ariaLabel="Projeto"
@@ -603,7 +603,7 @@ export default function DemandaForm({
             <FormCombobox
               name="area"
               value={area}
-              onChange={(v) => setValue("area", v)}
+              onChange={(v) => { setArea(v); setValue("area", v); }}
               options={areas}
               placeholder="Ex: Pesquisa de Campo"
               ariaLabel="Área"
@@ -617,7 +617,7 @@ export default function DemandaForm({
             <FormCombobox
               name="projeto"
               value={projeto}
-              onChange={(v) => setValue("projeto", v)}
+              onChange={(v) => { setProjeto(v); setValue("projeto", v); }}
               options={projetos}
               placeholder="Ex: Projeto Horta Comunitária"
               ariaLabel="Projeto"
