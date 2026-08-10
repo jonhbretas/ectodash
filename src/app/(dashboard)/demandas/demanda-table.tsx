@@ -92,15 +92,15 @@ export default function DemandaTable({ demandas }: DemandaTableProps) {
                   ? demanda.responsavelEmails.join(", ")
                   : "Sem responsável definido"}
               </TableCell>
-              <TableCell className="whitespace-normal px-5 py-3.5">
-                <div className="flex items-center gap-2">
+              <TableCell className="overflow-hidden px-5 py-3.5">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className={demanda.atrasada ? "font-medium text-red-700" : "text-zinc-600"}>
                     {prazoFormatada}
                   </span>
                   {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
                 </div>
               </TableCell>
-              <TableCell className="whitespace-normal px-5 py-3.5">
+              <TableCell className="overflow-hidden whitespace-normal px-5 py-3.5">
                 <StatusBadge status={demanda.status} />
               </TableCell>
               <TableCell className="whitespace-normal px-5 py-3.5">
