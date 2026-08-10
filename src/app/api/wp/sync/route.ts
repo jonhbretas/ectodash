@@ -10,13 +10,18 @@
 //               endpoint, which honors before/after — the WCFM endpoint
 //               ignores date filters). Click repeatedly to walk
 //               further back in history.
+//   "period"   — pulls orders and products inside a custom date window,
+//               given by `after` (required) and `before` (optional, ISO
+//               strings) in the request body. Use it to import a whole
+//               historical range at once (e.g. the last 6 or 12 months),
+//               even if it takes a while.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   fetchProducts,
   fetchOrders,
-  fetchOrdersBackfill,
+  fetchOrdersHistory,
 } from "@/lib/woocommerce/client";
 import {
   validateProducts,
@@ -25,6 +30,11 @@ import {
 import { linkStoreToProep } from "@/lib/woocommerce/proep-link";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Period fetches walk the whole requested range in one pass (wc/v3,
+// per_page=100), so allow many pages. The caller accepts that long
+// ranges take a while.
+const PERIOD_MAX_PAGES = 150;
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -52,7 +62,21 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const mode: "latest" | "backfill" = body.mode === "backfill" ? "backfill" : "latest";
+  const mode: "latest" | "backfill" | "period" =
+    body.mode === "backfill"
+      ? "backfill"
+      : body.mode === "period"
+        ? "period"
+        : "latest";
+  const afterRaw = typeof body.after === "string" ? body.after : undefined;
+  const beforeRaw = typeof body.before === "string" ? body.before : undefined;
+
+  if (mode === "period" && !afterRaw) {
+    return NextResponse.json(
+      { error: "Informe a data inicial para buscar o período" },
+      { status: 400 }
+    );
+  }
 
   const admin = createAdminClient();
   const startedAt = Date.now();
@@ -120,7 +144,24 @@ export async function POST(request: NextRequest) {
       let ordersAfter: string | undefined;
       let ordersBefore: string | undefined;
 
-      if (mode === "backfill") {
+      if (mode === "period") {
+        // Custom date range: everything between after and before.
+        const afterDate = new Date(afterRaw!);
+        const beforeDate = beforeRaw ? new Date(beforeRaw) : new Date();
+        if (
+          isNaN(afterDate.getTime()) ||
+          isNaN(beforeDate.getTime()) ||
+          afterDate.getTime() >= beforeDate.getTime()
+        ) {
+          throw new Error(
+            "Período inválido: a data inicial deve ser anterior à final"
+          );
+        }
+        ordersAfter = afterDate.toISOString();
+        ordersBefore = beforeDate.toISOString();
+        productsModifiedAfter = ordersAfter;
+        productsModifiedBefore = ordersBefore;
+      } else if (mode === "backfill") {
         // Walk backwards from the oldest record we already have.
         const [oldestOrderResult, oldestProductResult] = await Promise.all([
           admin
@@ -184,13 +225,19 @@ export async function POST(request: NextRequest) {
 
       // Fetch products and orders in parallel.
       // NOTE: the WCFM orders endpoint ignores before/after filters (it
-      // always returns the newest orders first), so backfill uses the
-      // native wc/v3/orders endpoint instead, which honors them.
+      // always returns the newest orders first), so backfill and period
+      // go through the native wc/v3/orders endpoint instead, which
+      // honors them.
       const [rawProducts, rawOrders] = await Promise.all([
         fetchProducts(creds, productsModifiedAfter, productsModifiedBefore, 10),
-        mode === "backfill"
-          ? fetchOrdersBackfill(creds, ordersBefore)
-          : fetchOrders(creds, ordersAfter, ordersBefore),
+        mode === "latest"
+          ? fetchOrders(creds, ordersAfter, ordersBefore)
+          : fetchOrdersHistory(
+              creds,
+              ordersAfter,
+              ordersBefore,
+              mode === "period" ? PERIOD_MAX_PAGES : 5
+            ),
       ]);
 
       // Validate

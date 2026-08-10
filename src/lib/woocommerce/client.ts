@@ -162,19 +162,23 @@ export async function fetchOrders(
   return wpGet<WpOrder>(store, "/wp-json/wcfmmp/v1/orders", params, 5);
 }
 
-// Backfill: fetches orders OLDER than `before` (exclusive, UTC) walking
-// FORWARD from the oldest record (orderby=date&order=asc), so each page
-// is immediately usable history and pagination is bounded per click.
-export async function fetchOrdersBackfill(
+// History: fetches orders inside a date window (after..before, both
+// optional, UTC) walking FORWARD from the oldest record
+// (orderby=date&order=asc), so each page is immediately usable history.
+// Backfill uses only `before` (walk further back one click at a time);
+// period fetches pass both `after` and `before` (custom date range).
+export async function fetchOrdersHistory(
   store: WpStore,
+  after?: string,
   before?: string,
-  maxPages = 5
+  maxPages?: number
 ): Promise<WpOrder[]> {
   const params: Record<string, string> = {
     dates_are_gmt: "true",
     orderby: "date",
     order: "asc",
   };
+  if (after) params.after = after;
   if (before) params.before = before;
   return wpGet<WpOrder>(store, "/wp-json/wc/v3/orders", params, maxPages);
 }
