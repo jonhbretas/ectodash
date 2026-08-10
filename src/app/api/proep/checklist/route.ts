@@ -13,15 +13,11 @@ function requireUuid(id: string | null, label = "id") {
 const LABEL = "proep_checklist";
 
 export async function GET(req: NextRequest) {
-  const editionIdRaw = req.nextUrl.searchParams.get("edition_id");
-  const editionId = editionIdRaw ? parseInt(editionIdRaw, 10) : null;
   const supabase = await createClient();
   const { data, error } = await supabase.from("proep_checklist").select("*").order("day_number").order("sort_order");
   if (error) return NextResponse.json({ error: `[${LABEL} GET] ${error.message}` }, { status: 500 });
-  const filtered = editionId && !isNaN(editionId)
-    ? (data ?? []).filter((r) => r.edition_id === editionId)
-    : data ?? [];
-  return NextResponse.json(filtered);
+  // Checklist é global (todas as turmas): não filtra por edition_id.
+  return NextResponse.json(data ?? []);
 }
 
 export async function POST(req: NextRequest) {
@@ -30,7 +26,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("proep_checklist")
     .insert({
-      edition_id: body.edition_id,
+      edition_id: null,
       day_number: body.day_number,
       phase: body.phase || "before",
       title: body.title,

@@ -18,7 +18,7 @@ interface Edition { id: number; name: string; start_date: string | null; descrip
 interface Student { id: string; edition_id: number; name: string; email: string | null; phone: string | null; role: string; drive_folder_url: string | null; planilha_url: string | null; parapercepciograma_url: string | null; form_responder_url: string | null; status: string; source: string | null; wp_customer_id: number | null; proep_student_materials?: Array<{ material_id: string; drive_url: string; proep_materials: { title: string } | null }>; }
 interface Material { id: string; edition_id: number | null; category: string; title: string; description: string | null; url: string | null; file_id: string | null; file_type: string | null; is_template: boolean; sort_order: number; }
 interface FolderFile { id: string; name: string; mimeType: string; fileType: string; webViewLink?: string; }
-interface ChecklistItem { id: string; edition_id: number; day_number: number; phase: string; title: string; description: string | null; done: boolean; sort_order: number; }
+interface ChecklistItem { id: string; edition_id: number | null; day_number: number; phase: string; title: string; description: string | null; done: boolean; sort_order: number; }
 interface Assignment { id: string; edition_id: number; role: string; title: string; description: string | null; sort_order: number; }
 interface Progression { id: string; edition_id: number | null; from_role: string; to_role: string; requirements: string | null; sort_order: number; }
 
