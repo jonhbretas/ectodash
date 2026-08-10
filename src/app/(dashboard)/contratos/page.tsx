@@ -1,9 +1,18 @@
 // /contratos — painel do módulo de contratos: cards dos contratos gerados,
-// agrupados por evento. Cada card referencia o PDF (baixar, enviar para
-// assinatura, upload do assinado) e a pasta no Google Drive. Coordenador-only
-// (dados pessoais de alunos); RLS restringe a leitura ao criador/coordenador.
+// agrupados por mês do evento (e por evento dentro do mês, com data + nome).
+// Contratos sem evento ficam numa seção própria no fim. Cada card referencia
+// o PDF (baixar, enviar para assinatura, upload do assinado) e a pasta no
+// Google Drive. Coordenador-only (dados pessoais de alunos); RLS restringe a
+// leitura ao criador/coordenador.
 import Link from "next/link";
-import { FileSignature, Lock, Settings2, Plus, FolderOpen } from "lucide-react";
+import {
+  FileSignature,
+  Lock,
+  Settings2,
+  Plus,
+  FolderOpen,
+  CalendarDays,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
@@ -24,21 +33,85 @@ type ContratoCardRow = ContratoRow & {
   evento_data: string | null;
 };
 
-function grupoPorEvento(
+type EventoGroup = {
+  key: string;
+  titulo: string;
+  data: string | null;
+  items: ContratoCardRow[];
+};
+
+type MesGroup = {
+  key: string;
+  label: string;
+  eventos: EventoGroup[];
+  total: number;
+};
+
+function monthLabel(key: string): string {
+  const [year, month] = key.split("-");
+  const label = format(
+    new Date(Number(year), Number(month) - 1, 1),
+    "MMMM 'de' yyyy",
+    { locale: ptBR }
+  );
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function formatarDataBR(iso: string): string {
+  return format(new Date(`${iso.slice(0, 10)}T00:00:00`), "dd/MM/yyyy", {
+    locale: ptBR,
+  });
+}
+
+// Mês (da data do evento) → evento → contratos. Eventos sem data ficam no
+// mês mais antigo conhecido; contratos sem evento vão para a seção avulsa.
+function agruparPorMes(
   rows: ContratoCardRow[]
-): Array<{ key: string; titulo: string; items: ContratoCardRow[] }> {
-  const grupos = new Map<string, ContratoCardRow[]>();
+): { meses: MesGroup[]; avulsos: ContratoCardRow[] } {
+  const avulsos: ContratoCardRow[] = [];
+  const porEvento = new Map<string, ContratoCardRow[]>();
   for (const row of rows) {
-    const key = row.evento_id ? String(row.evento_id) : "avulsos";
-    const bucket = grupos.get(key) ?? [];
+    if (!row.evento_id) {
+      avulsos.push(row);
+      continue;
+    }
+    const bucket = porEvento.get(String(row.evento_id)) ?? [];
     bucket.push(row);
-    grupos.set(key, bucket);
+    porEvento.set(String(row.evento_id), bucket);
   }
-  return [...grupos.entries()].map(([key, items]) => ({
-    key,
-    titulo: items[0]?.evento_titulo ?? "Sem evento vinculado",
-    items,
-  }));
+
+  const mesesMap = new Map<string, MesGroup>();
+  for (const [eventoId, items] of porEvento) {
+    const primeiro = items[0];
+    const mesKey = (primeiro.evento_data ?? "").slice(0, 7) || "0000-00";
+    const grupo = mesesMap.get(mesKey) ?? {
+      key: mesKey,
+      label: monthLabel(mesKey),
+      eventos: [],
+      total: 0,
+    };
+    grupo.eventos.push({
+      key: eventoId,
+      titulo: primeiro.evento_titulo ?? `Evento ${eventoId}`,
+      data: primeiro.evento_data,
+      items,
+    });
+    grupo.total += items.length;
+    mesesMap.set(mesKey, grupo);
+  }
+
+  const meses = [...mesesMap.values()]
+    .sort((a, b) => (a.key < b.key ? 1 : -1))
+    .map((mes) => ({
+      ...mes,
+      eventos: [...mes.eventos].sort((a, b) => {
+        if (!a.data) return 1;
+        if (!b.data) return -1;
+        return a.data < b.data ? 1 : -1;
+      }),
+    }));
+
+  return { meses, avulsos };
 }
 
 function nested<T>(value: unknown): T | null {
@@ -100,7 +173,7 @@ export default async function ContratosPage({
       )
       .order("created_at", { ascending: false })
       .limit(300),
-    supabase.from("eventos").select("id, titulo").order("data_evento", { ascending: false }),
+    supabase.from("eventos").select("id, titulo, data_evento").order("data_evento", { ascending: false }),
   ]);
 
   const rows: ContratoCardRow[] = (contratosResult.data ?? []).map((row) => {
@@ -139,7 +212,7 @@ export default async function ContratosPage({
     return true;
   });
 
-  const grupos = grupoPorEvento(filtrados);
+  const { meses, avulsos } = agruparPorMes(filtrados);
 
   return (
     <PageContainer>
@@ -184,6 +257,7 @@ export default async function ContratosPage({
           {(eventosResult.data ?? []).map((evento) => (
             <option key={evento.id} value={String(evento.id)}>
               {evento.titulo}
+              {evento.data_evento ? ` — ${formatarDataBR(evento.data_evento)}` : ""}
             </option>
           ))}
         </select>
@@ -235,32 +309,85 @@ export default async function ContratosPage({
         </div>
       ) : (
         <div className="flex w-full flex-col gap-10">
-          {grupos.map((grupo) => (
-            <section key={grupo.key} className="flex w-full flex-col gap-3">
+          {meses.map((mes) => (
+            <section key={mes.key} className="flex w-full flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
+                <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
+                  {mes.label}
+                </h2>
+                <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
+                  {mes.total} {mes.total === 1 ? "contrato" : "contratos"}
+                </span>
+              </div>
+              <div className="flex w-full flex-col gap-6">
+                {mes.eventos.map((evento) => (
+                  <div key={evento.key} className="flex w-full flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <CalendarDays
+                        size={18}
+                        className="text-[#2195B9]"
+                        aria-hidden="true"
+                      />
+                      <h3 className="text-xl font-semibold text-zinc-900">
+                        {evento.titulo}
+                      </h3>
+                      {evento.data && (
+                        <span className="text-base font-medium text-zinc-500">
+                          {formatarDataBR(evento.data)}
+                        </span>
+                      )}
+                      <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-sm font-medium text-zinc-600">
+                        {evento.items.length}{" "}
+                        {evento.items.length === 1 ? "contrato" : "contratos"}
+                      </span>
+                    </div>
+                    <div className="grid w-full gap-4 lg:grid-cols-2">
+                      {evento.items.map((contrato) => (
+                        <ContratoCard
+                          key={contrato.id}
+                          contrato={contrato}
+                          eventoData={
+                            contrato.evento_data
+                              ? formatarDataBR(contrato.evento_data)
+                              : null
+                          }
+                          categoriaLabel={categoriaLabel(contrato.modelo_categoria)}
+                          valorLabel={formatarValor(contrato.valor)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+
+          {avulsos.length > 0 && (
+            <section className="flex w-full flex-col gap-3">
               <div className="flex items-center gap-3">
                 <FolderOpen size={22} className="text-[#2195B9]" aria-hidden="true" />
-                <h2 className="text-2xl font-semibold text-zinc-900">{grupo.titulo}</h2>
+                <h2 className="text-2xl font-semibold text-zinc-900">
+                  Sem evento vinculado
+                </h2>
                 <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
-                  {grupo.items.length} {grupo.items.length === 1 ? "contrato" : "contratos"}
+                  {avulsos.length}{" "}
+                  {avulsos.length === 1 ? "contrato" : "contratos"}
                 </span>
               </div>
               <div className="grid w-full gap-4 lg:grid-cols-2">
-                {grupo.items.map((contrato) => (
+                {avulsos.map((contrato) => (
                   <ContratoCard
                     key={contrato.id}
                     contrato={contrato}
-                    eventoData={
-                      contrato.evento_data
-                        ? format(new Date(`${contrato.evento_data.slice(0, 10)}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })
-                        : null
-                    }
+                    eventoData={null}
                     categoriaLabel={categoriaLabel(contrato.modelo_categoria)}
                     valorLabel={formatarValor(contrato.valor)}
                   />
                 ))}
               </div>
             </section>
-          ))}
+          )}
         </div>
       )}
     </PageContainer>
