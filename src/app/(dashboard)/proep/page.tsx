@@ -18,7 +18,7 @@ interface Edition { id: number; name: string; start_date: string | null; descrip
 interface Student { id: string; edition_id: number; name: string; email: string | null; phone: string | null; role: string; drive_folder_url: string | null; planilha_url: string | null; parapercepciograma_url: string | null; form_responder_url: string | null; status: string; source: string | null; wp_customer_id: number | null; proep_student_materials?: Array<{ material_id: string; drive_url: string; proep_materials: { title: string } | null }>; }
 interface Material { id: string; edition_id: number | null; category: string; title: string; description: string | null; url: string | null; file_id: string | null; file_type: string | null; is_template: boolean; sort_order: number; }
 interface FolderFile { id: string; name: string; mimeType: string; fileType: string; webViewLink?: string; }
-interface ChecklistItem { id: string; edition_id: number | null; day_number: number; phase: string; title: string; description: string | null; done: boolean; sort_order: number; }
+interface ChecklistItem { id: string; edition_id: number | null; day_number: number; role: string; title: string; description: string | null; done: boolean; sort_order: number; }
 interface Assignment { id: string; edition_id: number; role: string; title: string; description: string | null; sort_order: number; }
 interface Progression { id: string; edition_id: number | null; from_role: string; to_role: string; requirements: string | null; sort_order: number; }
 
@@ -29,6 +29,26 @@ const ROLES = [
   { value: "P2", label: "Professor 2", color: "bg-purple-500" },
   { value: "P1", label: "Professor 1", color: "bg-purple-700" },
 ];
+
+const CHECKLIST_ROLES = [
+  { value: "P1", label: "P1", color: "bg-purple-700" },
+  { value: "P2", label: "P2", color: "bg-purple-500" },
+  { value: "Monitor", label: "Monitor", color: "bg-blue-500" },
+  { value: "Todos", label: "Todos", color: "bg-slate-500" },
+  { value: "Coordenadora", label: "Coordenadora", color: "bg-amber-500" },
+  { value: "Rodízio", label: "Rodízio", color: "bg-teal-500" },
+  { value: "Equipe", label: "Equipe", color: "bg-slate-400" },
+];
+
+const DAY_LABELS: Record<number, string> = {
+  [-30]: "PRÉ-CURSO (D-30 a D-1)",
+  0: "SEXTA-FEIRA (D0)",
+  1: "SÁBADO (D+1)",
+  2: "DOMINGO (D+2)",
+  3: "PÓS-CURSO",
+};
+
+const checkRoleColor = (role: string) => CHECKLIST_ROLES.find(r => r.value === role)?.color || "bg-slate-400";
 
 const MATERIAL_CATEGORIES = [
   { value: "student", label: "Material do Aluno", icon: BookOpen },
@@ -215,6 +235,7 @@ export default function ProepPage() {
   const [editions, setEditions] = useState<Edition[]>([]);
   const [selectedEdition, setSelectedEdition] = useState<string>("");
   const [tab, setTab] = useState<"students" | "materials" | "checklist" | "assignments" | "progression">("students");
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -394,12 +415,12 @@ export default function ProepPage() {
     setChecklist(prev => prev.map(c => c.id === id ? { ...c, done: !done } : c));
   }
 
-  async function addChecklistItem(dayNumber: number, phase: string) {
-    const title = prompt(`Item para o dia ${dayNumber} (${phase === "before" ? "antes" : "depois"}):`);
+  async function addChecklistItem(dayNumber: number, role: string) {
+    const title = prompt(`Item para o dia ${dayNumber} (${role}):`);
     if (!title) return;
     const result = await api("/api/proep/checklist", {
       method: "POST",
-      body: JSON.stringify({ edition_id: Number(selectedEdition), day_number: dayNumber, phase, title, sort_order: checklist.filter(c => c.day_number === dayNumber && c.phase === phase).length }),
+      body: JSON.stringify({ day_number: dayNumber, role, title, sort_order: checklist.filter(c => c.day_number === dayNumber && c.role === role).length }),
     });
     setChecklist(prev => [...prev, result]);
   }
@@ -454,12 +475,16 @@ export default function ProepPage() {
   }, [materials, tab, materialFilter]);
 
   const checklistByDay = useMemo(() => {
-    const map: Record<number, { before: ChecklistItem[]; after: ChecklistItem[] }> = {};
+    const map: Record<number, Record<string, ChecklistItem[]>> = {};
     for (const item of checklist) {
-      if (!map[item.day_number]) map[item.day_number] = { before: [], after: [] };
-      map[item.day_number][item.phase as "before" | "after"].push(item);
+      if (!map[item.day_number]) map[item.day_number] = {};
+      const r = item.role || "Todos";
+      if (!map[item.day_number][r]) map[item.day_number][r] = [];
+      map[item.day_number][r].push(item);
     }
-    return Object.entries(map).sort(([a], [b]) => Number(a) - Number(b)).map(([day, items]) => ({ day: Number(day), ...items }));
+    return Object.entries(map)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([day, roles]) => ({ day: Number(day), roles }));
   }, [checklist]);
 
   const assignmentsByRole = useMemo(() => {
@@ -538,7 +563,7 @@ export default function ProepPage() {
         </div>
       </div>
 
-      {/* Event details card */}
+      {/* Event details card — oculto conforme solicitado
       {currentEdition && (
         <Card>
           <CardContent className="p-4">
@@ -572,6 +597,7 @@ export default function ProepPage() {
           </CardContent>
         </Card>
       )}
+      */}
 
       {error && (
         <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg border border-red-200 bg-red-50 text-sm text-red-600" role="status">
@@ -684,6 +710,30 @@ export default function ProepPage() {
           {/* Tab: Checklist */}
           {tab === "checklist" && (
             <div className="space-y-4">
+              {/* Filtro de função */}
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setRoleFilter(null)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    roleFilter === null ? "bg-[#2195B9]/10 text-[#2195B9]" : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  Todas as funções
+                </button>
+                {CHECKLIST_ROLES.map(r => (
+                  <button
+                    key={r.value}
+                    onClick={() => setRoleFilter(r.value)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      roleFilter === r.value ? "bg-[#2195B9]/10 text-[#2195B9]" : "text-slate-500 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${r.color}`} />
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+
               {checklistByDay.length === 0 ? (
                 <div className="text-center py-8 px-4 text-slate-500">
                   <ClipboardCheck className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -691,58 +741,53 @@ export default function ProepPage() {
                   <p className="text-xs max-w-[42ch] mx-auto leading-relaxed">Adicione itens do dia-a-dia do programa.</p>
                 </div>
               ) : (
-                checklistByDay.map(({ day, before, after }) => (
-                  <details key={day} open={day <= 2} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                    <summary className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 cursor-pointer select-none">
-                      <span className="text-sm font-bold text-slate-900">Dia {day}</span>
-                      <Badge variant={before.every(c => c.done) && after.every(c => c.done) ? "default" : "secondary"}>
-                        {before.filter(c => c.done).length + after.filter(c => c.done).length}/{before.length + after.length}
-                      </Badge>
-                    </summary>
-                    <div className="px-4 py-3 border-t border-slate-100">
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <p className="text-xs font-semibold uppercase text-slate-500 mb-2">Antes da Aula</p>
-                          <div className="space-y-1">
-                            {before.map(item => (
-                              <div key={item.id} className="flex items-center gap-2 group">
-                                <button onClick={() => toggleChecklist(item.id, item.done)} className="shrink-0 bg-transparent border-none p-0 cursor-pointer">
-                                  {item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4 text-slate-300 hover:text-[#2195B9]" />}
-                                </button>
-                                <span className={`text-sm flex-1 ${item.done ? "line-through text-slate-400" : "text-slate-700"}`}>{item.title}</span>
-                                <button onClick={() => deleteChecklist(item.id)} className="shrink-0 p-0.5 rounded text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none cursor-pointer">
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ))}
-                            <button onClick={() => addChecklistItem(day, "before")} className="flex items-center gap-1 text-xs text-slate-400 hover:text-[#2195B9] mt-1 bg-transparent border-none p-0 cursor-pointer">
-                              <Plus className="h-3 w-3" /> Adicionar
-                            </button>
+                checklistByDay.map(({ day, roles }) => {
+                  const filteredRoles = roleFilter
+                    ? Object.entries(roles).filter(([r]) => r === roleFilter)
+                    : Object.entries(roles);
+                  const totalItems = filteredRoles.reduce((acc, [, items]) => acc + items.length, 0);
+                  const doneItems = filteredRoles.reduce((acc, [, items]) => acc + items.filter(c => c.done).length, 0);
+                  if (totalItems === 0) return null;
+                  return (
+                    <details key={day} open={day <= 2} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                      <summary className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 cursor-pointer select-none">
+                        <span className="text-sm font-bold text-slate-900">{DAY_LABELS[day] || `DIA ${day}`}</span>
+                        <Badge variant={doneItems === totalItems ? "default" : "secondary"}>
+                          {doneItems}/{totalItems}
+                        </Badge>
+                      </summary>
+                      <div className="px-4 py-3 border-t border-slate-100 space-y-3">
+                        {filteredRoles.map(([role, items]) => (
+                          <div key={role}>
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className={`h-2.5 w-2.5 rounded-full ${checkRoleColor(role)}`} />
+                              <p className="text-xs font-semibold uppercase text-slate-600">{role}</p>
+                              <span className="text-[11px] text-slate-400">
+                                {items.filter(c => c.done).length}/{items.length}
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {items.map(item => (
+                                <div key={item.id} className="flex items-center gap-2 group">
+                                  <button onClick={() => toggleChecklist(item.id, item.done)} className="shrink-0 bg-transparent border-none p-0 cursor-pointer">
+                                    {item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4 text-slate-300 hover:text-[#2195B9]" />}
+                                  </button>
+                                  <span className={`text-sm flex-1 ${item.done ? "line-through text-slate-400" : "text-slate-700"}`}>{item.title}</span>
+                                  <button onClick={() => deleteChecklist(item.id)} className="shrink-0 p-0.5 rounded text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none cursor-pointer">
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                              <button onClick={() => addChecklistItem(day, role)} className="flex items-center gap-1 text-xs text-slate-400 hover:text-[#2195B9] mt-1 bg-transparent border-none p-0 cursor-pointer">
+                                <Plus className="h-3 w-3" /> Adicionar
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase text-slate-500 mb-2">Depois da Aula</p>
-                          <div className="space-y-1">
-                            {after.map(item => (
-                              <div key={item.id} className="flex items-center gap-2 group">
-                                <button onClick={() => toggleChecklist(item.id, item.done)} className="shrink-0 bg-transparent border-none p-0 cursor-pointer">
-                                  {item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4 text-slate-300 hover:text-[#2195B9]" />}
-                                </button>
-                                <span className={`text-sm flex-1 ${item.done ? "line-through text-slate-400" : "text-slate-700"}`}>{item.title}</span>
-                                <button onClick={() => deleteChecklist(item.id)} className="shrink-0 p-0.5 rounded text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none cursor-pointer">
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ))}
-                            <button onClick={() => addChecklistItem(day, "after")} className="flex items-center gap-1 text-xs text-slate-400 hover:text-[#2195B9] mt-1 bg-transparent border-none p-0 cursor-pointer">
-                              <Plus className="h-3 w-3" /> Adicionar
-                            </button>
-                          </div>
-                        </div>
+                        ))}
                       </div>
-                    </div>
-                  </details>
-                ))
+                    </details>
+                  );
+                })
               )}
             </div>
           )}

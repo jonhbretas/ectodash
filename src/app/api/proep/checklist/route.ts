@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     .insert({
       edition_id: null,
       day_number: body.day_number,
-      phase: body.phase || "before",
+      role: body.role || "Todos",
       title: body.title,
       description: body.description || null,
       sort_order: body.sort_order || 0,
