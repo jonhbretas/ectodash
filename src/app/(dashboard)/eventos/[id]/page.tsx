@@ -13,6 +13,7 @@ import {
   PlusCircle,
   Tag,
   CalendarPlus,
+  FileSignature,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -168,6 +169,15 @@ export default async function EventoPage({ params }: EventoPageProps) {
 
       <div className="flex w-full flex-wrap items-start gap-3">
         <AdicionarTarefasButton eventoId={id} />
+        {profileResult.data?.role === "coordenador_geral" && (
+          <Link
+            href={`/eventos/${id}/contratos`}
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white transition-colors hover:bg-[#28627B]"
+          >
+            <FileSignature size={22} aria-hidden="true" />
+            Contratos do evento
+          </Link>
+        )}
         <Link
           href="/demandas/nova"
           className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"

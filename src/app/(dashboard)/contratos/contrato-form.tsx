@@ -39,6 +39,7 @@ type Props = {
   eventos: ContratoFormOption[];
   alunosIniciais: ContratoFormAluno[];
   busca: string;
+  eventoInicial?: string;
 };
 
 const initial: ContratoActionState = { ok: true, message: "" };
@@ -46,14 +47,14 @@ const initial: ContratoActionState = { ok: true, message: "" };
 const INPUT_CLASS =
   "w-full min-h-14 rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 placeholder:text-zinc-400 focus:border-[#2195B9] focus:outline-none focus:ring-2 focus:ring-[#2195B9]/30";
 
-export default function ContratoForm({ modelos, eventos, alunosIniciais, busca }: Props) {
+export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, eventoInicial = "" }: Props) {
   const [state, formAction, isPending] = useActionState(criarContrato, initial);
 
   const { register, handleSubmit, setValue } = useForm<ContratoFormValues>({
     resolver: zodResolver(contratoSchema),
     defaultValues: {
       modeloId: "",
-      eventoId: "",
+      eventoId: eventoInicial,
       alunoNome: "",
       alunoEmail: "",
       alunoDocumento: "",

@@ -30,6 +30,8 @@ export type ContratoRow = {
   aluno_telefone: string | null;
   valor: number | null;
   status: ContratoStatus;
+  expira_em: string | null;
+  conteudo_utilizado: string | null;
   drive_pasta_id: string | null;
   drive_pasta_url: string | null;
   drive_arquivo_id: string | null;
@@ -78,6 +80,18 @@ export function formatarValor(valor: number | null): string | null {
   }).format(valor);
 }
 
+/** Vencido é derivado na leitura: ainda pendente de assinatura e prazo passou. */
+export function contratoVencido(
+  contrato: Pick<ContratoRow, "status" | "expira_em">,
+  hoje: string
+): boolean {
+  return (
+    (contrato.status === "gerado" || contrato.status === "assinando") &&
+    Boolean(contrato.expira_em) &&
+    contrato.expira_em! < hoje
+  );
+}
+
 export async function carregarContrato(
   supabase: SupabaseClient,
   id: number
@@ -122,19 +136,22 @@ export async function renderizarContratoPdf(
   const emissao = formatarData(contrato.created_at);
   const valor = formatarValor(contrato.valor);
 
-  const conteudo = aplicarVariaveis(modelo.conteudo, {
-    "{{aluno_nome}}": contrato.aluno_nome,
-    "{{aluno_email}}": contrato.aluno_email ?? "",
-    "{{aluno_documento}}": contrato.aluno_documento ?? "",
-    "{{aluno_telefone}}": contrato.aluno_telefone ?? "",
-    "{{evento_titulo}}": evento?.titulo ?? "",
-    "{{evento_data}}": evento?.data_evento ? formatarData(evento.data_evento) : "",
-    "{{evento_local}}": evento?.local ?? "",
-    "{{evento_descricao}}": evento?.descricao ?? "",
-    "{{valor}}": valor ?? "",
-    "{{data_emissao}}": emissao,
-    "{{modelo_titulo}}": modelo.titulo,
-  });
+  const conteudo = aplicarVariaveis(
+    contrato.conteudo_utilizado ?? modelo.conteudo,
+    {
+      "{{aluno_nome}}": contrato.aluno_nome,
+      "{{aluno_email}}": contrato.aluno_email ?? "",
+      "{{aluno_documento}}": contrato.aluno_documento ?? "",
+      "{{aluno_telefone}}": contrato.aluno_telefone ?? "",
+      "{{evento_titulo}}": evento?.titulo ?? "",
+      "{{evento_data}}": evento?.data_evento ? formatarData(evento.data_evento) : "",
+      "{{evento_local}}": evento?.local ?? "",
+      "{{evento_descricao}}": evento?.descricao ?? "",
+      "{{valor}}": valor ?? "",
+      "{{data_emissao}}": emissao,
+      "{{modelo_titulo}}": modelo.titulo,
+    }
+  );
 
   const buffer = await buildContratoPdf({
     numero: String(contrato.id),

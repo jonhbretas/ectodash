@@ -37,12 +37,14 @@ export type ContratoCardProps = {
     aluno_email: string | null;
     aluno_documento: string | null;
     status: ContratoStatus;
+    expira_em: string | null;
     drive_pasta_url: string | null;
     drive_arquivo_url: string | null;
     drive_assinado_url: string | null;
     assinafy_document_id: string | null;
     created_at: string;
   };
+  vencido?: boolean;
   eventoData: string | null;
   categoriaLabel: string;
   valorLabel: string | null;
@@ -118,7 +120,7 @@ function CopyLink({ url, label }: { url: string; label: string }) {
   );
 }
 
-export default function ContratoCard({ contrato, eventoData, categoriaLabel, valorLabel }: ContratoCardProps) {
+export default function ContratoCard({ contrato, vencido = false, eventoData, categoriaLabel, valorLabel }: ContratoCardProps) {
   const statusInfo = STATUS_INFO[contrato.status];
   const [enviarState, enviarAction, enviarPending] = useActionState(
     enviarParaAssinatura.bind(null, contrato.id),
@@ -162,9 +164,13 @@ export default function ContratoCard({ contrato, eventoData, categoriaLabel, val
           </p>
         </div>
         <span
-          className={`rounded-full px-3 py-1 text-sm font-semibold ring-1 ${statusInfo.className}`}
+          className={`rounded-full px-3 py-1 text-sm font-semibold ring-1 ${
+            vencido
+              ? "bg-red-50 text-red-800 ring-red-200/60"
+              : statusInfo.className
+          }`}
         >
-          {statusInfo.label}
+          {vencido ? "Vencido" : statusInfo.label}
         </span>
       </div>
 
@@ -175,6 +181,14 @@ export default function ContratoCard({ contrato, eventoData, categoriaLabel, val
         {contrato.aluno_email && <span>{contrato.aluno_email}</span>}
         {contrato.aluno_documento && <span>{contrato.aluno_documento}</span>}
         {valorLabel && <span className="font-semibold text-zinc-700">{valorLabel}</span>}
+        {!vencido && contrato.expira_em && (
+          <span className="text-amber-700">
+            Vence em{" "}
+            {new Date(`${contrato.expira_em.slice(0, 10)}T00:00:00`).toLocaleDateString(
+              "pt-BR"
+            )}
+          </span>
+        )}
         <span>
           Criado em{" "}
           {new Date(`${contrato.created_at.slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR")}

@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 
 ## Current Position
 
-Phase: 11 (Contratos e Assinatura Eletrônica) — SHIPPED
+Phase: 11 (Contratos e Assinatura Eletrônica) — SHIPPED (v1 + gestão por evento)
 Plan: 11-01 — executed lean (no PLAN/SUMMARY ceremony, per user's accelerate decision)
-Status: Implemented + migration 0042 applied live + RLS tests green. Awaiting human: Assinafy API key/account id in .env.local + Vercel, then "Configurar webhook na Assinafy" no card de modelos.
-Details: modelos padronizados com variáveis ({{aluno_nome}}, {{evento_titulo}}...), geração de PDF (pdfkit), pastas automáticas no Drive (Contratos Ectolab > Evento > Aluno), envio para assinatura (Assinafy: upload doc, signer, assignment virtual), webhook /api/contratos/webhook (dedup por id + account_id, baixa certificado e arquiva), cards com status gerado/assinando/assinado/recusado/cancelado.
+Status: Implemented + migrations 0042/0047 applied live + 14 RLS/unit tests green. Awaiting human: nada bloqueado — Assinafy já configurada (webhook ativo, validado via GET subscriptions em 2026-08-10).
+v2 (gestão por evento, 2026-08-10, user decision): cada evento ganha /eventos/[id]/contratos com 4 blocos — (A) vínculo evento↔produto da loja (busca + sugestão por nome; alunos inscritos = compradores via wp_customers.courses overlaps), (B) modelos habilitados por evento com texto personalizado opcional (contrato_evento_modelos.conteudo_personalizado; snapshot em contratos.conteudo_utilizado), (C) alunos com checkbox + geração/envio em lote (limite 30 combinações, prazo de assinatura 15 dias padrão em contratos.expira_em), (D) gestão por status incl. VENCIDOS (derivado na leitura: gerado/assinando e expira_em < hoje). Botão "Contratos do evento" na página do evento; /contratos geral continua mensal com badge Vencido.
 
 Phase: 09 (Google Sheets Sync) — code shipped, AWAITING HUMAN SETUP
 Plan: 09-01 — executed lean (no PLAN/SUMMARY ceremony per user decision to accelerate)

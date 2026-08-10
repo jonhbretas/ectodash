@@ -20,6 +20,7 @@ import PageContainer from "../page-container";
 import {
   categoriaLabel,
   formatarValor,
+  contratoVencido,
   type ContratoRow,
 } from "@/lib/contratos/render";
 import ContratoCard from "./contrato-card";
@@ -31,6 +32,7 @@ type ContratoCardRow = ContratoRow & {
   modelo_categoria: string;
   evento_titulo: string | null;
   evento_data: string | null;
+  vencido: boolean;
 };
 
 type EventoGroup = {
@@ -176,6 +178,7 @@ export default async function ContratosPage({
     supabase.from("eventos").select("id, titulo, data_evento").order("data_evento", { ascending: false }),
   ]);
 
+  const hoje = new Date().toISOString().slice(0, 10);
   const rows: ContratoCardRow[] = (contratosResult.data ?? []).map((row) => {
     const modelo = nested<{ titulo?: string; categoria?: string }>(row.modelo);
     const evento = nested<{ titulo?: string; data_evento?: string }>(row.evento);
@@ -189,6 +192,8 @@ export default async function ContratosPage({
       aluno_telefone: row.aluno_telefone,
       valor: row.valor,
       status: row.status,
+      expira_em: row.expira_em,
+      conteudo_utilizado: row.conteudo_utilizado,
       drive_pasta_id: row.drive_pasta_id,
       drive_pasta_url: row.drive_pasta_url,
       drive_arquivo_id: row.drive_arquivo_id,
@@ -203,11 +208,13 @@ export default async function ContratosPage({
       modelo_categoria: modelo?.categoria ?? "outro",
       evento_titulo: evento?.titulo ?? null,
       evento_data: evento?.data_evento ?? null,
+      vencido: contratoVencido(row, hoje),
     };
   });
 
   const filtrados = rows.filter((row) => {
     if (eventoFiltro && String(row.evento_id ?? "avulsos") !== eventoFiltro) return false;
+    if (statusFiltro === "vencido") return row.vencido;
     if (statusFiltro && row.status !== statusFiltro) return false;
     return true;
   });
@@ -269,6 +276,7 @@ export default async function ContratosPage({
           <option value="">Todos os status</option>
           <option value="gerado">Aguardando assinatura</option>
           <option value="assinando">Em assinatura</option>
+          <option value="vencido">Vencido</option>
           <option value="assinado">Assinado</option>
           <option value="recusado">Recusado</option>
           <option value="cancelado">Cancelado</option>
@@ -347,6 +355,7 @@ export default async function ContratosPage({
                         <ContratoCard
                           key={contrato.id}
                           contrato={contrato}
+                          vencido={contrato.vencido}
                           eventoData={
                             contrato.evento_data
                               ? formatarDataBR(contrato.evento_data)
@@ -380,6 +389,7 @@ export default async function ContratosPage({
                   <ContratoCard
                     key={contrato.id}
                     contrato={contrato}
+                    vencido={contrato.vencido}
                     eventoData={null}
                     categoriaLabel={categoriaLabel(contrato.modelo_categoria)}
                     valorLabel={formatarValor(contrato.valor)}

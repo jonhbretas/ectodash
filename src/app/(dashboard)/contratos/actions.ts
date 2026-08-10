@@ -1,6 +1,8 @@
 // src/app/(dashboard)/contratos/actions.ts
 // Server actions do módulo de contratos: criação (com pastas no Drive e PDF),
 // envio para assinatura (Assinafy), retorno de assinado, modelos e webhook.
+// O núcleo de geração/assinatura vive em lib/contratos/{geracao,assinatura}.ts
+// e é compartilhado com o fluxo em lote por evento (evento-actions.ts).
 // Padrões do projeto: validação via schema zod compartilhado, revalidatePath,
 // gate por role, RLS como fronteira real (auth.uid()).
 
@@ -9,16 +11,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { uploadDriveFile } from "@/lib/google/drive";
+import { arquivarContratoNoDrive } from "@/lib/contratos/geracao";
+import { enviarContratoParaAssinatura } from "@/lib/contratos/assinatura";
 import {
-  ensureEventFolder,
-  ensureAvulsosFolder,
-  createAlunoFolder,
-} from "@/lib/contratos/drive-folders";
-import { carregarContrato, renderizarContratoPdf } from "@/lib/contratos/render";
-import {
-  assinafyUploadDocumento,
-  assinafyCriarSignatario,
-  assinafyCriarAssignment,
   assinafyBaixarDocumento,
   assinafyGarantirWebhook,
 } from "@/lib/assinafy";
@@ -32,7 +27,8 @@ export type ContratoActionState = {
 
 const initialState: ContratoActionState = { ok: true, message: "" };
 
-async function requireCoordenador() {
+/** Gate de role compartilhado com evento-actions.ts (coordenador_geral). */
+export async function requireCoordenador() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -48,6 +44,12 @@ async function requireCoordenador() {
     throw new Error("Você não tem acesso aos contratos.");
   }
   return { supabase, user };
+}
+
+const PRAZO_PADRAO_DIAS = 15;
+
+function prazoPadrao(): string {
+  return new Date(Date.now() + PRAZO_PADRAO_DIAS * 86400000).toISOString().slice(0, 10);
 }
 
 // ── Contratos ──────────────────────────────────────────────────────────
@@ -93,6 +95,7 @@ export async function criarContrato(
         aluno_telefone: data.alunoTelefone || null,
         valor,
         status: "gerado",
+        expira_em: prazoPadrao(),
       })
       .select("id")
       .single();
@@ -105,36 +108,7 @@ export async function criarContrato(
     // criado e o PDF continua disponível para download/assinatura).
     let driveWarning = "";
     try {
-      const { data: evento } = data.eventoId
-        ? await supabase
-            .from("eventos")
-            .select("titulo")
-            .eq("id", Number(data.eventoId))
-            .single()
-        : { data: null };
-      const parent = data.eventoId
-        ? await ensureEventFolder(Number(data.eventoId), evento?.titulo ?? `Evento ${data.eventoId}`)
-        : await ensureAvulsosFolder();
-
-      const completo = await carregarContrato(supabase, contratoId);
-      const alunoFolder = await createAlunoFolder(parent.id, completo.contrato.aluno_nome);
-      await supabase
-        .from("contratos")
-        .update({
-          drive_pasta_id: alunoFolder.id,
-          drive_pasta_url: alunoFolder.url,
-        })
-        .eq("id", contratoId);
-
-      const { buffer, filename } = await renderizarContratoPdf(completo);
-      const arquivo = await uploadDriveFile(alunoFolder.id, filename, buffer);
-      await supabase
-        .from("contratos")
-        .update({
-          drive_arquivo_id: arquivo.id,
-          drive_arquivo_url: arquivo.webViewLink || null,
-        })
-        .eq("id", contratoId);
+      await arquivarContratoNoDrive(supabase, contratoId, data.eventoId ? Number(data.eventoId) : null);
     } catch (error) {
       driveWarning = ` O PDF não foi salvo no Google Drive: ${error instanceof Error ? error.message : "erro desconhecido"}.`;
     }
@@ -159,38 +133,13 @@ export async function enviarParaAssinatura(
 ): Promise<ContratoActionState> {
   try {
     const { supabase } = await requireCoordenador();
-
-    const completo = await carregarContrato(supabase, id);
-    const { buffer, filename } = await renderizarContratoPdf(completo);
-
-    const documento = await assinafyUploadDocumento(buffer, filename);
-    const signer = await assinafyCriarSignatario(
-      completo.contrato.aluno_nome,
-      completo.contrato.aluno_email,
-      completo.contrato.aluno_telefone
-    );
-    const assignment = await assinafyCriarAssignment(
-      documento.id,
-      [signer.id],
-      `Assine o contrato "${completo.modelo.titulo}" referente ao ${completo.evento?.titulo ?? "evento/curso"} da Ectolab.`
-    );
-
-    const { error } = await supabase
-      .from("contratos")
-      .update({
-        status: "assinando",
-        assinafy_document_id: documento.id,
-        assinafy_assignment_id: assignment.id,
-      })
-      .eq("id", id);
-    if (error) throw new Error("Não foi possível atualizar o contrato.");
-
+    const resultado = await enviarContratoParaAssinatura(supabase, id);
     revalidatePath("/contratos");
-    const assinaturaUrl = assignment.signing_urls?.[0]?.url ?? undefined;
+    if (!resultado.ok) return { ok: false, message: resultado.message };
     return {
       ok: true,
       message: "Documento enviado para assinatura. Compartilhe o link com o aluno.",
-      assinaturaUrl,
+      assinaturaUrl: resultado.url,
     };
   } catch (error) {
     return {

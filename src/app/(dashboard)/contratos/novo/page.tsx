@@ -16,6 +16,8 @@ export default async function NovoContratoPage({
 }) {
   const params = await searchParams;
   const busca = typeof params.busca === "string" ? params.busca.trim() : "";
+  const eventoInicial =
+    typeof params.evento === "string" && /^\d+$/.test(params.evento) ? params.evento : "";
 
   const supabase = await createClient();
   const {
@@ -105,6 +107,7 @@ export default async function NovoContratoPage({
         eventos={eventos}
         alunosIniciais={alunos}
         busca={busca}
+        eventoInicial={eventoInicial}
       />
     </PageContainer>
   );
