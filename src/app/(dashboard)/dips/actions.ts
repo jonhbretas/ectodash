@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
+export type DipState = {
+  ok: boolean;
+  message: string;
+};
+
+const initial: DipState = { ok: false, message: "" };
+
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 const dipSchema = z.object({
@@ -20,6 +27,46 @@ const dipSchema = z.object({
   ),
   observacoes: z.string().trim().max(3000).optional(),
 });
+
+export async function criarDip(
+  prevState: DipState,
+  formData: FormData
+): Promise<DipState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ...initial, message: "Sessão expirada." };
+
+  const parsed = dipSchema.safeParse({
+    localidade: formData.get("localidade"),
+    pais: formData.get("pais"),
+    data: formData.get("data"),
+    participantes: formData.get("participantes"),
+    observacoes: formData.get("observacoes"),
+  });
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Preencha os campos obrigatórios.";
+    return { ...initial, message: msg };
+  }
+
+  const { error } = await supabase.from("dips").insert({
+    localidade: parsed.data.localidade,
+    pais: parsed.data.pais,
+    data_dip: parsed.data.data || null,
+    participantes: parsed.data.participantes,
+    observacoes: parsed.data.observacoes || null,
+  });
+
+  if (error) {
+    console.error("criarDip: insert failed", error);
+    return { ...initial, message: "Não foi possível registrar a DIP." };
+  }
+
+  revalidatePath("/dips");
+  revalidatePath("/dips/cadastro");
+  return { ok: true, message: "DIP registrada com sucesso." };
+}
 
 // RLS (migration 0015) is the real boundary: only the creator of the record
 // or a coordenador_geral can update/delete a DIP.

@@ -9,7 +9,7 @@ import { atualizarDip, excluirDip } from "./actions";
 type DipActionsProps = {
   dip: {
     id: number;
-    ataId: number;
+    ataId: number | null;
     localidade: string;
     pais: string;
     data: string | null;
@@ -53,7 +53,7 @@ export default function DipActions({
     }
     const form = new FormData();
     form.set("id", String(dip.id));
-    form.set("ata_id", String(dip.ataId));
+    if (dip.ataId != null) form.set("ata_id", String(dip.ataId));
     excluirDip(form);
   }
 
@@ -61,7 +61,7 @@ export default function DipActions({
     setSaving(true);
     const form = new FormData();
     form.set("id", String(dip.id));
-    form.set("ata_id", String(dip.ataId));
+    if (dip.ataId != null) form.set("ata_id", String(dip.ataId));
     form.set("localidade", localidade);
     form.set("pais", pais);
     form.set("data", data);

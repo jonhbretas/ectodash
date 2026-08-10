@@ -58,6 +58,8 @@ export async function criarLocalidadeDip(
   }
 
   revalidatePath("/dips");
+  revalidatePath("/dips/cadastro");
+  revalidatePath("/dips/localidades");
   return { ok: true, message: "Localidade cadastrada." };
 }
 
@@ -102,6 +104,8 @@ export async function editarLocalidadeDip(
   }
 
   revalidatePath("/dips");
+  revalidatePath("/dips/cadastro");
+  revalidatePath("/dips/localidades");
   return { ok: true, message: "Localidade atualizada." };
 }
 
@@ -129,5 +133,7 @@ export async function excluirLocalidadeDip(
   }
 
   revalidatePath("/dips");
+  revalidatePath("/dips/cadastro");
+  revalidatePath("/dips/localidades");
   return { ok: true, message: "Localidade removida do cadastro." };
 }

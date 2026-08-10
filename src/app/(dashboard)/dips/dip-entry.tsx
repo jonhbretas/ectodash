@@ -14,9 +14,9 @@ export type DipRow = {
   data_dip: string | null;
   participantes: number | null;
   observacoes: string | null;
-  ataId: number;
-  ataTitulo: string;
-  ataData: string;
+  ataId: number | null;
+  ataTitulo: string | null;
+  ataData: string | null;
   criadoPor: string;
 };
 
@@ -53,15 +53,21 @@ export default function DipEntry({
         <p className="text-base leading-relaxed text-zinc-700">{registro.observacoes}</p>
       )}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link
-          href={`/reunioes/${registro.ataId}`}
-          className="w-fit text-base font-medium text-[#2195B9] underline decoration-[#2195B9]/40 underline-offset-4"
-        >
-          {registro.ataTitulo}
-          {registro.ataData
-            ? ` — ${format(new Date(`${registro.ataData}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}`
-            : ""}
-        </Link>
+        {registro.ataId ? (
+          <Link
+            href={`/reunioes/${registro.ataId}`}
+            className="w-fit text-base font-medium text-[#2195B9] underline decoration-[#2195B9]/40 underline-offset-4"
+          >
+            {registro.ataTitulo}
+            {registro.ataData
+              ? ` — ${format(new Date(`${registro.ataData}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}`
+              : ""}
+          </Link>
+        ) : (
+          <span className="text-base font-medium text-zinc-500 italic">
+            Registro avulso
+          </span>
+        )}
         {canManage && (
           <DipActions
             dip={{

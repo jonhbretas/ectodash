@@ -85,7 +85,7 @@ export default async function DipLocalidadePage({
   const rows: DipRow[] = (dipsResult.data ?? [])
     .filter((dip) => dip.localidade === localidade)
     .map((dip) => {
-      const ata = ataById.get(dip.ata_id);
+      const ata = dip.ata_id ? ataById.get(dip.ata_id) : undefined;
       return {
         id: dip.id,
         localidade: dip.localidade,
@@ -94,8 +94,8 @@ export default async function DipLocalidadePage({
         participantes: dip.participantes,
         observacoes: dip.observacoes,
         ataId: dip.ata_id,
-        ataTitulo: ata?.titulo ?? "Ata removida",
-        ataData: ata?.data_reuniao ?? "",
+        ataTitulo: ata?.titulo ?? null,
+        ataData: ata?.data_reuniao ?? null,
         criadoPor: dip.criado_por,
       };
     });

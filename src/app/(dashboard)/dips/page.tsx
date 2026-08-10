@@ -3,7 +3,7 @@
 // (vindos de atas analisadas) + próximas DIPs planejadas.
 // Filtro por localidade permite focar em uma DIP específica.
 import Link from "next/link";
-import { Globe2, MapPin, Sparkles, Users, CalendarDays } from "lucide-react";
+import { Globe2, MapPin, Sparkles, Users, CalendarDays, PlusCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import DipEntry, { type DipRow } from "./dip-entry";
@@ -41,13 +41,13 @@ export default async function DipsPage({
   const ataById = new Map((atasResult.data ?? []).map((ata) => [ata.id, ata]));
 
   const rows: DipRow[] = (dipsResult.data ?? []).map((dip) => {
-    const ata = ataById.get(dip.ata_id);
+    const ata = dip.ata_id ? ataById.get(dip.ata_id) : undefined;
     return {
       id: dip.id, localidade: dip.localidade, pais: dip.pais,
       data_dip: dip.data_dip, participantes: dip.participantes,
       observacoes: dip.observacoes, ataId: dip.ata_id,
-      ataTitulo: ata?.titulo ?? "Ata removida",
-      ataData: ata?.data_reuniao ?? "",
+      ataTitulo: ata?.titulo ?? null,
+      ataData: ata?.data_reuniao ?? null,
       criadoPor: dip.criado_por,
     };
   });
@@ -100,13 +100,24 @@ export default async function DipsPage({
   return (
     <PageContainer>
       <header className="flex w-full flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
-          <Sparkles size={30} aria-hidden="true" />
-          Dinâmica DIP
-        </h1>
-        <p className="max-w-2xl text-xl text-zinc-500">
-          Agenda e histórico das dinâmicas DIP por localidade.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
+              <Sparkles size={30} aria-hidden="true" />
+              Dinâmica DIP
+            </h1>
+            <p className="max-w-2xl text-xl text-zinc-500">
+              Agenda e histórico das dinâmicas DIP por localidade.
+            </p>
+          </div>
+          <Link
+            href="/dips/cadastro"
+            className="flex min-h-12 items-center gap-2 rounded-xl bg-[#2195B9] px-5 text-lg font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          >
+            <PlusCircle size={18} aria-hidden="true" />
+            Cadastrar DIP
+          </Link>
+        </div>
       </header>
 
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
