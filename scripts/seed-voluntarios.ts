@@ -41,7 +41,7 @@ type Voluntario = {
 // Areas canônicas derivadas das colunas "Org Depto"/"Função" da planilha.
 const AREA_FINANCEIRO = "Financeiro";
 const AREA_VOLUNTARIADO = "Voluntariado";
-const AREA_COMUNICACAO = "Comunicação e Eventos";
+// Comunicação e Eventos removida — área descontinuada (migration 0052)
 const AREA_PARAPEDAGOGICO = "Parapedagógico";
 const AREA_DIP = "Paratecnológico - DIP";
 const AREA_BIOENERGOLOGIA = "Paratecnológico - Bioenergologia";

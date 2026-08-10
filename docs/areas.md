@@ -22,7 +22,6 @@ Derivadas da planilha oficial de voluntários (2026-08-04), usadas como
 |---|---|
 | Financeiro | Rinaldo Nishimura (financeiro) |
 | Voluntariado | Regina Krupka (voluntariado) |
-| Comunicação e Eventos | Eliane Amarante |
 | Parapedagógico | Ana Prado |
 | Paratecnológico - DIP | Luciano Guerini, Máris Polo Paz |
 | Paratecnológico - Bioenergologia | Lidia Bolfe |
