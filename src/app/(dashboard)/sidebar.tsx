@@ -241,14 +241,14 @@ function SidebarBrand({
       href="/"
       title={collapsed ? "EctoLab — página inicial" : undefined}
       aria-label="EctoLab — página inicial"
-      className={`flex min-h-12 items-center rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
-        collapsed ? "justify-center gap-0" : "gap-3 px-2"
+      className={`flex min-h-12 items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
+        collapsed ? "justify-center gap-0" : "w-full"
       }`}
     >
       <img
         src={collapsed ? "/favicon.png" : "/logo-ectolab.png"}
         alt="EctoLab"
-        className={`shrink-0 ${collapsed ? "h-9 w-9" : size === "lg" ? "h-14" : "h-10"}`}
+        className={`shrink-0 ${collapsed ? "h-9 w-9" : "w-full"}`}
       />
     </a>
   );
@@ -286,7 +286,9 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
       />
       <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-slate-200 glass-strong px-5 py-6 animate-slide-in-right">
         <div className="flex items-center justify-between">
-          <SidebarBrand collapsed={false} size="lg" />
+          <div className="flex-1 min-w-0">
+            <SidebarBrand collapsed={false} size="lg" />
+          </div>
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -317,14 +319,14 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         className={`sticky top-0 z-30 hidden h-dvh shrink-0 flex-col gap-5 border-r border-slate-200/60 bg-white/95 backdrop-blur-xl py-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
-          visuallyCollapsed ? "w-18 px-2" : "w-64 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
+          visuallyCollapsed ? "w-18 px-2" : "w-64 shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
         }`}
       >
         <SidebarBrand collapsed={visuallyCollapsed} size="lg" />
 
-        {!visuallyCollapsed && <QuickSearch />}
+        {!visuallyCollapsed && <div className="px-4"><QuickSearch /></div>}
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none px-4">
           <SidebarLinks
             acesso={acesso}
             pathname={pathname}
@@ -332,7 +334,7 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
           />
         </div>
 
-        <div className="mt-auto flex flex-col items-center gap-2">
+        <div className="mt-auto flex flex-col items-center gap-2 px-4">
           {!visuallyCollapsed && (
             <button
               type="button"
@@ -361,7 +363,9 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
       </aside>
 
       <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[#e8ddd4]/60 glass px-4 lg:hidden">
-        <SidebarBrand collapsed={false} />
+        <div className="flex-1 min-w-0">
+          <SidebarBrand collapsed={false} />
+        </div>
         <button
           type="button"
           onClick={() => setOpen(true)}
