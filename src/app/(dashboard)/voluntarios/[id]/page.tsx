@@ -230,7 +230,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
 
   return (
     <PageContainer>
-      <div className="flex w-full max-w-4xl flex-col gap-5">
+      <div className="flex w-full flex-col gap-5">
         <div className="flex w-full flex-col gap-5 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-col gap-2">
@@ -300,7 +300,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
             )}
           </div>
 
-          <dl className="grid grid-cols-1 gap-4 border-t border-zinc-100 pt-5 sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-4 border-t border-zinc-100 pt-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[
               ["Código PF", voluntario.codigo_pf],
               ["Unidade", voluntario.unidade],
@@ -345,106 +345,110 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
           editavel={canManage || ehProprioCadastro}
         />
 
-        <section className="flex flex-col gap-3">
-          <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-            <NotebookPen size={24} aria-hidden="true" />
-            Participação em reuniões gerais ({participacoes.length})
-          </h2>
-          {participacoes.length === 0 ? (
-            <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-700 ring-1 ring-zinc-200/60">
-              Este voluntário ainda não foi vinculado como participante de
-              nenhuma ata.
-            </p>
-          ) : (
-            <div className="flex flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-              {participacoes.map((participacao) => (
-                <Link
-                  key={participacao.ataId}
-                  href={`/reunioes/${participacao.ataId}`}
-                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <span className="text-xl text-zinc-900">
-                    {participacao.titulo}
-                  </span>
-                  <span className="text-base text-zinc-700">
-                    {formatData(participacao.data_reuniao)}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="flex flex-col gap-3">
-          <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-            <ClipboardList size={24} aria-hidden="true" />
-            Demandas atuais ({ativas.length})
-          </h2>
-          {!linked ? (
-            <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-700 ring-1 ring-zinc-200/60">
-              Este voluntário ainda não vinculou a conta de acesso — as
-              demandas aparecem aqui depois do vínculo.
-            </p>
-          ) : ativas.length === 0 ? (
-            <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-700 ring-1 ring-zinc-200/60">
-              Nenhuma demanda ativa no momento.
-            </p>
-          ) : (
-            <div className="flex flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-              {ativas.map((demanda) => (
-                <Link
-                  key={demanda.id}
-                  href={`/demandas/${demanda.id}/editar`}
-                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <span className="text-xl text-zinc-900">{demanda.titulo}</span>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <StatusBadge status={demanda.status} />
-                    <span
-                      className={`text-base ${
-                        demanda.atrasada ? "text-red-700" : "text-zinc-700"
-                      }`}
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+          <div className="flex flex-col gap-5">
+            <section className="flex flex-col gap-3">
+              <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+                <ClipboardList size={24} aria-hidden="true" />
+                Demandas atuais ({ativas.length})
+              </h2>
+              {!linked ? (
+                <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-700 ring-1 ring-zinc-200/60">
+                  Este voluntário ainda não vinculou a conta de acesso — as
+                  demandas aparecem aqui depois do vínculo.
+                </p>
+              ) : ativas.length === 0 ? (
+                <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-700 ring-1 ring-zinc-200/60">
+                  Nenhuma demanda ativa no momento.
+                </p>
+              ) : (
+                <div className="flex flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+                  {ativas.map((demanda) => (
+                    <Link
+                      key={demanda.id}
+                      href={`/demandas/${demanda.id}/editar`}
+                      className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
                     >
-                      {format(
-                        new Date(`${demanda.prazo}T00:00:00`),
-                        "dd/MM/yyyy",
-                        { locale: ptBR }
-                      )}
-                    </span>
-                    {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+                      <span className="text-xl text-zinc-900">{demanda.titulo}</span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={demanda.status} />
+                        <span
+                          className={`text-base ${
+                            demanda.atrasada ? "text-red-700" : "text-zinc-700"
+                          }`}
+                        >
+                          {format(
+                            new Date(`${demanda.prazo}T00:00:00`),
+                            "dd/MM/yyyy",
+                            { locale: ptBR }
+                          )}
+                        </span>
+                        {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
 
-        {linked && historico.length > 0 && (
+            {linked && historico.length > 0 && (
+              <section className="flex flex-col gap-3">
+                <h2 className="text-2xl font-semibold text-zinc-900">
+                  Histórico de concluídas ({historico.length})
+                </h2>
+                <div className="flex flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+                  {historico.map((demanda) => (
+                    <Link
+                      key={demanda.id}
+                      href={`/demandas/${demanda.id}/editar`}
+                      className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <span className="text-xl text-zinc-900">{demanda.titulo}</span>
+                      <span className="text-base text-zinc-700">
+                        Concluída — prazo{" "}
+                        {format(
+                          new Date(`${demanda.prazo}T00:00:00`),
+                          "dd/MM/yyyy",
+                          { locale: ptBR }
+                        )}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+
           <section className="flex flex-col gap-3">
-            <h2 className="text-2xl font-semibold text-zinc-900">
-              Histórico de concluídas ({historico.length})
+            <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+              <NotebookPen size={24} aria-hidden="true" />
+              Participação em reuniões gerais ({participacoes.length})
             </h2>
-            <div className="flex flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-              {historico.map((demanda) => (
-                <Link
-                  key={demanda.id}
-                  href={`/demandas/${demanda.id}/editar`}
-                  className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <span className="text-xl text-zinc-900">{demanda.titulo}</span>
-                  <span className="text-base text-zinc-700">
-                    Concluída — prazo{" "}
-                    {format(
-                      new Date(`${demanda.prazo}T00:00:00`),
-                      "dd/MM/yyyy",
-                      { locale: ptBR }
-                    )}
-                  </span>
-                </Link>
-              ))}
-            </div>
+            {participacoes.length === 0 ? (
+              <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-700 ring-1 ring-zinc-200/60">
+                Este voluntário ainda não foi vinculado como participante de
+                nenhuma ata.
+              </p>
+            ) : (
+              <div className="flex flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+                {participacoes.map((participacao) => (
+                  <Link
+                    key={participacao.ataId}
+                    href={`/reunioes/${participacao.ataId}`}
+                    className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="text-xl text-zinc-900">
+                      {participacao.titulo}
+                    </span>
+                    <span className="text-base text-zinc-700">
+                      {formatData(participacao.data_reuniao)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </section>
-        )}
+        </div>
       </div>
     </PageContainer>
   );
