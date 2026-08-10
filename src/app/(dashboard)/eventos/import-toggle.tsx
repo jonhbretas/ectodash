@@ -13,7 +13,11 @@ export default function ImportEventosToggle() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex w-full flex-col items-stretch gap-3 sm:items-end">
+    <div
+      className={`flex w-full flex-col items-stretch gap-3 sm:items-end ${
+        open ? "" : "sm:w-auto"
+      }`}
+    >
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
