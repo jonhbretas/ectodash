@@ -615,7 +615,7 @@ export default function ProepPage() {
       ) : (
         <>
           {/* Tabs */}
-          <div className="flex gap-1 overflow-x-auto pb-1 -mb-1">
+          <div className="sticky top-0 z-10 flex gap-1 overflow-x-auto pb-1 -mb-1 bg-white/95 backdrop-blur-sm">
             {TABS.map(t => {
               const Icon = t.icon;
               return (
