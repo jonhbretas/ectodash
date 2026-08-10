@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const targetEdition = Number(edition_id) || student.edition_id;
 
-    // 0. Garante pasta central + pasta da turma (PROEP AGO 26)
+    // 0. Garante pasta central + pasta da turma (PROEP 26 AGO)
     let editionFolder;
     try {
       editionFolder = await ensureEditionFolder(targetEdition);

@@ -282,7 +282,12 @@ export default function ProepPage() {
   useEffect(() => {
     api("/api/proep/editions").then((data: Edition[]) => {
       setEditions(data);
-      if (data.length > 0) setSelectedEdition(String(data[0].id));
+      if (data.length > 0) {
+        const today = new Date().toISOString().slice(0, 10);
+        const sorted = [...data].sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+        const next = sorted.find(e => e.start_date && e.start_date.slice(0, 10) >= today) || data[0];
+        setSelectedEdition(String(next.id));
+      }
     }).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, []);
 
@@ -914,7 +919,7 @@ export default function ProepPage() {
                             file_id: f.id, name: f.name, url: f.webViewLink,
                             file_type: f.fileType, is_template: folderTpl[f.id] ?? true,
                           }));
-                          const d = await api("/api/proep/materials/import-folder", { method: "POST", body: JSON.stringify({ edition_id: Number(selectedEdition), category: materialFilter, items }) });
+                          const d = await api("/api/proep/materials/import-folder", { method: "POST", body: JSON.stringify({ category: materialFilter, items }) });
                           setMaterials(prev => [...prev, ...d.imported]);
                           setShowMaterialModal(false);
                           setError(`${d.imported.length} material(is) importado(s) da pasta`);

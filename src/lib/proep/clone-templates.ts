@@ -29,6 +29,7 @@ function driveFileUrl(mimeType: string | null, fileId: string): string {
   if (mimeType === "spreadsheet") return `https://docs.google.com/spreadsheets/d/${fileId}/edit`;
   if (mimeType === "form") return `https://docs.google.com/forms/d/${fileId}/edit`;
   if (mimeType === "doc") return `https://docs.google.com/document/d/${fileId}/edit`;
+  if (mimeType === "slides") return `https://docs.google.com/presentation/d/${fileId}/edit`;
   return `https://drive.google.com/file/d/${fileId}/view`;
 }
 
@@ -43,11 +44,11 @@ export async function cloneTemplatesIntoFolder(
   const materials: ClonedMaterial[] = [];
   const errors: Record<string, string> = {};
 
-  const { data: allTemplates } = await supabase
+  const { data } = await supabase
     .from("proep_materials")
     .select("*")
     .eq("is_template", true);
-  const templates = (allTemplates ?? []).filter((t) => t.edition_id === editionId);
+  const templates = data ?? [];
 
   // Campos legados: primeira planilha e primeiro formulário (compatibilidade
   // com os chips Planilha/Parapercepciograma e com o compartilhamento por

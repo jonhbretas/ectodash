@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { edition_id, category, items } = await req.json();
+    const { category, items } = await req.json();
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Nenhum arquivo selecionado" }, { status: 400 });
     }
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       const { data, error } = await supabase
         .from("proep_materials")
         .insert({
-          edition_id: edition_id || null,
+          edition_id: null,
           category: category || "student",
           title,
           url: item.url || `https://drive.google.com/file/d/${fileId}/view`,

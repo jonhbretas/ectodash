@@ -13,18 +13,14 @@ function requireUuid(id: string | null, label = "id") {
 const LABEL = "proep_materials";
 
 export async function GET(req: NextRequest) {
-  const editionIdRaw = req.nextUrl.searchParams.get("edition_id");
-  const editionId = editionIdRaw ? parseInt(editionIdRaw, 10) : null;
   const category = req.nextUrl.searchParams.get("category");
   const supabase = await createClient();
   let query = supabase.from("proep_materials").select("*").order("sort_order");
   if (category) query = query.eq("category", category);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: `[${LABEL} GET] ${error.message}` }, { status: 500 });
-  const filtered = editionId && !isNaN(editionId)
-    ? (data ?? []).filter((r) => r.edition_id === editionId)
-    : data ?? [];
-  return NextResponse.json(filtered);
+  // Materiais são globais (todas as turmas): não filtra por edition_id.
+  return NextResponse.json(data ?? []);
 }
 
 export async function POST(req: NextRequest) {
@@ -33,7 +29,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("proep_materials")
     .insert({
-      edition_id: body.edition_id || null,
+      edition_id: null,
       category: body.category,
       title: body.title,
       description: body.description || null,

@@ -1,7 +1,7 @@
 // src/lib/proep/drive-folders.ts
 // Garante a estrutura de pastas do PROEP no Drive:
 //   PROEP (central)/
-//     PROEP AGO 26/     ← 1 pasta por turma
+//     PROEP 26 AGO/     ← 1 pasta por turma
 // As funções são idempotentes: se a pasta já existe (id salvo no banco),
 // reutilizam sem criar duplicata.
 
