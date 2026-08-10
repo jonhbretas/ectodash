@@ -47,7 +47,8 @@ export type ModuloAcesso =
   | "analisar"
   | "vendas"
   | "financeiro"
-  | "utilidades";
+  | "utilidades"
+  | "contratos";
 
 export type ModuloRestrito = "painel" | "areas";
 
@@ -65,6 +66,7 @@ export const MODULOS_LABELS: Record<ModuloAcesso, string> = {
   vendas: "Loja Ectolab",
   financeiro: "Financeiro",
   utilidades: "Utilidades",
+  contratos: "Contratos",
 };
 
 export const NIVEL_CARGO_LABELS: Record<NivelCargo, string> = {
@@ -97,6 +99,10 @@ export function podeAcessar(
   const role = acesso.role;
 
   if (role === "coordenador_geral") return "gerenciar";
+
+  // Contratos contêm dados pessoais de alunos e é exclusivo do coordenador
+  // geral (RLS 0042/0047 + gates de página). Cargo nenhum concede este módulo.
+  if (modulo === "contratos") return false;
 
   if (role === "financeiro") {
     if (modulo === "financeiro") return "gerenciar";

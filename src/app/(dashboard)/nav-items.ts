@@ -21,6 +21,8 @@ import {
   ShoppingCart,
   Package,
   Receipt,
+  FileSignature,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -114,6 +116,19 @@ export const navEntries: SidebarEntry[] = [
 
   // ─── Financeiro (role financeiro ou cargo com o módulo) ───
   { href: "/financeiro", label: "Financeiro", Icon: Wallet, modulo: "financeiro" },
+
+  // ─── Contratos (módulo exclusivo do coordenador geral — acesso.ts) ───
+  {
+    type: "group",
+    label: "Contratos",
+    Icon: FileSignature,
+    href: "/contratos",
+    modulo: "contratos",
+    children: [
+      { href: "/contratos", label: "Contratos", Icon: FileSignature, modulo: "contratos" },
+      { href: "/contratos/modelos", label: "Modelos", Icon: FileText, modulo: "contratos" },
+    ],
+  },
 
   // ─── Ferramentas ───
   { href: "/utilidades", label: "Utilidades", Icon: Wrench, modulo: "utilidades" },
