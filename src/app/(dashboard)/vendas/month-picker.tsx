@@ -19,6 +19,8 @@ export default function MonthPicker() {
     const params = new URLSearchParams(searchParams);
     if (yearVal && monthVal) {
       params.set("month", `${yearVal}-${monthVal.padStart(2, "0")}`);
+    } else if (yearVal) {
+      params.set("month", yearVal);
     } else {
       params.delete("month");
     }
@@ -45,7 +47,7 @@ export default function MonthPicker() {
       </select>
       <select
         value={year}
-        onChange={(e) => handleChange(e.target.value, month || String(new Date().getMonth() + 1))}
+        onChange={(e) => handleChange(e.target.value, month)}
         className="min-h-12 rounded-xl border border-zinc-200 bg-white px-3 text-base text-zinc-900 focus:border-[#2195B9] focus:outline-none focus:ring-2 focus:ring-[#2195B9]/30"
       >
         <option value="">Ano</option>

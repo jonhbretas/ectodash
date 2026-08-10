@@ -60,11 +60,14 @@ export default async function ProdutosPage({
   const { data: products } = await query;
   let items: ProductRow[] = (products ?? []) as ProductRow[];
 
-  // Filter by month if specified.
+  // Filter by month or year if specified.
   if (monthFilter) {
     items = items.filter((p) => {
       if (!p.date_created) return false;
       const d = new Date(p.date_created);
+      if (monthFilter.length === 4) {
+        return String(d.getFullYear()) === monthFilter;
+      }
       const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       return ym === monthFilter;
     });

@@ -92,34 +92,64 @@ export default async function VendasPage({
   }
 
   // Fetch all data in parallel — same pattern as financeiro/page.tsx.
-  const [ordersResult, customersResult, productsResult, syncResult] =
-    await Promise.all([
-      supabase
-        .from("wp_orders")
-        .select("wp_order_id, total, customer_name, customer_email, status, date_created, items_summary, coupon_codes"),
-      supabase
-        .from("wp_customers")
-        .select("id"),
-      supabase
-        .from("wp_products")
-        .select("id, name, price, image_url"),
-      supabase
-        .from("wp_sync_log")
-        .select("id, status, trigger_source, started_at, finished_at, products_synced, orders_synced, customers_synced, error")
-        .order("started_at", { ascending: false })
-        .limit(5),
-    ]);
+  const [
+    ordersResult,
+    customersResult,
+    productsResult,
+    syncResult,
+    oldestOrderResult,
+    oldestProductResult,
+  ] = await Promise.all([
+    supabase
+      .from("wp_orders")
+      .select("wp_order_id, total, customer_name, customer_email, status, date_created, items_summary, coupon_codes"),
+    supabase
+      .from("wp_customers")
+      .select("id"),
+    supabase
+      .from("wp_products")
+      .select("id, name, price, image_url"),
+    supabase
+      .from("wp_sync_log")
+      .select("id, status, trigger_source, started_at, finished_at, products_synced, orders_synced, customers_synced, error")
+      .order("started_at", { ascending: false })
+      .limit(5),
+    // Oldest synced dates — how far back the import has walked so far.
+    supabase
+      .from("wp_orders")
+      .select("date_created")
+      .order("date_created", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("wp_products")
+      .select("date_modified")
+      .order("date_modified", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   const orders: OrderRow[] = (ordersResult.data ?? []) as OrderRow[];
   const productsCount = (productsResult.data ?? []).length;
   const customersCount = (customersResult.data ?? []).length;
   const syncLogs: SyncLogRow[] = (syncResult.data ?? []) as SyncLogRow[];
+  const oldestOrderDate = oldestOrderResult.data?.date_created as
+    | string
+    | null
+    | undefined;
+  const oldestProductDate = oldestProductResult.data?.date_modified as
+    | string
+    | null
+    | undefined;
 
-  // Filter orders by month if specified.
+  // Filter orders by month or year if specified.
   const filteredOrders = monthFilter
     ? orders.filter((o) => {
         if (!o.date_created) return false;
         const d = new Date(o.date_created);
+        if (monthFilter.length === 4) {
+          return String(d.getFullYear()) === monthFilter;
+        }
         const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
         return ym === monthFilter;
       })
@@ -162,7 +192,10 @@ export default async function VendasPage({
 
   return (
     <PageContainer>
-      <Header />
+      <Header
+        oldestOrderDate={oldestOrderDate}
+        oldestProductDate={oldestProductDate}
+      />
       <MonthPicker />
 
       {/* KPIs */}
@@ -364,7 +397,13 @@ export default async function VendasPage({
   );
 }
 
-function Header() {
+function Header({
+  oldestOrderDate,
+  oldestProductDate,
+}: {
+  oldestOrderDate?: string | null;
+  oldestProductDate?: string | null;
+}) {
   return (
     <header className="flex w-full flex-wrap items-start justify-between gap-6">
       <div className="flex flex-col gap-1">
@@ -375,7 +414,10 @@ function Header() {
           Dados da loja Ectolab, sincronizados automaticamente.
         </p>
       </div>
-      <SyncButton />
+      <SyncButton
+        oldestOrderDate={oldestOrderDate}
+        oldestProductDate={oldestProductDate}
+      />
     </header>
   );
 }
