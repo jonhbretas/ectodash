@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import ImportEventosToggle from "./import-toggle";
+import MergeEventosSection, { type EventoMergeOpcao } from "./merge-eventos-section";
 
 type EventoRow = {
   id: number;
@@ -78,7 +79,7 @@ export default async function EventosPage() {
   const isCoordenador = profile?.role === "coordenador_geral";
 
   // RLS (migration 0008): every authenticated volunteer reads every event.
-  const [proximosResult, anterioresResult, tiposResult] = await Promise.all([
+  const [proximosResult, anterioresResult, tiposResult, mergeResult] = await Promise.all([
     supabase
       .from("eventos")
       .select("id, titulo, descricao, data_evento, local, tipo_evento_id")
@@ -92,6 +93,14 @@ export default async function EventosPage() {
       .order("data_evento", { ascending: false })
       .limit(50),
     supabase.from("evento_tipos").select("id, nome"),
+    // Merge options (coordinator only): enough history to find a duplicate.
+    isCoordenador
+      ? supabase
+          .from("eventos")
+          .select("id, titulo, data_evento, local")
+          .order("data_evento", { ascending: false })
+          .limit(500)
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const tipoNomeById = new Map(
@@ -121,6 +130,13 @@ export default async function EventosPage() {
   const proximosPorMes = groupByMonth(proximos);
   const anterioresPorMes = groupByMonth(anteriores);
   const mesAtualKey = monthKey(today);
+
+  const eventosMerge: EventoMergeOpcao[] = (mergeResult.data ?? []).map((e) => ({
+    id: e.id,
+    titulo: e.titulo,
+    data_evento: e.data_evento,
+    local: e.local,
+  }));
 
   return (
     <PageContainer>
@@ -218,6 +234,8 @@ export default async function EventosPage() {
               </div>
             </details>
           )}
+
+          {isCoordenador && <MergeEventosSection eventos={eventosMerge} />}
         </div>
       )}
     </PageContainer>

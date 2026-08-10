@@ -322,6 +322,70 @@ async function importarEventosInner(
 // cron already treats that case), and assignment happens afterwards via the
 // edit screen. prazo = event date + template offset (negative = days
 // before), status pendente, criado_por = the clicking volunteer.
+export type MesclarEventosState = {
+  ok: boolean;
+  message: string;
+};
+
+const mesclarEventosInitialState: MesclarEventosState = { ok: false, message: "" };
+
+export { mesclarEventosInitialState };
+
+// Merge de eventos duplicados (migration 0046) — a análise automática de
+// atas pode extrair o mesmo evento duas vezes; o coordenador escolhe qual
+// fica (manter) e qual é absorvido (remover). Todas as referências do
+// duplicado (demandas, contratos, turmas PROEP) são movidas para o
+// definitivo e o duplicado é apagado.
+const MESCLAR_MENSAGENS: Record<string, string> = {
+  ok: "Eventos mesclados com sucesso. O duplicado foi removido.",
+  evento_nao_encontrado: "Um dos eventos não foi encontrado.",
+  mesmo_evento: "Escolha dois eventos diferentes.",
+  sem_permissao: "Você não tem permissão para mesclar eventos.",
+};
+
+export async function mesclarEventos(
+  manterId: number,
+  removerId: number
+): Promise<MesclarEventosState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ...mesclarEventosInitialState, message: "Sessão expirada." };
+  }
+
+  if (!Number.isFinite(manterId) || !Number.isFinite(removerId)) {
+    return { ...mesclarEventosInitialState, message: "Evento inválido." };
+  }
+
+  const { data, error } = await supabase.rpc("mesclar_eventos", {
+    p_manter_id: manterId,
+    p_remover_id: removerId,
+  });
+
+  if (error) {
+    console.error("mesclarEventos: rpc failed", error);
+    return {
+      ...mesclarEventosInitialState,
+      message: "Não foi possível mesclar agora. Tente novamente.",
+    };
+  }
+
+  const resultado = typeof data === "string" ? data : "erro";
+  if (resultado === "ok") {
+    revalidatePath("/eventos");
+    revalidatePath("/demandas");
+    revalidatePath("/");
+  }
+
+  return {
+    ok: resultado === "ok",
+    message: MESCLAR_MENSAGENS[resultado] ?? "Não foi possível mesclar agora.",
+  };
+}
+
 export async function adicionarTarefasDoModelo(
   eventoId: number
 ): Promise<AdicionarTarefasState> {
