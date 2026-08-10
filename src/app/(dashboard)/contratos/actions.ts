@@ -1,0 +1,458 @@
+// src/app/(dashboard)/contratos/actions.ts
+// Server actions do módulo de contratos: criação (com pastas no Drive e PDF),
+// envio para assinatura (Assinafy), retorno de assinado, modelos e webhook.
+// Padrões do projeto: validação via schema zod compartilhado, revalidatePath,
+// gate por role, RLS como fronteira real (auth.uid()).
+
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { uploadDriveFile } from "@/lib/google/drive";
+import {
+  ensureEventFolder,
+  ensureAvulsosFolder,
+  createAlunoFolder,
+} from "@/lib/contratos/drive-folders";
+import { carregarContrato, renderizarContratoPdf } from "@/lib/contratos/render";
+import {
+  assinafyUploadDocumento,
+  assinafyCriarSignatario,
+  assinafyCriarAssignment,
+  assinafyBaixarDocumento,
+  assinafyGarantirWebhook,
+} from "@/lib/assinafy";
+import { contratoSchema, contratoModeloSchema } from "./contrato-schema";
+
+export type ContratoActionState = {
+  ok: boolean;
+  message: string;
+  assinaturaUrl?: string;
+};
+
+const initialState: ContratoActionState = { ok: true, message: "" };
+
+async function requireCoordenador() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Sessão expirada. Entre novamente.");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "coordenador_geral") {
+    throw new Error("Você não tem acesso aos contratos.");
+  }
+  return { supabase, user };
+}
+
+// ── Contratos ──────────────────────────────────────────────────────────
+
+export async function criarContrato(
+  _prev: ContratoActionState,
+  formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+
+    const parsed = contratoSchema.safeParse({
+      modeloId: formData.get("modeloId") ?? "",
+      eventoId: formData.get("eventoId") ?? "",
+      alunoNome: formData.get("alunoNome") ?? "",
+      alunoEmail: formData.get("alunoEmail") ?? "",
+      alunoDocumento: formData.get("alunoDocumento") ?? "",
+      alunoTelefone: formData.get("alunoTelefone") ?? "",
+      valor: formData.get("valor") ?? "",
+    });
+    if (!parsed.success) {
+      const first = parsed.error.issues[0]?.message ?? "Dados inválidos.";
+      return { ok: false, message: first };
+    }
+
+    const data = parsed.data;
+    const valor =
+      data.valor && data.valor.trim()
+        ? parseFloat(data.valor.replace(/\s/g, "").replace(/\./g, "").replace(",", "."))
+        : null;
+    if (valor !== null && !Number.isFinite(valor)) {
+      return { ok: false, message: "Informe o valor em formato numérico (ex.: 120,00)." };
+    }
+
+    const { data: insert, error: insertError } = await supabase
+      .from("contratos")
+      .insert({
+        modelo_id: Number(data.modeloId),
+        evento_id: data.eventoId ? Number(data.eventoId) : null,
+        aluno_nome: data.alunoNome,
+        aluno_email: data.alunoEmail || null,
+        aluno_documento: data.alunoDocumento || null,
+        aluno_telefone: data.alunoTelefone || null,
+        valor,
+        status: "gerado",
+      })
+      .select("id")
+      .single();
+    if (insertError || !insert) {
+      return { ok: false, message: "Não foi possível criar o contrato." };
+    }
+    const contratoId = insert.id as number;
+
+    // Pastas + PDF no Drive (best effort: se o Google falhar, o contrato fica
+    // criado e o PDF continua disponível para download/assinatura).
+    let driveWarning = "";
+    try {
+      const { data: evento } = data.eventoId
+        ? await supabase
+            .from("eventos")
+            .select("titulo")
+            .eq("id", Number(data.eventoId))
+            .single()
+        : { data: null };
+      const parent = data.eventoId
+        ? await ensureEventFolder(Number(data.eventoId), evento?.titulo ?? `Evento ${data.eventoId}`)
+        : await ensureAvulsosFolder();
+
+      const completo = await carregarContrato(supabase, contratoId);
+      const alunoFolder = await createAlunoFolder(parent.id, completo.contrato.aluno_nome);
+      await supabase
+        .from("contratos")
+        .update({
+          drive_pasta_id: alunoFolder.id,
+          drive_pasta_url: alunoFolder.url,
+        })
+        .eq("id", contratoId);
+
+      const { buffer, filename } = await renderizarContratoPdf(completo);
+      const arquivo = await uploadDriveFile(alunoFolder.id, filename, buffer);
+      await supabase
+        .from("contratos")
+        .update({
+          drive_arquivo_id: arquivo.id,
+          drive_arquivo_url: arquivo.webViewLink || null,
+        })
+        .eq("id", contratoId);
+    } catch (error) {
+      driveWarning = ` O PDF não foi salvo no Google Drive: ${error instanceof Error ? error.message : "erro desconhecido"}.`;
+    }
+
+    revalidatePath("/contratos");
+    return {
+      ok: true,
+      message: "Contrato criado e salvo no Drive." + driveWarning,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Erro ao criar o contrato.",
+    };
+  }
+}
+
+export async function enviarParaAssinatura(
+  id: number,
+  _prev: ContratoActionState,
+  _formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+
+    const completo = await carregarContrato(supabase, id);
+    const { buffer, filename } = await renderizarContratoPdf(completo);
+
+    const documento = await assinafyUploadDocumento(buffer, filename);
+    const signer = await assinafyCriarSignatario(
+      completo.contrato.aluno_nome,
+      completo.contrato.aluno_email,
+      completo.contrato.aluno_telefone
+    );
+    const assignment = await assinafyCriarAssignment(
+      documento.id,
+      [signer.id],
+      `Assine o contrato "${completo.modelo.titulo}" referente ao ${completo.evento?.titulo ?? "evento/curso"} da Ectolab.`
+    );
+
+    const { error } = await supabase
+      .from("contratos")
+      .update({
+        status: "assinando",
+        assinafy_document_id: documento.id,
+        assinafy_assignment_id: assignment.id,
+      })
+      .eq("id", id);
+    if (error) throw new Error("Não foi possível atualizar o contrato.");
+
+    revalidatePath("/contratos");
+    const assinaturaUrl = assignment.signing_urls?.[0]?.url ?? undefined;
+    return {
+      ok: true,
+      message: "Documento enviado para assinatura. Compartilhe o link com o aluno.",
+      assinaturaUrl,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? `Não foi possível enviar para assinatura: ${error.message}`
+          : "Erro ao enviar para assinatura.",
+    };
+  }
+}
+
+export async function uploadAssinado(
+  id: number,
+  _prev: ContratoActionState,
+  formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+
+    const arquivo = formData.get("arquivo");
+    if (!(arquivo instanceof File)) {
+      return { ok: false, message: "Selecione o arquivo PDF assinado." };
+    }
+    if (!arquivo.name.toLowerCase().endsWith(".pdf")) {
+      return { ok: false, message: "O arquivo precisa ser PDF." };
+    }
+    if (arquivo.size > 10 * 1024 * 1024) {
+      return { ok: false, message: "O arquivo é grande demais (máx. 10 MB)." };
+    }
+
+    const { data: contrato, error } = await supabase
+      .from("contratos")
+      .select("id, drive_pasta_id")
+      .eq("id", id)
+      .single();
+    if (error || !contrato?.drive_pasta_id) {
+      return { ok: false, message: "Contrato sem pasta no Drive." };
+    }
+
+    const buffer = Buffer.from(await arquivo.arrayBuffer());
+    const up = await uploadDriveFile(contrato.drive_pasta_id, "contrato-assinado.pdf", buffer);
+
+    await supabase
+      .from("contratos")
+      .update({
+        status: "assinado",
+        drive_assinado_id: up.id,
+        drive_assinado_url: up.webViewLink || null,
+      })
+      .eq("id", id);
+
+    revalidatePath("/contratos");
+    return { ok: true, message: "PDF assinado salvo e contrato marcado como assinado." };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? `Falha ao salvar o assinado: ${error.message}`
+          : "Erro ao salvar o PDF assinado.",
+    };
+  }
+}
+
+export async function sincronizarAssinado(
+  id: number,
+  _prev: ContratoActionState,
+  _formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+
+    const { data: contrato, error } = await supabase
+      .from("contratos")
+      .select("id, drive_pasta_id, assinafy_document_id")
+      .eq("id", id)
+      .single();
+    if (error || !contrato?.assinafy_document_id) {
+      return { ok: false, message: "Contrato sem documento na Assinafy." };
+    }
+
+    const buffer = await assinafyBaixarDocumento(contrato.assinafy_document_id, "certificated");
+    const update: Record<string, unknown> = { status: "assinado" };
+    if (contrato.drive_pasta_id) {
+      const up = await uploadDriveFile(
+        contrato.drive_pasta_id,
+        "contrato-assinado.pdf",
+        buffer
+      );
+      update.drive_assinado_id = up.id;
+      update.drive_assinado_url = up.webViewLink || null;
+    }
+    await supabase.from("contratos").update(update).eq("id", id);
+
+    revalidatePath("/contratos");
+    return { ok: true, message: "PDF certificado sincronizado do Assinafy." };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? `Falha ao sincronizar: ${error.message}`
+          : "Erro ao sincronizar o assinado.",
+    };
+  }
+}
+
+export async function marcarAssinadoManual(
+  id: number,
+  _prev: ContratoActionState,
+  _formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+    await supabase.from("contratos").update({ status: "assinado" }).eq("id", id);
+    revalidatePath("/contratos");
+    return { ok: true, message: "Contrato marcado como assinado." };
+  } catch {
+    return { ok: false, message: "Erro ao marcar como assinado." };
+  }
+}
+
+export async function cancelarContrato(
+  id: number,
+  _prev: ContratoActionState,
+  _formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+    await supabase.from("contratos").update({ status: "cancelado" }).eq("id", id);
+    revalidatePath("/contratos");
+    return { ok: true, message: "Contrato cancelado." };
+  } catch {
+    return { ok: false, message: "Erro ao cancelar o contrato." };
+  }
+}
+
+// ── Modelos ────────────────────────────────────────────────────────────
+
+export async function criarModelo(
+  _prev: ContratoActionState,
+  formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+
+    const parsed = contratoModeloSchema.safeParse({
+      titulo: formData.get("titulo") ?? "",
+      categoria: formData.get("categoria") ?? "",
+      descricao: formData.get("descricao") ?? "",
+      conteudo: formData.get("conteudo") ?? "",
+    });
+    if (!parsed.success) {
+      const first = parsed.error.issues[0]?.message ?? "Dados inválidos.";
+      return { ok: false, message: first };
+    }
+
+    const { error } = await supabase.from("contrato_modelos").insert({
+      titulo: parsed.data.titulo,
+      categoria: parsed.data.categoria,
+      descricao: parsed.data.descricao || null,
+      conteudo: parsed.data.conteudo,
+      ativo: true,
+    });
+    if (error) return { ok: false, message: "Não foi possível criar o modelo." };
+
+    revalidatePath("/contratos/modelos");
+    return { ok: true, message: "Modelo criado." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Erro ao criar o modelo.",
+    };
+  }
+}
+
+export async function atualizarModelo(
+  id: number,
+  _prev: ContratoActionState,
+  formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+
+    const parsed = contratoModeloSchema.safeParse({
+      titulo: formData.get("titulo") ?? "",
+      categoria: formData.get("categoria") ?? "",
+      descricao: formData.get("descricao") ?? "",
+      conteudo: formData.get("conteudo") ?? "",
+    });
+    if (!parsed.success) {
+      const first = parsed.error.issues[0]?.message ?? "Dados inválidos.";
+      return { ok: false, message: first };
+    }
+
+    const { error } = await supabase
+      .from("contrato_modelos")
+      .update({
+        titulo: parsed.data.titulo,
+        categoria: parsed.data.categoria,
+        descricao: parsed.data.descricao || null,
+        conteudo: parsed.data.conteudo,
+      })
+      .eq("id", id);
+    if (error) return { ok: false, message: "Não foi possível atualizar o modelo." };
+
+    revalidatePath("/contratos/modelos");
+    return { ok: true, message: "Modelo atualizado." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Erro ao atualizar o modelo.",
+    };
+  }
+}
+
+export async function toggleModeloAtivo(
+  id: number,
+  _prev: ContratoActionState,
+  _formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    const { supabase } = await requireCoordenador();
+    const { data: modelo } = await supabase
+      .from("contrato_modelos")
+      .select("ativo")
+      .eq("id", id)
+      .single();
+    await supabase
+      .from("contrato_modelos")
+      .update({ ativo: !modelo?.ativo })
+      .eq("id", id);
+    revalidatePath("/contratos/modelos");
+    return { ok: true, message: modelo?.ativo ? "Modelo desativado." : "Modelo ativado." };
+  } catch {
+    return { ok: false, message: "Erro ao alternar o modelo." };
+  }
+}
+
+// ── Webhook Assinafy ───────────────────────────────────────────────────
+
+export async function configurarAssinafy(
+  _prev: ContratoActionState,
+  _formData: FormData
+): Promise<ContratoActionState> {
+  try {
+    await requireCoordenador();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const { url } = await assinafyGarantirWebhook(siteUrl);
+    return {
+      ok: true,
+      message: "Webhook configurado na Assinafy apontando para este sistema.",
+      assinaturaUrl: url,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? `Assinafy: ${error.message}`
+          : "Erro ao configurar o webhook da Assinafy.",
+    };
+  }
+}

@@ -1,7 +1,7 @@
 // src/lib/google/drive.ts
 // Google Drive operations: copy files, create folders, set permissions.
 
-import { googleApiRequest } from "./oauth";
+import { getGoogleAccessToken, googleApiRequest } from "./oauth";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 
@@ -51,4 +51,43 @@ export async function shareWithEmail(fileId: string, email: string, role: "reade
     method: "POST",
     body: JSON.stringify({ type: "user", role, emailAddress: email }),
   });
+}
+
+/** Upload a file (buffer) into a Drive folder via multipart upload. */
+export async function uploadDriveFile(
+  parentFolderId: string,
+  fileName: string,
+  buffer: Buffer,
+  mimeType = "application/pdf"
+) {
+  const token = await getGoogleAccessToken();
+  const boundary = `ectodash-${Date.now()}`;
+
+  const header = Buffer.from(
+    `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="metadata"\r\n` +
+      `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+      `${JSON.stringify({ name: fileName, parents: [parentFolderId] })}\r\n` +
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+      `Content-Type: ${mimeType}\r\n\r\n`
+  );
+  const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
+
+  const response = await fetch(
+    `${DRIVE_API}/files?uploadType=multipart&fields=id,name,webViewLink`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body: Buffer.concat([header, buffer, footer]),
+    }
+  );
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(json?.error?.message || "Erro no upload para o Google Drive.");
+  }
+  return json as { id: string; name: string; webViewLink?: string };
 }

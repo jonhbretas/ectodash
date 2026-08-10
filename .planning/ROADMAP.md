@@ -279,10 +279,30 @@ Plans:
 
 - [ ] 10-01: TBD
 
+### Phase 11: Contratos e Assinatura Eletrônica
+
+**Goal**: Coordenador gera contratos padronizados (curso, evento, cessão de imagem, consentimento) com variáveis por aluno/evento, envia para assinatura eletrônica (Assinafy, ICP-Brasil) e arquiva automaticamente os PDFs no Google Drive (Contratos Ectolab > Evento > Aluno), tudo referenciado por cards no sistema.
+**Mode:** mvp
+**Depends on**: Phase 1 (login/RLS), integração Google Drive existente, sync WooCommerce (alunos)
+**Requirements**: CONTR-01 a CONTR-07 (definidas em 2026-08-10 na conversa de planejamento)
+**Success Criteria** (what must be TRUE):
+
+  1. Coordenador cria modelos padronizados com texto livre + variáveis ({{aluno_nome}}, {{evento_titulo}}, {{valor}}...) e os reutiliza.
+  2. Ao gerar um contrato, o sistema cria a estrutura de pastas no Drive (central > evento > aluno), gera o PDF preenchido e salva automaticamente.
+  3. Coordenador envia o contrato para assinatura eletrônica via Assinafy; o webhook recebe o retorno e o PDF certificado volta sozinho para a pasta do aluno.
+  4. Cada contrato é referenciado por um card com status (gerado/assinando/assinado/recusado/cancelado) e ações (baixar PDF, link de assinatura, upload do assinado, sincronizar, cancelar).
+  5. Usuários sem o papel coordenador_geral não acessam dados de alunos/contratos (RLS + gate de página).
+
+**Plans**: 1/1 plan executed lean (sem cerimônia PLAN/SUMMARY, decisão de aceleração do usuário)
+
+Plans:
+
+- [x] 11-01 — Módulo completo: migration 0042 (contratos, modelos, pastas, webhook log, RLS) + libs (variáveis, PDF pdfkit, render, pastas Drive, cliente Assinafy) + rotas (/api/contratos/[id]/pdf, /api/contratos/webhook) + UI (/contratos, /contratos/novo, /contratos/modelos, menu) + testes (6 RLS live, 4 unit) + env vars ASSINAFY_* (2026-08-10)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -296,6 +316,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 8. AI Task Extraction & Review | 2/3 | In Progress|  |
 | 9. Google Sheets Sync | 1/1* | Code shipped, awaiting human setup | - |
 | 10. Financial Dashboard | 1/1* | Implemented, awaiting real data | - |
+| 11. Contratos e Assinatura Eletrônica | 1/1* | SHIPPED (migration 0042 + UI + API + Assinafy); awaiting human setup | 2026-08-10 |
 
 \* Phases 9-10 executed lean (no PLAN/SUMMARY ceremony) per the user's 2026-08-04 decision to accelerate: migration 0006 + sync-sheets cron route + /painel sync panel + /financeiro dashboard shipped in one pass. The remaining blockers are human-setup actions: Google service account + spreadsheet share + env vars (Phase 9), and a real sync run to verify Phase 10 against real data.
 

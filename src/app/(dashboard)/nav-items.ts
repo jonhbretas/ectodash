@@ -21,6 +21,8 @@ import {
   ShoppingCart,
   Package,
   Receipt,
+  FileSignature,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -106,6 +108,19 @@ export const navEntries: SidebarEntry[] = [
       { href: "/vendas/produtos", label: "Produtos", Icon: Package, visibleTo: "coordenador" },
       { href: "/vendas/pedidos", label: "Pedidos", Icon: Receipt, visibleTo: "coordenador" },
       { href: "/vendas/alunos", label: "Alunos", Icon: Users, visibleTo: "coordenador" },
+    ],
+  },
+
+  // ─── Contratos (coordenador) ───
+  {
+    type: "group",
+    label: "Contratos",
+    Icon: FileSignature,
+    href: "/contratos",
+    visibleTo: "coordenador",
+    children: [
+      { href: "/contratos", label: "Contratos", Icon: FileSignature, visibleTo: "coordenador" },
+      { href: "/contratos/modelos", label: "Modelos", Icon: FileText, visibleTo: "coordenador" },
     ],
   },
 

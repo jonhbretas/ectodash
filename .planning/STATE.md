@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 09
-current_phase_name: Google Sheets Sync
-status: executing
-stopped_at: Phase 9 code shipped (migration 0006 + cron route); awaiting human setup (service account + spreadsheet share)
-last_updated: "2026-08-04T17:30:00.000Z"
-last_activity: 2026-08-04
-last_activity_desc: Phases 9-10 shipped; Phase 8 provider swapped to OpenCode API (DeepSeek V4 Flash); sidebar + kanban/calendário shipped
+current_phase: 11
+current_phase_name: Contratos e Assinatura Eletrônica
+status: shipped
+stopped_at: Phase 11 (Contratos) shipped — migration 0042 applied, RLS tests green; awaiting human setup: ASSINAFY_API_KEY + ASSINAFY_ACCOUNT_ID env vars
+last_updated: "2026-08-10T16:00:00.000Z"
+last_activity: 2026-08-10
+last_activity_desc: Phase 11 (Contratos) shipped — migration 0042, libs (variáveis/PDF/pastas/Assinafy), rotas /api/contratos, UI /contratos (+novo+modelos), 6 RLS + 4 unit tests green
 progress:
-  total_phases: 8
-  completed_phases: 6
-  total_plans: 25
-  completed_plans: 22
+  total_phases: 9
+  completed_phases: 7
+  total_plans: 26
+  completed_plans: 23
 ---
 
 # Project State
@@ -23,9 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-02)
 
 **Core value:** Coordenador consegue ver, num só lugar, o andamento real de todas as demandas/projetos da instituição — quem é responsável, qual o prazo, o que está atrasado — sem precisar cobrar manualmente ou vasculhar planilhas e grupos.
-**Current focus:** Phases 09-10 — Sheets sync code shipped; financial dashboard (/financeiro) built; both await real credentials/data
+**Current focus:** Phase 11 (Contratos) shipped; awaits ASSINAFY_API_KEY/ASSAINAFY_ACCOUNT_ID for the signature flow
 
 ## Current Position
+
+Phase: 11 (Contratos e Assinatura Eletrônica) — SHIPPED
+Plan: 11-01 — executed lean (no PLAN/SUMMARY ceremony, per user's accelerate decision)
+Status: Implemented + migration 0042 applied live + RLS tests green. Awaiting human: Assinafy API key/account id in .env.local + Vercel, then "Configurar webhook na Assinafy" no card de modelos.
+Details: modelos padronizados com variáveis ({{aluno_nome}}, {{evento_titulo}}...), geração de PDF (pdfkit), pastas automáticas no Drive (Contratos Ectolab > Evento > Aluno), envio para assinatura (Assinafy: upload doc, signer, assignment virtual), webhook /api/contratos/webhook (dedup por id + account_id, baixa certificado e arquiva), cards com status gerado/assinando/assinado/recusado/cancelado.
 
 Phase: 09 (Google Sheets Sync) — code shipped, AWAITING HUMAN SETUP
 Plan: 09-01 — executed lean (no PLAN/SUMMARY ceremony per user decision to accelerate)
@@ -156,7 +161,9 @@ None yet.
 - **[Voluntariado, 2026-08-04]** User decision: volunteers self-register by the magic link (`shouldCreateUser: true` — replaces D-02's invite-only mode; Supabase instance signup re-enabled via Management API `disable_signup=false`), then link their account to their name in the institutional roster at /vincular ("escolhem um usuário pelo nome do que já consta no sistema"; not finding themselves, they type name+sobrenome and a new roster entry is created).
 - **[Voluntariado, 2026-08-04]** Institutional roster decoupled from auth: new `public.voluntarios` table (migrations 0016-0019) holds nome/codigo_pf/unidade/org_depto/funcao/data_inicio/data_saida/obs/area_atuacao + intended role/areas_lideradas. 90 real volunteers seeded via `npm run seed:voluntarios` (no auth accounts created). `profiles.voluntario_id` links; `vincular_pendente` flags new accounts until linked. Writes go through SECURITY DEFINER functions (never RLS write policies) so voluntariado/coordenador_area can manage data but never roles; role changes stay coordenador_geral-only.
 - **[Voluntariado, 2026-08-04]** Role model updated (migration 0016): `lider_area` renamed to `coordenador_area` ("Coordenador de área") and new role `voluntariado` (full roster access). Access by área: financeiro→financial full access; voluntariado→roster full access; coordenador_area→own-área config (demandas via lider_areas + roster scoped via voluntario_manager_role). /voluntarios modernized (stat pills, busca+filtro, grouped by área, Novo voluntário); /vincular self-link flow; perfil shows linked roster data. Auth sign-up rate limit may affect test runs (run tests/db suites individually).
+- **[Contratos, 2026-08-10]** Phase 11 shipped lean (user decision). Alunos: busca no WooCommerce (wp_customers) + cadastro manual na tela. Modelos: editor de texto com placeholders {{...}}. Assinatura: Assinafy (usuário optou pela Assinafy em vez do GOV.BR; API grátis 100/mês, ICP-Brasil); webhook URL = https://painel.ectolab.org/api/contratos/webhook. A API da Assinafy NÃO assina o payload (sem HMAC/secret na spec) — verificação por account_id + dedup por id do evento em contrato_webhook_log (PK); retry manual via "Sincronizar assinatura" no card. Drive: Contratos Ectolab > Evento > Aluno (1 pasta por contrato). Env novas: ASSINAFY_API_KEY, ASSINAFY_ACCOUNT_ID, ASSINAFY_API_URL (default prod, sandbox p/ teste), ASSINAFY_NOTIFICATION_EMAIL.
 - **[Responsáveis por roster, 2026-08-04]** User decision: "já temos o nome no sistema, na tela de voluntários" — the ROSTER (public.voluntarios) is the source of truth for who owns a demanda; profiles only add access. Migrations 0020-0021: demanda_responsaveis and demanda_membros accept `voluntario_id` (nullable) alongside profile_id with exactly-one CHECK, identity PK + partial unique indexes, is_responsavel_for()/meu_voluntario_id() helpers and join-table SELECT policies learn the roster self-lookup. UI: demanda form/inline editor list all roster volunteers ("sem acesso" marker), server actions resolve roster ids to profile_id (linked account) or voluntario_id; dashboard filter/group and /painel normalize to roster ids/names; volunteer detail lists demandas by profile OR roster. Test suite grew DEM-06 cases (roster volunteer without account as responsável; linked volunteer sees/edits assigned demandas). Cleanup: 69 test/fictitious accounts deleted (database hygiene, not code); jonathanbretas@gmail.com backfilled to vincular_pendente=true so the existing coordinator account links via /vincular on next sign-in. Known gap (deferred): coordinator-side e-mail field on the volunteer edit screen (would need a service-role exception in src/lib/supabase/admin.ts).
+- **[Infra, 2026-08-10]** Removida linha inválida `vendor_id 17` (sem `=`) do .env.local — quebrava o parser do Supabase CLI (LegacyDbConfigLoadError) em `migration list/push --linked`.
 
 ## Deferred Items
 
