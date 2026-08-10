@@ -1,6 +1,8 @@
 // src/lib/google/drive.ts
 // Google Drive operations: copy files, create folders, set permissions.
 
+import { Readable } from "node:stream";
+import { google } from "googleapis";
 import { getGoogleAccessToken, googleApiRequest } from "./oauth";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
@@ -53,7 +55,10 @@ export async function shareWithEmail(fileId: string, email: string, role: "reade
   });
 }
 
-/** Upload a file (buffer) into a Drive folder via multipart upload. */
+/** Upload a file (buffer) into a Drive folder. Usa a biblioteca googleapis
+ * (gaxios → node:http), que lida com o upload do Google de forma confiável —
+ * fetch/undici falhava intermitentemente no upload (o Google não reconhecia
+ * o corpo multipart/resumable e respondia "Invalid JSON payload received"). */
 export async function uploadDriveFile(
   parentFolderId: string,
   fileName: string,
@@ -61,33 +66,17 @@ export async function uploadDriveFile(
   mimeType = "application/pdf"
 ) {
   const token = await getGoogleAccessToken();
-  const boundary = `ectodash-${Date.now()}`;
-
-  const header = Buffer.from(
-    `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="metadata"\r\n` +
-      `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
-      `${JSON.stringify({ name: fileName, parents: [parentFolderId] })}\r\n` +
-      `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-      `Content-Type: ${mimeType}\r\n\r\n`
-  );
-  const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
-
-  const response = await fetch(
-    `${DRIVE_API}/files?uploadType=multipart&fields=id,name,webViewLink`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
-      },
-      body: Buffer.concat([header, buffer, footer]),
-    }
-  );
-  const json = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(json?.error?.message || "Erro no upload para o Google Drive.");
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: token });
+  const drive = google.drive({ version: "v3", auth });
+  const response = await drive.files.create({
+    requestBody: { name: fileName, parents: [parentFolderId] },
+    media: { mimeType, body: Readable.from(buffer) },
+    fields: "id,name,webViewLink",
+  });
+  const data = response.data;
+  if (!data.id) {
+    throw new Error("Upload para o Google Drive sem resposta válida.");
   }
-  return json as { id: string; name: string; webViewLink?: string };
+  return data as { id: string; name: string; webViewLink?: string };
 }
