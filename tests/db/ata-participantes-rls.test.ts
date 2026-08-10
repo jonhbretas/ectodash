@@ -197,7 +197,17 @@ describe.skipIf(!canRun)(
         .eq("voluntario_id", voluntarioA);
       expect(creatorDeleteError).toBeNull();
 
-      // Estranho (terceiro) não pode remover.
+      // O coordenador re-vincula o mesmo participante para o teste do
+      // estranho ter uma linha EXISTENTE para tentar remover (delete de
+      // linha inexistente é no-op sem erro e não testaria a RLS).
+      const { error: coordReLinkError } = await coordenadorClient
+        .from("ata_participantes")
+        .insert({ ata_id: ataId, voluntario_id: voluntarioA });
+      expect(coordReLinkError).toBeNull();
+
+      // Estranho (terceiro) não pode remover — o bloqueio RLS de DELETE é
+      // SILENCIOSO (0 linhas, sem erro, como o UPDATE da lição do 0002), então
+      // a prova é a linha continuar existindo.
       const estranho = await createFixtureUser();
       const estranhoClient = await signInAs(estranho);
       const { error: strangerDeleteError } = await estranhoClient
@@ -205,7 +215,14 @@ describe.skipIf(!canRun)(
         .delete()
         .eq("ata_id", ataId)
         .eq("voluntario_id", voluntarioA);
-      expect(strangerDeleteError).not.toBeNull();
+      expect(strangerDeleteError).toBeNull();
+
+      const { data: linhaSobrevive } = await admin
+        .from("ata_participantes")
+        .select("voluntario_id")
+        .eq("ata_id", ataId)
+        .eq("voluntario_id", voluntarioA);
+      expect(linhaSobrevive ?? []).toHaveLength(1);
 
       // Coordenador adiciona de novo e remove — permitido.
       const { error: coordReInsertError } = await coordenadorClient
@@ -224,7 +241,8 @@ describe.skipIf(!canRun)(
         .from("ata_participantes")
         .select("voluntario_id")
         .eq("ata_id", ataId);
-      expect(rows ?? []).toHaveLength(0);
+      // Só resta o vínculo de A — o que o estranho não conseguiu remover.
+      expect((rows ?? []).map((r) => r.voluntario_id)).toEqual([voluntarioA]);
     });
 
     it("ATA-03: vínculo aponta para voluntário do roster (FK) e cascata na exclusão da ata", async () => {

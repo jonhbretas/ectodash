@@ -26,6 +26,7 @@ import StatusBadge from "../../demandas/status-badge";
 import OverdueBadge from "../../demandas/overdue-badge";
 import AtividadesSection from "../atividades-section";
 import SituacaoToggle from "../situacao-toggle";
+import CargosManager from "../cargos-manager";
 
 type VoluntarioPageProps = {
   params: Promise<{ id: string }>;
@@ -117,10 +118,15 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
     .eq("id", user.id)
     .single();
   const role = me?.role;
+  const { data: meusCargos } = await supabase.rpc("meus_cargos");
+  const temCargoVoluntarios = (meusCargos ?? []).some((c: { modulos: string[] }) =>
+    c.modulos.includes("voluntarios")
+  );
   const canManage =
     role === "coordenador_geral" ||
     role === "voluntariado" ||
-    role === "coordenador_area";
+    role === "coordenador_area" ||
+    temCargoVoluntarios;
 
   const { data: voluntario } = await supabase
     .from("voluntarios")
@@ -214,6 +220,66 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
     .from("ata_participantes")
     .select("ata_id, reunioes(titulo, data_reuniao)")
     .eq("voluntario_id", voluntario.id);
+
+  // Cargos de acesso do perfil vinculado (migration 0043) — cargo = nível
+  // + escopo + módulos. A leitura é RLS: o dono vê os próprios, o
+  // coordenador_geral e os gestores de escopo veem os de quem gerem.
+  let cargosRows: Array<{
+    id: number;
+    nivel: string;
+    area_id: number | null;
+    localidade_id: number | null;
+    areas_institucionais: { nome: string } | { nome: string }[] | null;
+    voluntario_localidades: { nome: string } | { nome: string }[] | null;
+    cargo_modulos: { modulo: string }[] | null;
+  }> = [];
+  let podeGerirCargos = false;
+  if (linked?.id) {
+    const result = await supabase
+      .from("cargos")
+      .select(
+        "id, nivel, area_id, localidade_id, areas_institucionais(nome), voluntario_localidades(nome), cargo_modulos(modulo)"
+      )
+      .eq("profile_id", linked.id)
+      .order("id");
+    cargosRows = (result.data ?? []) as typeof cargosRows;
+    const { data: gerencia } = await supabase.rpc("pode_gerir_cargos_de", {
+      target_profile: linked.id,
+    });
+    // Um gestor de escopo sem cargo prévio do alvo ainda pode conceder o
+    // primeiro (o INSERT é validado por pode_conceder_cargo) — então o
+    // formulário abre para quem tem cargo de gestão (geral de área ou
+    // localidade), e a RLS barra o que estiver fora do escopo.
+    const temCargoGestao = (meusCargos ?? []).some(
+      (c: { nivel: string }) =>
+        c.nivel === "coordenador_geral_area" || c.nivel === "coordenador_localidade"
+    );
+    podeGerirCargos =
+      role === "coordenador_geral" || gerencia === true || temCargoGestao;
+  }
+
+  const { data: areasRows } = await supabase
+    .from("areas_institucionais")
+    .select("id, nome")
+    .order("nome");
+  const { data: localidadesRows } = await supabase
+    .from("voluntario_localidades")
+    .select("id, nome")
+    .order("nome");
+
+  const cargos = cargosRows.map((c) => ({
+    id: c.id,
+    nivel: c.nivel,
+    area_id: c.area_id,
+    localidade_id: c.localidade_id,
+    area_nome: Array.isArray(c.areas_institucionais)
+      ? (c.areas_institucionais[0]?.nome ?? null)
+      : (c.areas_institucionais?.nome ?? null),
+    localidade_nome: Array.isArray(c.voluntario_localidades)
+      ? (c.voluntario_localidades[0]?.nome ?? null)
+      : (c.voluntario_localidades?.nome ?? null),
+    modulos: (c.cargo_modulos ?? []).map((m) => m.modulo),
+  }));
 
   type AtaRow = { titulo: string; data_reuniao: string };
   const participacoes = (participacoesRows ?? [])
@@ -343,6 +409,15 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
           voluntarioId={voluntario.id}
           atuais={atividades}
           editavel={canManage || ehProprioCadastro}
+        />
+
+        <CargosManager
+          voluntarioId={voluntario.id}
+          profileId={linked?.id ?? null}
+          cargos={cargos}
+          areas={(areasRows ?? []).map((a) => ({ id: a.id, nome: a.nome }))}
+          localidades={(localidadesRows ?? []).map((l) => ({ id: l.id, nome: l.nome }))}
+          canManage={podeGerirCargos}
         />
 
         <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">

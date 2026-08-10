@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import {
   filterEntries,
+  filterCoordinatorEntries,
   isGroupActive,
   navEntries,
   coordinatorEntries,
@@ -19,36 +20,42 @@ import {
   type SidebarEntry,
 } from "./nav-items";
 import { useStoredPreference } from "@/lib/use-stored-preference";
+import { podeAcessar, type Acesso, type ModuloAcesso } from "@/lib/acesso";
 import SignOutButton from "./sign-out-button";
 import QuickSearch from "./quick-search";
 
 export type SidebarProps = {
-  isCoordenador?: boolean;
-  isFinanceiro?: boolean;
+  acesso?: Acesso | null;
 };
 
 const COLLAPSED_KEY = "ectodash:sidebar-colapsada";
 
 function SidebarLinks({
-  isCoordenador,
-  isFinanceiro,
+  acesso,
   pathname,
   collapsed,
   onNavigate,
 }: {
-  isCoordenador: boolean;
-  isFinanceiro: boolean;
+  acesso: Acesso | null;
   pathname: string;
   collapsed: boolean;
   onNavigate?: () => void;
 }) {
+  const visibilidade = (modulo: ModuloAcesso) =>
+    acesso ? podeAcessar(acesso, modulo) : false;
+
   const main = useMemo(
-    () => filterEntries(navEntries, isCoordenador, isFinanceiro),
-    [isCoordenador, isFinanceiro]
+    () => filterEntries(navEntries, visibilidade),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [acesso]
   );
   const coord = useMemo(
-    () => filterEntries(coordinatorEntries, isCoordenador, isFinanceiro),
-    [isCoordenador, isFinanceiro]
+    () =>
+      filterCoordinatorEntries(
+        coordinatorEntries,
+        acesso?.role === "coordenador_geral"
+      ),
+    [acesso]
   );
 
   // Auto-expand groups whose children include the current route
@@ -247,7 +254,7 @@ function SidebarBrand({
   );
 }
 
-export default function Sidebar({ isCoordenador = false, isFinanceiro = false }: SidebarProps) {
+export default function Sidebar({ acesso = null }: SidebarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -291,8 +298,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
         </div>
         <QuickSearch onNavigate={() => setOpen(false)} />
         <SidebarLinks
-          isCoordenador={isCoordenador}
-          isFinanceiro={isFinanceiro}
+          acesso={acesso}
           pathname={pathname}
           collapsed={false}
           onNavigate={() => setOpen(false)}
@@ -320,8 +326,7 @@ export default function Sidebar({ isCoordenador = false, isFinanceiro = false }:
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
           <SidebarLinks
-            isCoordenador={isCoordenador}
-            isFinanceiro={isFinanceiro}
+            acesso={acesso}
             pathname={pathname}
             collapsed={visuallyCollapsed}
           />

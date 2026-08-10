@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import type { Acesso } from "@/lib/acesso";
 import Sidebar from "./sidebar";
 
 export default async function DashboardLayout({
@@ -46,13 +47,18 @@ export default async function DashboardLayout({
     );
   }
 
-  const role = profile?.role;
-  const isCoordenador = role === "coordenador_geral";
-  const isFinanceiro = role === "financeiro";
+  // Acesso por módulo: role global + cargos (nível + escopo, migration
+  // 0043) — decide a visibilidade da sidebar; as páginas têm os seus
+  // próprios gates de servidor e a RLS é o limite real.
+  const { data: cargos } = await supabase.rpc("meus_cargos");
+  const acesso = {
+    role: profile?.role ?? null,
+    cargos: (cargos ?? []) as Acesso["cargos"],
+  };
 
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20 lg:flex-row">
-      <Sidebar isCoordenador={isCoordenador} isFinanceiro={isFinanceiro} />
+      <Sidebar acesso={acesso} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {children}
       </div>

@@ -305,7 +305,7 @@ describe.skipIf(!canRun)(
       const paiNome = `Pai Gestão ${unique()}`;
       const foraNome = `Fora ${unique()}`;
       const pai = await createArea(paiNome, gestor.id);
-      await createArea(foraNome, gestor.id);
+      const fora = await createArea(foraNome, gestor.id);
       const filha = await createArea(`Filha Gestão ${unique()}`, gestor.id, pai);
 
       const alvo = await createUser();
@@ -339,7 +339,7 @@ describe.skipIf(!canRun)(
         .insert({
           profile_id: alvo.id,
           nivel: "coordenador_area",
-          area_id: pai,
+          area_id: fora,
         }).select("id");
       expect(errFora !== null || (foraInsert ?? []).length === 0).toBe(true);
 
@@ -536,7 +536,8 @@ describe.skipIf(!canRun)(
         nivel: "coordenador_localidade",
         localidade_id: locB,
       });
-      expect(errFora).toBeNull();
+      // INSERT bloqueado pelo WITH CHECK vira erro 42501 no PostgREST.
+      expect(errFora?.code).toBe("42501");
 
       // Verificação pelo lado do admin: só o cargo da localidade A entrou
       // (o RETURNING do primeiro cargo do alvo é filtrado pela política de

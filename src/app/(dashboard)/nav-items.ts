@@ -1,7 +1,7 @@
 // src/app/(dashboard)/nav-items.ts
 // The single source of truth for the sidebar menu — every screen listed
-// here, with the role flags that hide role-scoped items (UX-only hiding;
-// each destination keeps its own server-side gate + RLS). Shared by the
+// here, with the module that gates its visibility (UX-only hiding; each
+// destination keeps its own server-side gate + RLS). Shared by the
 // sidebar and, where needed, page-level "voltar" links.
 import {
   ClipboardList,
@@ -21,10 +21,9 @@ import {
   ShoppingCart,
   Package,
   Receipt,
-  FileSignature,
-  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { ModuloAcesso } from "@/lib/acesso";
 
 // ── Type definitions ──────────────────────────────────────────────
 
@@ -33,7 +32,9 @@ export type NavItem = {
   href: string;
   label: string;
   Icon: LucideIcon;
-  visibleTo?: "coordenador" | "financeiro";
+  // Módulo de acesso que governa a visibilidade deste item (acesso.ts).
+  // Sem módulo = sempre visível (ex.: Meu perfil).
+  modulo?: ModuloAcesso;
 };
 
 export type NavGroup = {
@@ -42,7 +43,7 @@ export type NavGroup = {
   Icon: LucideIcon;
   href?: string; // parent link (e.g. /vendas); undefined = container-only
   children: NavItem[];
-  visibleTo?: "coordenador" | "financeiro";
+  modulo?: ModuloAcesso;
 };
 
 export type SidebarEntry = NavItem | NavGroup;
@@ -56,9 +57,9 @@ export const navEntries: SidebarEntry[] = [
     label: "Gestão Operacional",
     Icon: ClipboardList,
     children: [
-      { href: "/", label: "Demandas", Icon: ClipboardList },
-      { href: "/reunioes", label: "Atas de Reuniões", Icon: NotebookPen },
-      { href: "/dips", label: "Dinâmica DIP", Icon: Globe2 },
+      { href: "/", label: "Demandas", Icon: ClipboardList, modulo: "demandas" },
+      { href: "/reunioes", label: "Atas de Reuniões", Icon: NotebookPen, modulo: "reunioes" },
+      { href: "/dips", label: "Dinâmica DIP", Icon: Globe2, modulo: "dips" },
     ],
   },
 
@@ -68,8 +69,8 @@ export const navEntries: SidebarEntry[] = [
     label: "Engajamento",
     Icon: Users,
     children: [
-      { href: "/voluntarios", label: "Voluntários", Icon: Users },
-      { href: "/eventos", label: "Eventos", Icon: CalendarDays },
+      { href: "/voluntarios", label: "Voluntários", Icon: Users, modulo: "voluntarios" },
+      { href: "/eventos", label: "Eventos", Icon: CalendarDays, modulo: "eventos" },
     ],
   },
 
@@ -79,9 +80,9 @@ export const navEntries: SidebarEntry[] = [
     label: "Conhecimento",
     Icon: FolderKanban,
     children: [
-      { href: "/projetos", label: "Projetos", Icon: FolderKanban },
-      { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical },
-      { href: "/proep", label: "PROEP", Icon: GraduationCap },
+      { href: "/projetos", label: "Projetos", Icon: FolderKanban, modulo: "projetos" },
+      { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical, modulo: "pesquisas" },
+      { href: "/proep", label: "PROEP", Icon: GraduationCap, modulo: "proep" },
     ],
   },
 
@@ -91,44 +92,31 @@ export const navEntries: SidebarEntry[] = [
     label: "Inteligência",
     Icon: BarChart3,
     children: [
-      { href: "/analise", label: "Análise", Icon: BarChart3 },
-      { href: "/analisar", label: "Analisar com IA", Icon: Sparkles },
+      { href: "/analise", label: "Análise", Icon: BarChart3, modulo: "analise" },
+      { href: "/analisar", label: "Analisar com IA", Icon: Sparkles, modulo: "analisar" },
     ],
   },
 
-  // ─── Loja Ectolab (coordenador) ───
+  // ─── Loja Ectolab (módulo vendas: role ou cargo) ───
   {
     type: "group",
     label: "Loja Ectolab",
     Icon: ShoppingCart,
     href: "/vendas",
-    visibleTo: "coordenador",
+    modulo: "vendas",
     children: [
-      { href: "/vendas", label: "Visão geral", Icon: ShoppingCart, visibleTo: "coordenador" },
-      { href: "/vendas/produtos", label: "Produtos", Icon: Package, visibleTo: "coordenador" },
-      { href: "/vendas/pedidos", label: "Pedidos", Icon: Receipt, visibleTo: "coordenador" },
-      { href: "/vendas/alunos", label: "Alunos", Icon: Users, visibleTo: "coordenador" },
+      { href: "/vendas", label: "Visão geral", Icon: ShoppingCart, modulo: "vendas" },
+      { href: "/vendas/produtos", label: "Produtos", Icon: Package, modulo: "vendas" },
+      { href: "/vendas/pedidos", label: "Pedidos", Icon: Receipt, modulo: "vendas" },
+      { href: "/vendas/alunos", label: "Alunos", Icon: Users, modulo: "vendas" },
     ],
   },
 
-  // ─── Contratos (coordenador) ───
-  {
-    type: "group",
-    label: "Contratos",
-    Icon: FileSignature,
-    href: "/contratos",
-    visibleTo: "coordenador",
-    children: [
-      { href: "/contratos", label: "Contratos", Icon: FileSignature, visibleTo: "coordenador" },
-      { href: "/contratos/modelos", label: "Modelos", Icon: FileText, visibleTo: "coordenador" },
-    ],
-  },
-
-  // ─── Financeiro ───
-  { href: "/financeiro", label: "Financeiro", Icon: Wallet, visibleTo: "financeiro" },
+  // ─── Financeiro (role financeiro ou cargo com o módulo) ───
+  { href: "/financeiro", label: "Financeiro", Icon: Wallet, modulo: "financeiro" },
 
   // ─── Ferramentas ───
-  { href: "/utilidades", label: "Utilidades", Icon: Wrench },
+  { href: "/utilidades", label: "Utilidades", Icon: Wrench, modulo: "utilidades" },
 
   // ─── Perfil ───
   { href: "/perfil", label: "Meu perfil", Icon: UserRound },
@@ -137,33 +125,28 @@ export const navEntries: SidebarEntry[] = [
 // Coordenador-only entry points live in their own section at the bottom of
 // the sidebar, visually separated from the main menu.
 export const coordinatorEntries: SidebarEntry[] = [
-  { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard, visibleTo: "coordenador" },
+  { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────
 
-function isVisible(
-  item: SidebarEntry,
-  isCoordenador: boolean,
-  isFinanceiro: boolean
-): boolean {
-  if (item.visibleTo === "coordenador") return isCoordenador;
-  if (item.visibleTo === "financeiro") return isCoordenador || isFinanceiro;
-  return true;
-}
+export type Visibilidade = "gerenciar" | "ler" | false;
 
 export function filterEntries(
   entries: SidebarEntry[],
-  isCoordenador: boolean,
-  isFinanceiro: boolean
+  visibilidade: (modulo: ModuloAcesso) => Visibilidade
 ): SidebarEntry[] {
+  const isVisible = (item: NavItem | NavGroup): boolean => {
+    if (!item.modulo) return true; // itens sem módulo são sempre visíveis
+    const nivel = visibilidade(item.modulo);
+    return nivel !== false;
+  };
+
   return entries
-    .filter((e) => isVisible(e, isCoordenador, isFinanceiro))
+    .filter(isVisible)
     .map((e) => {
       if (e.type === "group") {
-        const children = e.children.filter((c) =>
-          isVisible(c, isCoordenador, isFinanceiro)
-        );
+        const children = e.children.filter(isVisible);
         return { ...e, children };
       }
       return e;
@@ -184,4 +167,13 @@ export function isGroupActive(group: NavGroup, pathname: string): boolean {
       child.href === "/" ? pathname === "/" : pathname.startsWith(child.href);
     return active;
   });
+}
+
+/** Seção exclusiva do coordenador_geral (painel) — o resto da sidebar usa
+ * a visibilidade por módulo. */
+export function filterCoordinatorEntries(
+  entries: SidebarEntry[],
+  isCoordenadorGeral: boolean
+): SidebarEntry[] {
+  return isCoordenadorGeral ? entries : [];
 }

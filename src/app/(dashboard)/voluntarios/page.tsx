@@ -66,8 +66,16 @@ export default async function VoluntariosPage({
     .single();
 
   const role = profile?.role;
-  const isFullRoster = role === "coordenador_geral" || role === "voluntariado";
-  const isAreaScoped = role === "coordenador_area";
+  // Coordenadores por cargo (migration 0043) com o módulo voluntários
+  // gerem o roster dentro do próprio escopo — somam-se aos legados.
+  const { data: meusCargos } = await supabase.rpc("meus_cargos");
+  const temCargoVoluntarios = (meusCargos ?? []).some(
+    (c: { modulos: string[] }) => c.modulos.includes("voluntarios")
+  );
+  const isFullRoster =
+    role === "coordenador_geral" || role === "voluntariado" || temCargoVoluntarios;
+  const isAreaScoped =
+    role === "coordenador_area" || (temCargoVoluntarios && role !== "coordenador_geral" && role !== "voluntariado");
   const canManage = isFullRoster || isAreaScoped;
 
   if (!isFullRoster && !isAreaScoped) {

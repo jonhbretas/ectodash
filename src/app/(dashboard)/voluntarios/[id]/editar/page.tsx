@@ -34,10 +34,17 @@ export default async function EditarVoluntarioPage({
     .single();
 
   const role = me?.role;
+  // Coordenador por cargo (migration 0043) com o módulo voluntários — a
+  // RPC atualizar_voluntario valida o escopo e nunca atribui papel.
+  const { data: meusCargos } = await supabase.rpc("meus_cargos");
+  const temCargoVoluntarios = (meusCargos ?? []).some(
+    (c: { modulos: string[] }) => c.modulos.includes("voluntarios")
+  );
   const canManage =
     role === "coordenador_geral" ||
     role === "voluntariado" ||
-    role === "coordenador_area";
+    role === "coordenador_area" ||
+    temCargoVoluntarios;
 
   if (!canManage) {
     return (

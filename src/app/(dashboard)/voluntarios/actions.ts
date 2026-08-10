@@ -413,6 +413,181 @@ export async function atualizarVoluntariosEmMassa(
 // (migration 0026)
 
 // ---------------------------------------------------------------------------
+// Cargos de acesso (migration 0043): cargo = nível + escopo. A RLS é o
+// limite real — o WITH CHECK de INSERT usa pode_conceder_cargo (o escopo
+// novo precisa estar dentro do escopo do gestor) e o DELETE/UPDATE usam
+// pode_gerir_cargos_de. Estas ações só passam os dados e traduzem erros.
+
+export type CargosState = { ok: boolean; message: string };
+const cargosInitial: CargosState = { ok: false, message: "" };
+
+const NIVEL_CARGO_VALIDOS = [
+  "coordenador_area",
+  "coordenador_geral_area",
+  "coordenador_localidade",
+] as const;
+
+const MODULO_CARGO_VALIDOS = [
+  "demandas",
+  "reunioes",
+  "dips",
+  "voluntarios",
+  "eventos",
+  "projetos",
+  "pesquisas",
+  "proep",
+  "analise",
+  "analisar",
+  "vendas",
+  "financeiro",
+  "utilidades",
+] as const;
+
+export async function criarCargo(
+  voluntarioId: number,
+  profileId: string,
+  nivel: string,
+  areaId: number | null,
+  localidadeId: number | null,
+  modulos: string[]
+): Promise<CargosState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ...cargosInitial, message: "Sessão expirada." };
+
+  if (!profileId) return { ...cargosInitial, message: "Perfil não informado." };
+  if (!(NIVEL_CARGO_VALIDOS as readonly string[]).includes(nivel)) {
+    return { ...cargosInitial, message: "Nível de acesso inválido." };
+  }
+
+  const escopoOk =
+    nivel === "coordenador_localidade"
+      ? localidadeId !== null
+      : areaId !== null;
+  if (!escopoOk) {
+    return { ...cargosInitial, message: "Escolha o escopo do cargo." };
+  }
+
+  const modulosValidos = modulos.filter((m) =>
+    (MODULO_CARGO_VALIDOS as readonly string[]).includes(m)
+  );
+
+  // Sem .select() no INSERT: o RETURNING do PRIMEIRO cargo do alvo é
+  // filtrado pela política de SELECT (o alvo ainda não tem cargo no escopo
+  // do gestor). Depois do insert o cargo passa a ser visível, então o id
+  // é resolvido na leitura seguinte.
+  const { error: insErr } = await supabase.from("cargos").insert({
+    profile_id: profileId,
+    nivel,
+    area_id: areaId,
+    localidade_id: localidadeId,
+  });
+  if (insErr) {
+    console.error("criarCargo: insert failed", insErr);
+    return {
+      ...cargosInitial,
+      message: "Não foi possível criar o cargo (permissão ou escopo).",
+    };
+  }
+
+  const { data: cargo } = await supabase
+    .from("cargos")
+    .select("id")
+    .eq("profile_id", profileId)
+    .order("id", { ascending: false })
+    .limit(1)
+    .single();
+  if (!cargo) {
+    return { ...cargosInitial, message: "Não foi possível confirmar o cargo." };
+  }
+
+  if (modulosValidos.length > 0) {
+    const { error: modErr } = await supabase
+      .from("cargo_modulos")
+      .insert(modulosValidos.map((modulo) => ({ cargo_id: cargo.id, modulo })));
+    if (modErr) {
+      console.error("criarCargo: modules failed", modErr);
+      return {
+        ...cargosInitial,
+        message: "Cargo criado, mas falha ao salvar os módulos.",
+      };
+    }
+  }
+
+  revalidatePath(`/voluntarios/${voluntarioId}`);
+  revalidatePath("/voluntarios");
+  return { ok: true, message: "Cargo criado." };
+}
+
+export async function excluirCargo(
+  voluntarioId: number,
+  cargoId: number
+): Promise<CargosState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ...cargosInitial, message: "Sessão expirada." };
+
+  const { error: modErr } = await supabase
+    .from("cargo_modulos")
+    .delete()
+    .eq("cargo_id", cargoId);
+  if (modErr) {
+    console.error("excluirCargo: modules delete failed", modErr);
+    return { ...cargosInitial, message: "Não foi possível excluir o cargo." };
+  }
+
+  const { error: delErr } = await supabase
+    .from("cargos")
+    .delete()
+    .eq("id", cargoId);
+  if (delErr) {
+    console.error("excluirCargo: delete failed", delErr);
+    return { ...cargosInitial, message: "Não foi possível excluir o cargo." };
+  }
+
+  revalidatePath(`/voluntarios/${voluntarioId}`);
+  revalidatePath("/voluntarios");
+  return { ok: true, message: "Cargo removido." };
+}
+
+export async function alternarModuloCargo(
+  voluntarioId: number,
+  cargoId: number,
+  modulo: string,
+  ativo: boolean
+): Promise<CargosState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ...cargosInitial, message: "Sessão expirada." };
+
+  if (!(MODULO_CARGO_VALIDOS as readonly string[]).includes(modulo)) {
+    return { ...cargosInitial, message: "Módulo inválido." };
+  }
+
+  const { error } = ativo
+    ? await supabase.from("cargo_modulos").insert({ cargo_id: cargoId, modulo })
+    : await supabase
+        .from("cargo_modulos")
+        .delete()
+        .eq("cargo_id", cargoId)
+        .eq("modulo", modulo);
+  if (error) {
+    console.error("alternarModuloCargo: failed", error);
+    return { ...cargosInitial, message: "Não foi possível alterar o módulo." };
+  }
+
+  revalidatePath(`/voluntarios/${voluntarioId}`);
+  revalidatePath("/voluntarios");
+  return { ok: true, message: ativo ? "Módulo concedido." : "Módulo revogado." };
+}
+
+// ---------------------------------------------------------------------------
 // Merge de cadastros repetidos (migration 0028)
 
 export type MergeState = { ok: boolean; message: string };
