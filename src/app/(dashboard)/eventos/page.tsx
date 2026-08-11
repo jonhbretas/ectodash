@@ -11,6 +11,7 @@ import PageContainer from "../page-container";
 import EventosLista, { type EventoRow } from "./eventos-lista";
 import ImportEventosToggle from "./import-toggle";
 import MergeEventosSection, { type EventoMergeOpcao } from "./merge-eventos-section";
+import BotaoMesclarEventos from "./botao-mesclar-eventos";
 
 export default async function EventosPage() {
   const supabase = await createClient();
@@ -100,6 +101,9 @@ export default async function EventosPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {isCoordenador && (
+            <BotaoMesclarEventos />
+          )}
           {isCoordenador && (
             <Link
               href="/eventos/modelos"

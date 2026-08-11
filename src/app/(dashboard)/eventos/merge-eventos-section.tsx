@@ -55,7 +55,10 @@ export default function MergeEventosSection({
   }
 
   return (
-    <section className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+    <section
+      id="mesclar-eventos"
+      className="flex w-full scroll-mt-6 flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
+    >
       <div className="flex flex-wrap items-center gap-3">
         <span className="h-8 w-1.5 rounded-full bg-green-600" aria-hidden="true" />
         <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
