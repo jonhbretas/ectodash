@@ -179,6 +179,7 @@ export default function VoluntarioForm({
             value={unidade}
             onChange={setUnidade}
             options={unidadeOptions}
+            labels={UNIDADE_LABELS}
             placeholder="Escolha a unidade ou digite outra"
             ariaLabel="Unidade"
           />

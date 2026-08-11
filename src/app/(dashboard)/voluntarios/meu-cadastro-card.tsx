@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Phone, Mail } from "lucide-react";
 import { roleLabel } from "@/lib/role-labels";
+import { exibirUnidade } from "@/lib/unidade-label";
 import PageContainer from "../page-container";
 
 type VoluntarioRow = {
@@ -69,7 +70,7 @@ export default function MeuCadastroCard({ row, role }: { row: VoluntarioRow; rol
           <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
               ["Cód. PF", row.codigo_pf],
-              ["Unidade", row.unidade],
+              ["Unidade", exibirUnidade(row.unidade)],
               ["Org Depto", row.org_depto],
               ["Função", row.funcao],
               ["Data de início", formatData(row.data_inicio)],

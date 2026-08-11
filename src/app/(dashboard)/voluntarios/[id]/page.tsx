@@ -369,7 +369,7 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
           <dl className="grid grid-cols-1 gap-4 border-t border-zinc-100 pt-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[
               ["Código PF", voluntario.codigo_pf],
-              ["Unidade", voluntario.unidade],
+              ["Unidade", exibirUnidade(voluntario.unidade)],
               ["Org Depto", voluntario.org_depto],
               ["Função", voluntario.funcao],
               ["Área de atuação", voluntario.area_atuacao],
