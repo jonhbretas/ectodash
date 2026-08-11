@@ -13,12 +13,17 @@ import {
 } from "lucide-react";
 import DemandaCard from "./demanda-card";
 import DemandaTable from "./demanda-table";
+import {
+  DemandaStatusFilter,
+  DemandaAgruparFilter,
+} from "./demanda-quick-filters";
 import { excluirDemandas } from "./actions";
 import {
   groupDemandas,
   compareDemandas,
   type DemandaGroupable,
 } from "./demanda-groups";
+import type { DemandaFilters } from "./demanda-filter-schema";
 
 // The breakpoint-switching container: cards below lg (including tablet),
 // table at lg and above — a single CSS-only lg: breakpoint switch, per
@@ -29,6 +34,11 @@ export type Demanda = DemandaGroupable;
 
 export type DemandaListProps = {
   demandas: Demanda[];
+  // currentFilters: the same parsed searchParams page.tsx passes to
+  // DemandaFilters — needed here so the inline status/grouping controls
+  // (DemandaStatusFilter / DemandaAgruparFilter) can read the current URL
+  // state and navigate with the same router.push pattern.
+  currentFilters: DemandaFilters;
   // groupBy: when set, the list splits into labeled sections instead of one
   // flat sorted list (05-UI-SPEC.md Screen Inventory 1a). compareDemandas is
   // applied WITHIN each group independently, never globally when grouping
@@ -49,6 +59,7 @@ export type DemandaListProps = {
 
 export default function DemandaList({
   demandas,
+  currentFilters,
   groupBy,
   filtersActive = false,
   canExcluir = false,
@@ -120,44 +131,49 @@ export default function DemandaList({
           {countLabel}
         </span>
 
-        {canExcluir && demandas.length > 0 && !selectionMode && (
-          <button
-            type="button"
-            onClick={enterSelection}
-            className="ml-auto flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-          >
-            <CheckSquare size={16} aria-hidden="true" />
-            Selecionar
-          </button>
-        )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <DemandaStatusFilter currentFilters={currentFilters} />
+          <DemandaAgruparFilter currentFilters={currentFilters} />
 
-        {selectionMode && (
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
-              {selected.size} {selected.size === 1 ? "selecionada" : "selecionadas"}
-            </span>
+          {canExcluir && demandas.length > 0 && !selectionMode && (
             <button
               type="button"
-              onClick={toggleAll}
+              onClick={enterSelection}
               className="flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
-              {allSelected ? (
-                <Square size={16} aria-hidden="true" />
-              ) : (
-                <CheckSquare size={16} aria-hidden="true" />
-              )}
-              {allSelected ? "Desmarcar todas" : "Selecionar todas"}
+              <CheckSquare size={16} aria-hidden="true" />
+              Selecionar
             </button>
-            <button
-              type="button"
-              onClick={exitSelection}
-              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-            >
-              <X size={16} aria-hidden="true" />
-              Cancelar
-            </button>
-          </div>
-        )}
+          )}
+
+          {selectionMode && (
+            <>
+              <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
+                {selected.size} {selected.size === 1 ? "selecionada" : "selecionadas"}
+              </span>
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+              >
+                {allSelected ? (
+                  <Square size={16} aria-hidden="true" />
+                ) : (
+                  <CheckSquare size={16} aria-hidden="true" />
+                )}
+                {allSelected ? "Desmarcar todas" : "Selecionar todas"}
+              </button>
+              <button
+                type="button"
+                onClick={exitSelection}
+                className="flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+              >
+                <X size={16} aria-hidden="true" />
+                Cancelar
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {confirming && (

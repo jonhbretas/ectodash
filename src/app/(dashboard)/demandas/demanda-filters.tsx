@@ -16,11 +16,7 @@ import type { ReactNode } from "react";
 import {
   Building2,
   Calendar,
-  CheckCircle2,
-  Circle,
-  Clock,
   FolderOpen,
-  LayoutGrid,
   SlidersHorizontal,
   Tag,
   Users,
@@ -40,23 +36,6 @@ import { agruparEventosPorMes } from "@/lib/eventos-agrupados";
 import type { DemandaFilters } from "./demanda-filter-schema";
 
 const ALL_VALUE = "__todas__";
-const NO_GROUPING_VALUE = "__sem_agrupamento__";
-
-// Status multi-select — canonical order is the URL order, so toggling
-// always rebuilds the param in this sequence.
-const STATUS_OPTIONS: Array<{
-  value: "pendente" | "em_andamento" | "concluida";
-  label: string;
-  Icon: typeof Circle;
-}> = [
-  { value: "pendente", label: "Pendente", Icon: Circle },
-  { value: "em_andamento", label: "Em andamento", Icon: Clock },
-  { value: "concluida", label: "Concluída", Icon: CheckCircle2 },
-];
-
-const STATUS_LABEL: Record<string, string> = Object.fromEntries(
-  STATUS_OPTIONS.map((s) => [s.value, s.label])
-);
 
 function dataEventoLabel(data: string): string {
   const [ano, mes, dia] = data.split("-");
@@ -121,7 +100,7 @@ export default function DemandaFilters({
   }
 
   function removeFilter(
-    key: "area" | "projeto" | "evento" | "etiqueta" | "responsavel" | "status"
+    key: "area" | "projeto" | "evento" | "etiqueta" | "responsavel"
   ) {
     navigateWith({ [key]: undefined });
   }
@@ -130,30 +109,8 @@ export default function DemandaFilters({
     router.push("/");
   }
 
-  const statusAtivos = (currentFilters.status ?? "").split(",").filter(Boolean);
-
-  function toggleStatus(value: string) {
-    const atual = new Set(statusAtivos);
-    if (atual.has(value)) {
-      atual.delete(value);
-    } else {
-      atual.add(value);
-    }
-    const proximo = STATUS_OPTIONS.map((s) => s.value).filter((v) => atual.has(v));
-    navigateWith({ status: proximo.length > 0 ? proximo.join(",") : undefined });
-  }
-
   const responsavelLabelById = new Map(
     responsavelOptions.map((option) => [option.id, option.label])
-  );
-
-  const hasActiveFilter = Boolean(
-    currentFilters.area ||
-      currentFilters.projeto ||
-      currentFilters.evento ||
-      currentFilters.etiqueta ||
-      currentFilters.responsavel ||
-      currentFilters.status
   );
 
   const activeChips = [
@@ -193,22 +150,12 @@ export default function DemandaFilters({
       }`,
       title: "Voluntário",
     },
-    {
-      key: "status" as const,
-      label: `Status: ${
-        statusAtivos.length > 0
-          ? statusAtivos.map((s) => STATUS_LABEL[s] ?? s).join(" + ")
-          : ""
-      }`,
-      title: "Status",
-    },
   ].filter((chip) => {
     if (chip.key === "area") return Boolean(currentFilters.area);
     if (chip.key === "projeto") return Boolean(currentFilters.projeto);
     if (chip.key === "evento") return Boolean(currentFilters.evento);
     if (chip.key === "etiqueta") return Boolean(currentFilters.etiqueta);
-    if (chip.key === "responsavel") return Boolean(currentFilters.responsavel);
-    return Boolean(currentFilters.status);
+    return Boolean(currentFilters.responsavel);
   });
 
   const activeCount = activeChips.length;
@@ -407,55 +354,6 @@ export default function DemandaFilters({
                   </SelectItem>
                 )),
                 <Users size={16} aria-hidden="true" />
-              )}
-
-              <div className="flex flex-col gap-1.5">
-                <span className="flex items-center gap-2 text-base font-medium text-zinc-500">
-                  <SlidersHorizontal size={16} aria-hidden="true" />
-                  Filtrar por status
-                </span>
-                <div className="flex flex-wrap items-center gap-2">
-                  {STATUS_OPTIONS.map((status) => {
-                    const ativo = statusAtivos.includes(status.value);
-                    return (
-                      <button
-                        key={status.value}
-                        type="button"
-                        aria-pressed={ativo}
-                        onClick={() => toggleStatus(status.value)}
-                        className={`flex min-h-11 items-center gap-2 rounded-full px-4 text-base font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
-                          ativo
-                            ? "bg-[#2195B9] text-white ring-[#2195B9]"
-                            : "bg-white text-zinc-700 ring-zinc-300 hover:bg-zinc-50"
-                        }`}
-                      >
-                        <status.Icon size={16} aria-hidden="true" />
-                        {status.label}
-                      </button>
-                    );
-                  })}
-                  <button
-                    type="button"
-                    onClick={() => navigateWith({ status: undefined })}
-                    disabled={statusAtivos.length === 0}
-                    className="min-h-11 rounded-full px-4 text-base font-medium text-zinc-500 ring-1 ring-transparent transition-colors hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:opacity-50"
-                  >
-                    Todos
-                  </button>
-                </div>
-              </div>
-
-              {selectControl(
-                "Agrupar por",
-                currentFilters.agrupar,
-                NO_GROUPING_VALUE,
-                "Sem agrupamento",
-                (value) => navigateWith({ agrupar: value }),
-                <>
-                  <SelectItem value="area">Área</SelectItem>
-                  <SelectItem value="responsavel">Responsável</SelectItem>
-                </>,
-                <LayoutGrid size={16} aria-hidden="true" />
               )}
             </div>
           </div>

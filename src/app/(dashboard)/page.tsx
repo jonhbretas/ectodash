@@ -3,6 +3,10 @@ import { displayName } from "@/lib/display-name";
 import Link from "next/link";
 import DemandaList from "./demandas/demanda-list";
 import DemandaFilters from "./demandas/demanda-filters";
+import {
+  DemandaStatusFilter,
+  DemandaAgruparFilter,
+} from "./demandas/demanda-quick-filters";
 import DemandaViewToggle, {
   type DemandaView,
 } from "./demandas/demanda-view-toggle";
@@ -340,6 +344,13 @@ export default async function DashboardPage({
           </p>
         )}
 
+        {view !== "lista" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <DemandaStatusFilter currentFilters={filters} />
+            <DemandaAgruparFilter currentFilters={filters} />
+          </div>
+        )}
+
         {view === "kanban" ? (
           filters.agrupar ? (
             <div className="flex w-full flex-col gap-8">
@@ -370,6 +381,7 @@ export default async function DashboardPage({
         ) : (
           <DemandaList
             demandas={demandaList}
+            currentFilters={filters}
             groupBy={filters.agrupar}
             filtersActive={filtersActive}
             canExcluir={
