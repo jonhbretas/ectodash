@@ -25,7 +25,7 @@ export type DemandaCardProps = {
   checklistFeitos?: number;
   selectionActive?: boolean;
   selectedIds?: Set<number>;
-  onToggle?: (id: number) => void;
+  onToggle?: (id: number, shiftKey?: boolean) => void;
 };
 
 export default function DemandaCard({
@@ -58,7 +58,7 @@ export default function DemandaCard({
           type="button"
           aria-label={selected ? `Desmarcar ${titulo}` : `Selecionar ${titulo}`}
           aria-pressed={selected}
-          onClick={() => onToggle?.(id)}
+          onClick={(e) => onToggle?.(id, e.shiftKey)}
           className="mt-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           {selected ? (

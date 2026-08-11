@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   FilterX,
   ClipboardList,
@@ -76,15 +76,40 @@ export default function DemandaList({
   const countLabel = count === 1 ? "1 demanda" : `${count} demandas`;
   const grouped = groupBy ? groupDemandas(demandas, groupBy) : null;
 
+  const lastToggledRef = useRef<number | null>(null);
+
   const allSelected =
     demandas.length > 0 && selected.size === demandas.length;
-  const toggleSelected = (id: number) => {
+  const toggleSelected = (id: number, shiftKey?: boolean) => {
+    if (shiftKey && lastToggledRef.current !== null) {
+      const lastId = lastToggledRef.current;
+      const ids = sorted.map((d) => d.id);
+      const lastIdx = ids.indexOf(lastId);
+      const curIdx = ids.indexOf(id);
+      if (lastIdx !== -1 && curIdx !== -1) {
+        const start = Math.min(lastIdx, curIdx);
+        const end = Math.max(lastIdx, curIdx);
+        const rangeIds = ids.slice(start, end + 1);
+        setSelected((prev) => {
+          const next = new Set(prev);
+          const shouldAdd = !rangeIds.every((rid) => next.has(rid));
+          for (const rid of rangeIds) {
+            if (shouldAdd) next.add(rid);
+            else next.delete(rid);
+          }
+          return next;
+        });
+        lastToggledRef.current = id;
+        return;
+      }
+    }
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    lastToggledRef.current = id;
   };
 
   const toggleAll = () => {
@@ -101,6 +126,7 @@ export default function DemandaList({
     setSelected(new Set());
     setConfirming(false);
     setMessage(null);
+    lastToggledRef.current = null;
   };
 
   const confirmExcluir = async () => {
@@ -163,6 +189,16 @@ export default function DemandaList({
                 )}
                 {allSelected ? "Desmarcar todas" : "Selecionar todas"}
               </button>
+              {selected.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setConfirming(true)}
+                  className="flex min-h-10 items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-base font-medium text-white transition-colors hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  Excluir
+                </button>
+              )}
               <button
                 type="button"
                 onClick={exitSelection}

@@ -38,7 +38,7 @@ export type DemandaTableProps = {
   demandas: DemandaTableRow[];
   selectionActive?: boolean;
   selectedIds?: Set<number>;
-  onToggle?: (id: number) => void;
+  onToggle?: (id: number, shiftKey?: boolean) => void;
 };
 
 export default function DemandaTable({
@@ -92,7 +92,7 @@ export default function DemandaTable({
             : false;
 
           const rowClick = selectionActive
-            ? () => onToggle?.(demanda.id)
+            ? (e: React.MouseEvent) => onToggle?.(demanda.id, e.shiftKey)
             : () => router.push(`/demandas/${demanda.id}/editar`);
 
           return (
