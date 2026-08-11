@@ -194,15 +194,29 @@ export default async function VoluntariosPage({
   }
 
   const { data: rows } = await query;
-  const all = (rows ?? []) as VoluntarioRow[];
+  let all = (rows ?? []) as VoluntarioRow[];
+
+  // "Vinculado" = tem ao menos um perfil ligado ao cadastro (profiles.
+  // voluntario_id aponta para esta linha e vincular_pendente já foi limpo
+  // por vincular_meu_cadastro/mesclar_cadastro_voluntario).
+  const temPerfil = (row: VoluntarioRow) => {
+    const linked = !row.profiles
+      ? null
+      : Array.isArray(row.profiles)
+        ? row.profiles[0]
+        : row.profiles;
+    return Boolean(linked);
+  };
+  if (filters.vinculacao === "vinculado") {
+    all = all.filter(temPerfil);
+  } else if (filters.vinculacao === "nao_vinculado") {
+    all = all.filter((row) => !temPerfil(row));
+  }
 
   const ativos = all.filter((row) => row.ativo).length;
   const ociosos = all.filter((row) => row.situacao === "ocioso").length;
   const afastados = all.filter((row) => row.data_saida).length;
-  const vinculados = all.filter((row) => {
-    const linked = !row.profiles ? null : Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    return Boolean(linked);
-  }).length;
+  const vinculados = all.filter(temPerfil).length;
 
   // Desligados (ativo = false) vão para a seção própria no fim da lista;
   // as áreas mostram apenas os ativos.
@@ -300,7 +314,13 @@ export default async function VoluntariosPage({
     areaTree.push({ nome: SEM_AREA_DEFINIDA, rows: semOrgDepto, subAreas: [] });
   }
 
-  const filtersActive = Boolean(filters.busca || filters.area || filters.localidade || filters.situacao);
+  const filtersActive = Boolean(
+    filters.busca ||
+      filters.area ||
+      filters.localidade ||
+      filters.situacao ||
+      filters.vinculacao
+  );
 
   return (
     <PageContainer>

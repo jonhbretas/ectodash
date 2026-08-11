@@ -9,6 +9,7 @@ export const voluntariosFilterSchema = z.object({
   area: z.string().trim().max(120).optional(),
   localidade: z.string().trim().max(120).optional(),
   situacao: z.enum(["ativo", "ocioso"]).optional(),
+  vinculacao: z.enum(["vinculado", "nao_vinculado"]).optional(),
 });
 
 export type VoluntariosFilters = z.infer<typeof voluntariosFilterSchema>;

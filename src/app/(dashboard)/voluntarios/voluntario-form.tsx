@@ -14,6 +14,7 @@ import { Check, Save, UserRoundPlus } from "lucide-react";
 import { criarVoluntario, atualizarVoluntario, type PerfilState } from "./actions";
 import { FormCombobox, FormSelect } from "@/components/ui/form-select";
 import DateFieldBr from "@/components/ui/date-field";
+import { UNIDADE_LABELS } from "@/lib/unidade-label";
 
 export type VoluntarioFormValues = {
   nome: string;
@@ -101,21 +102,29 @@ export default function VoluntarioForm({
   const [unidade, setUnidade] = useState(values.unidade ?? "");
   const [orgDepto, setOrgDepto] = useState(values.org_depto ?? "");
   const [papel, setPapel] = useState(values.papel ?? "voluntario_comum");
-  const [areasExtras, setAreasExtras] = useState<string[]>(values.areas ?? []);
+  const [areasExtras, setAreasExtras] = useState<string[]>(
+    () => (values.areas ?? []).filter((a) => a !== values.area_atuacao)
+  );
 
+  // A principal nunca aparece na lista de extras (nem no chip nem nos dados).
   const outrasAreasOptions = [
-    ...new Set([
-      ...areasOptions,
-      ...(areaAtuacao ? [areaAtuacao] : []),
-      ...(values.area_atuacao ? [values.area_atuacao] : []),
-      ...(values.areas ?? []),
-    ]),
-  ].sort((a, b) => a.localeCompare(b));
+    ...new Set([...areasOptions, ...(values.areas ?? [])]),
+  ]
+    .filter((a) => a !== areaAtuacao)
+    .sort((a, b) => a.localeCompare(b));
 
   function toggleAreaExtra(area: string) {
     setAreasExtras((prev) =>
       prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
     );
+  }
+
+  // Se uma área marcada como extra virar a principal, sai da lista de extras.
+  function aoMudarAreaPrincipal(area: string) {
+    setAreaAtuacao(area);
+    if (area && areasExtras.includes(area)) {
+      setAreasExtras((prev) => prev.filter((a) => a !== area));
+    }
   }
 
   const [state, formAction] = useActionState<
@@ -132,6 +141,7 @@ export default function VoluntarioForm({
   }
 
   const showRoleFields = canAssignRole;
+  const ehCoordenadorArea = papel === "coordenador_area";
 
   return (
     <form
@@ -238,17 +248,20 @@ export default function VoluntarioForm({
             <FormCombobox
               name="area_atuacao"
               value={areaAtuacao}
-              onChange={setAreaAtuacao}
+              onChange={aoMudarAreaPrincipal}
               options={areaOptions}
               placeholder="Escolha a área ou digite outra"
               ariaLabel="Área de atuação"
             />
+            <p className="text-base text-zinc-600">
+              Usada nos agrupamentos e no vínculo do cadastro.
+            </p>
           </Field>
         </div>
 
         <div className="sm:col-span-2 lg:col-span-3">
           <span className={labelClassName}>Outras áreas (opcional)</span>
-          <div className="flex flex-wrap gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <div className="mt-1.5 flex flex-wrap gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
             {outrasAreasOptions.length === 0 && (
               <span className="text-lg text-zinc-400">
                 Nenhuma área cadastrada ainda.
@@ -274,10 +287,6 @@ export default function VoluntarioForm({
               );
             })}
           </div>
-          <p className="text-base text-zinc-600">
-            Marque as áreas adicionais além da principal (ex.: DIP + áreas
-            internas). A principal continua sendo a usada nos agrupamentos.
-          </p>
           <input
             type="hidden"
             name="areas"
@@ -300,37 +309,47 @@ export default function VoluntarioForm({
 
         {showRoleFields && (
           <>
-            <Field id="papel" label="Papel">
-              <FormSelect
-                name="papel"
-                value={papel}
-                onValueChange={setPapel}
-                placeholder="Escolha o papel"
-                options={[
-                  { value: "voluntario_comum", label: "Voluntário comum" },
-                  { value: "coordenador_area", label: "Coordenador de área" },
-                  { value: "financeiro", label: "Financeiro" },
-                  { value: "voluntariado", label: "Voluntariado" },
-                  { value: "coordenador_geral", label: "Coordenador geral" },
-                ]}
-              />
-            </Field>
-
-            <div className="sm:col-span-2 lg:col-span-2">
-              <Field id="areas_lideradas" label="Áreas de coordenação">
-                <input
-                  id="areas_lideradas"
-                  name="areas_lideradas"
-                  defaultValue={values.areasLideradas.join(", ")}
-                  placeholder="Ex: Paratecnológico - DIP, Eventos"
-                  className={inputClassName}
+            <div className={ehCoordenadorArea ? "" : "sm:col-span-2 lg:col-span-2"}>
+              <Field id="papel" label="Papel">
+                <FormSelect
+                  name="papel"
+                  value={papel}
+                  onValueChange={setPapel}
+                  placeholder="Escolha o papel"
+                  options={[
+                    { value: "voluntario_comum", label: "Voluntário comum" },
+                    { value: "coordenador_area", label: "Coordenador de área" },
+                    { value: "financeiro", label: "Financeiro" },
+                    { value: "voluntariado", label: "Voluntariado" },
+                    { value: "coordenador_geral", label: "Coordenador geral" },
+                  ]}
                 />
-                <p className="text-base text-zinc-600">
-                  Separe por vírgula. Vale apenas para o papel Coordenador de
-                  área. Será aplicado quando o voluntário vincular o cadastro.
-                </p>
               </Field>
             </div>
+
+            {ehCoordenadorArea ? (
+              <div className="sm:col-span-2 lg:col-span-2">
+                <Field id="areas_lideradas" label="Áreas de coordenação">
+                  <input
+                    id="areas_lideradas"
+                    name="areas_lideradas"
+                    defaultValue={values.areasLideradas.join(", ")}
+                    placeholder="Ex: DIP, Eventos"
+                    className={inputClassName}
+                  />
+                  <p className="text-base text-zinc-600">
+                    Separe por vírgula. Aplicado quando o voluntário vincular
+                    o cadastro.
+                  </p>
+                </Field>
+              </div>
+            ) : (
+              <input
+                type="hidden"
+                name="areas_lideradas"
+                value={values.areasLideradas.join(", ")}
+              />
+            )}
           </>
         )}
 

@@ -102,6 +102,7 @@ export function FormCombobox({
   ariaLabel,
   className,
   customLabel = "Outro (digitar)...",
+  labels,
 }: {
   name?: string;
   value: string;
@@ -111,6 +112,7 @@ export function FormCombobox({
   ariaLabel?: string;
   className?: string;
   customLabel?: string;
+  labels?: Record<string, string>;
 }) {
   const [digitando, setDigitando] = useState<boolean>(
     () => value.trim() !== "" && !options.includes(value)
@@ -154,7 +156,7 @@ export function FormCombobox({
           )}
           {options.map((option) => (
             <SelectItem key={option} value={option} className={itemClass}>
-              {option}
+              {labels?.[option] ?? option}
             </SelectItem>
           ))}
           <SelectItem

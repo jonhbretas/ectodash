@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { VoluntariosFilters } from "./voluntarios-filter-schema";
+import { exibirUnidade } from "@/lib/unidade-label";
 
 const ALL_VALUE = "__todas__";
 
@@ -38,7 +39,8 @@ export default function VoluntariosFilters({
     currentFilters.busca ||
       currentFilters.area ||
       currentFilters.localidade ||
-      currentFilters.situacao
+      currentFilters.situacao ||
+      currentFilters.vinculacao
   );
 
   function navigateWith(updates: Record<string, string | undefined>) {
@@ -133,7 +135,7 @@ export default function VoluntariosFilters({
             <SelectItem value={ALL_VALUE}>Todas as localidades</SelectItem>
             {localidadeOptions.map((localidade) => (
               <SelectItem key={localidade} value={localidade}>
-                {localidade}
+                {exibirUnidade(localidade)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -155,6 +157,25 @@ export default function VoluntariosFilters({
             <SelectItem value={ALL_VALUE}>Todas as situações</SelectItem>
             <SelectItem value="ativo">Ativo</SelectItem>
             <SelectItem value="ocioso">Ocioso</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={currentFilters.vinculacao ?? ALL_VALUE}
+          onValueChange={(next) =>
+            navigateWith({ vinculacao: next === ALL_VALUE ? undefined : next })
+          }
+        >
+          <SelectTrigger
+            aria-label="Filtrar por vinculação"
+            className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white px-4 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          >
+            <SelectValue placeholder="Todas as vinculações" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todas as vinculações</SelectItem>
+            <SelectItem value="vinculado">Vinculados</SelectItem>
+            <SelectItem value="nao_vinculado">Não vinculados</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -189,7 +210,7 @@ export default function VoluntariosFilters({
           )}
           {currentFilters.localidade && (
             <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-base text-zinc-700 ring-1 ring-zinc-200/60">
-              Localidade: {currentFilters.localidade}
+              Localidade: {exibirUnidade(currentFilters.localidade)}
               <button
                 type="button"
                 onClick={() => navigateWith({ localidade: undefined })}
@@ -207,6 +228,22 @@ export default function VoluntariosFilters({
                 type="button"
                 onClick={() => navigateWith({ situacao: undefined })}
                 aria-label="Remover filtro de situação"
+                className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-zinc-200"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </span>
+          )}
+          {currentFilters.vinculacao && (
+            <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-base text-zinc-700 ring-1 ring-zinc-200/60">
+              Vinculação:{" "}
+              {currentFilters.vinculacao === "vinculado"
+                ? "Vinculados"
+                : "Não vinculados"}
+              <button
+                type="button"
+                onClick={() => navigateWith({ vinculacao: undefined })}
+                aria-label="Remover filtro de vinculação"
                 className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-zinc-200"
               >
                 <X size={14} aria-hidden="true" />
