@@ -1,16 +1,21 @@
 // src/lib/contratos/pdf.ts
-// Geração do PDF do contrato com pdfkit, seguindo o layout do módulo de atas
-// (banda #2195B9 no topo, cabeçalhos de seção com barra de acento, rodapé com
-// página). Fontes WinAnsi (Helvetica) cobrem os acentos pt-BR sem embutir
-// fontes. O conteúdo do modelo já deve estar renderizado (variáveis trocadas).
+// Geração do PDF do contrato com pdfkit, layout profissional com logo,
+// bandas de destaque, tipografia clara e assinatura eletrônica.
 
 import PDFDocument from "pdfkit";
+import fs from "node:fs";
+import path from "node:path";
 
 const ACCENT = "#2195B9";
+const ACCENT_LIGHT = "#e8f4f8";
+const ACCENT_DARK = "#1a7a94";
 const TEXT_DARK = "#18181b";
 const TEXT_MID = "#52525b";
 const TEXT_MUTED = "#a1a1aa";
 const RULE = "#e4e4e7";
+const RULE_DARK = "#d4d4d8";
+const BG_LIGHT = "#fafafa";
+const WHITE = "#ffffff";
 
 const MARGIN = 48;
 
@@ -32,11 +37,31 @@ export type ContratoPdfInput = {
 function paragrafos(texto: string): string[] {
   return texto
     .split(/\n{2,}/)
-    .map((bloco) => bloco.split("\n").map((l) => l.trim()).filter(Boolean).join(" "))
+    .map((bloco) =>
+      bloco
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .join(" ")
+    )
     .filter(Boolean);
 }
 
-export async function buildContratoPdf(input: ContratoPdfInput): Promise<Buffer> {
+/** Caminho absoluto para a logo em public/. */
+const LOGO_PATH = path.join(process.cwd(), "public", "logo-ectolab.png");
+
+function logoExists(): boolean {
+  try {
+    fs.accessSync(LOGO_PATH, fs.constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function buildContratoPdf(
+  input: ContratoPdfInput
+): Promise<Buffer> {
   const doc = new PDFDocument({ size: "A4", margin: MARGIN });
   const chunks: Buffer[] = [];
   doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -44,10 +69,11 @@ export async function buildContratoPdf(input: ContratoPdfInput): Promise<Buffer>
 
   const contentWidth = doc.page.width - MARGIN * 2;
 
+  // ── Rodapé ─────────────────────────────────────────────────────────
   function drawFooter() {
     const page = doc.page;
     const y = page.height - 34;
-    const footerOptions = { height: 20, lineBreak: false };
+    const footerOpts = { height: 20, lineBreak: false };
 
     const state = doc as unknown as {
       x: number;
@@ -66,16 +92,24 @@ export async function buildContratoPdf(input: ContratoPdfInput): Promise<Buffer>
       fillColor: state._fillColor,
     };
 
+    // Linha separadora do rodapé
+    doc
+      .moveTo(MARGIN, y - 8)
+      .lineTo(page.width - MARGIN, y - 8)
+      .lineWidth(0.5)
+      .strokeColor(RULE)
+      .stroke();
+
     doc
       .font("Helvetica")
       .fontSize(8)
       .fillColor(TEXT_MUTED)
-      .text("EctoDash · Contratos", page.margins.left, y, footerOptions);
+      .text("Ectolab · Contratos", MARGIN, y, footerOpts);
     doc.text(
       `Página ${doc.bufferedPageRange().start + doc.bufferedPageRange().count}`,
       page.width - page.margins.right - 120,
       y,
-      { ...footerOptions, width: 120, align: "right" }
+      { ...footerOpts, width: 120, align: "right" }
     );
 
     const fontSource = prev.fontSource;
@@ -94,18 +128,47 @@ export async function buildContratoPdf(input: ContratoPdfInput): Promise<Buffer>
 
   doc.on("pageAdded", drawFooter);
 
-  // ── Banda do cabeçalho ───────────────────────────────────────────────
-  const BAND_HEIGHT = 96;
+  // ── Banda do cabeçalho com logo ───────────────────────────────────
+  const BAND_HEIGHT = 110;
   doc.save();
+  // Fundo da banda
   doc.rect(0, 0, doc.page.width, BAND_HEIGHT).fill(ACCENT);
+  // Barra decorativa inferior da banda
+  doc.rect(0, BAND_HEIGHT - 4, doc.page.width, 4).fill(ACCENT_DARK);
   doc.restore();
 
+  // Logo (se existir)
+  const hasLogo = logoExists();
+  const logoW = hasLogo ? 40 : 0;
+  const logoH = hasLogo ? 40 : 0;
+  const logoX = MARGIN + 8;
+  const logoY = 18;
+
+  if (hasLogo) {
+    try {
+      doc.image(LOGO_PATH, logoX, logoY, {
+        width: logoW,
+        height: logoH,
+        fit: [logoW, logoH],
+      });
+    } catch {
+      // Ignora erro de logo
+    }
+  }
+
+  // Título ao lado da logo ou centralizado
+  const titleX = hasLogo ? logoX + logoW + 12 : MARGIN;
+  const titleWidth = hasLogo ? contentWidth - logoW - 12 : contentWidth;
   doc
     .font("Helvetica-Bold")
-    .fontSize(17)
-    .fillColor("#ffffff")
-    .text(input.modeloTitulo, MARGIN, 28, { width: contentWidth, align: "center" });
+    .fontSize(20)
+    .fillColor(WHITE)
+    .text(input.modeloTitulo, titleX, 26, {
+      width: titleWidth,
+      align: hasLogo ? "left" : "center",
+    });
 
+  // Linha de metadata abaixo do título
   const metaLinha = [
     input.categoriaLabel,
     input.numero ? `Contrato nº ${input.numero}` : "",
@@ -116,38 +179,45 @@ export async function buildContratoPdf(input: ContratoPdfInput): Promise<Buffer>
   doc
     .font("Helvetica")
     .fontSize(10)
-    .fillColor("#dbeafe")
-    .text(metaLinha, MARGIN, 64, { width: contentWidth, align: "center" });
+    .fillColor("#c7e6f0")
+    .text(metaLinha, titleX, 56, {
+      width: titleWidth,
+      align: hasLogo ? "left" : "center",
+    });
 
-  doc.moveDown(0);
-  doc.y = BAND_HEIGHT + 10;
-  doc
-    .moveTo(MARGIN, doc.y)
-    .lineTo(doc.page.width - MARGIN, doc.y)
-    .lineWidth(0.8)
-    .strokeColor(RULE)
-    .stroke();
-  doc.y += 8;
+  // ── Posição inicial do conteúdo ────────────────────────────────────
+  doc.y = BAND_HEIGHT + 16;
 
+  // ── Helpers de seção ──────────────────────────────────────────────
   function sectionHeader(title: string) {
-    doc.moveDown(0.7);
-    const accentY = doc.y + 2.5;
+    if (doc.y + 60 > doc.page.height - doc.page.margins.bottom - 20) {
+      doc.addPage();
+    }
+    doc.moveDown(0.5);
+
+    // Barra lateral de destaque
+    const accentY = doc.y + 2;
     doc.save();
-    doc.roundedRect(doc.x, accentY, 4, 13, 2).fill(ACCENT);
+    doc.roundedRect(doc.x, accentY, 4, 15, 2).fill(ACCENT);
     doc.restore();
+
+    // Título da seção
     doc
       .font("Helvetica-Bold")
-      .fontSize(13)
+      .fontSize(14)
       .fillColor(TEXT_DARK)
-      .text(title, { indent: 12 });
-    doc.moveDown(0.2);
+      .text(title, { indent: 14 });
+
+    doc.moveDown(0.15);
+
+    // Linha separadora
     doc
       .moveTo(MARGIN, doc.y)
       .lineTo(doc.page.width - MARGIN, doc.y)
-      .lineWidth(0.7)
-      .strokeColor(RULE)
+      .lineWidth(0.8)
+      .strokeColor(RULE_DARK)
       .stroke();
-    doc.moveDown(0.45);
+    doc.moveDown(0.5);
   }
 
   function paragraph(text: string) {
@@ -155,99 +225,142 @@ export async function buildContratoPdf(input: ContratoPdfInput): Promise<Buffer>
       .font("Helvetica")
       .fontSize(11)
       .fillColor(TEXT_DARK)
-      .text(text, { lineGap: 4, align: "justify" });
-    doc.moveDown(0.4);
+      .text(text, { lineGap: 5, align: "justify" });
+    doc.moveDown(0.45);
   }
 
+  // ── Card de informações ────────────────────────────────────────────
   function infoCard() {
     const linhas: Array<[string, string]> = [
       ["Aluno", input.alunoNome],
-      ...(input.alunoDocumento ? ([["Documento", input.alunoDocumento]] as Array<[string, string]>) : []),
-      ...(input.alunoEmail ? ([["E-mail", input.alunoEmail]] as Array<[string, string]>) : []),
-      ...(input.alunoTelefone ? ([["Telefone", input.alunoTelefone]] as Array<[string, string]>) : []),
-      ...(input.evento
-        ? ([
-            ["Evento", input.evento.titulo],
-            ...(input.evento.data ? ([["Data do evento", input.evento.data]] as Array<[string, string]>) : []),
-            ...(input.evento.local ? ([["Local", input.evento.local]] as Array<[string, string]>) : []),
-          ] as Array<[string, string]>)
+      ...(input.alunoDocumento
+        ? [["Documento", input.alunoDocumento] as [string, string]]
         : []),
-      ...(input.valor ? ([["Valor", input.valor]] as Array<[string, string]>) : []),
+      ...(input.alunoEmail
+        ? [["E-mail", input.alunoEmail] as [string, string]]
+        : []),
+      ...(input.alunoTelefone
+        ? [["Telefone", input.alunoTelefone] as [string, string]]
+        : []),
+      ...(input.evento
+        ? [
+            ["Evento", input.evento.titulo] as [string, string],
+            ...(input.evento.data
+              ? [["Data do evento", input.evento.data] as [string, string]]
+              : []),
+            ...(input.evento.local
+              ? [["Local", input.evento.local] as [string, string]]
+              : []),
+          ]
+        : []),
+      ...(input.valor ? [["Valor", input.valor] as [string, string]] : []),
     ];
 
-    const pad = 12;
+    const pad = 14;
     const innerWidth = contentWidth - pad * 2;
+    const labelWidth = innerWidth * 0.35;
+    const valueWidth = innerWidth * 0.65;
 
-    doc.font("Helvetica-Bold").fontSize(11);
+    // Calcular alturas das linhas
+    doc.font("Helvetica-Bold").fontSize(10.5);
     const heights = linhas.map(([rotulo, valor]) =>
       Math.max(
-        doc.heightOfString(rotulo, { width: innerWidth / 2 - 8 }),
-        doc.heightOfString(valor, { width: innerWidth / 2 - 8 })
+        doc.heightOfString(rotulo, { width: labelWidth }),
+        doc.heightOfString(valor, { width: valueWidth })
       )
     );
-    const rowH = heights.reduce((a, b) => a + b, 0);
-    const cardH = pad * 2 + rowH + (linhas.length - 1) * 6;
+    const totalRowsHeight = heights.reduce((a, b) => a + b, 0);
+    const cardH = pad * 2 + totalRowsHeight + (linhas.length - 1) * 8;
 
-    doc.roundedRect(MARGIN, doc.y, contentWidth, cardH, 8).fillAndStroke(
-      "#fafafa",
+    // Fundo do card
+    doc.roundedRect(MARGIN, doc.y, contentWidth, cardH, 6).fillAndStroke(
+      BG_LIGHT,
       RULE
     );
 
-    const textX = MARGIN + pad;
+    // Borda esquerda colorida do card
+    doc.save();
+    doc.roundedRect(MARGIN, doc.y, 4, cardH, 2).fill(ACCENT);
+    doc.restore();
+
+    const textX = MARGIN + pad + 4;
     let textY = doc.y + pad;
-    doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_DARK);
-    for (let i = 0; i < linhas.length; i += 1) {
+
+    for (let i = 0; i < linhas.length; i++) {
       const [rotulo, valor] = linhas[i];
-      doc.text(rotulo, textX, textY, { width: innerWidth / 2 - 8 });
-      doc.font("Helvetica").fontSize(10.5).fillColor(TEXT_MID);
-      doc.text(valor, textX + innerWidth / 2, textY, { width: innerWidth / 2 - 8 });
-      doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_DARK);
-      textY += heights[i] + 6;
+
+      // Rótulo (negrito)
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10.5)
+        .fillColor(TEXT_DARK)
+        .text(rotulo, textX, textY, { width: labelWidth });
+
+      // Valor (regular)
+      doc
+        .font("Helvetica")
+        .fontSize(10.5)
+        .fillColor(TEXT_MID)
+        .text(valor, textX + labelWidth + 8, textY, { width: valueWidth });
+
+      textY += heights[i] + 8;
     }
 
-    doc.y = doc.y + cardH + 10;
+    doc.y = doc.y + cardH + 12;
   }
 
+  // ── Bloco de assinaturas ──────────────────────────────────────────
   function signatureBlock() {
-    if (doc.y + 170 > doc.page.height - doc.page.margins.bottom - 20) {
+    if (doc.y + 200 > doc.page.height - doc.page.margins.bottom - 20) {
       doc.addPage();
     }
     sectionHeader("Assinaturas");
 
-    doc.moveDown(1);
-    const halfWidth = (contentWidth - 40) / 2;
+    doc.moveDown(1.5);
+    const halfWidth = (contentWidth - 60) / 2;
     const lineY = doc.y;
 
-    for (const [x, quem] of [
+    const signatures = [
       [MARGIN, "Assinatura do aluno"],
-      [MARGIN + halfWidth + 40, "Assinatura da instituição"],
-    ] as const) {
+      [MARGIN + halfWidth + 60, "Assinatura da instituição"],
+    ] as const;
+
+    for (const [x, quem] of signatures) {
+      // Linha de assinatura
       doc
         .moveTo(x, lineY)
         .lineTo(x + halfWidth, lineY)
-        .lineWidth(1)
-        .strokeColor("#71717a")
+        .lineWidth(1.2)
+        .strokeColor(TEXT_DARK)
         .stroke();
+
+      // Texto abaixo da linha
       doc
         .font("Helvetica")
         .fontSize(10)
         .fillColor(TEXT_MID)
-        .text(quem, x, lineY + 8, { width: halfWidth, align: "center" });
+        .text(quem, x, lineY + 10, {
+          width: halfWidth,
+          align: "center",
+        });
     }
 
-    doc.y = lineY + 34;
+    doc.y = lineY + 40;
+
+    // Nota sobre assinatura eletrônica
+    doc.moveDown(1.5);
     doc
       .font("Helvetica")
-      .fontSize(10)
+      .fontSize(9)
       .fillColor(TEXT_MUTED)
       .text(
         "Assinatura eletrônica com validade jurídica (Assinafy / ICP-Brasil) ou assinatura manual do documento impresso.",
         { width: contentWidth, align: "center", lineGap: 2 }
       );
-    doc.moveDown(0.4);
+    doc.moveDown(0.5);
   }
 
-  // ── Conteúdo ─────────────────────────────────────────────────────────
+  // ── Conteúdo do contrato ──────────────────────────────────────────
   sectionHeader("Partes do contrato");
   infoCard();
 
@@ -257,13 +370,13 @@ export async function buildContratoPdf(input: ContratoPdfInput): Promise<Buffer>
     paragraph(bloco);
   }
 
-  const cidadeData = `Ectolab — ${input.emissao}`;
-  doc.moveDown(1);
+  // Local e data
+  doc.moveDown(1.5);
   doc
     .font("Helvetica")
     .fontSize(10.5)
     .fillColor(TEXT_DARK)
-    .text(cidadeData, { align: "right" });
+    .text(`Ectolab — ${input.emissao}`, { align: "right" });
   doc.moveDown(2);
 
   signatureBlock();
