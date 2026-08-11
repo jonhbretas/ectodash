@@ -2,13 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  PanelLeftClose,
-  PanelLeftOpen,
-  X,
-  ChevronDown,
-  ArrowRight,
-} from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, X, ChevronDown } from "lucide-react";
 import {
   filterEntries,
   filterCoordinatorEntries,
@@ -168,17 +162,32 @@ function SidebarLinks({
 
     return (
       <div key={group.label}>
-        {/* Group header — label/chevron toggle collapse; the parent link is
-            a sibling <a> (a link must never nest inside a <button>). */}
+        {/* Group header — label acts as the parent link (when the group has
+            one); the chevron button only toggles collapse. */}
         <div className={groupHeaderClassName(active)}>
+          {group.href ? (
+            <a
+              href={group.href}
+              onClick={() => onNavigate?.()}
+              title={`Ir para ${group.label}`}
+              className="flex min-w-0 flex-1 items-center gap-3 self-stretch text-left"
+            >
+              <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
+              <span className="flex-1 truncate text-left">{group.label}</span>
+            </a>
+          ) : (
+            <span className="flex min-w-0 flex-1 items-center gap-3 self-stretch text-left">
+              <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
+              <span className="flex-1 truncate text-left">{group.label}</span>
+            </span>
+          )}
           <button
             type="button"
             onClick={() => toggleGroup(group.label)}
             aria-expanded={open}
-            className="flex min-w-0 flex-1 items-center gap-3 self-stretch text-left"
+            aria-label={open ? `Recolher ${group.label}` : `Expandir ${group.label}`}
+            className="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
           >
-            <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
-            <span className="flex-1 truncate text-left">{group.label}</span>
             <ChevronDown
               size={14}
               aria-hidden="true"
@@ -187,17 +196,6 @@ function SidebarLinks({
               }`}
             />
           </button>
-          {group.href && (
-            <a
-              href={group.href}
-              onClick={() => onNavigate?.()}
-              className="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
-              title={`Ir para ${group.label}`}
-              aria-label={`Ir para ${group.label}`}
-            >
-              <ArrowRight size={14} aria-hidden="true" />
-            </a>
-          )}
         </div>
 
         {/* Children */}
