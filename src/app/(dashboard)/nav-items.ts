@@ -61,7 +61,6 @@ export const navEntries: SidebarEntry[] = [
     children: [
       { href: "/", label: "Demandas", Icon: ClipboardList, modulo: "demandas" },
       { href: "/reunioes", label: "Atas de Reuniões", Icon: NotebookPen, modulo: "reunioes" },
-      { href: "/dips", label: "Dinâmica DIP", Icon: Globe2, modulo: "dips" },
     ],
   },
 
@@ -73,6 +72,7 @@ export const navEntries: SidebarEntry[] = [
     children: [
       { href: "/voluntarios", label: "Voluntários", Icon: Users, modulo: "voluntarios" },
       { href: "/eventos", label: "Eventos", Icon: CalendarDays, modulo: "eventos" },
+      { href: "/dips", label: "Dinâmica DIP", Icon: Globe2, modulo: "dips" },
     ],
   },
 
