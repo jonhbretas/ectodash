@@ -11,10 +11,22 @@ import ReminderRunsPanel, { type ReminderRunRow } from "./reminder-runs-panel";
 import SheetSyncPanel, { type SheetSyncRunRow } from "./sheet-sync-panel";
 import AreasConfig from "./areas-config";
 import PainelTabs from "./painel-tabs";
+import LogAcoesPanel, { type LogAcoesRow } from "./log-acoes-panel";
+import {
+  LOG_ACOES_POR_PAGINA,
+  parseLogAcoesFilters,
+  logAcoesPaginaAtual,
+  type LogAcoesFilters,
+} from "./log-acoes-filter-schema";
 
 const SEM_AREA_DEFINIDA = "Sem area definida";
 
-export default async function PainelPage() {
+export default async function PainelPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const logAcoesFilters = parseLogAcoesFilters(await searchParams);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -63,7 +75,7 @@ export default async function PainelPage() {
           </Link>
         </div>
       ) : (
-        <PainelContent rows={allRows} supabase={supabase} />
+        <PainelContent rows={allRows} supabase={supabase} logAcoesFilters={logAcoesFilters} />
       )}
     </PageContainer>
   );
@@ -71,7 +83,7 @@ export default async function PainelPage() {
 
 type PainelRow = { id: number; titulo: string; prazo: string; status: "pendente" | "em_andamento" | "concluida"; area: string | null; atrasada: boolean };
 
-async function PainelContent({ rows, supabase }: { rows: PainelRow[]; supabase: Awaited<ReturnType<typeof createClient>> }) {
+async function PainelContent({ rows, supabase, logAcoesFilters }: { rows: PainelRow[]; supabase: Awaited<ReturnType<typeof createClient>>; logAcoesFilters: LogAcoesFilters }) {
   const total = rows.length;
   const pendentes = rows.filter((r) => r.status === "pendente").length;
   const emAndamento = rows.filter((r) => r.status === "em_andamento").length;
@@ -141,6 +153,63 @@ async function PainelContent({ rows, supabase }: { rows: PainelRow[]; supabase: 
   ).length;
   const voluntariosAreas = totalVoluntarios - equipeDip;
 
+  // Log de ações (migração 0059): filtros e paginação vêm dos searchParams
+  // do /painel; a barra client só navega. Ordenação estável (created_at +
+  // id desc) para a paginação por range() não pular/duplicar linhas.
+  let logQuery = supabase
+    .from("audit_log")
+    .select(
+      "id, profile_id, acao, entidade, entidade_id, before_data, after_data, created_at, profiles(email, full_name)",
+      { count: "exact" }
+    )
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
+  if (logAcoesFilters.busca) {
+    logQuery = logQuery.or(
+      `entidade.ilike.%${logAcoesFilters.busca}%,entidade_id.ilike.%${logAcoesFilters.busca}%`
+    );
+  }
+  if (logAcoesFilters.entidade) {
+    logQuery = logQuery.eq("entidade", logAcoesFilters.entidade);
+  }
+  const logPagina = logAcoesPaginaAtual(logAcoesFilters);
+  const logOffset = (logPagina - 1) * LOG_ACOES_POR_PAGINA;
+  const { data: logRawRows, count: logTotal } = await logQuery.range(
+    logOffset,
+    logOffset + LOG_ACOES_POR_PAGINA - 1
+  );
+
+  type LogRawRow = {
+    id: number;
+    profile_id: string | null;
+    acao: LogAcoesRow["acao"];
+    entidade: string;
+    entidade_id: string | null;
+    before_data: Record<string, unknown> | null;
+    after_data: Record<string, unknown> | null;
+    created_at: string;
+    profiles: { email: string; full_name: string | null } | null;
+  };
+
+  const logRows: LogAcoesRow[] = ((logRawRows ?? []) as unknown as LogRawRow[]).map(
+    (row) => ({
+      id: row.id,
+      profileId: row.profile_id,
+      acao: row.acao,
+      entidade: row.entidade,
+      entidadeId: row.entidade_id,
+      beforeData: row.before_data,
+      afterData: row.after_data,
+      createdAt: row.created_at,
+      usuario:
+        row.profiles?.full_name?.trim() || row.profiles?.email || null,
+    })
+  );
+  const logTotalPaginas = Math.max(
+    1,
+    Math.ceil((logTotal ?? 0) / LOG_ACOES_POR_PAGINA)
+  );
+
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -189,6 +258,18 @@ async function PainelContent({ rows, supabase }: { rows: PainelRow[]; supabase: 
             id: "planilha",
             label: "Planilha",
             content: <SheetSyncPanel runs={sheetSyncRuns} />,
+          },
+          {
+            id: "log-acoes",
+            label: "Log de ações",
+            content: (
+              <LogAcoesPanel
+                rows={logRows}
+                total={logTotal ?? 0}
+                totalPages={logTotalPaginas}
+                filters={logAcoesFilters}
+              />
+            ),
           },
         ]}
       />
