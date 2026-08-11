@@ -34,7 +34,9 @@ interface DemandaRow {
 }
 
 interface ResponsavelRow {
-  profile_id: string;
+  // Nullable since migration 0020/0021: a row can target a roster-only
+  // volunteer (voluntario_id) with no auth account, leaving profile_id NULL.
+  profile_id: string | null;
   profiles: { email: string } | { email: string }[] | null;
 }
 
@@ -124,8 +126,11 @@ export async function GET(request: NextRequest) {
 
       // Union responsáveis + membros, deduped by profile_id — an
       // acompanhante who is also responsável gets exactly one reminder,
-      // and the LEMB-03 dedup granularity stays per-recipient.
-      const destinatarios = new Map<string, ResponsavelRow>();
+      // and the LEMB-03 dedup granularity stays per-recipient. Roster-only
+      // rows (profile_id NULL) dedupe on the null key: the one null key
+      // collapses all such rows to a single recipient, which is correct —
+      // none of them can receive an email anyway (guard below).
+      const destinatarios = new Map<string | null, ResponsavelRow>();
       for (const row of [...responsaveis, ...membros] as ResponsavelRow[]) {
         if (!destinatarios.has(row.profile_id)) {
           destinatarios.set(row.profile_id, row);
@@ -136,6 +141,19 @@ export async function GET(request: NextRequest) {
       // granularity is per-recipient, not per-demanda
       // (07-RESEARCH.md Anti-Patterns).
       for (const responsavel of destinatarios.values()) {
+        // A roster-only volunteer (demanda_responsaveis/membros row with
+        // voluntario_id set, profile_id NULL since migrations 0020/0021)
+        // has no auth account and therefore no resolvable email — skip
+        // BEFORE the dedup insert, because profile_id is NOT NULL in
+        // demanda_reminders_log and inserting null would crash the whole
+        // run with a 23502 violation (exactly the failure the run-log
+        // panel showed). Same "explicitly tracked, never silently dropped"
+        // semantics as the zero-destinatários case above.
+        if (!responsavel.profile_id) {
+          skippedNoResponsavel++;
+          continue;
+        }
+
         // 4. Dedup check IS the atomic insert-with-conflict-handling below —
         // never a separate SELECT-then-conditional-INSERT (07-RESEARCH.md
         // Pattern 2, Anti-Patterns). This insert claims today's slot before

@@ -55,6 +55,7 @@ describe.skipIf(!canRun)(
     const createdUserIds: string[] = [];
     const createdDemandaIds: number[] = [];
     const createdRunIds: number[] = [];
+    const createdVoluntarioIds: number[] = [];
     let fixtureCounter = 0;
 
     admin = createClient(supabaseUrl!, serviceRoleKey!);
@@ -129,6 +130,37 @@ describe.skipIf(!canRun)(
       }
     }
 
+    // Creates a roster-only volunteer (no auth account) and links it as the
+    // demanda's responsável via voluntario_id — profile_id stays NULL, the
+    // "exactly one destination" CHECK (migration 0020) requires it.
+    async function linkResponsavelRosterOnly(demandaId: number) {
+      const { data: voluntario, error: voluntarioError } = await admin
+        .from("voluntarios")
+        .insert({
+          nome: `Voluntário roster-only fixture ${Date.now()}-${fixtureCounter}`,
+        })
+        .select("id")
+        .single();
+
+      if (voluntarioError || !voluntario) {
+        throw new Error(
+          `Failed to create roster-only voluntário: ${voluntarioError?.message}`
+        );
+      }
+
+      createdVoluntarioIds.push(voluntario.id as number);
+
+      const { error } = await admin
+        .from("demanda_responsaveis")
+        .insert({ demanda_id: demandaId, voluntario_id: voluntario.id });
+
+      if (error) {
+        throw new Error(
+          `Failed to link roster-only responsável: ${error.message}`
+        );
+      }
+    }
+
     afterAll(async () => {
       // demanda_reminders_log rows are cleaned up via the demanda's own
       // `on delete cascade`... except demanda_reminders_log has NO cascade
@@ -142,6 +174,9 @@ describe.skipIf(!canRun)(
       }
       for (const id of createdRunIds) {
         await admin.from("reminder_runs").delete().eq("id", id);
+      }
+      for (const id of createdVoluntarioIds) {
+        await admin.from("voluntarios").delete().eq("id", id);
       }
       for (const id of createdUserIds) {
         await admin.auth.admin.deleteUser(id);
@@ -182,8 +217,14 @@ describe.skipIf(!canRun)(
       expect(sendMock).not.toHaveBeenCalled();
     });
 
-    it("LEMB-01/02/04: sends exactly one email for one eligible atrasada demanda with one responsável and records a success run", async () => {
-      sendMock.mockResolvedValueOnce({ data: { id: "mock-id" }, error: null });
+    it("LEMB-01/02/04: sends at least one email for one eligible atrasada demanda with one responsável and records a success run", async () => {
+      // Always-resolving mock (not mockResolvedValueOnce): the route queries
+      // the LIVE demandas_com_status view, so any real production demanda
+      // whose dedup slot is not yet claimed for today is processed too — a
+      // once-only mock would crash mid-run on the second send
+      // (`Cannot destructure property 'error' of ... undefined`). The
+      // fixture-scoped assertions below pin the fixture's own outcome.
+      sendMock.mockResolvedValue({ data: { id: "mock-id" }, error: null });
 
       const criador = await createFixtureUser();
       const responsavel = await createFixtureUser();
@@ -277,6 +318,44 @@ describe.skipIf(!canRun)(
       const body = await response.json();
 
       expect(body.skippedNoResponsavel).toBeGreaterThanOrEqual(1);
+    });
+
+    it("Roster-only responsável (profile_id NULL, voluntario_id set) is skipped, never crashes the run with a 23502 not-null violation", async () => {
+      sendMock.mockResolvedValue({ data: { id: "mock-id" }, error: null });
+
+      const criador = await createFixtureUser();
+      const demandaId = await createAtrasadaDemanda(criador.id);
+      await linkResponsavelRosterOnly(demandaId);
+
+      const response = await GET(buildRequest(`Bearer ${TEST_CRON_SECRET}`));
+      expect(response.status).toBe(200);
+      const body = await response.json();
+
+      // The roster-only destinatário is counted as a no-responsável skip,
+      // and the run completes successfully instead of aborting with
+      // `null value in column "profile_id" of relation
+      // "demanda_reminders_log" violates not-null constraint`.
+      expect(body.skippedNoResponsavel).toBeGreaterThanOrEqual(1);
+
+      const { data: runRow, error: runError } = await admin
+        .from("reminder_runs")
+        .select("id, status, failed_count, error_message")
+        .order("id", { ascending: false })
+        .limit(1)
+        .single();
+
+      expect(runError).toBeNull();
+      expect(runRow?.status).toBe("success");
+      expect(runRow?.failed_count).toBe(0);
+      expect(runRow?.error_message).toBeNull();
+      if (runRow?.id) createdRunIds.push(runRow.id as number);
+
+      // No demanda_reminders_log row is ever written for a null profile_id.
+      const { data: logRows } = await admin
+        .from("demanda_reminders_log")
+        .select("id")
+        .eq("demanda_id", demandaId);
+      expect(logRows).toHaveLength(0);
     });
 
     it("LEMB-04: a failed resend.emails.send() marks the dedup row 'failed' (not deleted) and the run 'partial_failure'", async () => {
