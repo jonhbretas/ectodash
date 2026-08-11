@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Acesso } from "@/lib/acesso";
+import FeedbackButton from "@/components/feedback/feedback-button";
 import Sidebar from "./sidebar";
 
 export default async function DashboardLayout({
@@ -62,6 +63,7 @@ export default async function DashboardLayout({
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {children}
       </div>
+      <FeedbackButton />
     </div>
   );
 }
