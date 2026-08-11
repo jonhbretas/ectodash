@@ -22,15 +22,10 @@ export default async function UtilidadesPage() {
     .select("id, nome")
     .order("nome");
 
-  // A página de utilidades exibe somente a área Financeiro — as demais
-  // áreas existem no banco para seus próprios módulos (Comunicação,
-  // Eventos, etc.) e não devem aparecer como abas aqui.
-  const areas: { id: number; nome: string }[] = (areasRaw ?? [])
-    .map((a) => ({
-      id: Number(a.id),
-      nome: String(a.nome),
-    }))
-    .filter((a) => a.nome === "Financeiro");
+  const areas: { id: number; nome: string }[] = (areasRaw ?? []).map((a) => ({
+    id: Number(a.id),
+    nome: String(a.nome),
+  }));
 
   const { data: itens } = await supabase
     .from("utilidades_itens")
@@ -67,7 +62,7 @@ export default async function UtilidadesPage() {
         </div>
       </header>
 
-      <UtilidadesView areas={areas ?? []} items={items} />
+      <UtilidadesView areas={areas ?? []} items={items} podeGerenciar={isCoord} />
 
       {isCoord && <UtilidadesClient areas={areas ?? []} />}
     </PageContainer>

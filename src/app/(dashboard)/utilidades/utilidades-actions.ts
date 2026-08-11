@@ -11,8 +11,18 @@ const categorias = [
   "grade_curricular", "links_uteis", "outro",
 ] as const;
 
+const categoriaLabels: Record<string, string> = {
+  "Ata de Fundação": "ata_fundacao",
+  "Estatuto": "estatuto",
+  "Logos e Identidade Visual": "logo",
+  "Ficha de Proposição de Curso": "ficha_proposicao",
+  "Grade Curricular — IC": "grade_curricular",
+  "Links Úteis": "links_uteis",
+  "Outros Documentos": "outro",
+};
+
 const tituloSchema = z.string().trim().min(1, "Dê um título.").max(200);
-const categoriaSchema = z.enum(categorias);
+const categoriaSchema = z.string().trim().min(1, "Informe a categoria ou título da utilidade.").max(200);
 
 export async function criarUtilidadeItem(
   prevState: UtilidadeState,
@@ -25,8 +35,9 @@ export async function criarUtilidadeItem(
   const titulo = tituloSchema.safeParse(formData.get("titulo"));
   if (!titulo.success) return { ok: false, message: "Dê um título ao item." };
 
-  const categoria = categoriaSchema.safeParse(formData.get("categoria"));
-  if (!categoria.success) return { ok: false, message: "Escolha uma categoria." };
+  const categoriaRaw = categoriaSchema.safeParse(formData.get("categoria"));
+  if (!categoriaRaw.success) return { ok: false, message: "Informe a categoria ou título da utilidade." };
+  const categoria = categoriaLabels[categoriaRaw.data] ?? categoriaRaw.data;
 
   const urlRaw = formData.get("url");
   const url = typeof urlRaw === "string" ? urlRaw.trim() : null;
@@ -47,7 +58,7 @@ export async function criarUtilidadeItem(
   const { error } = await supabase.from("utilidades_itens").insert({
     titulo: titulo.data,
     descricao: descricao || null,
-    categoria: categoria.data,
+    categoria: categoria,
     url: url || null,
     area_id: area_id && Number.isFinite(area_id) ? area_id : null,
     tags,

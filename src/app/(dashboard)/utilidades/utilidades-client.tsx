@@ -55,12 +55,24 @@ export default function UtilidadesClient({ areas }: { areas: Area[] }) {
         ))}
       </select>
 
-      <select name="categoria" required className={inputClass}>
-        <option value="">Escolha a categoria</option>
-        {CATEGORIES.map((cat) => (
-          <option key={cat.value} value={cat.value}>{cat.label}</option>
-        ))}
-      </select>
+      <div className="flex flex-col gap-1">
+        <input
+          name="categoria"
+          required
+          list="categoria-sugestoes"
+          placeholder="Categoria ou título (ex: Tutorial de matrícula)"
+          className={inputClass}
+        />
+        <datalist id="categoria-sugestoes">
+          {CATEGORIES.map((cat) => (
+            <option key={cat.value} value={cat.label} />
+          ))}
+          <option value="Tutorial" />
+        </datalist>
+        <p className="text-sm text-zinc-500">
+          Escolha uma sugestão ou digite uma categoria específica da utilidade.
+        </p>
+      </div>
 
       <input name="url" placeholder="URL (link para o documento ou site)" className={inputClass} />
 

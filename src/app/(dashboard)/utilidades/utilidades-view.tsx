@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ExternalLink, Search, Trash2, Layers, FileText, BookOpen, Image, GraduationCap, Link2, Wrench } from "lucide-react";
+import { ExternalLink, Search, Trash2, Layers, FileText, BookOpen, Image, GraduationCap, Link2, Wrench, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { excluirUtilidadeItemSimples } from "./utilidades-actions";
 
@@ -28,9 +28,14 @@ const CATEGORIAS: Record<string, { label: string; icon: typeof BookOpen }> = {
   outro: { label: "Outros Documentos", icon: Wrench },
 };
 
-export default function UtilidadesView({ areas, items }: { areas: Area[]; items: Item[] }) {
+function categoriaInfo(categoria: string) {
+  return CATEGORIAS[categoria] ?? { label: categoria, icon: Wrench };
+}
+
+export default function UtilidadesView({ areas, items, podeGerenciar = false }: { areas: Area[]; items: Item[]; podeGerenciar?: boolean }) {
   const [activeTab, setActiveTab] = useState("todos");
   const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState("todas");
 
   const tabs = useMemo(() => {
     const all = [{ id: "todos", label: "Todos", count: items.length }];
@@ -41,6 +46,18 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
     return all;
   }, [areas, items]);
 
+  const categorias = useMemo(() => {
+    const seen = new Set<string>(Object.keys(CATEGORIAS));
+    const list = Object.entries(CATEGORIAS).map(([value, cat]) => ({ value, label: cat.label }));
+    for (const item of items) {
+      if (!seen.has(item.categoria)) {
+        seen.add(item.categoria);
+        list.push({ value: item.categoria, label: item.categoria });
+      }
+    }
+    return list;
+  }, [items]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     let result = items;
@@ -50,9 +67,13 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
       result = result.filter((i) => i.area_id === areaId);
     }
 
+    if (catFilter !== "todas") {
+      result = result.filter((i) => i.categoria === catFilter);
+    }
+
     if (q) {
       result = result.filter((i) => {
-        const catLabel = CATEGORIAS[i.categoria]?.label ?? "";
+        const catLabel = CATEGORIAS[i.categoria]?.label ?? i.categoria;
         const haystack = [
           i.titulo,
           i.descricao ?? "",
@@ -67,7 +88,7 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
     }
 
     return result;
-  }, [items, activeTab, search]);
+  }, [items, activeTab, catFilter, search]);
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -111,15 +132,31 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
         })}
       </div>
 
-      <div className="relative">
-        <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
-        <input
-          type="text"
-          placeholder="Buscar por título, descrição, área ou tag..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-4 text-xl text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] placeholder:text-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-        />
+      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-stretch">
+        <div className="relative flex-1">
+          <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+          <input
+            type="text"
+            placeholder="Buscar por título, descrição, área ou tag..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-4 text-xl text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] placeholder:text-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          />
+        </div>
+        <div className="relative">
+          <ChevronDown size={18} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+          <select
+            aria-label="Filtrar por categoria"
+            value={catFilter}
+            onChange={(e) => setCatFilter(e.target.value)}
+            className="min-h-14 w-full appearance-none rounded-xl border border-zinc-200 bg-white py-3 pl-4 pr-10 text-xl text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:w-72"
+          >
+            <option value="todas">Todas as categorias</option>
+            {categorias.map((cat) => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div role="tabpanel" className="flex w-full flex-col gap-4">
@@ -132,7 +169,7 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((item) => (
-              <ItemCard key={item.id} item={item} />
+              <ItemCard key={item.id} item={item} podeGerenciar={podeGerenciar} />
             ))}
           </div>
         )}
@@ -141,8 +178,8 @@ export default function UtilidadesView({ areas, items }: { areas: Area[]; items:
   );
 }
 
-function ItemCard({ item }: { item: Item }) {
-  const cat = CATEGORIAS[item.categoria];
+function ItemCard({ item, podeGerenciar }: { item: Item; podeGerenciar: boolean }) {
+  const cat = categoriaInfo(item.categoria);
 
   return (
     <div className="flex flex-col gap-2 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
@@ -194,23 +231,50 @@ function ItemCard({ item }: { item: Item }) {
         {item.arquivo_nome && (
           <span className="text-base text-zinc-500">{item.arquivo_nome}</span>
         )}
-        <ExcluirItemButton itemId={item.id} />
+        {podeGerenciar && <ExcluirItemButton itemId={item.id} titulo={item.titulo} />}
       </div>
     </div>
   );
 }
 
-function ExcluirItemButton({ itemId }: { itemId: number }) {
-  return (
-    <form action={excluirUtilidadeItemSimples} className="ml-auto">
-      <input type="hidden" name="id" value={itemId} />
+function ExcluirItemButton({ itemId, titulo }: { itemId: number; titulo: string }) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (!confirming) {
+    return (
       <button
-        type="submit"
+        type="button"
         aria-label="Excluir item"
-        className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-700"
+        onClick={() => setConfirming(true)}
+        className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-700"
       >
         <Trash2 size={18} />
       </button>
-    </form>
+    );
+  }
+
+  return (
+    <div className="ml-auto flex flex-wrap items-center gap-2">
+      <span className="text-sm font-medium text-red-800">
+        Excluir “{titulo}”? Essa ação não pode ser desfeita.
+      </span>
+      <form action={excluirUtilidadeItemSimples} className="contents">
+        <input type="hidden" name="id" value={itemId} />
+        <button
+          type="submit"
+          className="flex min-h-10 items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-base font-medium text-white transition-colors hover:bg-red-800"
+        >
+          <Trash2 size={15} aria-hidden="true" />
+          Confirmar exclusão
+        </button>
+      </form>
+      <button
+        type="button"
+        onClick={() => setConfirming(false)}
+        className="rounded-lg px-3 py-2 text-base text-zinc-600 transition-colors hover:text-zinc-900"
+      >
+        Voltar
+      </button>
+    </div>
   );
 }
