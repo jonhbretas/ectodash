@@ -24,6 +24,7 @@ import {
   FileSignature,
   FileText,
   Map,
+  MessageSquareWarning,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -134,6 +135,9 @@ export const navEntries: SidebarEntry[] = [
 
   // ─── Ferramentas ───
   { href: "/utilidades", label: "Utilidades", Icon: Wrench, modulo: "utilidades" },
+
+  // ─── Relatos (todos veem os próprios; coordenador geral gerencia tudo) ───
+  { href: "/feedback", label: "Relatos e melhorias", Icon: MessageSquareWarning },
 
   // ─── Perfil ───
   { href: "/perfil", label: "Meu perfil", Icon: UserRound },
