@@ -912,3 +912,53 @@ export async function corrigirDemandaComIa(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Exclusão em massa (seleção na lista)
+
+export type ExcluirDemandasState = { ok: boolean; message: string };
+
+// Bulk delete from the list view ("excluir selecionadas"). Ids come from the
+// client as a serializable array and are re-validated server-side (never
+// trusted raw). RLS governs which rows each user may delete (migration 0053);
+// rows outside the caller's scope are silently skipped by Supabase, so the
+// reported count reflects what was actually deleted.
+export async function excluirDemandas(
+  ids: number[]
+): Promise<ExcluirDemandasState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  const idsValidos = idsNumericos(ids.map(String));
+  if (idsValidos.length === 0) {
+    return { ok: false, message: "Nenhuma demanda selecionada." };
+  }
+
+  const { data: deletadas, error } = await supabase
+    .from("demandas")
+    .delete()
+    .in("id", idsValidos)
+    .select("id");
+
+  if (error) {
+    console.error("excluirDemandas: delete failed", error);
+    return {
+      ok: false,
+      message:
+        "Não foi possível excluir as demandas. Verifique suas permissões e tente de novo.",
+    };
+  }
+
+  revalidatePath("/");
+  const count = deletadas?.length ?? 0;
+  return {
+    ok: true,
+    message: count === 1 ? "1 demanda excluída." : `${count} demandas excluídas.`,
+  };
+}
+

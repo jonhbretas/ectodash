@@ -1,28 +1,31 @@
+"use client";
+
 import Link from "next/link";
-import { FilterX, ClipboardList } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import {
+  FilterX,
+  ClipboardList,
+  CheckSquare,
+  Square,
+  Trash2,
+  X,
+} from "lucide-react";
 import DemandaCard from "./demanda-card";
 import DemandaTable from "./demanda-table";
-import type { DemandaStatus } from "./status-badge";
+import { excluirDemandas } from "./actions";
+import {
+  groupDemandas,
+  compareDemandas,
+  type DemandaGroupable,
+} from "./demanda-groups";
 
 // The breakpoint-switching container: cards below lg (including tablet),
 // table at lg and above — a single CSS-only lg: breakpoint switch, per
 // 04-UI-SPEC.md's Responsive Behavior Summary. No JavaScript-based screen-
 // width detection (React lifecycle hooks, a browser resize listener, or a
 // media-query hook) is used to decide which variant renders.
-export type Demanda = {
-  id: number;
-  titulo: string;
-  responsavelEmails: string[];
-  prazo: string;
-  status: DemandaStatus;
-  atrasada: boolean;
-  area: string | null;
-  projeto?: string | null;
-  eventoNome?: string | null;
-  etiquetaNome?: string | null;
-  checklistTotal?: number;
-  checklistFeitos?: number;
-};
+export type Demanda = DemandaGroupable;
 
 export type DemandaListProps = {
   demandas: Demanda[];
@@ -39,89 +42,164 @@ export type DemandaListProps = {
   // dataset down to nothing, never when the role-scoped dataset was already
   // empty to begin with.
   filtersActive?: boolean;
+  // canExcluir: role gate for the bulk-selection toolbar (coordenador_geral
+  // or coordenador_area). RLS still governs each delete server-side.
+  canExcluir?: boolean;
 };
-
-const SEM_AREA_DEFINIDA = "Sem área definida";
-
-// Single comparator implementing the whole sort rule in one place: atrasada
-// first, then prazo ascending, then concluída last regardless of prazo
-// (04-UI-SPEC.md Screen Inventory > 1, Sort order). Reads the
-// server-computed `atrasada` boolean only — never recomputes it. Grouping
-// (below) wraps around this comparator; it never replaces or reorders it.
-function compareDemandas(a: Demanda, b: Demanda): number {
-  if (a.status === "concluida" !== (b.status === "concluida")) {
-    return a.status === "concluida" ? 1 : -1;
-  }
-  if (a.atrasada !== b.atrasada) {
-    return a.atrasada ? -1 : 1;
-  }
-  return a.prazo.localeCompare(b.prazo);
-}
-
-// One section per distinct group value. A demanda with multiple
-// responsáveis (demanda_responsaveis is many-to-many) has no single
-// "primary" responsável to bucket by — absent a UI-SPEC tiebreaker, the
-// simplest defensible rule is applied: the demanda appears once in every
-// group for each of its responsáveis. This choice is documented in
-// 05-02-SUMMARY.md since 05-UI-SPEC.md does not explicitly resolve it.
-// Exported so the kanban view groups by the same rule.
-export function groupDemandas(
-  demandas: Demanda[],
-  groupBy: "area" | "responsavel"
-): { label: string; items: Demanda[] }[] {
-  const groups = new Map<string, Demanda[]>();
-
-  for (const demanda of demandas) {
-    if (groupBy === "area") {
-      const key = demanda.area?.trim() ? demanda.area : SEM_AREA_DEFINIDA;
-      const items = groups.get(key) ?? [];
-      items.push(demanda);
-      groups.set(key, items);
-    } else {
-      const emails =
-        demanda.responsavelEmails.length > 0
-          ? demanda.responsavelEmails
-          : ["Sem responsável definido"];
-      for (const email of emails) {
-        const items = groups.get(email) ?? [];
-        items.push(demanda);
-        groups.set(email, items);
-      }
-    }
-  }
-
-  // Sem área definida always sorts last; every other group sorts
-  // alphabetically for a stable, predictable section order.
-  const labels = [...groups.keys()].sort((a, b) => {
-    if (a === SEM_AREA_DEFINIDA) return 1;
-    if (b === SEM_AREA_DEFINIDA) return -1;
-    return a.localeCompare(b);
-  });
-
-  return labels.map((label) => ({
-    label,
-    items: [...(groups.get(label) ?? [])].sort(compareDemandas),
-  }));
-}
 
 export default function DemandaList({
   demandas,
   groupBy,
   filtersActive = false,
+  canExcluir = false,
 }: DemandaListProps) {
+  const router = useRouter();
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
   const sorted = [...demandas].sort(compareDemandas);
   const count = demandas.length;
   const countLabel = count === 1 ? "1 demanda" : `${count} demandas`;
   const grouped = groupBy ? groupDemandas(demandas, groupBy) : null;
 
+  const allSelected =
+    demandas.length > 0 && selected.size === demandas.length;
+  const toggleSelected = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelected(allSelected ? new Set() : new Set(demandas.map((d) => d.id)));
+  };
+
+  const enterSelection = () => {
+    setSelectionMode(true);
+    setMessage(null);
+  };
+
+  const exitSelection = () => {
+    setSelectionMode(false);
+    setSelected(new Set());
+    setConfirming(false);
+    setMessage(null);
+  };
+
+  const confirmExcluir = async () => {
+    if (selected.size === 0) return;
+    setDeleting(true);
+    const result = await excluirDemandas([...selected]);
+    setDeleting(false);
+    if (result.ok) {
+      exitSelection();
+      router.refresh();
+    } else {
+      setMessage({ ok: false, text: result.message });
+      setConfirming(false);
+    }
+  };
+
+  const selectionProps = {
+    selectionActive: selectionMode,
+    selectedIds: selected,
+    onToggle: toggleSelected,
+  };
+
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-2xl font-semibold text-zinc-900">Demandas</h2>
         <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-base font-medium text-zinc-600">
           {countLabel}
         </span>
+
+        {canExcluir && demandas.length > 0 && !selectionMode && (
+          <button
+            type="button"
+            onClick={enterSelection}
+            className="ml-auto flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          >
+            <CheckSquare size={16} aria-hidden="true" />
+            Selecionar
+          </button>
+        )}
+
+        {selectionMode && (
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
+              {selected.size} {selected.size === 1 ? "selecionada" : "selecionadas"}
+            </span>
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+            >
+              {allSelected ? (
+                <Square size={16} aria-hidden="true" />
+              ) : (
+                <CheckSquare size={16} aria-hidden="true" />
+              )}
+              {allSelected ? "Desmarcar todas" : "Selecionar todas"}
+            </button>
+            <button
+              type="button"
+              onClick={exitSelection}
+              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+            >
+              <X size={16} aria-hidden="true" />
+              Cancelar
+            </button>
+          </div>
+        )}
       </div>
+
+      {confirming && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+          <p className="text-xl font-medium text-red-900">
+            Excluir {selected.size}{" "}
+            {selected.size === 1 ? "demanda" : "demandas"}? Essa ação não pode
+            ser desfeita.
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={confirmExcluir}
+              className="flex min-h-11 items-center gap-1.5 rounded-lg bg-red-700 px-4 text-lg font-medium text-white transition-colors hover:bg-red-800 disabled:opacity-60"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              {deleting ? "Excluindo..." : "Confirmar exclusão"}
+            </button>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => setConfirming(false)}
+              className="rounded-lg px-3 py-2 text-lg text-zinc-600 transition-colors hover:text-zinc-900"
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {message && (
+        <p
+          className={`rounded-2xl px-5 py-3 text-lg ring-1 ${
+            message.ok
+              ? "bg-green-50 text-green-800 ring-green-200/60"
+              : "bg-red-50 text-red-800 ring-red-200/60"
+          }`}
+        >
+          {message.text}
+        </p>
+      )}
 
       {count === 0 && filtersActive ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
@@ -176,11 +254,18 @@ export default function DemandaList({
                 </div>
                 <ul className="flex flex-col gap-3 lg:hidden">
                   {group.items.map((demanda) => (
-                    <DemandaCard key={demanda.id} {...demanda} />
+                    <DemandaCard
+                      key={demanda.id}
+                      {...demanda}
+                      {...selectionProps}
+                    />
                   ))}
                 </ul>
                 <div className="hidden lg:block">
-                  <DemandaTable demandas={group.items} />
+                  <DemandaTable
+                    demandas={group.items}
+                    {...selectionProps}
+                  />
                 </div>
               </div>
             );
@@ -190,11 +275,11 @@ export default function DemandaList({
         <>
           <ul className="flex flex-col gap-3 lg:hidden">
             {sorted.map((demanda) => (
-              <DemandaCard key={demanda.id} {...demanda} />
+              <DemandaCard key={demanda.id} {...demanda} {...selectionProps} />
             ))}
           </ul>
           <div className="hidden lg:block">
-            <DemandaTable demandas={sorted} />
+            <DemandaTable demandas={sorted} {...selectionProps} />
           </div>
         </>
       )}

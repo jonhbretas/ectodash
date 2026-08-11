@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CheckSquare, Square } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -35,16 +36,33 @@ export type DemandaTableRow = {
 
 export type DemandaTableProps = {
   demandas: DemandaTableRow[];
+  selectionActive?: boolean;
+  selectedIds?: Set<number>;
+  onToggle?: (id: number) => void;
 };
 
-export default function DemandaTable({ demandas }: DemandaTableProps) {
+export default function DemandaTable({
+  demandas,
+  selectionActive = false,
+  selectedIds,
+  onToggle,
+}: DemandaTableProps) {
   const router = useRouter();
 
   return (
     <Table className="w-full table-fixed overflow-hidden rounded-2xl ring-1 ring-zinc-200/60">
       <TableHeader>
         <TableRow className="border-b-0 bg-zinc-100/80 text-base font-semibold text-zinc-600 hover:bg-zinc-100/80">
-          <TableHead className="h-auto w-[38%] px-5 py-3.5 text-left font-semibold text-zinc-600">
+          {selectionActive && (
+            <TableHead className="h-auto w-[3.5rem] px-3 py-3.5 text-left">
+              <span className="sr-only">Selecionar</span>
+            </TableHead>
+          )}
+          <TableHead
+            className={`h-auto px-5 py-3.5 text-left font-semibold text-zinc-600 ${
+              selectionActive ? "w-[35%]" : "w-[38%]"
+            }`}
+          >
             Título
           </TableHead>
           <TableHead className="h-auto w-[24%] px-5 py-3.5 text-left font-semibold text-zinc-600">
@@ -69,14 +87,34 @@ export default function DemandaTable({ demandas }: DemandaTableProps) {
             { locale: ptBR }
           );
 
+          const selected = selectionActive
+            ? selectedIds?.has(demanda.id) ?? false
+            : false;
+
+          const rowClick = selectionActive
+            ? () => onToggle?.(demanda.id)
+            : () => router.push(`/demandas/${demanda.id}/editar`);
+
           return (
             <TableRow
               key={demanda.id}
-              onClick={() => router.push(`/demandas/${demanda.id}/editar`)}
-              className={`cursor-pointer border-t border-b-0 border-zinc-100 bg-white text-base text-zinc-900 transition-colors duration-200 hover:bg-zinc-50 ${
-                demanda.atrasada ? "border-l-3 border-l-red-500" : ""
-              }`}
+              onClick={rowClick}
+              aria-selected={selected}
+              className={`cursor-pointer border-t border-b-0 border-zinc-100 bg-white text-base text-zinc-900 transition-colors duration-200 ${
+                selected ? "bg-[#2195B9]/5 hover:bg-[#2195B9]/10" : "hover:bg-zinc-50"
+              } ${demanda.atrasada ? "border-l-3 border-l-red-500" : ""}`}
             >
+              {selectionActive && (
+                <TableCell className="px-3 py-3.5">
+                  <span className="flex justify-center">
+                    {selected ? (
+                      <CheckSquare size={20} className="text-[#2195B9]" />
+                    ) : (
+                      <Square size={20} className="text-zinc-400" />
+                    )}
+                  </span>
+                </TableCell>
+              )}
               <TableCell className="truncate px-5 py-3.5" title={demanda.titulo}>
                 {demanda.titulo}
               </TableCell>

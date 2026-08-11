@@ -33,7 +33,23 @@ WHERE nome IN ('Adminstrativo Financeiro', 'Comunicação e Eventos');
 DELETE FROM public.demandas
 WHERE titulo ~ '^DA \d';
 
--- 6. Corrigir typo 'Coordenaação geral' → 'Coordenação Geral'
-UPDATE public.areas_institucionais
-SET nome = 'Coordenação Geral'
+-- 6. Corrigir typo 'Coordenaação geral' → 'Coordenação Geral' (merge no nome
+-- correto — que pode já existir no banco — depois remove o duplicado)
+UPDATE public.demandas SET area = 'Coordenação Geral' WHERE area = 'Coordenaação geral';
+UPDATE public.voluntarios SET area_atuacao = 'Coordenação Geral' WHERE area_atuacao = 'Coordenaação geral';
+
+INSERT INTO public.lider_areas (lider_id, area, created_at)
+SELECT lider_id, 'Coordenação Geral', created_at
+FROM public.lider_areas
+WHERE area = 'Coordenaação geral'
+ON CONFLICT (lider_id, area) DO NOTHING;
+DELETE FROM public.lider_areas WHERE area = 'Coordenaação geral';
+
+UPDATE public.utilidades_itens
+SET area_id = (SELECT id FROM public.areas_institucionais WHERE nome = 'Coordenação Geral' LIMIT 1)
+WHERE area_id IN (
+  SELECT id FROM public.areas_institucionais WHERE nome = 'Coordenaação geral'
+);
+
+DELETE FROM public.areas_institucionais
 WHERE nome = 'Coordenaação geral';

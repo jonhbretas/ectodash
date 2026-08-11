@@ -14,7 +14,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { parseDemandaFilters } from "./demandas/demanda-filter-schema";
-import { groupDemandas } from "./demandas/demanda-list";
+import { groupDemandas } from "./demandas/demanda-groups";
 import { cn } from "@/lib/utils";
 
 export default async function DashboardPage({
@@ -372,6 +372,9 @@ export default async function DashboardPage({
             demandas={demandaList}
             groupBy={filters.agrupar}
             filtersActive={filtersActive}
+            canExcluir={
+              role === "coordenador_geral" || role === "coordenador_area"
+            }
           />
         )}
       </div>
