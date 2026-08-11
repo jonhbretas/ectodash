@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { roleLabel } from "@/lib/role-labels";
+import { exibirUnidade } from "@/lib/unidade-label";
 import PageContainer from "../../page-container";
 import StatusBadge from "../../demandas/status-badge";
 import OverdueBadge from "../../demandas/overdue-badge";

@@ -6,6 +6,7 @@ import { Users, UserRoundCheck, Pencil, CalendarClock, Settings2, X, CheckSquare
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { roleLabel } from "@/lib/role-labels";
+import { exibirUnidade } from "@/lib/unidade-label";
 import { atualizarVoluntariosEmMassa, type BulkState } from "./actions";
 
 type VoluntarioRow = {
@@ -393,7 +394,7 @@ function VoluntarioCard({
             )}
           </span>
           <span className="truncate text-base text-zinc-600">
-            {[row.codigo_pf ? `Cód. PF ${row.codigo_pf}` : null, row.unidade, row.funcao, linked?.email ?? null]
+            {[row.codigo_pf ? `Cód. PF ${row.codigo_pf}` : null, exibirUnidade(row.unidade), row.funcao, linked?.email ?? null]
               .filter(Boolean).join(" · ")}
           </span>
           <span className="truncate text-base text-zinc-500">

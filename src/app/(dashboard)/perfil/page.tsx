@@ -3,6 +3,7 @@ import { UserRound, Lock, Mail, Shield, MapPin, Hash, Building2, Briefcase, Cale
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
 import { roleLabel } from "@/lib/role-labels";
+import { exibirUnidade } from "@/lib/unidade-label";
 import PageContainer from "../page-container";
 import MeuPerfilForm from "../voluntarios/meu-perfil-form";
 import AtividadesSection from "../voluntarios/atividades-section";
@@ -155,7 +156,7 @@ export default async function MeuPerfilPage() {
                 <Building2 size={16} className="shrink-0 text-slate-400" aria-hidden="true" strokeWidth={1.5} />
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                   <span className="text-sm text-slate-500">Unidade</span>
-                  <span className="text-sm font-medium text-slate-900">{cadastro.unidade || "—"}</span>
+                  <span className="text-sm font-medium text-slate-900">{exibirUnidade(cadastro.unidade) || "—"}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3 px-5 py-3.5">

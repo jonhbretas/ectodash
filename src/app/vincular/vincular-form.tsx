@@ -16,6 +16,7 @@ import {
   criarCadastro,
   type VoluntarioMatch,
 } from "./vincular-actions";
+import { exibirUnidade } from "@/lib/unidade-label";
 
 const initialState = { ok: false, message: "" };
 
@@ -96,7 +97,7 @@ export default function VincularForm() {
                     {match.nome}
                   </span>
                   <span className="truncate text-base text-zinc-600">
-                    {[match.unidade, match.funcao, match.area_atuacao]
+                    {[exibirUnidade(match.unidade), match.funcao, match.area_atuacao]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>

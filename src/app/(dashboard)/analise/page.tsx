@@ -3,6 +3,7 @@ import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
+import { exibirUnidade } from "@/lib/unidade-label";
 import PageContainer from "../page-container";
 import StatCard from "@/components/stat-card";
 
@@ -232,13 +233,13 @@ export default async function AnalisePage() {
             {regiaoRows.map((row, index) => (
               <div key={row.regiao} className={`flex flex-col gap-1.5 ${index > 0 ? "border-t border-slate-100 pt-3" : ""} ${index < regiaoRows.length - 1 ? "pb-3" : ""}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium text-slate-900" title={row.regiao}>{row.regiao}</span>
+                  <span className="truncate text-sm font-medium text-slate-900" title={exibirUnidade(row.regiao)}>{exibirUnidade(row.regiao)}</span>
                   <span className="shrink-0 text-xs text-slate-500">
                     {row.ativos} ativos · {row.dip > 0 ? `${row.dip} DIP · ` : ""}{row.total} total
                   </span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-gradient-to-r from-[#2195B9] to-[#28627B]" style={{ width: `${(row.total / maxRegiao) * 100}%` }} role="img" aria-label={`${row.regiao}: ${row.total} voluntários, ${row.ativos} ativos`} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#2195B9] to-[#28627B]" style={{ width: `${(row.total / maxRegiao) * 100}%` }} role="img" aria-label={`${exibirUnidade(row.regiao)}: ${row.total} voluntários, ${row.ativos} ativos`} />
                 </div>
               </div>
             ))}
