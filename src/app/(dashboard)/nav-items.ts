@@ -23,6 +23,7 @@ import {
   Receipt,
   FileSignature,
   FileText,
+  Map,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -73,6 +74,7 @@ export const navEntries: SidebarEntry[] = [
       { href: "/voluntarios", label: "Voluntários", Icon: Users, modulo: "voluntarios" },
       { href: "/eventos", label: "Eventos", Icon: CalendarDays, modulo: "eventos" },
       { href: "/dips", label: "Dinâmica DIP", Icon: Globe2, modulo: "dips" },
+      { href: "/trilha", label: "Trilha do Voluntário", Icon: Map, modulo: "voluntarios" },
     ],
   },
 
