@@ -142,12 +142,15 @@ describe.skipIf(!canRun)(
         .maybeSingle();
       expect(oculto).toBeNull();
 
-      // E não consegue alterar o status de acompanhamento.
-      const { error: updateError } = await intrusoClient
+      // E não consegue alterar o status de acompanhamento — RLS filtra a
+      // linha, o update afeta 0 registros silenciosamente.
+      const { data: updated, error: updateError } = await intrusoClient
         .from("feedback")
         .update({ status: "resolvido" })
-        .eq("id", feedbackId);
-      expect(updateError).not.toBeNull();
+        .eq("id", feedbackId)
+        .select("id");
+      expect(updateError).toBeNull();
+      expect(updated ?? []).toHaveLength(0);
 
       // O status segue inalterado (verificação via service-role).
       const { data: row } = await admin
