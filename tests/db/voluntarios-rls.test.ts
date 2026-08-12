@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // .env.local is git-ignored and holds real project credentials. Load it here so
@@ -43,6 +43,25 @@ describe.skipIf(!canRun)(
         .slice(2, 6)}`;
 
     admin = createClient(supabaseUrl!, serviceRoleKey!);
+
+    beforeAll(async () => {
+      // Execuções que quebraram no meio deixam para trás contas-fantasma
+      // (auth.users + profiles) e linhas "Novo Cadastro ..." sem dono.
+      // Varre o próprio namespace da suíte antes de rodar para o projeto
+      // real nunca acumular lixo entre execuções.
+      const { data, error } = await admin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      if (!error) {
+        for (const user of data.users) {
+          if (user.email?.startsWith("ectodash-test-vol-")) {
+            await admin.auth.admin.deleteUser(user.id);
+          }
+        }
+      }
+      await admin.from("voluntarios").delete().ilike("nome", "Novo Cadastro %");
+    });
 
     async function createUser(role: AppRole) {
       const email = `ectodash-test-vol-${role}-${unique()}@example.invalid`;
@@ -240,6 +259,9 @@ describe.skipIf(!canRun)(
       expect(profile?.voluntario_id).toBeTruthy();
       expect(profile?.vincular_pendente).toBe(false);
       expect(profile?.full_name).toBeTruthy();
+      if (profile?.voluntario_id) {
+        createdVoluntarioIds.push(profile.voluntario_id);
+      }
 
       const { data: row } = await admin
         .from("voluntarios")

@@ -44,5 +44,10 @@ export default defineConfig({
     // setup-dom.ts's own polyfills are guarded (`typeof Element !==
     // "undefined"`) so they're inert no-ops under the "node" environment.
     setupFiles: ["./tests/setup-dom.ts"],
+    // Runs once per `npm test` invocation, before any suite (even under
+    // file filters). Removes junk left in the live project by crashed
+    // test runs (fixture accounts, "Novo Cadastro" volunteers and rows
+    // they created) via public.limpar_dados_teste() (migration 0062).
+    globalSetup: ["./tests/db/global-cleanup.ts"],
   },
 });
