@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export type RecuperarSenhaState = {
   message: string;
@@ -9,6 +10,10 @@ export type RecuperarSenhaState = {
 };
 
 const emailSchema = z.string().email("Digite um e-mail válido.");
+
+// V-003: Rate-limit password reset — 3 per 5 minutes per IP.
+const RESET_WINDOW_MS = 5 * 60_000;
+const RESET_MAX = 3;
 
 export async function resetPassword(
   prevState: RecuperarSenhaState,
@@ -20,6 +25,16 @@ export async function resetPassword(
   const parsed = emailSchema.safeParse(email);
   if (!parsed.success) {
     return { ok: false, message: "Digite um e-mail válido." };
+  }
+
+  // V-003: Rate-limit.
+  const rateLimit = checkRateLimit("password-reset", RESET_MAX, RESET_WINDOW_MS);
+  if (!rateLimit.allowed) {
+    const seconds = Math.ceil(rateLimit.retryAfterMs / 1_000);
+    return {
+      ok: false,
+      message: `Muitas solicitações. Aguarde ${seconds} segundo(s).`,
+    };
   }
 
   const supabase = await createClient();

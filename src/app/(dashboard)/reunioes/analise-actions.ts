@@ -16,7 +16,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { chatCompletion } from "@/lib/ai/ai-client";
+import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
 import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
 import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
 import { obterTranscricao } from "@/lib/meetings";
@@ -79,7 +79,7 @@ async function extractWithAi(texto: string): Promise<AtaAnalise> {
   const rawJson = JSON.parse(
     await chatCompletion(
       AI_SYSTEM_PROMPT,
-      `Hoje é ${new Date().toISOString().slice(0, 10)}. Analise a transcrição a seguir:\n\n"""\n${texto}\n"""`,
+      `Hoje é ${new Date().toISOString().slice(0, 10)}. Analise a transcrição a seguir:\n\n${wrapUserContent(texto)}`,
       { jsonMode: true }
     )
   );

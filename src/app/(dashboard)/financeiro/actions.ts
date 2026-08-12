@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { parseFinanceiroFile } from "@/lib/financeiro/parse-file";
-import { chatCompletion } from "@/lib/ai/ai-client";
+import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
 
 export type ImportarFinanceiroState = {
   ok: boolean;

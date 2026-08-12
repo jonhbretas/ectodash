@@ -9,7 +9,7 @@ import {
   voluntarioIdsDosDestinos,
 } from "@/lib/destinos-voluntario";
 import { demandaSchema, eventoIdSchema, etiquetaIdSchema, idsNumericos } from "./demanda-schema";
-import { chatCompletion } from "@/lib/ai/ai-client";
+import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
 import { matchResponsavelRoster, normalize } from "@/lib/ai/match-responsavel";
 
 export type CreateDemandaState = {
@@ -863,7 +863,7 @@ export async function corrigirDemandaComIa(
   let rawJson: unknown;
   try {
     rawJson = JSON.parse(
-      await chatCompletion(CORRIGIR_IA_PROMPT, pedido, { jsonMode: true })
+      await chatCompletion(CORRIGIR_IA_PROMPT, wrapUserContent(pedido), { jsonMode: true })
     );
   } catch (err) {
     console.error("corrigirDemandaComIa: AI call failed", err);

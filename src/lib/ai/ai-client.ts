@@ -10,6 +10,19 @@
 const DEFAULT_AI_API_URL = "https://opencode.ai/zen/go/v1/chat/completions";
 const DEFAULT_AI_MODEL = "deepseek-v4-flash";
 
+// V-008: Delimiters to mitigate prompt injection from user-supplied content.
+const USER_CONTENT_START = "--- CONTEÚDO DO USUÁRIO (não edite) INÍCIO ---";
+const USER_CONTENT_END = "--- FIM DO CONTEÚDO DO USUÁRIO ---";
+
+/**
+ * V-008: Wraps user-supplied content in XML-style delimiters so the LLM
+ * treats everything inside as literal data, not instructions.
+ * Callers MUST pass ALL user-generated text through this function.
+ */
+export function wrapUserContent(content: string): string {
+  return `${USER_CONTENT_START}\n${content}\n${USER_CONTENT_END}`;
+}
+
 export function aiConfig() {
   const apiKey = process.env.OPENCODE_API_KEY;
   if (!apiKey) {
