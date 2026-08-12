@@ -16,3 +16,7 @@ Ao analisar qualquer evento, tarefa ou DIP com IA, **sempre**:
    - A demanda deve ser **atualizada**, não duplicada
 
 **Fluxo**: Ao criar/editar demanda → buscar duplicatas → sugerir mesclagem se houver → atualizar registro existente ao invés de criar novo.
+
+## Git
+
+- **Sempre commit + push** após concluir qualquer tarefa/ajuste (o usuário pediu explicitamente; não perguntar de novo).
