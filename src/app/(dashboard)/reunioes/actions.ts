@@ -98,6 +98,8 @@ export async function addAtaParticipante(
   voluntarioId: string
 ): Promise<AtaParticipanteResult> {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
 
   const id = Number(voluntarioId);
   if (!Number.isInteger(id) || id <= 0) {
@@ -123,6 +125,8 @@ export async function removeAtaParticipante(
   voluntarioId: string
 ): Promise<AtaParticipanteResult> {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
 
   const id = Number(voluntarioId);
   if (!Number.isInteger(id) || id <= 0) {

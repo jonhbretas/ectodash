@@ -62,7 +62,8 @@ async function wpGet<T>(
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      throw new Error(`WooCommerce API ${res.status}: ${body.slice(0, 200)}`);
+      console.error(`[woocommerce] API ${res.status}:`, body.slice(0, 200));
+      throw new Error(`WooCommerce API error: ${res.status}`);
     }
 
     const data = (await res.json()) as T[];

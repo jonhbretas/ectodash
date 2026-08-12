@@ -16,8 +16,6 @@ export default function GlobalError({
 }) {
   console.error("Unhandled page error:", error);
 
-  const detail = error.digest ?? error.message ?? "";
-
   return (
     <html lang="pt-BR">
       <body className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-50 px-6 py-16 text-center">
@@ -29,11 +27,6 @@ export default function GlobalError({
           Não foi possível carregar esta página agora. Tente novamente — se o
           problema persistir, recarregue a página.
         </p>
-        {detail && (
-          <p className="max-w-md break-all rounded-lg bg-zinc-100 px-3 py-2 text-base text-zinc-500">
-            Detalhe técnico: {detail}
-          </p>
-        )}
         <button
           type="button"
           onClick={reset}

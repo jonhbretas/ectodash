@@ -16,7 +16,7 @@ export default function FinancialAutomationPanel() {
       const duplicates = result.results.filter((item: { status: string }) => item.status === "DUPLICATE").length;
       setMessage(`${processed} arquivo(s) processado(s). ${duplicates ? `${duplicates} duplicado(s) ignorado(s).` : ""}`);
       window.location.reload();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Falha na importação"); }
+    } catch { setMessage("Falha na importação. Verifique o arquivo e tente novamente."); }
     finally { setPending(false); }
   }
   return <section className="flex w-full flex-col gap-3 rounded-2xl bg-slate-950 p-5 text-white shadow-sm">

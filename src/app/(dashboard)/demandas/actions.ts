@@ -549,9 +549,11 @@ export async function updateDemandaTitulo(
   id: number,
   titulo: string
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.string().trim().min(1, "Digite um título.").safeParse(titulo);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Título inválido." };
-  const supabase = await createClient();
   const { error } = await supabase.from("demandas").update({ titulo: parsed.data }).eq("id", id);
   if (error) return inlineUpdateError;
   revalidatePath("/");
@@ -562,9 +564,11 @@ export async function updateDemandaPrazo(
   id: number,
   prazo: string
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.string().date("Data inválida.").safeParse(prazo);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Prazo inválido." };
-  const supabase = await createClient();
   const { error } = await supabase.from("demandas").update({ prazo: parsed.data }).eq("id", id);
   if (error) return inlineUpdateError;
   revalidatePath("/");
@@ -575,9 +579,11 @@ export async function updateDemandaArea(
   id: number,
   area: string | null
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.string().trim().max(200).nullable().safeParse(area || null);
   if (!parsed.success) return { ok: false, message: "Área inválida." };
-  const supabase = await createClient();
   const { error } = await supabase.from("demandas").update({ area: parsed.data }).eq("id", id);
   if (error) return inlineUpdateError;
   revalidatePath("/");
@@ -588,9 +594,11 @@ export async function updateDemandaProjeto(
   id: number,
   projeto: string | null
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.string().trim().max(200).nullable().safeParse(projeto || null);
   if (!parsed.success) return { ok: false, message: "Projeto inválido." };
-  const supabase = await createClient();
   const { error } = await supabase.from("demandas").update({ projeto: parsed.data }).eq("id", id);
   if (error) return inlineUpdateError;
   revalidatePath("/");
@@ -601,9 +609,11 @@ export async function updateDemandaEvento(
   id: number,
   eventoId: number | null
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = eventoIdSchema.safeParse(eventoId);
   if (!parsed.success) return { ok: false, message: "Evento inválido." };
-  const supabase = await createClient();
   const { error } = await supabase.from("demandas").update({ evento_id: parsed.data ?? null }).eq("id", id);
   if (error) return inlineUpdateError;
   revalidatePath("/");
@@ -614,9 +624,11 @@ export async function updateDemandaEtiqueta(
   id: number,
   etiquetaId: number | null
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = etiquetaIdSchema.safeParse(etiquetaId);
   if (!parsed.success) return { ok: false, message: "Etiqueta inválida." };
-  const supabase = await createClient();
   const { error } = await supabase.from("demandas").update({ etiqueta_id: parsed.data ?? null }).eq("id", id);
   if (error) return inlineUpdateError;
   revalidatePath("/");
@@ -627,9 +639,11 @@ export async function addDemandaResponsavel(
   demandaId: number,
   voluntarioId: string
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.coerce.number().int().positive().safeParse(voluntarioId);
   if (!parsed.success) return { ok: false, message: "Voluntário inválido." };
-  const supabase = await createClient();
   const [destino] = await resolverDestinosVoluntario(supabase, [parsed.data]);
   if (!destino) return { ok: false, message: "Voluntário não encontrado." };
   const { error } = await supabase.from("demanda_responsaveis").insert({
@@ -648,9 +662,11 @@ export async function removeDemandaResponsavel(
   demandaId: number,
   voluntarioId: string
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.coerce.number().int().positive().safeParse(voluntarioId);
   if (!parsed.success) return { ok: false, message: "Voluntário inválido." };
-  const supabase = await createClient();
   const [destino] = await resolverDestinosVoluntario(supabase, [parsed.data]);
   if (!destino) return { ok: false, message: "Voluntário não encontrado." };
   let query = supabase
@@ -671,9 +687,11 @@ export async function addDemandaMembro(
   demandaId: number,
   voluntarioId: string
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.coerce.number().int().positive().safeParse(voluntarioId);
   if (!parsed.success) return { ok: false, message: "Voluntário inválido." };
-  const supabase = await createClient();
   const [destino] = await resolverDestinosVoluntario(supabase, [parsed.data]);
   if (!destino) return { ok: false, message: "Voluntário não encontrado." };
   const { error } = await supabase.from("demanda_membros").insert({
@@ -692,9 +710,11 @@ export async function removeDemandaMembro(
   demandaId: number,
   voluntarioId: string
 ): Promise<InlineUpdateState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.coerce.number().int().positive().safeParse(voluntarioId);
   if (!parsed.success) return { ok: false, message: "Voluntário inválido." };
-  const supabase = await createClient();
   const [destino] = await resolverDestinosVoluntario(supabase, [parsed.data]);
   if (!destino) return { ok: false, message: "Voluntário não encontrado." };
   let query = supabase

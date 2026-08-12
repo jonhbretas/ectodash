@@ -56,12 +56,10 @@ export async function enviarContratoParaAssinatura(
       url: assignment.signing_urls?.[0]?.url,
     };
   } catch (error) {
+    console.error("[assinatura] enviarParaAssinatura failed", error);
     return {
       ok: false,
-      message:
-        error instanceof Error
-          ? `Não foi possível enviar para assinatura: ${error.message}`
-          : "Erro ao enviar para assinatura.",
+      message: "Não foi possível enviar para assinatura.",
     };
   }
 }
