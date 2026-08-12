@@ -2,6 +2,7 @@
 
 import { CalendarRange, RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { DateInput } from "@/components/ui/date-input";
 
 type SyncMode = "latest" | "period";
 
@@ -139,8 +140,7 @@ export default function SyncButton({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium text-zinc-600">De</span>
-                <input
-                  type="date"
+                <DateInput
                   value={fromDate}
                   max={toDate || undefined}
                   onChange={(e) => setFromDate(e.target.value)}
@@ -149,8 +149,7 @@ export default function SyncButton({
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium text-zinc-600">Até</span>
-                <input
-                  type="date"
+                <DateInput
                   value={toDate}
                   min={fromDate || undefined}
                   max={toInputDate(new Date())}

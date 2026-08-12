@@ -4,6 +4,7 @@
 // do registro ou um coordenador_geral (espelha a RLS da migration 0015).
 import { useId, useState } from "react";
 import { Pencil, Trash2, X, Check } from "lucide-react";
+import { DateInput } from "@/components/ui/date-input";
 import { atualizarDip, excluirDip } from "./actions";
 
 type DipActionsProps = {
@@ -108,8 +109,7 @@ export default function DipActions({
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
             Data
-            <input
-              type="date"
+            <DateInput
               value={data}
               onChange={(e) => setData(e.target.value)}
               className={inputClass}

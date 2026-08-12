@@ -12,6 +12,7 @@ import {
   Users,
   FileText,
 } from "lucide-react";
+import { DateInput } from "@/components/ui/date-input";
 import { criarDip, type DipState } from "../actions";
 
 const initial: DipState = { ok: false, message: "" };
@@ -156,10 +157,9 @@ export default function CadastroDipForm({
               Data da DIP
             </span>
           </label>
-          <input
+          <DateInput
             id="data"
             name="data"
-            type="date"
             className={inputClass}
           />
         </div>

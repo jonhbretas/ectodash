@@ -8,6 +8,7 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, X, Check } from "lucide-react";
+import { DateInput } from "@/components/ui/date-input";
 import {
   editarEvento,
   editarEventoInitialState,
@@ -86,10 +87,9 @@ export default function EditarEventoPanel({
           <label htmlFor="editar-data" className="text-lg font-medium text-zinc-900">
             Data
           </label>
-          <input
+          <DateInput
             id="editar-data"
             name="data_evento"
-            type="date"
             required
             defaultValue={evento.data_evento}
             className={inputClass}
