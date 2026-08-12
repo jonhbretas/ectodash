@@ -23,6 +23,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import { DateInput } from "@/components/ui/date-input";
 import { matchResponsavelRoster, normalize } from "@/lib/ai/match-responsavel";
 import {
   analisarTranscricao,
@@ -543,10 +544,9 @@ function ReviewScreen({
               <label htmlFor="data_reuniao" className={labelClassName}>
                 Data
               </label>
-              <input
+              <DateInput
                 id="data_reuniao"
                 name="data_reuniao"
-                type="date"
                 value={dataReuniao}
                 onChange={(e) => setDataReuniao(e.target.value)}
                 required
@@ -725,9 +725,8 @@ function ReviewScreen({
                       >
                         Prazo
                       </label>
-                      <input
+                      <DateInput
                         id={`demanda-prazo-${demanda.id}`}
-                        type="date"
                         value={demanda.prazo ?? ""}
                         onChange={(e) =>
                           setDemandas((prev) =>
@@ -944,9 +943,8 @@ function ReviewScreen({
                       <label htmlFor={`evento-data-${evento.id}`} className={labelClassName}>
                         Data
                       </label>
-                      <input
+                      <DateInput
                         id={`evento-data-${evento.id}`}
-                        type="date"
                         value={evento.data}
                         onChange={(e2) =>
                           setEventos((prev) =>
@@ -1096,9 +1094,8 @@ function ReviewScreen({
                       <label htmlFor={`dip-data-${dip.id}`} className={labelClassName}>
                         Data da DIP
                       </label>
-                      <input
+                      <DateInput
                         id={`dip-data-${dip.id}`}
-                        type="date"
                         value={dip.data}
                         onChange={(e) =>
                           setDips((prev) =>

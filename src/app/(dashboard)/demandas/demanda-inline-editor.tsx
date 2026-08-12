@@ -7,6 +7,7 @@
 // that used to occupy the left column — the edit screen now has only
 // checklist and comments in its two-column grid.
 import { useState, useTransition, useEffect, useRef } from "react";
+import { DateInput } from "@/components/ui/date-input";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -516,9 +517,8 @@ export default function DemandaInlineEditor({
         {editingPill === "prazo" ? (
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
             <Calendar size={18} className="text-zinc-400" aria-hidden="true" />
-            <input
+            <DateInput
               ref={editingRef as any}
-              type="date"
               value={localPrazo}
               onChange={(e) => setLocalPrazo(e.target.value)}
               className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#2195B9]"

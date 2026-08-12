@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { FormCombobox, FormSelect } from "@/components/ui/form-select";
 import {
@@ -247,9 +248,8 @@ export default function DemandaForm({
               <Label htmlFor="prazo" className={fieldLabelClass}>
                 Prazo *
               </Label>
-              <Input
+              <DateInput
                 id="prazo"
-                type="date"
                 className={fieldInputClass}
                 {...register("prazo")}
               />
@@ -533,9 +533,8 @@ export default function DemandaForm({
           <Label htmlFor="prazo" className={fieldLabelClass}>
             Prazo *
           </Label>
-          <Input
+          <DateInput
             id="prazo"
-            type="date"
             className={fieldInputClass}
             {...register("prazo")}
           />

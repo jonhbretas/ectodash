@@ -6,6 +6,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import VoluntarioPicker from "@/components/voluntario-picker";
 import { criarAta, type CriarAtaState } from "./actions";
 
@@ -65,10 +66,9 @@ export default function AtaForm({
         <label htmlFor="data_reuniao" className={labelClassName}>
           Data
         </label>
-        <Input
+        <DateInput
           id="data_reuniao"
           name="data_reuniao"
-          type="date"
           required
           className={inputClassName}
         />

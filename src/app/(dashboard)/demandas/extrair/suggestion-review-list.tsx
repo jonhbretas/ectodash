@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, UserX } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -472,9 +473,8 @@ function SuggestionCard({
                 </span>
               )}
             </div>
-            <Input
+            <DateInput
               id={`prazo-${suggestion.key}`}
-              type="date"
               value={prazo}
               onChange={(e) => onPrazoChange(e.target.value)}
               disabled={isConfirming}

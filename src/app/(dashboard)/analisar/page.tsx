@@ -27,6 +27,7 @@ import {
   Users,
   MessageSquareText,
 } from "lucide-react";
+import { DateInput } from "@/components/ui/date-input";
 import {
   analisarComIA,
   salvarTudoDaAnalise,
@@ -505,9 +506,8 @@ function ResultsScreen({
                       <label htmlFor="ata-data" className="text-xs font-medium text-slate-700">
                         Data
                       </label>
-                      <input
+                      <DateInput
                         id="ata-data"
-                        type="date"
                         value={ataEdit.data}
                         onChange={(e) =>
                           setAtaEdit((prev) => ({ ...prev, data: e.target.value }))
@@ -708,9 +708,8 @@ function ResultsScreen({
                         >
                           Prazo
                         </label>
-                        <input
+                        <DateInput
                           id={`prazo-${d.key}`}
-                          type="date"
                           value={d.prazo}
                           onChange={(e) =>
                             setDemandaEdits((prev) =>
@@ -879,9 +878,8 @@ function ResultsScreen({
                         <label htmlFor={`dip-data-${dip.key}`} className="text-xs font-medium text-slate-700">
                           Data da DIP
                         </label>
-                        <input
+                        <DateInput
                           id={`dip-data-${dip.key}`}
-                          type="date"
                           value={dip.data}
                           onChange={(e) =>
                             setDipEdits((prev) =>
