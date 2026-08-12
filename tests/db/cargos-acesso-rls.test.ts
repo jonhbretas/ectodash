@@ -36,6 +36,7 @@ describe.skipIf(!canRun)(
     const createdVoluntarioIds: number[] = [];
     const createdAreaIds: number[] = [];
     const createdLocalidadeIds: number[] = [];
+    const createdDemandaIds: number[] = [];
     let fixtureCounter = 0;
     const unique = () =>
       `${Date.now()}-${(fixtureCounter += 1)}-${Math.random()
@@ -168,10 +169,15 @@ describe.skipIf(!canRun)(
       if (error || !data) {
         throw new Error(`Failed to create demanda: ${error?.message}`);
       }
+      createdDemandaIds.push(data.id);
       return data.id as number;
     }
 
     afterAll(async () => {
+      // Demandas must be deleted BEFORE users (criado_por FK).
+      for (const id of createdDemandaIds) {
+        await admin.from("demandas").delete().eq("id", id);
+      }
       for (const id of createdVoluntarioIds) {
         await admin.from("voluntarios").delete().eq("id", id);
       }
