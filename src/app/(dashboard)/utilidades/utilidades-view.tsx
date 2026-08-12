@@ -25,6 +25,8 @@ const CATEGORIAS: Record<string, { label: string; icon: typeof BookOpen }> = {
   ficha_proposicao: { label: "Ficha de Proposição de Curso", icon: FileText },
   grade_curricular: { label: "Grade Curricular — IC", icon: GraduationCap },
   links_uteis: { label: "Links Úteis", icon: Link2 },
+  qualificacao_docente: { label: "Qualificação Docente", icon: GraduationCap },
+  atividades_parapedagogicas: { label: "Atividades Parapedagógicas", icon: BookOpen },
   outro: { label: "Outros Documentos", icon: Wrench },
 };
 

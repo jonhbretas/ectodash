@@ -18,6 +18,8 @@ const categoriaLabels: Record<string, string> = {
   "Ficha de Proposição de Curso": "ficha_proposicao",
   "Grade Curricular — IC": "grade_curricular",
   "Links Úteis": "links_uteis",
+  "Qualificação Docente": "qualificacao_docente",
+  "Atividades Parapedagógicas": "atividades_parapedagogicas",
   "Outros Documentos": "outro",
 };
 

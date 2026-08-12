@@ -15,6 +15,8 @@ const CATEGORIES = [
   { value: "ficha_proposicao", label: "Ficha de Proposição de Curso" },
   { value: "grade_curricular", label: "Grade Curricular — IC" },
   { value: "links_uteis", label: "Links Úteis" },
+  { value: "qualificacao_docente", label: "Qualificação Docente" },
+  { value: "atividades_parapedagogicas", label: "Atividades Parapedagógicas" },
   { value: "outro", label: "Outros Documentos" },
 ];
 
