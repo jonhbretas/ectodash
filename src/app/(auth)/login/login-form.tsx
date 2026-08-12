@@ -83,8 +83,12 @@ export default function LoginForm() {
         {state.message && !state.ok ? state.message : ""}
       </div>
 
-      {/* Acesso somente por convite do coordenador — sem auto-cadastro
-          (auditoria 0063). O coordenador convida cada voluntário. */}
+      <p className="text-center text-sm text-slate-600">
+        Não tem uma conta?{" "}
+        <Link href="/cadastro" className="font-medium text-[#2195B9] hover:underline">
+          Cadastre-se
+        </Link>
+      </p>
     </form>
   );
 }
