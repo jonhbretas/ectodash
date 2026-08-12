@@ -86,5 +86,7 @@ export async function GET() {
     syncLogs,
     productsCount: products.length,
     customersCount: customers.length,
+  }, {
+    headers: { "Cache-Control": "private, no-store" },
   });
 }

@@ -14,5 +14,7 @@ export async function GET(request: Request) {
     console.error("financeiro ledger:", error.message);
     return NextResponse.json({ error: "Erro ao consultar o razão financeiro." }, { status: 400 });
   }
-  return NextResponse.json({ data });
+  return NextResponse.json({ data }, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }

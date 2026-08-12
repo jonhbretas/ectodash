@@ -16,16 +16,21 @@
 //      is the source of truth, per 09-RESEARCH.md Architecture Item 1)
 //   6. Run-row finalized success|failed with entries_count
 import type { NextRequest } from "next/server";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createSheetsClient } from "@/lib/sheets/client";
 import { parseSheetRows } from "@/lib/sheets/parse-rows";
 
+function constantTimeEqual(a: string, b: string): boolean {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+
 export async function GET(request: NextRequest) {
-  // 1. Authenticate the REQUEST itself — fails closed if CRON_SECRET is
-  // unset (a missing secret is never "no auth required"), rejected before
-  // any database or Sheets call. Same gate as the reminders route.
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  if (!authHeader || !constantTimeEqual(authHeader, expected)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

@@ -9,6 +9,7 @@
 // mechanism. Structure follows 07-RESEARCH.md's "Cron route skeleton" Code
 // Example, adapted to this repo's real import paths.
 import type { NextRequest } from "next/server";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { Resend } from "resend";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,13 +41,16 @@ interface ResponsavelRow {
   profiles: { email: string } | { email: string }[] | null;
 }
 
+function constantTimeEqual(a: string, b: string): boolean {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+
 export async function GET(request: NextRequest) {
-  // 1. Authenticate the REQUEST itself (there is no end-user session in a
-  // cron context) — this comparison naturally fails closed if CRON_SECRET is
-  // unset/undefined; a missing secret is never treated as "no auth required".
-  // Rejected BEFORE any database or Resend call — status(401), zero side effects.
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  if (!authHeader || !constantTimeEqual(authHeader, expected)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

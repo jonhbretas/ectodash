@@ -2,6 +2,7 @@
 // GET /api/cron/sync-woocommerce — Vercel Cron-triggered, CRON_SECRET-gated.
 // Optimized: parallel fetch + parallel upsert, per_page=1000, 200ms rate limit.
 import type { NextRequest } from "next/server";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   fetchProducts,
@@ -22,9 +23,16 @@ type StoreRow = {
   last_sync_at: string | null;
 };
 
+function constantTimeEqual(a: string, b: string): boolean {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  if (!authHeader || !constantTimeEqual(authHeader, expected)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

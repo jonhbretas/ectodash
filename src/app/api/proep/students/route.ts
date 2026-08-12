@@ -72,11 +72,23 @@ export async function PATCH(req: NextRequest) {
   if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
   const supabase = gate.supabase;
   const body = await req.json();
-  const { id, ...fields } = body;
+  const { id, ...raw } = body;
   try { requireUuid(id, "id"); } catch (e) { return e as NextResponse; }
+
+  // Allowlist de campos atualizáveis — previne mass assignment.
+  const ALLOWED = ["name", "email", "phone", "role", "edition_id"] as const;
+  const fields: Record<string, unknown> = {};
+  for (const key of ALLOWED) {
+    if (key in raw) fields[key] = raw[key];
+  }
+  if (Object.keys(fields).length === 0) {
+    return NextResponse.json({ error: "Nenhum campo válido para atualizar." }, { status: 400 });
+  }
+  fields.updated_at = new Date().toISOString();
+
   const { data, error } = await supabase
     .from("proep_students")
-    .update({ ...fields, updated_at: new Date().toISOString() })
+    .update(fields)
     .eq("id", id)
     .select()
     .single();

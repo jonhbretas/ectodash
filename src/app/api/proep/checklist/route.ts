@@ -64,8 +64,19 @@ export async function PATCH(req: NextRequest) {
   if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
   const supabase = gate.supabase;
   const body = await req.json();
-  const { id, ...fields } = body;
+  const { id, ...raw } = body;
   try { requireUuid(id, "id"); } catch (e) { return e as NextResponse; }
+
+  // Allowlist de campos atualizáveis — previne mass assignment.
+  const ALLOWED = ["day_number", "role", "title", "description", "sort_order"] as const;
+  const fields: Record<string, unknown> = {};
+  for (const key of ALLOWED) {
+    if (key in raw) fields[key] = raw[key];
+  }
+  if (Object.keys(fields).length === 0) {
+    return NextResponse.json({ error: "Nenhum campo válido para atualizar." }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from("proep_checklist")
     .update(fields)

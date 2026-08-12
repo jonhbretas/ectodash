@@ -2,6 +2,9 @@
 // GET /api/wp/orders — list synced WooCommerce orders with filters.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearch } from "@/lib/utils";
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -13,7 +16,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search")?.trim() ?? "";
+  const search = sanitizeSearch(searchParams.get("search") ?? "");
   const status = searchParams.get("status")?.trim() ?? "";
   const since = searchParams.get("since")?.trim() ?? "";
   const until = searchParams.get("until")?.trim() ?? "";
@@ -32,10 +35,10 @@ export async function GET(req: NextRequest) {
   if (status) {
     query = query.eq("status", status);
   }
-  if (since) {
+  if (since && DATE_RE.test(since)) {
     query = query.gte("date_created", since);
   }
-  if (until) {
+  if (until && DATE_RE.test(until)) {
     query = query.lte("date_created", until);
   }
   if (coupon) {
@@ -44,7 +47,10 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query;
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[wp/orders]", error.message);
+    return NextResponse.json({ error: "Erro ao consultar pedidos." }, { status: 500 });
   }
-  return NextResponse.json(data);
+  return NextResponse.json(data, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }

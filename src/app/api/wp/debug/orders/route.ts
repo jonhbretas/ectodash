@@ -7,10 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireFinanceiro } from "@/lib/role-gates";
 
 export async function GET() {
-  if (
-    process.env.NODE_ENV === "production" &&
-    process.env.ECTODASH_DEBUG_ENABLED !== "true"
-  ) {
+  if (process.env.ECTODASH_DEBUG_ENABLED !== "true") {
     return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
   }
 

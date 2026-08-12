@@ -12,6 +12,7 @@ import PDFDocument from "pdfkit";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeFilename } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -331,15 +332,13 @@ export async function GET(_request: Request, { params }: RouteContext) {
   await done;
 
   const pdf = Buffer.concat(chunks);
-  const filename = `ata-${dataLabel.replaceAll("/", "-")}.pdf`;
+  const filename = sanitizeFilename(`ata-${dataLabel.replaceAll("/", "-")}.pdf`);
 
   return new Response(pdf, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Content-Length": String(pdf.length),
-      // Never let the browser's PDF viewer or the CDN serve a stale copy
-      // (the old file kept reappearing after a redesign).
       "Cache-Control": "no-store, max-age=0",
     },
   });

@@ -59,6 +59,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // Limpa o cookie de state após validação bem-sucedida (previne replay).
+  const clearStateCookie = (response: Response) => {
+    response.headers.append(
+      "Set-Cookie",
+      "proep_oauth_state=; Path=/api/proep/google/callback; Max-Age=0; HttpOnly; SameSite=Lax"
+    );
+    return response;
+  };
+
   if (error) {
     return new Response(
       htmlPage({
@@ -165,42 +174,44 @@ export async function GET(req: NextRequest) {
     /* o teste é informativo; falha não aborta a página */
   }
 
-  return new Response(
-    htmlPage({
-      title: "✅ Autorização concluída!",
-      content: `
-        <div class="success-box">
-          <h2>Tokens obtidos com sucesso</h2>
-          <p><strong>Drive:</strong> ${driveTest}</p>
-        </div>
+  return clearStateCookie(
+    new Response(
+      htmlPage({
+        title: "✅ Autorização concluída!",
+        content: `
+          <div class="success-box">
+            <h2>Tokens obtidos com sucesso</h2>
+            <p><strong>Drive:</strong> ${driveTest}</p>
+          </div>
 
-        <h2>1. Copie o Refresh Token</h2>
-        <div class="token-box">
-          <textarea id="token" readonly rows="2" onfocus="this.select()">${escapeHtml(refreshToken)}</textarea>
-          <button onclick="copyToken()" class="btn">Copiar</button>
-        </div>
+          <h2>1. Copie o Refresh Token</h2>
+          <div class="token-box">
+            <textarea id="token" readonly rows="2" onfocus="this.select()">${escapeHtml(refreshToken)}</textarea>
+            <button onclick="copyToken()" class="btn">Copiar</button>
+          </div>
 
-        <h2>2. Adicione nas variáveis de ambiente</h2>
-        <p>No <code>.env.local</code> do EctoDash ou no painel do Vercel (a secret do OAuth e o client id continuam como estão):</p>
-        <pre>GOOGLE_REFRESH_TOKEN=${escapeHtml(refreshToken)}</pre>
+          <h2>2. Adicione nas variáveis de ambiente</h2>
+          <p>No <code>.env.local</code> do EctoDash ou no painel do Vercel (a secret do OAuth e o client id continuam como estão):</p>
+          <pre>GOOGLE_REFRESH_TOKEN=${escapeHtml(refreshToken)}</pre>
 
-        <h2>3. Teste a automação</h2>
-        <p>Após salvar as variáveis, acesse <a href="/proep">/proep</a> e clique "Gerar" em um aluno.</p>
+          <h2>3. Teste a automação</h2>
+          <p>Após salvar as variáveis, acesse <a href="/proep">/proep</a> e clique "Gerar" em um aluno.</p>
 
-        <script>
-          function copyToken() {
-            const el = document.getElementById('token');
-            el.select();
-            navigator.clipboard.writeText(el.value).then(() => {
-              const btn = document.querySelector('.btn');
-              btn.textContent = 'Copiado!';
-              setTimeout(() => btn.textContent = 'Copiar', 2000);
-            });
-          }
-        </script>
-      `,
-    }),
-    { headers: { "Content-Type": "text/html; charset=utf-8" } }
+          <script>
+            function copyToken() {
+              const el = document.getElementById('token');
+              el.select();
+              navigator.clipboard.writeText(el.value).then(() => {
+                const btn = document.querySelector('.btn');
+                btn.textContent = 'Copiado!';
+                setTimeout(() => btn.textContent = 'Copiar', 2000);
+              });
+            }
+          </script>
+        `,
+      }),
+      { headers: { "Content-Type": "text/html; charset=utf-8" } }
+    )
   );
 }
 

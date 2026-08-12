@@ -14,5 +14,7 @@ export async function GET() {
     console.error("financeiro summary:", balance.error.message);
     return NextResponse.json({ error: "Erro ao consultar os dados financeiros." }, { status: 400 });
   }
-  return NextResponse.json({ balance: balance.data, receivables: receivables.data ?? [], exceptions: exceptions.data ?? [] });
+  return NextResponse.json({ balance: balance.data, receivables: receivables.data ?? [], exceptions: exceptions.data ?? [] }, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }

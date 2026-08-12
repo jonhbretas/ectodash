@@ -6,6 +6,14 @@ import { normalizeText } from "@/lib/financeiro/automation";
 
 export const maxDuration = 60;
 
+const ALLOWED_MIME = new Set([
+  "application/pdf",
+  "text/csv",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "application/octet-stream", // fallback para arquivos sem MIME detectado
+]);
+
 async function ensureEntity(supabase: Awaited<ReturnType<typeof createClient>>, kind: string, name: string | undefined) {
   if (!name?.trim()) return null;
   const normalizedName = normalizeText(name);
@@ -27,6 +35,7 @@ export async function POST(request: Request) {
   const results = [];
   for (const file of files) {
     if (file.size === 0 || file.size > 10 * 1024 * 1024) { results.push({ file: file.name, status: "FAILED", error: "Arquivo vazio ou maior que 10MB" }); continue; }
+    if (file.type && !ALLOWED_MIME.has(file.type)) { results.push({ file: file.name, status: "FAILED", error: "Tipo de arquivo não permitido. Envie PDF, CSV ou Excel." }); continue; }
     const bytes = Buffer.from(await file.arrayBuffer());
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     const { data: existing } = await supabase.from("finance_imports").select("id,status").eq("file_sha256", sha256).maybeSingle();
