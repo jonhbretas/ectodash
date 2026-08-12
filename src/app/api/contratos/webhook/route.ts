@@ -50,8 +50,8 @@ export async function POST(request: Request) {
   // nenhum evento é aceito). O provedor pode ser configurado para enviar um
   // header customizado na subscription de webhook; x-api-key é aceito como
   // fallback caso o provedor ecoe a chave da conta.
-  const webhookSecret = process.env.ASSAINAFY_WEBHOOK_SECRET?.trim();
-  const apiKey = process.env.ASSAINAFY_API_KEY?.trim();
+  const webhookSecret = process.env.ASSINAFY_WEBHOOK_SECRET?.trim();
+  const apiKey = process.env.ASSINAFY_API_KEY?.trim();
   const expected = webhookSecret || apiKey;
   if (!expected) {
     console.error(
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
   // Camada 2 — workspace de origem: account_id é OBRIGATÓRIO e precisa ser o
   // nosso (fail-closed: payloads sem account_id são rejeitados).
-  const expectedAccount = process.env.ASSAINAFY_ACCOUNT_ID?.trim();
+  const expectedAccount = process.env.ASSINAFY_ACCOUNT_ID?.trim();
   if (!expectedAccount || !accountId || accountId !== expectedAccount) {
     return new Response("account_id inválido", { status: 403 });
   }
