@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import UtilidadesView from "./utilidades-view";
 import UtilidadesClient from "./utilidades-client";
+import UtilidadesIA from "./utilidades-ia";
 
 export default async function UtilidadesPage() {
   const supabase = await createClient();
@@ -64,7 +65,12 @@ export default async function UtilidadesPage() {
 
       <UtilidadesView areas={areas ?? []} items={items} podeGerenciar={isCoord} />
 
-      {isCoord && <UtilidadesClient areas={areas ?? []} />}
+      {isCoord && (
+        <div className="flex w-full flex-col gap-3">
+          <UtilidadesIA areas={areas ?? []} />
+          <UtilidadesClient areas={areas ?? []} />
+        </div>
+      )}
     </PageContainer>
   );
 }

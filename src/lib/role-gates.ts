@@ -89,6 +89,19 @@ export async function requireAnaliseComIA(): Promise<RoleGateContext> {
   return ctx;
 }
 
+/** Acesso à gestão do acervo de Utilidades (criar/editar, inclusive via IA). */
+export async function requireUtilidades(): Promise<RoleGateContext> {
+  const ctx = await requireUsuario();
+  const ok =
+    ctx.role === "coordenador_geral" ||
+    ctx.role === "coordenador_area" ||
+    (await temCargoModulo(ctx.supabase, "utilidades"));
+  if (!ok) {
+    throw new Error("Este recurso é exclusivo de coordenadores.");
+  }
+  return ctx;
+}
+
 /** Acesso ao financeiro (rotas com efeitos colaterais). */
 export async function requireFinanceiro(): Promise<RoleGateContext> {
   return requireRole(["coordenador_geral", "financeiro"]);

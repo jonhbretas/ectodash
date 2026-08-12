@@ -191,7 +191,7 @@ function ItemCard({ item, areas, podeGerenciar }: { item: Item; areas: Area[]; p
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+    <div className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
       {editing ? (
         <ItemEditForm item={item} areas={areas} onCancel={() => setEditing(false)} />
       ) : (
@@ -210,10 +210,10 @@ function ItemCard({ item, areas, podeGerenciar }: { item: Item; areas: Area[]; p
             )}
           </div>
 
-          <h3 className="text-xl font-semibold text-zinc-900">{item.titulo}</h3>
+          <h3 className="text-lg font-semibold leading-snug text-zinc-900">{item.titulo}</h3>
 
           {item.descricao && (
-            <p className="line-clamp-3 text-base leading-relaxed text-zinc-600">{item.descricao}</p>
+            <DescricaoToggle descricao={item.descricao} />
           )}
 
           {item.tags.length > 0 && (
@@ -252,6 +252,31 @@ function ItemCard({ item, areas, podeGerenciar }: { item: Item; areas: Area[]; p
             )}
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+function DescricaoToggle({ descricao }: { descricao: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        aria-expanded={expanded}
+        className="flex w-fit items-center gap-1 text-sm font-medium text-[#2195B9] transition-colors hover:text-[#28627B]"
+      >
+        <ChevronDown
+          size={14}
+          aria-hidden="true"
+          className={cn("transition-transform duration-200", expanded && "rotate-180")}
+        />
+        {expanded ? "Ocultar descrição" : "Ver descrição"}
+      </button>
+      {expanded && (
+        <p className="text-sm leading-relaxed text-zinc-600">{descricao}</p>
       )}
     </div>
   );
