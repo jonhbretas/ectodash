@@ -91,6 +91,8 @@ export async function excluirUtilidadeItem(
 export async function excluirUtilidadeItemSimples(formData: FormData) {
   "use server";
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const id = Number(formData.get("id"));
   if (Number.isFinite(id)) {
     await supabase.from("utilidades_itens").delete().eq("id", id);

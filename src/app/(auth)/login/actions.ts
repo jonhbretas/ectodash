@@ -38,7 +38,7 @@ export async function signIn(
   });
 
   if (error) {
-    console.error("signIn failed", error);
+    console.error("signIn failed", { code: error.message?.substring(0, 20) });
 
     if (error.message.includes("Invalid login credentials")) {
       return {

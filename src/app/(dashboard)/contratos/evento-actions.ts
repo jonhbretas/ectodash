@@ -51,9 +51,10 @@ export async function vincularProdutoEvento(
     revalidateEvento(eventoId);
     return { ok: true, message: "Produto vinculado ao evento." };
   } catch (error) {
+    console.error("[contratos/evento] vincularProduto failed", error);
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Erro ao vincular o produto.",
+      message: "Erro ao vincular o produto.",
     };
   }
 }
@@ -96,9 +97,10 @@ export async function habilitarModeloEvento(
     revalidateEvento(eventoId);
     return { ok: true, message: "Modelo habilitado para o evento." };
   } catch (error) {
+    console.error("[contratos/evento] habilitarModelo failed", error);
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Erro ao habilitar o modelo.",
+      message: "Erro ao habilitar o modelo.",
     };
   }
 }
@@ -144,9 +146,10 @@ export async function salvarConteudoPersonalizado(
     revalidateEvento(eventoId);
     return { ok: true, message: "Texto personalizado salvo para este evento." };
   } catch (error) {
+    console.error("[contratos/evento] salvarTextoPersonalizado failed", error);
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Erro ao salvar o texto.",
+      message: "Erro ao salvar o texto.",
     };
   }
 }
@@ -279,12 +282,10 @@ export async function gerarContratosEvento(
       message: `${partes.join(" · ")}.${amostra ? ` ${amostra}` : ""}`,
     };
   } catch (error) {
+    console.error("[contratos/evento] gerarEmLote failed", error);
     return {
       ok: false,
-      message:
-        error instanceof Error
-          ? `Erro na geração em lote: ${error.message}`
-          : "Erro na geração em lote.",
+      message: "Erro na geração em lote.",
     };
   }
 }
@@ -328,12 +329,10 @@ export async function enviarPendentesEvento(
       message: `${enviados} de ${ids.length} enviados para assinatura.${amostra ? ` ${amostra}` : ""}`,
     };
   } catch (error) {
+    console.error("[contratos/evento] enviarPendentesEvento failed", error);
     return {
       ok: false,
-      message:
-        error instanceof Error
-          ? `Erro no envio em lote: ${error.message}`
-          : "Erro no envio em lote.",
+      message: "Erro no envio em lote.",
     };
   }
 }

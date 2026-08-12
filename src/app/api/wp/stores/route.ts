@@ -3,8 +3,12 @@
 // Session-bound via createClient(); RLS gates read access.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireFinanceiro } from "@/lib/role-gates";
 
 export async function GET() {
+  try { await requireFinanceiro(); } catch {
+    return NextResponse.json({ error: "Sem acesso." }, { status: 403 });
+  }
   const supabase = await createClient();
   const {
     data: { user },

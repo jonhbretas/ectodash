@@ -1,6 +1,7 @@
 // src/app/api/proep/checklist/route.ts
 // Auditoria 0063: gate de acesso PROEP + sem eco de mensagens internas.
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireProep } from "@/lib/role-gates";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,6 +23,14 @@ async function guard() {
 
 const ERR = { error: "Erro ao processar a requisição." };
 
+const createChecklistSchema = z.object({
+  day_number: z.number().int().positive(),
+  role: z.string().trim().max(50).optional(),
+  title: z.string().trim().min(1).max(200),
+  description: z.string().max(2000).nullable().optional(),
+  sort_order: z.number().int().min(0).optional(),
+});
+
 export async function GET() {
   const gate = await guard();
   if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
@@ -31,8 +40,9 @@ export async function GET() {
     console.error("[proep_checklist GET]", error.message);
     return NextResponse.json(ERR, { status: 500 });
   }
-  // Checklist é global (todas as turmas): não filtra por edition_id.
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(data ?? [], {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -40,15 +50,19 @@ export async function POST(req: NextRequest) {
   if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
   const supabase = gate.supabase;
   const body = await req.json();
+  const parsed = createChecklistSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
+  }
   const { data, error } = await supabase
     .from("proep_checklist")
     .insert({
       edition_id: null,
-      day_number: body.day_number,
-      role: body.role || "Todos",
-      title: body.title,
-      description: body.description || null,
-      sort_order: body.sort_order || 0,
+      day_number: parsed.data.day_number,
+      role: parsed.data.role ?? "Todos",
+      title: parsed.data.title,
+      description: parsed.data.description ?? null,
+      sort_order: parsed.data.sort_order ?? 0,
     })
     .select()
     .single();

@@ -100,7 +100,8 @@ export async function criarContrato(
     try {
       await arquivarContratoNoDrive(supabase, contratoId, data.eventoId ? Number(data.eventoId) : null);
     } catch (error) {
-      driveWarning = ` O PDF não foi salvo no Google Drive: ${error instanceof Error ? error.message : "erro desconhecido"}.`;
+      console.error("[contratos] drive archival failed", error);
+      driveWarning = ` O PDF não foi salvo no Google Drive (erro interno).`;
     }
 
     revalidatePath("/contratos");
@@ -109,9 +110,10 @@ export async function criarContrato(
       message: "Contrato criado e salvo no Drive." + driveWarning,
     };
   } catch (error) {
+    console.error("[contratos] criarContrato failed", error);
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Erro ao criar o contrato.",
+      message: "Erro ao criar o contrato.",
     };
   }
 }
@@ -132,12 +134,10 @@ export async function enviarParaAssinatura(
       assinaturaUrl: resultado.url,
     };
   } catch (error) {
+    console.error("[contratos] enviarParaAssinatura failed", error);
     return {
       ok: false,
-      message:
-        error instanceof Error
-          ? `Não foi possível enviar para assinatura: ${error.message}`
-          : "Erro ao enviar para assinatura.",
+      message: "Não foi possível enviar para assinatura.",
     };
   }
 }
@@ -185,12 +185,10 @@ export async function uploadAssinado(
     revalidatePath("/contratos");
     return { ok: true, message: "PDF assinado salvo e contrato marcado como assinado." };
   } catch (error) {
+    console.error("[contratos] uploadAssinado failed", error);
     return {
       ok: false,
-      message:
-        error instanceof Error
-          ? `Falha ao salvar o assinado: ${error.message}`
-          : "Erro ao salvar o PDF assinado.",
+      message: "Erro ao salvar o PDF assinado.",
     };
   }
 }
@@ -228,12 +226,10 @@ export async function sincronizarAssinado(
     revalidatePath("/contratos");
     return { ok: true, message: "PDF certificado sincronizado do Assinafy." };
   } catch (error) {
+    console.error("[contratos] sincronizarAssinado failed", error);
     return {
       ok: false,
-      message:
-        error instanceof Error
-          ? `Falha ao sincronizar: ${error.message}`
-          : "Erro ao sincronizar o assinado.",
+      message: "Erro ao sincronizar o assinado.",
     };
   }
 }
@@ -300,9 +296,10 @@ export async function criarModelo(
     revalidatePath("/contratos/modelos");
     return { ok: true, message: "Modelo criado." };
   } catch (error) {
+    console.error("[contratos] criarModelo failed", error);
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Erro ao criar o modelo.",
+      message: "Erro ao criar o modelo.",
     };
   }
 }
@@ -340,9 +337,10 @@ export async function atualizarModelo(
     revalidatePath("/contratos/modelos");
     return { ok: true, message: "Modelo atualizado." };
   } catch (error) {
+    console.error("[contratos] atualizarModelo failed", error);
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Erro ao atualizar o modelo.",
+      message: "Erro ao atualizar o modelo.",
     };
   }
 }
@@ -386,12 +384,10 @@ export async function configurarAssinafy(
       assinaturaUrl: url,
     };
   } catch (error) {
+    console.error("[contratos] configurarWebhookAssinafy failed", error);
     return {
       ok: false,
-      message:
-        error instanceof Error
-          ? `Assinafy: ${error.message}`
-          : "Erro ao configurar o webhook da Assinafy.",
+      message: "Erro ao configurar o webhook da Assinafy.",
     };
   }
 }

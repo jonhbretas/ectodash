@@ -63,6 +63,7 @@ export default function QuickSearch({ onNavigate }: { onNavigate?: () => void })
   useEffect(() => {
     const t = termo.trim().replace(/["'(),;]/g, " ");
     if (t.length < 2) return;
+    const sanitized = t.replace(/%/g, "%%").replace(/_/g, "\\_").replace(/[()'"]/g, "").trim();
 
     const seq = ++seqRef.current;
 
@@ -74,31 +75,31 @@ export default function QuickSearch({ onNavigate }: { onNavigate?: () => void })
           supabase
             .from("demandas")
             .select("id, titulo, prazo")
-            .ilike("titulo", `%${t}%`)
+            .ilike("titulo", `%${sanitized}%`)
             .order("updated_at", { ascending: false })
             .limit(5),
           supabase
             .from("eventos")
             .select("id, titulo, data_evento")
-            .ilike("titulo", `%${t}%`)
+            .ilike("titulo", `%${sanitized}%`)
             .order("data_evento", { ascending: false })
             .limit(5),
           supabase
             .from("reunioes")
             .select("id, titulo, data_reuniao")
-            .ilike("titulo", `%${t}%`)
+            .ilike("titulo", `%${sanitized}%`)
             .order("data_reuniao", { ascending: false })
             .limit(5),
           supabase
             .from("voluntarios")
             .select("id, nome, codigo_pf, funcao")
-            .or(`nome.ilike.%${t}%,codigo_pf.ilike.%${t}%`)
+            .or(`nome.ilike.%${sanitized}%,codigo_pf.ilike.%${sanitized}%`)
             .order("nome", { ascending: true })
             .limit(5),
           supabase
             .from("projetos")
             .select("id, nome, area")
-            .ilike("nome", `%${t}%`)
+            .ilike("nome", `%${sanitized}%`)
             .order("nome", { ascending: true })
             .limit(5),
         ]);

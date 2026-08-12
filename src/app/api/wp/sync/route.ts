@@ -411,8 +411,8 @@ export async function POST(request: NextRequest) {
     await finalize("success", totals);
     return NextResponse.json(totals);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "erro desconhecido";
-    await finalize("failed", { products: 0, orders: 0, customers: 0 }, message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[wp/sync]", err instanceof Error ? err.message : err);
+    await finalize("failed", { products: 0, orders: 0, customers: 0 }, "erro interno");
+    return NextResponse.json({ error: "Erro ao sincronizar dados." }, { status: 500 });
   }
 }

@@ -21,6 +21,7 @@ import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
 import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
 import { obterTranscricao } from "@/lib/meetings";
 import { parseArquivoFonte, ArquivoNaoSuportadoError, ArquivoVazioError } from "@/lib/atas/parse-file";
+import { sanitizeSearch } from "@/lib/utils";
 import {
   ataAnaliseEnvelopeSchema,
   type AtaAnalise,
@@ -493,7 +494,7 @@ export async function salvarAtaAnalise(
     const { data: candidatas } = await supabase
       .from("demandas")
       .select("id, status")
-      .ilike("titulo", `%${atualizacao.titulo}%`)
+      .ilike("titulo", `%${sanitizeSearch(atualizacao.titulo)}%`)
       .order("status", { ascending: false })
       .limit(10);
 

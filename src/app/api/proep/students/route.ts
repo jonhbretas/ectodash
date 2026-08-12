@@ -2,6 +2,7 @@
 // Auditoria 0063: rota com gate de acesso PROEP (coordenador_geral,
 // financeiro ou cargo com o módulo) e sem eco de mensagens internas de erro.
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireProep } from "@/lib/role-gates";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -23,13 +24,20 @@ async function guard() {
 
 const ERR = { error: "Erro ao processar a requisição." };
 
+const createStudentSchema = z.object({
+  edition_id: z.number().int().positive(),
+  name: z.string().trim().min(1).max(200),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().max(30).nullable().optional(),
+  role: z.enum(["participant", "coordinator"]).optional(),
+});
+
 export async function GET(req: NextRequest) {
   const gate = await guard();
   if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
   const supabase = gate.supabase;
   const editionIdRaw = req.nextUrl.searchParams.get("edition_id");
   const editionId = editionIdRaw ? parseInt(editionIdRaw, 10) : null;
-  // Fetch all then filter in JS — PostgREST misinterprets edition_id as uuid.
   const { data, error } = await supabase
     .from("proep_students")
     .select("*, proep_student_materials(material_id, drive_url, proep_materials(title))")
@@ -41,7 +49,9 @@ export async function GET(req: NextRequest) {
   const filtered = editionId && !isNaN(editionId)
     ? (data ?? []).filter((s) => s.edition_id === editionId)
     : data ?? [];
-  return NextResponse.json(filtered);
+  return NextResponse.json(filtered, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -49,14 +59,18 @@ export async function POST(req: NextRequest) {
   if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
   const supabase = gate.supabase;
   const body = await req.json();
+  const parsed = createStudentSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
+  }
   const { data, error } = await supabase
     .from("proep_students")
     .insert({
-      edition_id: body.edition_id,
-      name: body.name,
-      email: body.email || null,
-      phone: body.phone || null,
-      role: body.role || "participant",
+      edition_id: parsed.data.edition_id,
+      name: parsed.data.name,
+      email: parsed.data.email ?? null,
+      phone: parsed.data.phone ?? null,
+      role: parsed.data.role ?? "participant",
     })
     .select()
     .single();

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ClipboardList, Clock, Circle, Lock, Users, Sparkles, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearch } from "@/lib/utils";
 import StatCard from "@/components/stat-card";
 import PageContainer from "../page-container";
 import type { DemandaTableRow } from "../demandas/demanda-table";
@@ -165,8 +166,9 @@ async function PainelContent({ rows, supabase, logAcoesFilters }: { rows: Painel
     .order("created_at", { ascending: false })
     .order("id", { ascending: false });
   if (logAcoesFilters.busca) {
+    const s = sanitizeSearch(logAcoesFilters.busca);
     logQuery = logQuery.or(
-      `entidade.ilike.%${logAcoesFilters.busca}%,entidade_id.ilike.%${logAcoesFilters.busca}%`
+      `entidade.ilike.%${s}%,entidade_id.ilike.%${s}%`
     );
   }
   if (logAcoesFilters.entidade) {

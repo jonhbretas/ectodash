@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Search, ArrowLeft, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearch } from "@/lib/utils";
 import PageContainer from "../../page-container";
 import MonthPicker from "../month-picker";
 
@@ -47,8 +48,9 @@ export default async function PedidosPage({
     .order("date_created", { ascending: false });
 
   if (search) {
+    const s = sanitizeSearch(search);
     query = query.or(
-      `customer_name.ilike.%${search}%,customer_email.ilike.%${search}%`
+      `customer_name.ilike.%${s}%,customer_email.ilike.%${s}%`
     );
   }
   if (status) {

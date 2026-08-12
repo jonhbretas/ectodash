@@ -2,11 +2,15 @@
 // GET /api/wp/orders — list synced WooCommerce orders with filters.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireFinanceiro } from "@/lib/role-gates";
 import { sanitizeSearch } from "@/lib/utils";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(req: NextRequest) {
+  try { await requireFinanceiro(); } catch {
+    return NextResponse.json({ error: "Sem acesso." }, { status: 403 });
+  }
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,7 +24,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status")?.trim() ?? "";
   const since = searchParams.get("since")?.trim() ?? "";
   const until = searchParams.get("until")?.trim() ?? "";
-  const coupon = searchParams.get("coupon")?.trim() ?? "";
+  const coupon = searchParams.get("coupon")?.trim().slice(0, 100) ?? "";
 
   let query = supabase
     .from("wp_orders")

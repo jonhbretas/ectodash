@@ -1,6 +1,7 @@
 // src/app/api/proep/assignments/route.ts
 // Auditoria 0063: gate de acesso PROEP + sem eco de mensagens internas.
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireProep } from "@/lib/role-gates";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,6 +23,14 @@ async function guard() {
 
 const ERR = { error: "Erro ao processar a requisição." };
 
+const createAssignmentSchema = z.object({
+  edition_id: z.number().int().positive(),
+  role: z.string().trim().min(1).max(100),
+  title: z.string().trim().min(1).max(200),
+  description: z.string().max(2000).nullable().optional(),
+  sort_order: z.number().int().min(0).optional(),
+});
+
 export async function GET(req: NextRequest) {
   const gate = await guard();
   if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
@@ -39,7 +48,9 @@ export async function GET(req: NextRequest) {
   const filtered = editionId && !isNaN(editionId)
     ? (data ?? []).filter((r) => r.edition_id === editionId)
     : data ?? [];
-  return NextResponse.json(filtered);
+  return NextResponse.json(filtered, {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -47,14 +58,18 @@ export async function POST(req: NextRequest) {
   if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
   const supabase = gate.supabase;
   const body = await req.json();
+  const parsed = createAssignmentSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
+  }
   const { data, error } = await supabase
     .from("proep_assignments")
     .insert({
-      edition_id: body.edition_id,
-      role: body.role,
-      title: body.title,
-      description: body.description || null,
-      sort_order: body.sort_order || 0,
+      edition_id: parsed.data.edition_id,
+      role: parsed.data.role,
+      title: parsed.data.title,
+      description: parsed.data.description ?? null,
+      sort_order: parsed.data.sort_order ?? 0,
     })
     .select()
     .single();

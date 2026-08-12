@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
   const clearStateCookie = (response: Response) => {
     response.headers.append(
       "Set-Cookie",
-      "proep_oauth_state=; Path=/api/proep/google/callback; Max-Age=0; HttpOnly; SameSite=Lax"
+      "proep_oauth_state=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
     );
     return response;
   };

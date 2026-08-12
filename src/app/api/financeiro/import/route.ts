@@ -11,7 +11,6 @@ const ALLOWED_MIME = new Set([
   "text/csv",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-excel",
-  "application/octet-stream", // fallback para arquivos sem MIME detectado
 ]);
 
 async function ensureEntity(supabase: Awaited<ReturnType<typeof createClient>>, kind: string, name: string | undefined) {

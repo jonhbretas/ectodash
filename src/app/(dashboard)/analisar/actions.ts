@@ -8,6 +8,7 @@ import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
 import { requireAnaliseComIA } from "@/lib/role-gates";
 import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
 import { parseXlsx } from "@/lib/financeiro/parse-file";
+import { sanitizeSearch } from "@/lib/utils";
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -741,7 +742,7 @@ async function salvarAtualizacoes(
     const { data: candidatas } = await supabase
       .from("demandas")
       .select("id, status")
-      .ilike("titulo", `%${atualizacao.titulo}%`)
+      .ilike("titulo", `%${sanitizeSearch(atualizacao.titulo)}%`)
       .order("status", { ascending: false })
       .limit(10);
 

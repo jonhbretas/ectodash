@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { Users, Plus, Layers, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearch } from "@/lib/utils";
 import PageContainer from "../page-container";
 import { parseVoluntariosFilters } from "./voluntarios-filter-schema";
 import VoluntariosFilters from "./voluntarios-filters";
@@ -179,8 +180,9 @@ export default async function VoluntariosPage({
     .order("nome", { ascending: true });
 
   if (filters.busca) {
+    const s = sanitizeSearch(filters.busca);
     query = query.or(
-      `nome.ilike.%${filters.busca}%,codigo_pf.ilike.%${filters.busca}%`
+      `nome.ilike.%${s}%,codigo_pf.ilike.%${s}%`
     );
   }
   if (filters.area) {

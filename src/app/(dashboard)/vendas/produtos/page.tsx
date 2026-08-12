@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Search, ArrowLeft, Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearch } from "@/lib/utils";
 import PageContainer from "../../page-container";
 import MonthPicker from "../month-picker";
 import { parseProductName } from "@/lib/woocommerce/parse-product";
@@ -51,7 +52,8 @@ export default async function ProdutosPage({
     .order("synced_at", { ascending: false });
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+    const s = sanitizeSearch(search);
+    query = query.or(`name.ilike.%${s}%,sku.ilike.%${s}%`);
   }
   if (status) {
     query = query.eq("status", status);

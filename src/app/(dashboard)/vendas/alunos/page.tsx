@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Search, ArrowLeft, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearch } from "@/lib/utils";
 import PageContainer from "../../page-container";
 import MonthPicker from "../month-picker";
 
@@ -45,8 +46,9 @@ export default async function AlunosPage({
     .order("total_spent", { ascending: false });
 
   if (search) {
+    const s = sanitizeSearch(search);
     query = query.or(
-      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`
+      `first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%`
     );
   }
 

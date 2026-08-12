@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { ArrowLeft, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearch } from "@/lib/utils";
 import PageContainer from "../../page-container";
 import ContratoForm from "../contrato-form";
 
@@ -59,7 +60,7 @@ export default async function NovoContratoPage({
           .from("wp_customers")
           .select("wp_customer_id, first_name, last_name, email, courses")
           .or(
-            `first_name.ilike.%${busca}%,last_name.ilike.%${busca}%,email.ilike.%${busca}%`
+            `first_name.ilike.%${sanitizeSearch(busca)}%,last_name.ilike.%${sanitizeSearch(busca)}%,email.ilike.%${sanitizeSearch(busca)}%`
           )
           .order("total_spent", { ascending: false })
           .limit(20)
