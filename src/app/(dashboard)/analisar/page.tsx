@@ -1,7 +1,7 @@
 "use client";
 
 // /analisar — full-width review screen: the AI result is distributed in
-// columns (Ata da reunião / Eventos / Demandas, plus a Financeiro column
+// columns (Ata da reunião / Eventos / Demandas, plus DIPs/Atualizações
 // when the content had financial entries, and DIPs/Atualizações sections
 // below), each with its own scroll. The ata fields and the demandas
 // responsáveis/prazos are editable before saving; a single sticky
@@ -9,12 +9,10 @@
 import { useActionState, useState, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import type { LucideIcon } from "lucide-react";
 import {
   Sparkles,
   Upload,
-  Wallet,
   CalendarDays,
   ClipboardList,
   CheckCircle2,
@@ -41,7 +39,6 @@ const initialState: AnalisarState = {
   tipo: null,
   titulo: null,
   resumo: null,
-  financeiro: null,
   eventos: null,
   demandas: null,
   ata: null,
@@ -83,8 +80,7 @@ function PendingHint() {
   );
 }
 
-const tipoLabels: Record<string, { label: string; Icon: typeof Wallet }> = {
-  financeiro: { label: "Financeiro", Icon: Wallet },
+const tipoLabels: Record<string, { label: string; Icon: LucideIcon }> = {
   eventos: { label: "Eventos", Icon: CalendarDays },
   transcricao_reuniao: {
     label: "Transcricao de reuniao",
@@ -94,18 +90,7 @@ const tipoLabels: Record<string, { label: string; Icon: typeof Wallet }> = {
   outro: { label: "Outro", Icon: FileText },
 };
 
-const brl = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
 // Datas vindas da IA em ISO (yyyy-MM-dd) → exibição brasileira dd/MM/yyyy.
-function formatarDataBR(iso: string): string {
-  if (!iso) return "";
-  const date = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return iso;
-  return format(date, "dd/MM/yyyy", { locale: ptBR });
-}
 
 export default function AnalisarPage() {
   // Bumping this key remounts the whole flow (action state included), which
@@ -167,7 +152,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
           </h1>
           <p className="text-sm text-slate-500">
             Cole um texto ou envie um arquivo (.txt, .csv, .xlsx).
-            A IA identifica automaticamente se e financeiro, eventos ou
+            A IA identifica automaticamente se e eventos ou
             atas de reuniao e extrai os dados para voce revisar e salvar.
           </p>
         </div>
@@ -248,8 +233,10 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
 
       <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-xs text-slate-500">
         <p>
-          A IA classifica e extrai automaticamente dados financeiros, eventos
-          e tarefas de reunioes. O modelo em uso e o configurado na variavel{" "}
+          A IA classifica e extrai automaticamente eventos, tarefas de
+          reunioes, atas e registros DIP. Os dados financeiros nao sao
+          extraidos aqui: entram apenas pela planilha no modulo Financeiro.
+          O modelo em uso e o configurado na variavel{" "}
           <code className="rounded bg-slate-100 px-1 py-0.5 text-xs font-mono">
             AI_MODEL
           </code>{" "}
@@ -300,7 +287,6 @@ function ResultsScreen({
   state: AnalisarState;
   onReset: () => void;
 }) {
-  const temFinanceiro = Boolean(state.financeiro && state.financeiro.length > 0);
   const temEventos = Boolean(state.eventos && state.eventos.length > 0);
   const temDemandas = Boolean(state.demandas && state.demandas.length > 0);
   const temAta = state.ata !== null;
@@ -309,7 +295,7 @@ function ResultsScreen({
     state.atualizacoes && state.atualizacoes.length > 0
   );
   const temAlgo =
-    temFinanceiro || temEventos || temDemandas || temAta || temDips || temAtualizacoes;
+    temEventos || temDemandas || temAta || temDips || temAtualizacoes;
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<
@@ -375,7 +361,6 @@ function ResultsScreen({
   async function salvarTudo() {
     setSaving(true);
     const result = await salvarTudoDaAnalise({
-      financeiro: state.financeiro?.map(({ key: _, ...rest }) => rest),
       eventos: state.eventos?.map((e) => {
         const acao = eventoAcoes[e.key] ?? "criar";
         return {
@@ -474,12 +459,8 @@ function ResultsScreen({
 
       {temAlgo ? (
         <>
-          {/* Column distribution: Ata / Eventos / Demandas (+ Financeiro) */}
-          <div
-            className={`grid w-full grid-cols-1 items-start gap-4 md:grid-cols-2 ${
-              temFinanceiro ? "xl:grid-cols-4" : "xl:grid-cols-3"
-            }`}
-          >
+          {/* Column distribution: Ata / Eventos / Demandas */}
+          <div className="grid w-full grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
             {/* Ata da reunião — editable quando a IA extraiu a ata */}
             <ResultColumn
               titulo="Ata da reunião"
@@ -762,57 +743,6 @@ function ResultsScreen({
                 <EmptyColumn text="Nenhuma demanda identificada." />
               )}
             </ResultColumn>
-
-            {/* Financeiro (quando presente) */}
-            {temFinanceiro && (
-              <ResultColumn
-                titulo="Financeiro"
-                Icon={Wallet}
-                count={state.financeiro!.length}
-              >
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-xs text-slate-500">
-                        <th className="pb-2 pr-4 font-medium">Descricao</th>
-                        <th className="pb-2 pr-4 font-medium">Tipo</th>
-                        <th className="pb-2 pr-4 text-right font-medium">Valor</th>
-                        <th className="pb-2 font-medium">Data</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state.financeiro!.map((e) => (
-                        <tr key={e.key} className="border-b border-slate-100">
-                          <td className="py-2 pr-4 text-slate-900 text-sm">
-                            {e.descricao}
-                            {e.categoria && (
-                              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                                {e.categoria}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2 pr-4 text-sm">
-                            <span
-                              className={
-                                e.tipo === "entrada"
-                                  ? "text-emerald-600 font-medium"
-                                  : "text-red-600 font-medium"
-                              }
-                            >
-                              {e.tipo === "entrada" ? "Entrada" : "Saida"}
-                            </span>
-                          </td>
-                          <td className="py-2 pr-4 text-right text-slate-900 text-sm">
-                            {brl.format(e.valor)}
-                          </td>
-                          <td className="py-2 text-slate-600 text-sm">{formatarDataBR(e.data)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </ResultColumn>
-            )}
           </div>
 
           {/* Dinâmica DIP */}
@@ -1041,11 +971,6 @@ function ResultsScreen({
                       <ClipboardList size={16} aria-hidden="true" strokeWidth={1.5} /> Ver demandas
                     </Link>
                   )}
-                  {temFinanceiro && (
-                    <Link href="/financeiro" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50">
-                      <Wallet size={16} aria-hidden="true" strokeWidth={1.5} /> Ver financeiro
-                    </Link>
-                  )}
                 </div>
               ) : (
                 <button
@@ -1123,7 +1048,7 @@ function AtaTextarea({
   );
 }
 
-// ── Result column (Ata / Eventos / Demandas / Financeiro) ──
+// ── Result column (Ata / Eventos / Demandas) ──
 
 function ResultColumn({
   titulo,
@@ -1132,7 +1057,7 @@ function ResultColumn({
   children,
 }: {
   titulo: string;
-  Icon: typeof Wallet;
+  Icon: LucideIcon;
   count: number | null;
   children: React.ReactNode;
 }) {

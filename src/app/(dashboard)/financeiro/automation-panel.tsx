@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { RefreshCw, UploadCloud } from "lucide-react";
+import { ChevronDown, ChevronUp, RefreshCw, UploadCloud } from "lucide-react";
 
 export default function FinancialAutomationPanel() {
+  const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   async function submit(form: FormData) {
@@ -20,11 +21,28 @@ export default function FinancialAutomationPanel() {
     finally { setPending(false); }
   }
   return <section className="flex w-full flex-col gap-3 rounded-2xl bg-slate-950 p-5 text-white shadow-sm">
-    <div className="flex items-center gap-3"><UploadCloud size={24} /><div><h2 className="text-xl font-semibold">Livro financeiro automatizado</h2><p className="text-sm text-slate-300">Arquivos preservados, classificados e rastreáveis até a linha original.</p></div></div>
-    <form action={submit} className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <input name="files" type="file" multiple accept=".csv,.xlsx,.xls,.ofx,.pdf" required className="min-h-12 flex-1 rounded-lg bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-cyan-700 file:px-3 file:py-2 file:font-medium file:text-white" />
-      <button disabled={pending} className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-cyan-600 px-5 font-medium hover:bg-cyan-500 disabled:opacity-60">{pending ? <RefreshCw className="animate-spin" size={18} /> : <UploadCloud size={18} />} {pending ? "Processando" : "Importar arquivos"}</button>
-    </form>
-    {message && <p aria-live="polite" className="text-sm text-cyan-100">{message}</p>}
+    <button
+      type="button"
+      onClick={() => setOpen((prev) => !prev)}
+      aria-expanded={open}
+      aria-controls="livro-financeiro-automatizado"
+      className="flex w-full items-center gap-3 text-left"
+    >
+      <UploadCloud size={24} aria-hidden="true" className="shrink-0" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <h2 className="text-xl font-semibold">Livro financeiro automatizado</h2>
+        <p className="text-sm text-slate-300">Arquivos preservados, classificados e rastreáveis até a linha original.</p>
+      </div>
+      {open ? <ChevronUp size={20} aria-hidden="true" className="shrink-0" /> : <ChevronDown size={20} aria-hidden="true" className="shrink-0" />}
+    </button>
+    {open && (
+      <div id="livro-financeiro-automatizado" className="flex flex-col gap-3">
+        <form action={submit} className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input name="files" type="file" multiple accept=".csv,.xlsx,.xls,.ofx,.pdf" required className="min-h-12 flex-1 rounded-lg bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-cyan-700 file:px-3 file:py-2 file:font-medium file:text-white" />
+          <button disabled={pending} className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-cyan-600 px-5 font-medium hover:bg-cyan-500 disabled:opacity-60">{pending ? <RefreshCw className="animate-spin" size={18} /> : <UploadCloud size={18} />} {pending ? "Processando" : "Importar arquivos"}</button>
+        </form>
+        {message && <p aria-live="polite" className="text-sm text-cyan-100">{message}</p>}
+      </div>
+    )}
   </section>;
 }
