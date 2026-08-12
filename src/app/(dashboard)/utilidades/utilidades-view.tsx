@@ -202,7 +202,7 @@ function ItemCard({ item, podeGerenciar }: { item: Item; podeGerenciar: boolean 
       <h3 className="text-xl font-semibold text-zinc-900">{item.titulo}</h3>
 
       {item.descricao && (
-        <p className="text-base leading-relaxed text-zinc-600">{item.descricao}</p>
+        <p className="line-clamp-3 text-base leading-relaxed text-zinc-600">{item.descricao}</p>
       )}
 
       {item.tags.length > 0 && (

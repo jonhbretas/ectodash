@@ -12,63 +12,63 @@ FROM (
   VALUES
     (
       'Qualificação Docente Ectolab 2026 — Apresentação',
-      'Apresentação de 11/04/2026 organizada pelo Parapedagógico/Paratecnológico (Profª Ana Paula do Prado, Profª Celeste Silveira e Paulo Battistella). Cobre formação docente (Parecer 72/2020 UNICIN), critérios docentes da Ectolab, categorização de atividades parapedagógicas (Parecer 90/2025 UNICIN) e fluxo de proposição de cursos.',
+      'Apresentação de 11/04/2026 do Parapedagógico: formação docente, critérios da Ectolab, categorias de atividades e fluxo de proposição de cursos.',
       'qualificacao_docente',
       ARRAY['qualificação', 'docente', 'ectolab', '2026', 'parapedagógico'],
       NULL
     ),
     (
       'Parecer Nº 72/2020 UNICIN — Formação Docente',
-      'Formação docente básica nas ICs. Pré-requisitos: 6 meses de voluntariado; formação conscienciológica (Fundamentação com mínimo 40h/aula, Aprofundamento em Autopesquisa e Curso de Campo); prova de conhecimentos com acerto mínimo de 70%. Inclui autoverificação do Paradigma Consciencial (5 pontos), 10 elementos avaliativos e os 37 aspectos da atuação parapedagógica do docente recém-formado.',
+      'Pré-requisitos, autoverificação do Paradigma Consciencial, elementos avaliativos e os 37 aspectos da atuação parapedagógica para formação docente nas ICs.',
       'qualificacao_docente',
       ARRAY['parecer', 'unicin', 'formação', 'docente', '72/2020'],
       NULL
     ),
     (
       'Critérios Docentes da Ectolab',
-      'Pré-requisitos para docência na Ectolab: voluntário na Conscienciologia há, no mínimo, 1 ano; voluntário na ECTOLAB há, no mínimo, 6 meses; participação regular na Dinâmica Interassistencial de Paracirurgia (DIP); curso Ectoplasmia Interassistencial EAD; cursos de autoenfrentamento (ex.: ECP1, Conscin-cobaia); cursos de campo parapsíquico (ex.: Campo Interassistencial Paracirúrgico, EPPI, ECP2); certificado de formação básica docente em instituição conscienciocêntrica.',
+      'Requisitos para docência: voluntariado (1 ano Conscienciologia, 6 meses Ectolab), participação na DIP, cursos de autoenfrentamento e de campo, e certificado de formação docente.',
       'qualificacao_docente',
       ARRAY['ectolab', 'critérios', 'docente', 'requisitos'],
       NULL
     ),
     (
       'Temas de Palestras em Ectoplasmologia',
-      'Lista de 15 temas sugeridos para palestras: o que é ectoplasma (conceitos básicos), anátomo-fisiologia do ectoplasta, aplicação prática da ectoplasmia, síndrome ectoplásmica, autocuidado no uso de ectoplasmia, benefícios evolutivos, relação Projeciologia e Ectoplasmologia, exteriorização de energias ectoplásmicas, otimizações para o ectoplasta, desenvolvimento da ectoplasmia, influência do ectoplasta nas pessoas e ambientes, ectoplasmia paraterapêutica, efeitos físicos, ectoplasmia como valor evolutivo e pesquisas científicas.',
+      '15 temas sugeridos de palestras em ectoplasmologia, de conceitos básicos a pesquisas científicas.',
       'qualificacao_docente',
       ARRAY['palestras', 'temas', 'ectoplasmologia'],
       NULL
     ),
     (
       'Modelo de Slides para Curso — Orientações',
-      'Regras de referenciação bibliográfica: ABNT para fontes da Socin, Bibliografia Específica Exaustiva (BEE) para obras da Conscienciologia, e modelo visual próprio para palestras/mídias sociais (exemplo: "Referenciações pesquisísticas em palestras ou mídias"; autoria Neida Cardozo).',
+      'Regras de referenciação: ABNT (fontes da Socin), BEE (Conscienciologia) e modelo visual para palestras e mídias.',
       'qualificacao_docente',
       ARRAY['slides', 'modelo', 'bibliografia', 'abnt', 'bee'],
       NULL
     ),
     (
       'Fluxo de Proposição de Cursos da Ectolab',
-      'Fluxo de proposição: 1) envio da ficha catalográfica por e-mail para paratecnologico@ectolab.org, com cópia para parapedagogico@ectolab.org; 2) revisão de conteúdo e forma (CONFOR) pela equipe; 3) revisões com o docente autor; 4) revisão da aula expositiva, sequência didática e materiais; 5) agendamento da aula piloto; 6) curso revisado, aprovado e pronto para aplicação.',
+      'Fluxo de 6 etapas, da ficha catalográfica (paratecnologico@ectolab.org) à aula piloto e aprovação.',
       'qualificacao_docente',
       ARRAY['fluxo', 'proposição', 'cursos', 'ficha'],
       NULL
     ),
     (
       'Parecer Nº 90/2025 UNICIN — Categorização de Atividades Parapedagógicas',
-      'Seis categorias de atividades parapedagógicas das ICs: 1) Atividades Introdutórias e Cursos Livres; 2) Atividades de Fundamentação (não se aplica na Ectolab); 3) Atividades Avançadas; 4) Atividades de Campo; 5) Atividades Institucionais de Qualificação; 6) Atividades de Especialização.',
+      'As 6 categorias de atividades parapedagógicas das ICs, de introdutórias a especialização.',
       'atividades_parapedagogicas',
       ARRAY['parecer', 'unicin', 'categorias', 'parapedagógicas', '90/2025'],
       NULL
     ),
     (
       'Atividades Parapedagógicas da Ectolab por Categoria',
-      'Relação das atividades da Ectolab organizadas pelas categorias do Parecer 90/2025 UNICIN (palestras, EctoLive, cursos assíncronos, oficinas presenciais, cursos de campo, formação do voluntário, imersões), incluindo atividades interinstitucionais e as atividades fora do escopo do Conselho de Parapedagogia (DIP, OGB, Preceptoria em Ectoplasmia, Ectogroup, pedidos de paracirurgia/tenepes, parcerias de pesquisa e Fórum de Ectoplasmologia).',
+      'Atividades da Ectolab por categoria do Parecer 90/2025, incluindo interinstitucionais e as fora do escopo do Conselho (DIP, OGB, preceptoria, Ectogroup).',
       'atividades_parapedagogicas',
       ARRAY['atividades', 'cursos', 'oficinas', 'categorias'],
       NULL
     ),
     (
       'Ficha Catalográfica de Atividade Parapedagógica',
-      'Ficha para proposição de atividades parapedagógicas. Campos: título da atividade/documento; professor(a) coordenador(a); tipo de atividade (dinâmica, curso de campo, palestra, curso de imersão, curta duração até 16h, longa duração acima de 16h, workshop, fórum, congresso, oficina ou outros); classificação (proposta institucional da ECTOLAB, proposta de pesquisador independente, parceria interinstitucional ou atividade a ser realizada no CEAEC). Todas as respostas são obrigatórias.',
+      'Campos obrigatórios: título, professor(a) coordenador(a), tipo e classificação da atividade parapedagógica.',
       'atividades_parapedagogicas',
       ARRAY['ficha', 'catalográfica', 'curso', 'proposição'],
       NULL
