@@ -39,6 +39,7 @@ export async function cloneTemplatesIntoFolder(
   editionLabel: string,
   studentName: string,
   studentFolderId: string,
+  studentEmail: string | null = null,
 ): Promise<CloneResults> {
   const links: Record<string, string> = {};
   const materials: ClonedMaterial[] = [];
@@ -83,8 +84,15 @@ export async function cloneTemplatesIntoFolder(
         }
       } else {
         const copy = await copyDriveFile(template.file_id, newName, studentFolderId);
-        if (fileType === "spreadsheet") await setLinkSharing(copy.id, "writer");
-        else await setLinkSharing(copy.id, "reader");
+        // Auditoria 0063 (M4): nunca "qualquer pessoa com link" em modo
+        // edição. A planilha do aluno é compartilhada somente com o e-mail
+        // dele (writer); sem e-mail, fica somente leitura por link.
+        if (fileType === "spreadsheet") {
+          if (studentEmail) await shareWithEmail(copy.id, studentEmail, "writer");
+          else await setLinkSharing(copy.id, "reader");
+        } else {
+          await setLinkSharing(copy.id, "reader");
+        }
         driveUrl = driveFileUrl(fileType, copy.id);
 
         if (legacySpreadsheet?.id === template.id) {

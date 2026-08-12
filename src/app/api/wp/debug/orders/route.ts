@@ -1,16 +1,22 @@
 // GET /api/wp/debug/orders — returns raw WCFM orders for inspection.
 // Shows the first 2 orders with full vendor_order_details to debug the filter.
+// Auditoria 0063: endpoint de debug desativado em produção (ou sem a flag
+// ECTODASH_DEBUG_ENABLED=true) e com gate de role centralizado.
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireFinanceiro } from "@/lib/role-gates";
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.ECTODASH_DEBUG_ENABLED !== "true"
+  ) {
+    return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+  }
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "coordenador_geral" && profile?.role !== "financeiro") {
+  try {
+    await requireFinanceiro();
+  } catch {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
 

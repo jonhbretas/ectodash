@@ -9,8 +9,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { uploadDriveFile } from "@/lib/google/drive";
+import { requireUsuario } from "@/lib/role-gates";
 import { arquivarContratoNoDrive } from "@/lib/contratos/geracao";
 import { enviarContratoParaAssinatura } from "@/lib/contratos/assinatura";
 import {
@@ -29,21 +29,11 @@ const initialState: ContratoActionState = { ok: true, message: "" };
 
 /** Gate de role compartilhado com evento-actions.ts (coordenador_geral). */
 export async function requireCoordenador() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Sessão expirada. Entre novamente.");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "coordenador_geral") {
+  const ctx = await requireUsuario();
+  if (ctx.role !== "coordenador_geral") {
     throw new Error("Você não tem acesso aos contratos.");
   }
-  return { supabase, user };
+  return { supabase: ctx.supabase, user: ctx.user };
 }
 
 const PRAZO_PADRAO_DIAS = 15;

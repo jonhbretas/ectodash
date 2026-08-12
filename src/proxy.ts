@@ -15,7 +15,6 @@ function isPublicPath(pathname: string): boolean {
   // exists for a cron-triggered request.
   return (
     pathname === "/login" ||
-    pathname === "/cadastro" ||
     pathname === "/recuperar-senha" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api/cron")

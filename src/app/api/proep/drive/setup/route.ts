@@ -4,16 +4,32 @@
 //   POST /api/proep/drive/setup                 → garante a pasta central
 //   POST /api/proep/drive/setup {edition_id}    → garante central + pasta da turma
 // Retorna links para abertura fácil no Drive.
+// Auditoria 0063: gate de acesso PROEP (POST cria pastas no Drive
+// institucional) + erros genéricos no response.
 import { NextRequest, NextResponse } from "next/server";
+import { requireProep } from "@/lib/role-gates";
 import { ensureCentralFolder, getCentralFolder, ensureEditionFolder, getEditionFolder } from "@/lib/proep/drive-folders";
 
 export async function GET() {
+  let gate;
+  try {
+    gate = await requireProep();
+  } catch {
+    return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
+  }
   const central = await getCentralFolder();
   return NextResponse.json({ central_folder_url: central?.url ?? null });
 }
 
 export async function POST(req: NextRequest) {
   try {
+    let gate;
+    try {
+      gate = await requireProep();
+    } catch {
+      return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const editionId = body.edition_id ? Number(body.edition_id) : null;
 
@@ -29,7 +45,8 @@ export async function POST(req: NextRequest) {
       edition_folder_url: edition.folder.url,
       edition_label: edition.label,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Erro ao preparar pastas" }, { status: 500 });
+  } catch (e) {
+    console.error("[proep drive/setup POST]", e);
+    return NextResponse.json({ error: "Erro ao preparar as pastas." }, { status: 500 });
   }
 }

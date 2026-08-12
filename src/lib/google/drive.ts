@@ -27,8 +27,15 @@ export async function createDriveFolder(name: string, parentFolderId?: string) {
   }) as Promise<{ id: string }>;
 }
 
-/** Set link sharing (anyone with link can edit/view) */
-export async function setLinkSharing(fileId: string, role: "reader" | "writer" = "writer") {
+/** Set link sharing (anyone with link can view; EDIT por link é proibido —
+ * auditoria 0063/M4: edição pública sem autenticação compromete a
+ * integridade de dados institucionais e vaza PII de alunos). */
+export async function setLinkSharing(fileId: string, role: "reader" | "writer" = "reader") {
+  if (role === "writer") {
+    throw new Error(
+      "Compartilhamento público com edição não é permitido — use shareWithEmail."
+    );
+  }
   return googleApiRequest(`${DRIVE_API}/files/${fileId}/permissions`, {
     method: "POST",
     body: JSON.stringify({ type: "anyone", role }),

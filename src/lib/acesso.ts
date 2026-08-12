@@ -120,8 +120,16 @@ export function podeAcessar(
   if (concedido) return "gerenciar";
 
   // Módulos restritos exigem role ou cargo; os públicos são de leitura
-  // para qualquer conta autenticada (como sempre foi).
-  if (modulo === "financeiro" || modulo === "vendas") return false;
+  // para qualquer conta autenticada (como sempre foi). PROEP entrou na
+  // lista na auditoria 0063: contém PII de alunos (nome/e-mail/telefone)
+  // e a RLS do banco agora restringe leitura/escrita a coordenadores.
+  if (
+    modulo === "financeiro" ||
+    modulo === "vendas" ||
+    modulo === "proep"
+  ) {
+    return false;
+  }
   return "ler";
 }
 

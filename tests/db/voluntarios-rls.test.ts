@@ -167,7 +167,7 @@ describe.skipIf(!canRun)(
       expect(scopedIds).not.toContain(otherRow);
     });
 
-    it("vincular_meu_cadastro links the caller's account and applies the intended role, capped at voluntario_comum for coordenador_geral rows", async () => {
+    it("vincular_meu_cadastro links the caller's account but NEVER grants the roster row's intended role (auditoria 0063 — promoção é exclusiva do coordenador)", async () => {
       const financeiroRow = await createVoluntario({
         nome: `Financeiro ${unique()}`,
         role: "financeiro",
@@ -191,7 +191,10 @@ describe.skipIf(!canRun)(
         .eq("id", volunteer.id)
         .single();
       expect(readErr).toBeNull();
-      expect(roleAfter?.role).toBe("financeiro");
+      // O vínculo NUNCA aplica o papel "intencionado" da linha do roster
+      // (antes concedia financeiro/voluntariado/coordenador_area a quem
+      // chegasse primeiro) — o vínculo é sempre voluntario_comum.
+      expect(roleAfter?.role).toBe("voluntario_comum");
       expect(roleAfter?.voluntario_id).toBe(financeiroRow);
       expect(roleAfter?.vincular_pendente).toBe(false);
 

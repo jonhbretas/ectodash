@@ -197,17 +197,26 @@ async function importarEventosInner(
     return { ...initialState, message: "O arquivo é grande demais (máx. 1MB)." };
   }
   const lowerName = arquivo.name.toLowerCase();
-  const isXlsx = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+  const isXlsx = lowerName.endsWith(".xlsx");
+  const isXls = lowerName.endsWith(".xls");
   const isCsv = lowerName.endsWith(".csv");
-  if (!isXlsx && !isCsv) {
+  if (!isXlsx && !isXls && !isCsv) {
     return { ...initialState, message: "Envie um arquivo no formato .csv ou .xlsx." };
+  }
+  if (isXls) {
+    // read-excel-file suporta apenas .xlsx (auditoria 0063/M3).
+    return {
+      ...initialState,
+      message:
+        "O formato .xls não é suportado. Abra a planilha e salve como .xlsx (ou .csv) e tente novamente.",
+    };
   }
 
   let allRows: unknown[][];
   try {
     if (isXlsx) {
       const buffer = await arquivo.arrayBuffer();
-      allRows = parseXlsx(buffer).rows;
+      allRows = (await parseXlsx(buffer)).rows;
     } else {
       let texto: string;
       try {

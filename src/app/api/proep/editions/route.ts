@@ -1,18 +1,28 @@
 // src/app/api/proep/editions/route.ts
 // Returns PROEP events (eventos where title contains 'PROEP') as editions,
 // including the Drive folder of each edition (when already created).
+// Auditoria 0063: gate de acesso PROEP + sem eco de mensagens internas.
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireProep } from "@/lib/role-gates";
 
 export async function GET() {
-  const supabase = await createClient();
+  let gate;
+  try {
+    gate = await requireProep();
+  } catch {
+    return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
+  }
+  const supabase = gate.supabase;
   const { data, error } = await supabase
     .from("eventos")
     .select("id, titulo, descricao, data_evento, local, created_at")
     .ilike("titulo", "%PROEP%")
     .order("data_evento", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[proep editions GET]", error.message);
+    return NextResponse.json({ error: "Erro ao processar a requisição." }, { status: 500 });
+  }
 
   const ids = (data || []).map((e) => e.id);
   let configs: { edition_id: number; drive_folder_id: string | null; drive_folder_url: string | null }[] = [];

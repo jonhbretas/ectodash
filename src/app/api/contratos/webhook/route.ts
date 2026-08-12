@@ -8,13 +8,22 @@
 //   - document_processing_failed  → apenas log.
 //
 // A API da Assinafy NÃO assina o payload (não há HMAC/secret — ver spec em
-// api.assinafy.com.br/v1/docs). A verificação é dupla:
-//   1) account_id do payload precisa bater com ASSINAFY_ACCOUNT_ID;
-//   2) dedup pelo id do evento em contrato_webhook_log (PK) — eventos
+// api.assinafy.com.br/v1/docs). Auditoria 0063 (webhook spoofável): a
+// verificação agora é de 3 camadas, todas fail-closed:
+//   1) segredo compartilhado: o header X-Assinafy-Key (ou x-api-key) precisa
+//      bater com ASSINAFY_WEBHOOK_SECRET (ou ASSINAFY_API_KEY). Sem segredo
+//      configurado, TODOS os eventos são rejeitados (401);
+//   2) account_id OBRIGATÓRIO no payload e igual a ASSINAFY_ACCOUNT_ID (403);
+//   3) dedup pelo id do evento em contrato_webhook_log (PK) — eventos
 //      repetidos recebem 200 imediato e não processam de novo.
+// Além disso, transições de estado só acontecem sobre um contrato existente
+// e no estado esperado (document_ready exige status 'assinando'), e o id do
+// documento é sempre validado contra a tabela contratos antes de qualquer
+// efeito colateral (Drive/Assinafy).
 // A rota não tem sessão de usuário (como /api/cron/*) → client admin
 // (service role), restrito por convenção a rotas de API.
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { uploadDriveFile } from "@/lib/google/drive";
 import { assinafyBaixarDocumento } from "@/lib/assinafy";
@@ -28,7 +37,35 @@ type WebhookEnvelope = {
   object?: { id?: unknown; [key: string]: unknown } | null;
 };
 
+// Comparação em tempo constante (sha256 de ambos os lados evita vazamento
+// de comprimento na comparação direta de strings).
+function constantTimeEqual(a: string, b: string): boolean {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+
 export async function POST(request: Request) {
+  // Camada 1 — segredo compartilhado (fail-closed: sem segredo configurado,
+  // nenhum evento é aceito). O provedor pode ser configurado para enviar um
+  // header customizado na subscription de webhook; x-api-key é aceito como
+  // fallback caso o provedor ecoe a chave da conta.
+  const webhookSecret = process.env.ASSAINAFY_WEBHOOK_SECRET?.trim();
+  const apiKey = process.env.ASSAINAFY_API_KEY?.trim();
+  const expected = webhookSecret || apiKey;
+  if (!expected) {
+    console.error(
+      "contratos webhook: ASSINAFY_WEBHOOK_SECRET não configurado — eventos rejeitados (fail-closed)."
+    );
+    return new Response("webhook não configurado", { status: 401 });
+  }
+
+  const presented =
+    request.headers.get("x-assinafy-key") ?? request.headers.get("x-api-key");
+  if (!presented || !constantTimeEqual(presented, expected)) {
+    return new Response("unauthorized", { status: 401 });
+  }
+
   const admin = createAdminClient();
 
   const body: WebhookEnvelope = await request.json().catch(() => ({}));
@@ -38,9 +75,10 @@ export async function POST(request: Request) {
   const documentId =
     typeof body.object?.id === "string" ? body.object.id : null;
 
-  // Verificação 1 — o workspace de origem precisa ser o nosso.
+  // Camada 2 — workspace de origem: account_id é OBRIGATÓRIO e precisa ser o
+  // nosso (fail-closed: payloads sem account_id são rejeitados).
   const expectedAccount = process.env.ASSAINAFY_ACCOUNT_ID?.trim();
-  if (expectedAccount && accountId && accountId !== expectedAccount) {
+  if (!expectedAccount || !accountId || accountId !== expectedAccount) {
     return new Response("account_id inválido", { status: 403 });
   }
 
@@ -48,13 +86,23 @@ export async function POST(request: Request) {
     return new Response("payload inválido", { status: 400 });
   }
 
-  // Verificação 2 — dedup atômico pelo id do evento.
+  // Eventos de mudança de estado exigem o id do documento alvo.
+  const stateChangingEvents = [
+    "document_ready",
+    "signer_signed_document",
+    "signer_rejected_document",
+  ];
+  if (stateChangingEvents.includes(event) && !documentId) {
+    return new Response("sem document id", { status: 400 });
+  }
+
+  // Camada 3 — dedup atômico pelo id do evento.
   const { error: insertError } = await admin
     .from("contrato_webhook_log")
     .insert({
       id: eventId,
       event,
-      account_id: accountId || null,
+      account_id: accountId,
       payload: body,
     });
 
@@ -72,7 +120,7 @@ export async function POST(request: Request) {
 
   const { data: contrato } = await admin
     .from("contratos")
-    .select("id, drive_pasta_id")
+    .select("id, status, drive_pasta_id")
     .eq("assinafy_document_id", documentId)
     .maybeSingle();
 
@@ -81,6 +129,12 @@ export async function POST(request: Request) {
   }
 
   if (event === "document_ready") {
+    // Transição de estado só a partir do estado esperado — um evento forjado
+    // (ou reentrante) não consegue "confirmar" um contrato que não está
+    // aguardando assinaturas.
+    if (contrato.status !== "assinando") {
+      return new Response("estado inválido", { status: 409 });
+    }
     try {
       const buffer = await assinafyBaixarDocumento(documentId, "certificated");
       const update: Record<string, unknown> = { status: "assinado" };

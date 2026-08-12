@@ -2,17 +2,25 @@
 // POST /api/proep/import-from-store — importa compradores da loja como
 // participantes das turmas PROEP correspondentes (mês/ano do produto vs
 // data do evento). Idempotente: alunos já existentes não são duplicados.
+// Auditoria 0063: o fluxo escreve em wp_customers e proep_students (sem
+// políticas de escrita de sessão — apenas service role), então usa o client
+// admin EXATAMENTE como /api/wp/sync, com o mesmo gate de role
+// (coordenador_geral | financeiro). Exceção documentada à restrição
+// cron-only de src/lib/supabase/admin.ts.
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireFinanceiro } from "@/lib/role-gates";
 import { linkStoreToProep } from "@/lib/woocommerce/proep-link";
 
 export async function POST(_req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    try {
+      await requireFinanceiro();
+    } catch {
+      return NextResponse.json({ error: "Sem permissão para importar da loja." }, { status: 403 });
+    }
+
+    const supabase = createAdminClient();
 
     const { data: stores, error: storesError } = await supabase
       .from("wp_stores")
@@ -33,6 +41,7 @@ export async function POST(_req: NextRequest) {
 
     return NextResponse.json({ ok: true, coursesUpdated, participantsCreated });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Erro interno" }, { status: 500 });
+    console.error("[proep import-from-store]", e);
+    return NextResponse.json({ error: "Erro interno." }, { status: 500 });
   }
 }

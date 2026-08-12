@@ -10,6 +10,9 @@ export async function GET() {
     supabase.from("finance_receivables").select("*").limit(500),
     supabase.from("finance_exceptions").select("*").eq("status", "OPEN").order("created_at", { ascending: false }).limit(100),
   ]);
-  if (balance.error) return NextResponse.json({ error: balance.error.message }, { status: 400 });
+  if (balance.error) {
+    console.error("financeiro summary:", balance.error.message);
+    return NextResponse.json({ error: "Erro ao consultar os dados financeiros." }, { status: 400 });
+  }
   return NextResponse.json({ balance: balance.data, receivables: receivables.data ?? [], exceptions: exceptions.data ?? [] });
 }

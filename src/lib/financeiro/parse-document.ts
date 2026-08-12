@@ -1,4 +1,7 @@
-import * as XLSX from "xlsx";
+// src/lib/financeiro/parse-document.ts
+// Auditoria 0063/M3: parse de XLSX via read-excel-file (mantida) — o pacote
+// xlsx (SheetJS npm) está descontinuado e tem CVEs conhecidas.
+import readXlsxFile from "read-excel-file/node";
 import { PDFParse } from "pdf-parse";
 import { parseCsv } from "./parse-file";
 import { classifyDescription, type NormalizedFinancialRow } from "./automation";
@@ -14,6 +17,7 @@ function number(value: unknown): number {
 }
 
 function date(value: unknown): string {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
   if (typeof value === "number") return new Date(Math.round((value - 25569) * 86400 * 1000)).toISOString().slice(0, 10);
   const text = String(value ?? "").trim();
   const br = /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/.exec(text);
@@ -69,7 +73,29 @@ export async function parseFinancialDocument(file: File): Promise<DocumentParseR
     return { format: "PDF", sourceType: "BANK_STATEMENT", rows, warnings: rows.length ? [] : ["PDF lido, mas o layout precisa de revisão manual."] };
   }
   if (name.endsWith(".csv")) { const rows = rowsFromGrid(parseCsv(await file.text())); return { format: "CSV", sourceType: "UNKNOWN", rows, warnings: rows.length ? [] : ["Cabeçalho financeiro não identificado."] }; }
-  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellFormula: false, cellNF: false, cellHTML: false });
-  const rows = workbook.SheetNames.flatMap((sheet) => rowsFromGrid(XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1, defval: "", raw: true }) as unknown[][], sheet));
+  if (name.endsWith(".xls")) {
+    return { format: "XLSX", sourceType: "UNKNOWN", rows: [], warnings: ["O formato .xls não é suportado — salve como .xlsx ou .csv."] };
+  }
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const sheets = (await readXlsxFile(buffer).catch(() => [])) as {
+    sheet: string;
+    data: unknown[][];
+  }[];
+  const rows = [];
+  for (const { sheet, data } of sheets) {
+    rows.push(...rowsFromGrid(normalizeGrid(data), sheet));
+  }
   return { format: "XLSX", sourceType: "UNKNOWN", rows, warnings: rows.length ? [] : ["Nenhuma tabela financeira foi identificada."] };
+}
+
+// read-excel-file devolve células vazias como null e datas como Date —
+// normaliza para o contrato de grade dos parsers ("" / yyyy-MM-dd).
+function normalizeGrid(grid: unknown[][]): unknown[][] {
+  return grid.map((row) =>
+    row.map((cell) => {
+      if (cell instanceof Date) return cell.toISOString().slice(0, 10);
+      if (cell === null || cell === undefined) return "";
+      return cell;
+    })
+  );
 }

@@ -10,6 +10,9 @@ export async function GET(request: Request) {
   let query = supabase.from("finance_ledger").select("*").order("movement_date", { ascending: false }).limit(500);
   if (status) query = query.eq("reconciliation_status", status);
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    console.error("financeiro ledger:", error.message);
+    return NextResponse.json({ error: "Erro ao consultar o razão financeiro." }, { status: 400 });
+  }
   return NextResponse.json({ data });
 }

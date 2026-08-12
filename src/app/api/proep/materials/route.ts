@@ -1,6 +1,7 @@
 // src/app/api/proep/materials/route.ts
+// Auditoria 0063: gate de acesso PROEP + sem eco de mensagens internas.
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireProep } from "@/lib/role-gates";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function requireUuid(id: string | null, label = "id") {
@@ -10,22 +11,38 @@ function requireUuid(id: string | null, label = "id") {
   return id;
 }
 
-const LABEL = "proep_materials";
+async function guard() {
+  try {
+    const ctx = await requireProep();
+    return ctx;
+  } catch {
+    return null;
+  }
+}
+
+const ERR = { error: "Erro ao processar a requisição." };
 
 export async function GET(req: NextRequest) {
+  const gate = await guard();
+  if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
+  const supabase = gate.supabase;
   const category = req.nextUrl.searchParams.get("category");
-  const supabase = await createClient();
   let query = supabase.from("proep_materials").select("*").order("sort_order");
   if (category) query = query.eq("category", category);
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: `[${LABEL} GET] ${error.message}` }, { status: 500 });
+  if (error) {
+    console.error("[proep_materials GET]", error.message);
+    return NextResponse.json(ERR, { status: 500 });
+  }
   // Materiais são globais (todas as turmas): não filtra por edition_id.
   return NextResponse.json(data ?? []);
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await guard();
+  if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
+  const supabase = gate.supabase;
   const body = await req.json();
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from("proep_materials")
     .insert({
@@ -41,30 +58,43 @@ export async function POST(req: NextRequest) {
     })
     .select()
     .single();
-  if (error) return NextResponse.json({ error: `[${LABEL} POST] ${error.message}` }, { status: 500 });
+  if (error) {
+    console.error("[proep_materials POST]", error.message);
+    return NextResponse.json(ERR, { status: 500 });
+  }
   return NextResponse.json(data, { status: 201 });
 }
 
 export async function PATCH(req: NextRequest) {
+  const gate = await guard();
+  if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
+  const supabase = gate.supabase;
   const body = await req.json();
   const { id, ...fields } = body;
   try { requireUuid(id, "id"); } catch (e) { return e as NextResponse; }
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from("proep_materials")
     .update(fields)
     .eq("id", id)
     .select()
     .single();
-  if (error) return NextResponse.json({ error: `[${LABEL} PATCH] ${error.message}` }, { status: 500 });
+  if (error) {
+    console.error("[proep_materials PATCH]", error.message);
+    return NextResponse.json(ERR, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
 export async function DELETE(req: NextRequest) {
+  const gate = await guard();
+  if (!gate) return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
+  const supabase = gate.supabase;
   const id = req.nextUrl.searchParams.get("id");
   try { requireUuid(id, "id"); } catch (e) { return e as NextResponse; }
-  const supabase = await createClient();
   const { error } = await supabase.from("proep_materials").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: `[${LABEL} DELETE] ${error.message}` }, { status: 500 });
+  if (error) {
+    console.error("[proep_materials DELETE]", error.message);
+    return NextResponse.json(ERR, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

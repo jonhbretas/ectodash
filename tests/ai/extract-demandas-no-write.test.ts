@@ -10,16 +10,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchMock = vi.fn();
 const insertSpy = vi.fn();
-const selectMock = vi.fn();
 const getUserMock = vi.fn();
 
+// Auditoria 0063: extractDemandas agora passa por requireExtrairDemandas
+// (gate de role) antes de tocar qualquer dado — o mock do client precisa
+// responder o perfil do usuário (role coordenador_geral para o gate passar)
+// e encadear as queries de roster de forma awaitable.
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: getUserMock },
-    from: vi.fn(() => ({
-      select: selectMock,
-      insert: insertSpy,
-    })),
+    from: vi.fn((table: string) => {
+      const chain = {
+        select: vi.fn(() => chain),
+        eq: vi.fn(() => chain),
+        not: vi.fn(() => chain),
+        order: vi.fn(() => chain),
+        limit: vi.fn(() => chain),
+        insert: insertSpy,
+        single: vi.fn(async () =>
+          table === "profiles"
+            ? { data: { role: "coordenador_geral" } }
+            : { data: [] }
+        ),
+      };
+      return chain;
+    }),
   })),
 }));
 
@@ -59,10 +74,8 @@ describe("extractDemandas — zero-database-write invariant (IA-04)", () => {
   beforeEach(() => {
     fetchMock.mockReset();
     insertSpy.mockReset();
-    selectMock.mockReset();
     getUserMock.mockReset();
     getUserMock.mockResolvedValue({ data: { user: FAKE_USER } });
-    selectMock.mockResolvedValue({ data: FAKE_PROFILES });
     // The action requires a configured provider key to even attempt the
     // call; the mocked fetch never touches the real API regardless.
     vi.stubEnv("OPENCODE_API_KEY", "test-key");

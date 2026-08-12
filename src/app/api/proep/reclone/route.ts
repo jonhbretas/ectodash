@@ -2,8 +2,9 @@
 // Re-clona os templates de material para um aluno usando a pasta que já
 // existe (ou criando uma se não houver). Útil quando um clone falhou ou foi
 // apagado: gera novamente sem duplicar a estrutura de pastas.
+// Auditoria 0063: gate de acesso PROEP + erros genéricos no response.
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireProep } from "@/lib/role-gates";
 import { createDriveFolder } from "@/lib/google/drive";
 import { ensureEditionFolder } from "@/lib/proep/drive-folders";
 import { cloneTemplatesIntoFolder } from "@/lib/proep/clone-templates";
@@ -14,12 +15,18 @@ const FOLDER_URL_RE = /\/drive\/folders\/([^/?]+)/;
 
 export async function POST(req: NextRequest) {
   try {
+    let gate;
+    try {
+      gate = await requireProep();
+    } catch {
+      return NextResponse.json({ error: "Sem acesso ao módulo PROEP." }, { status: 403 });
+    }
+    const supabase = gate.supabase;
+
     const { student_id } = await req.json();
     if (!student_id || !UUID_RE.test(student_id)) {
       return NextResponse.json({ error: "student_id deve ser um UUID válido" }, { status: 400 });
     }
-
-    const supabase = await createClient();
 
     const { data: student, error: studentError } = await supabase
       .from("proep_students")
@@ -43,8 +50,9 @@ export async function POST(req: NextRequest) {
           editionFolder.folder.id,
         );
         folderId = folder.id;
-      } catch (e: any) {
-        return NextResponse.json({ error: `Erro ao criar pasta do aluno: ${e.message}` }, { status: 500 });
+      } catch (e) {
+        console.error("[proep reclone] createDriveFolder", e);
+        return NextResponse.json({ error: "Erro ao criar pasta do aluno." }, { status: 500 });
       }
     }
 
@@ -54,6 +62,7 @@ export async function POST(req: NextRequest) {
       editionFolder.label,
       student.name,
       folderId,
+      typeof student.email === "string" ? student.email : null,
     );
 
     // Substitui os registros de materiais clonados (evita duplicatas ao reclonar)
@@ -71,7 +80,15 @@ export async function POST(req: NextRequest) {
     if (links.parapercepciograma_url) updateFields.parapercepciograma_url = links.parapercepciograma_url;
     if (links.form_responder_url) updateFields.form_responder_url = links.form_responder_url;
 
-    await supabase.from("proep_students").update({ ...updateFields, updated_at: new Date().toISOString() }).eq("id", student_id);
+    const { error: updateError } = await supabase
+      .from("proep_students")
+      .update({ ...updateFields, updated_at: new Date().toISOString() })
+      .eq("id", student_id);
+
+    if (updateError) {
+      console.error("[proep reclone] update student", updateError.message);
+      return NextResponse.json({ error: "Não foi possível salvar os links do aluno." }, { status: 500 });
+    }
 
     return NextResponse.json({
       ok: true,
@@ -80,6 +97,7 @@ export async function POST(req: NextRequest) {
       errors,
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Erro interno" }, { status: 500 });
+    console.error("[proep reclone]", e);
+    return NextResponse.json({ error: "Erro interno." }, { status: 500 });
   }
 }

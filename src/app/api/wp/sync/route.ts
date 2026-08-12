@@ -16,8 +16,8 @@
 //               historical range at once (e.g. the last 6 or 12 months),
 //               even if it takes a while.
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireFinanceiro } from "@/lib/role-gates";
 import {
   fetchProducts,
   fetchOrders,
@@ -37,24 +37,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const PERIOD_MAX_PAGES = 150;
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (
-    profile?.role !== "coordenador_geral" &&
-    profile?.role !== "financeiro"
-  ) {
+  // Auditoria 0063 (M2): gate de role centralizado (coordenador_geral |
+  // financeiro). O client admin abaixo é uma exceção documentada à
+  // restrição cron-only de src/lib/supabase/admin.ts: o sync grava em
+  // wp_* e proep_* sem políticas de escrita de sessão.
+  try {
+    await requireFinanceiro();
+  } catch {
     return NextResponse.json(
       { error: "Sem permissão para sincronizar" },
       { status: 403 }

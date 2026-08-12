@@ -1,12 +1,9 @@
 // src/lib/financeiro/parse-file.ts
 // Manual spreadsheet import parsing — CSV (PT-BR: semicolon or comma
-// delimited, quoted fields) and XLSX (first sheet, via the xlsx package).
-// Two formats are supported and auto-detected:
-//   1. EctoLab cash-flow (monthly pivot: Janeiro…Dezembro columns) —
-//      parsed by parseEctolabRows.
-//   2. Flat ledger (Data; Descrição; Tipo; Valor; Categoria) — parsed by
-//      parseSheetRows, shared with the Google Sheets cron sync.
-import * as XLSX from "xlsx";
+// delimited, quoted fields) e XLSX (via read-excel-file, mantida — o pacote
+// xlsx/SheetJS do npm (0.18.5) está descontinuado e possui CVEs conhecidas,
+// auditoria 0063/M3).
+import readXlsxFile from "read-excel-file/node";
 import { parseSheetRows } from "@/lib/sheets/parse-rows";
 import type { FinancialEntry } from "@/lib/sheets/parse-rows";
 import {
@@ -82,112 +79,76 @@ export function parseCsv(texto: string): unknown[][] {
   return rows;
 }
 
-export function parseXlsx(buffer: ArrayBuffer): { rows: unknown[][]; sheetName: string } {
-  // cellFormula:false is the KEY tolerance: SheetJS throws "ERROR <code>@<cell>"
-  // (e.g. 2185920330@E352) when a cell holds a formula it cannot parse —
-  // corrupted/foreign formulas are common in real cash-flow sheets. Skipping
-  // formula parsing reads each cell's cached/display value instead, which is
-  // exactly what an import needs. cellNF/cellHTML false skip equally
-  // crash-prone number-format and HTML parsing.
-  //
-  // Total-failure guard: even with those flags, a deeply malformed workbook
-  // can still make SheetJS throw (corrupt zip, truncated file, foreign
-  // formula engine). The import path must NEVER crash the page over a file —
-  // return an empty grid and let the caller report a friendly error.
-  let workbook: XLSX.WorkBook;
+export async function parseXlsx(buffer: ArrayBuffer): Promise<{ rows: unknown[][]; sheetName: string }> {
+  const data = Buffer.from(buffer);
   try {
-    workbook = XLSX.read(buffer, {
-      type: "array",
-      cellFormula: false,
-      cellNF: false,
-      cellHTML: false,
+    // read-excel-file lê o workbook inteiro de uma vez, devolvendo o nome e
+    // a grade de cada sheet — sem re-leitura por sheet.
+    let sheets: { sheet: string; data: unknown[][] }[];
+    try {
+      sheets = (await readXlsxFile(data)) as { sheet: string; data: unknown[][] }[];
+    } catch (err) {
+      console.error("parseXlsx: readXlsxFile failed", err);
+      return { rows: [], sheetName: "" };
+    }
+    if (sheets.length === 0) {
+      console.error("parseXlsx: workbook has no sheets");
+      return { rows: [], sheetName: "" };
+    }
+
+    // Real-world files carry several sheets (bank statements, old data…) and
+    // the cash-flow sheet is NOT always first — this one has six "Extrato BB"
+    // tabs before "SISPRIME 2026". Pick by name first, then by content.
+    let sheetName: string;
+    try {
+      sheetName = pickCashFlowSheet(sheets);
+    } catch (err) {
+      console.error("parseXlsx: sheet picking failed", err);
+      return { rows: [], sheetName: "" };
+    }
+
+    const rawRows = sheets.find((s) => s.sheet === sheetName)?.data ?? [];
+
+    // Normalização de grade: células vazias viram "" (não null), linhas são
+    // completadas até a largura máxima e datas (Date) viram yyyy-MM-dd para
+    // manter o contrato dos parsers de entrada financeira.
+    const width = rawRows.reduce((max, row) => Math.max(max, row.length), 0);
+    const clean = rawRows.map((row) => {
+      const out = row.map((cell) => {
+        if (cell instanceof Date) return cell.toISOString().slice(0, 10);
+        if (cell === null || cell === undefined) return "";
+        return cell;
+      });
+      while (out.length < width) out.push("");
+      return out;
     });
+    return { rows: clean, sheetName };
   } catch (err) {
-    console.error("parseXlsx: SheetJS read failed", err);
+    console.error("parseXlsx: read failed", err);
     return { rows: [], sheetName: "" };
   }
-  if (workbook.SheetNames.length === 0) {
-    console.error("parseXlsx: workbook has no sheets");
-    return { rows: [], sheetName: "" };
-  }
-
-  // Real-world files carry several sheets (bank statements, old data…) and
-  // the cash-flow sheet is NOT always first — this one has six "Extrato BB"
-  // tabs before "SISPRIME 2026". Pick by name first, then by content.
-  let sheetName: string;
-  let sheet: XLSX.WorkSheet | undefined;
-  try {
-    sheetName = pickCashFlowSheet(workbook);
-    sheet = workbook.Sheets[sheetName];
-  } catch (err) {
-    console.error("parseXlsx: sheet picking failed", err);
-    return { rows: [], sheetName: "" };
-  }
-
-  let rawRows: unknown[][];
-  try {
-    rawRows = XLSX.utils.sheet_to_json(sheet, {
-      header: 1,
-      defval: "",
-      raw: true,
-    }) as unknown[][];
-  } catch (err) {
-    console.error("parseXlsx: sheet_to_json failed", err);
-    return { rows: [], sheetName };
-  }
-
-  // Last line of defense: any cell that still surfaces as a SheetJS error
-  // object (t === "e") is normalized to an empty string instead of crashing
-  // or producing garbage values.
-  const clean = rawRows.map((row) =>
-    row.map((cell) => {
-      if (cell && typeof cell === "object" && "t" in cell && (cell as { t: string }).t === "e") {
-        return "";
-      }
-      return cell;
-    })
-  );
-  return { rows: clean, sheetName };
 }
 
-// Prefers the sheet named like a cash flow ("fluxo", "sisprime", the year),
-// then scans every sheet's first rows for the month header / "Fluxo de
-// Caixa" title. Falls back to the first sheet (the pre-multi-sheet
-// behavior) so single-sheet files keep working unchanged.
-function pickCashFlowSheet(workbook: XLSX.WorkBook): string {
-  const names = workbook.SheetNames;
-
-  const named = names.find((name) => {
-    const lower = name.toLowerCase();
+// Prefere a sheet com nome de fluxo de caixa ("fluxo", "sisprime", o ano),
+// então varre o conteúdo das primeiras linhas de cada sheet em busca do
+// cabeçalho de meses / título "Fluxo de Caixa". Cai para a primeira sheet
+// (comportamento pré-multi-sheet) quando nada casa.
+function pickCashFlowSheet(sheets: { sheet: string; data: unknown[][] }[]): string {
+  const named = sheets.find((s) => {
+    const lower = s.sheet.toLowerCase();
     return (
       lower.includes("fluxo") ||
       lower.includes("sisprime") ||
       /(^|\s)(20\d{2})(\s|$)/.test(lower)
     );
   });
-  if (named) return named;
+  if (named) return named.sheet;
 
-  for (const name of names) {
-    let probe: unknown[][] = [];
-    try {
-      probe = (
-        XLSX.utils.sheet_to_json(workbook.Sheets[name], {
-          header: 1,
-          defval: "",
-          raw: true,
-        }) as unknown[][]
-      ).slice(0, 30);
-    } catch (err) {
-      // A sheet with corrupt formulas can make sheet_to_json throw even
-      // with cellFormula:false — skip the probe for that sheet instead of
-      // crashing the whole import.
-      console.error("parseXlsx: probe failed for sheet", name, err);
-      continue;
-    }
-    if (sheetLooksLikeCashFlow(probe)) return name;
+  for (const s of sheets) {
+    if (sheetLooksLikeCashFlow(s.data.slice(0, 30))) return s.sheet;
   }
 
-  return names[0];
+  return sheets[0].sheet;
 }
 
 // Detects the EctoLab cash-flow layout in the first rows: either the
@@ -224,9 +185,17 @@ export async function parseFinanceiroFile(
   let rows: unknown[][];
 
   try {
-    if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+    if (name.endsWith(".xlsx")) {
       const buffer = await file.arrayBuffer();
-      rows = parseXlsx(buffer).rows;
+      rows = (await parseXlsx(buffer)).rows;
+    } else if (name.endsWith(".xls")) {
+      // read-excel-file suporta apenas .xlsx (auditoria 0063/M3) — o .xls
+      // legado é orientado a salvar como .xlsx ou .csv.
+      return {
+        ok: false,
+        error:
+          "O formato .xls não é suportado. Abra a planilha e salve como .xlsx (ou .csv) e tente novamente.",
+      };
     } else if (name.endsWith(".csv")) {
       rows = parseCsv(await file.text());
     } else {
