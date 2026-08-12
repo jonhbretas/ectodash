@@ -90,6 +90,57 @@ export async function excluirUtilidadeItem(
   return { ok: true, message: "Item removido." };
 }
 
+export async function atualizarUtilidadeItem(
+  prevState: UtilidadeState,
+  formData: FormData
+): Promise<UtilidadeState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
+
+  const id = Number(formData.get("id"));
+  if (!Number.isFinite(id)) return { ok: false, message: "Item inválido." };
+
+  const titulo = tituloSchema.safeParse(formData.get("titulo"));
+  if (!titulo.success) return { ok: false, message: "Dê um título ao item." };
+
+  const categoriaRaw = categoriaSchema.safeParse(formData.get("categoria"));
+  if (!categoriaRaw.success) return { ok: false, message: "Informe a categoria ou título da utilidade." };
+  const categoria = categoriaLabels[categoriaRaw.data] ?? categoriaRaw.data;
+
+  const urlRaw = formData.get("url");
+  const url = typeof urlRaw === "string" ? urlRaw.trim() : null;
+  const descricaoRaw = formData.get("descricao");
+  const descricao = typeof descricaoRaw === "string" ? descricaoRaw.trim() : null;
+
+  const areaIdRaw = formData.get("area_id");
+  const area_id = typeof areaIdRaw === "string" && areaIdRaw.trim() !== ""
+    ? Number(areaIdRaw)
+    : null;
+
+  const tagsRaw = formData.get("tags");
+  const tagsStr = typeof tagsRaw === "string" ? tagsRaw.trim() : "";
+  const tags = tagsStr
+    ? tagsStr.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
+
+  const { error } = await supabase
+    .from("utilidades_itens")
+    .update({
+      titulo: titulo.data,
+      descricao: descricao || null,
+      categoria,
+      url: url || null,
+      area_id: area_id && Number.isFinite(area_id) ? area_id : null,
+      tags,
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: "Não foi possível salvar as alterações." };
+
+  revalidatePath("/utilidades");
+  return { ok: true, message: "Item atualizado." };
+}
 export async function excluirUtilidadeItemSimples(formData: FormData) {
   "use server";
   const supabase = await createClient();

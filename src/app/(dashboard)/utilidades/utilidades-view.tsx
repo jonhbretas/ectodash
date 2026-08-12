@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ExternalLink, Search, Trash2, Layers, FileText, BookOpen, Image, GraduationCap, Link2, Wrench, ChevronDown } from "lucide-react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { ExternalLink, Search, Trash2, Pencil, Layers, FileText, BookOpen, Image, GraduationCap, Link2, Wrench, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { excluirUtilidadeItemSimples } from "./utilidades-actions";
+import { atualizarUtilidadeItem, excluirUtilidadeItemSimples, type UtilidadeState } from "./utilidades-actions";
 
 type Area = { id: number; nome: string };
 type Item = {
@@ -33,6 +33,12 @@ const CATEGORIAS: Record<string, { label: string; icon: typeof BookOpen }> = {
 function categoriaInfo(categoria: string) {
   return CATEGORIAS[categoria] ?? { label: categoria, icon: Wrench };
 }
+
+const CATEGORIA_SUGGESTIONS = Object.values(CATEGORIAS).map((c) => c.label);
+
+const initialEdit: UtilidadeState = { ok: false, message: "" };
+
+const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
 export default function UtilidadesView({ areas, items, podeGerenciar = false }: { areas: Area[]; items: Item[]; podeGerenciar?: boolean }) {
   const [activeTab, setActiveTab] = useState("todos");
@@ -171,7 +177,7 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((item) => (
-              <ItemCard key={item.id} item={item} podeGerenciar={podeGerenciar} />
+              <ItemCard key={item.id} item={item} areas={areas} podeGerenciar={podeGerenciar} />
             ))}
           </div>
         )}
@@ -180,62 +186,182 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
   );
 }
 
-function ItemCard({ item, podeGerenciar }: { item: Item; podeGerenciar: boolean }) {
+function ItemCard({ item, areas, podeGerenciar }: { item: Item; areas: Area[]; podeGerenciar: boolean }) {
   const cat = categoriaInfo(item.categoria);
+  const [editing, setEditing] = useState(false);
 
   return (
     <div className="flex flex-col gap-2 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-      <div className="flex flex-wrap items-center gap-2">
-        {item.area_nome && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-sm font-medium text-[#2195B9]">
-            {item.area_nome}
-          </span>
-        )}
-        {cat && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-sm font-medium text-[#2195B9]">
-            <cat.icon size={12} aria-hidden="true" />
-            {cat.label}
-          </span>
-        )}
-      </div>
+      {editing ? (
+        <ItemEditForm item={item} areas={areas} onCancel={() => setEditing(false)} />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {item.area_nome && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-sm font-medium text-[#2195B9]">
+                {item.area_nome}
+              </span>
+            )}
+            {cat && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-sm font-medium text-[#2195B9]">
+                <cat.icon size={12} aria-hidden="true" />
+                {cat.label}
+              </span>
+            )}
+          </div>
 
-      <h3 className="text-xl font-semibold text-zinc-900">{item.titulo}</h3>
+          <h3 className="text-xl font-semibold text-zinc-900">{item.titulo}</h3>
 
-      {item.descricao && (
-        <p className="line-clamp-3 text-base leading-relaxed text-zinc-600">{item.descricao}</p>
+          {item.descricao && (
+            <p className="line-clamp-3 text-base leading-relaxed text-zinc-600">{item.descricao}</p>
+          )}
+
+          {item.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {item.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-sm text-zinc-600"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-auto flex items-center gap-2 pt-2">
+            {item.url && (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-[#28627B]"
+              >
+                <ExternalLink size={16} />
+                Acessar
+              </a>
+            )}
+            {item.arquivo_nome && (
+              <span className="text-base text-zinc-500">{item.arquivo_nome}</span>
+            )}
+            {podeGerenciar && (
+              <>
+                <EditarItemButton onClick={() => setEditing(true)} />
+                <ExcluirItemButton itemId={item.id} titulo={item.titulo} />
+              </>
+            )}
+          </div>
+        </>
       )}
-
-      {item.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {item.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-sm text-zinc-600"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-auto flex items-center gap-2 pt-2">
-        {item.url && (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-[#28627B]"
-          >
-            <ExternalLink size={16} />
-            Acessar
-          </a>
-        )}
-        {item.arquivo_nome && (
-          <span className="text-base text-zinc-500">{item.arquivo_nome}</span>
-        )}
-        {podeGerenciar && <ExcluirItemButton itemId={item.id} titulo={item.titulo} />}
-      </div>
     </div>
+  );
+}
+
+function EditarItemButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label="Editar item"
+      onClick={onClick}
+      className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-[#2195B9]/10 hover:text-[#2195B9]"
+    >
+      <Pencil size={18} />
+    </button>
+  );
+}
+
+function ItemEditForm({
+  item,
+  areas,
+  onCancel,
+}: {
+  item: Item;
+  areas: Area[];
+  onCancel: () => void;
+}) {
+  const [state, formAction] = useActionState(atualizarUtilidadeItem, initialEdit);
+
+  useEffect(() => {
+    if (state.ok) onCancel();
+  }, [state.ok, onCancel]);
+
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-lg font-medium text-zinc-900">Editar item</span>
+        <button type="button" onClick={onCancel} className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-200" aria-label="Cancelar edição">
+          <X size={18} />
+        </button>
+      </div>
+
+      <input type="hidden" name="id" value={item.id} />
+
+      <input
+        name="titulo"
+        required
+        defaultValue={item.titulo}
+        placeholder="Título do item"
+        className={inputClass}
+      />
+
+      <select name="area_id" defaultValue={item.area_id ?? ""} className={inputClass}>
+        <option value="">Escolha a área (opcional)</option>
+        {areas.map((area) => (
+          <option key={area.id} value={area.id}>{area.nome}</option>
+        ))}
+      </select>
+
+      <div className="flex flex-col gap-1">
+        <input
+          name="categoria"
+          required
+          list="categoria-edicao"
+          defaultValue={item.categoria}
+          placeholder="Categoria ou título da utilidade"
+          className={inputClass}
+        />
+        <datalist id="categoria-edicao">
+          {CATEGORIA_SUGGESTIONS.map((label) => (
+            <option key={label} value={label} />
+          ))}
+        </datalist>
+      </div>
+
+      <input
+        name="url"
+        defaultValue={item.url ?? ""}
+        placeholder="URL (link para o documento ou site)"
+        className={inputClass}
+      />
+
+      <input
+        name="tags"
+        defaultValue={item.tags.join(", ")}
+        placeholder="Tags separadas por vírgula"
+        className={inputClass}
+      />
+
+      <textarea
+        name="descricao"
+        rows={3}
+        defaultValue={item.descricao ?? ""}
+        placeholder="Descrição curta (opcional)"
+        className={`${inputClass} min-h-20 resize-y py-3`}
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="submit" className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 text-lg font-medium text-white transition-colors hover:bg-[#28627B]">
+          Salvar
+        </button>
+        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-lg text-zinc-600 hover:text-zinc-900">
+          Cancelar
+        </button>
+      </div>
+
+      {state.message && (
+        <p className={`text-base ${state.ok ? "text-green-800" : "text-red-700"}`}>{state.message}</p>
+      )}
+    </form>
   );
 }
 
