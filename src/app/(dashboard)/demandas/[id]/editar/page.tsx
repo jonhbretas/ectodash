@@ -230,6 +230,8 @@ export default async function EditarDemandaPage({
             )}
           </div>
         </div>
+
+        {canExcluir && <ExcluirDemandaButton demandaId={id} />}
       </div>
     </PageContainer>
   );

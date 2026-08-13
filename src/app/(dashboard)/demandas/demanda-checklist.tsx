@@ -188,7 +188,7 @@ export default function DemandaChecklist({
             required
             placeholder="Adicionar item..."
             disabled={addPending}
-            className="min-h-12 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+            className="min-h-12 min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           />
           <button
             type="submit"
