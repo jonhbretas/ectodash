@@ -9,6 +9,8 @@
 //   • src/app/api/wp/debug/orders   (debug endpoint — production-gated)
 //   • src/app/api/proep/import-from-store (PROEP import — role-gated)
 //   • src/app/(auth)/cadastro/actions.ts (signUp — duplicate-email precheck)
+//   • src/app/(dashboard)/voluntarios/actions.ts (coordenador_geral resetting a
+//     volunteer's password via admin.auth.updateUserById — role-gated)
 //
 // If you need to add a new caller, update the ALLOWED_PREFIXES list below
 // and this comment.
@@ -21,6 +23,7 @@ const ALLOWED_PREFIXES = [
   "/api/wp/debug/",
   "/api/proep/import-from-store",
   "(auth)/cadastro/actions.ts",
+  "(dashboard)/voluntarios/actions.ts",
 ];
 
 function assertAllowedCaller() {

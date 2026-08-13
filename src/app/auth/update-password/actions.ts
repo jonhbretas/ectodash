@@ -36,6 +36,20 @@ export async function updatePassword(
 
   const supabase = await createClient();
 
+  // O link de recuperação (código PKCE) é de uso único: se a sessão não
+  // existir aqui, o código já foi consumido/expirado ou foi aberto em outro
+  // navegador — deixa claro o que aconteceu em vez de apenas falhar.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      ok: false,
+      message:
+        "Sua sessão expirou ou o link já foi usado. Solicite um novo link de redefinição.",
+    };
+  }
+
   const { error } = await supabase.auth.updateUser({
     password: parsed.data.password,
   });
@@ -44,7 +58,8 @@ export async function updatePassword(
     console.error("updatePassword failed", error);
     return {
       ok: false,
-      message: "Erro ao redefinir senha. O link pode ter expirado. Solicite um novo.",
+      message:
+        "Não foi possível redefinir a senha. O link pode ter expirado — solicite um novo link de redefinição.",
     };
   }
 

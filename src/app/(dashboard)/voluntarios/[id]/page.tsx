@@ -28,6 +28,7 @@ import OverdueBadge from "../../demandas/overdue-badge";
 import AtividadesSection from "../atividades-section";
 import SituacaoToggle from "../situacao-toggle";
 import CargosManager from "../cargos-manager";
+import RedefinirSenhaButton from "../redefinir-senha-button";
 
 type VoluntarioPageProps = {
   params: Promise<{ id: string }>;
@@ -363,6 +364,12 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                   Editar cadastro
                 </Link>
                 <SituacaoToggle voluntarioId={voluntario.id} situacao={situacao} />
+                {role === "coordenador_geral" && linked?.id && (
+                  <RedefinirSenhaButton
+                    profileId={linked.id}
+                    nome={voluntario.nome}
+                  />
+                )}
               </div>
             )}
           </div>

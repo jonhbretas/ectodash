@@ -13,6 +13,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendNovaSenha } from "@/lib/notifications/send-nova-senha";
 import { ATIVIDADES_VOLUNTARIO } from "@/lib/atividades-voluntario";
 
 export type PerfilState = { ok: boolean; message: string };
@@ -745,5 +747,172 @@ export async function salvarAtividadesVoluntario(
 }
 
 // ---------------------------------------------------------------------------
-// Merge de cadastros repetidos (migration 0028)
+// Senhas (acesso)
+
+export type AlterarSenhaState = { ok: boolean; message: string };
+const alterarSenhaInitial: AlterarSenhaState = { ok: false, message: "" };
+
+const novaSenhaSchema = z
+  .string()
+  .min(8, "A senha deve ter pelo menos 8 caracteres.")
+  .max(128);
+
+// Self-service: o próprio usuário troca a senha pelo perfil. Exige a senha
+// atual (confirmada via signInWithPassword) antes do updateUser — impede que
+// uma sessão cooptada troque a senha sem conhecer a vigente.
+export async function alterarMinhaSenha(
+  prevState: AlterarSenhaState,
+  formData: FormData
+): Promise<AlterarSenhaState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ...alterarSenhaInitial, message: "Sessão expirada." };
+
+  const rawAtual = formData.get("senhaAtual");
+  const rawNova = formData.get("novaSenha");
+  const rawConfirmacao = formData.get("confirmacao");
+  const senhaAtual = typeof rawAtual === "string" ? rawAtual : "";
+  const novaSenha = typeof rawNova === "string" ? rawNova : "";
+  const confirmacao = typeof rawConfirmacao === "string" ? rawConfirmacao : "";
+
+  if (!senhaAtual) {
+    return { ...alterarSenhaInitial, message: "Digite sua senha atual." };
+  }
+
+  const parsed = novaSenhaSchema.safeParse(novaSenha);
+  if (!parsed.success) {
+    return {
+      ...alterarSenhaInitial,
+      message: parsed.error.issues[0]?.message ?? "Senha inválida.",
+    };
+  }
+  if (novaSenha !== confirmacao) {
+    return { ...alterarSenhaInitial, message: "As senhas não conferem." };
+  }
+  if (senhaAtual === novaSenha) {
+    return {
+      ...alterarSenhaInitial,
+      message: "A nova senha deve ser diferente da atual.",
+    };
+  }
+
+  if (!user.email) {
+    return {
+      ...alterarSenhaInitial,
+      message: "Não foi possível identificar seu e-mail.",
+    };
+  }
+
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: senhaAtual,
+  });
+  if (verifyError) {
+    console.error(
+      "alterarMinhaSenha: senha atual incorreta",
+      verifyError.message?.substring(0, 20)
+    );
+    return { ...alterarSenhaInitial, message: "Senha atual incorreta." };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data,
+  });
+  if (error) {
+    console.error("alterarMinhaSenha: updateUser failed", error);
+    return {
+      ...alterarSenhaInitial,
+      message: "Não foi possível alterar a senha. Tente novamente.",
+    };
+  }
+
+  revalidatePath("/perfil");
+  return { ok: true, message: "Senha alterada com sucesso." };
+}
+
+export type RedefinirSenhaState = { ok: boolean; message: string };
+const redefinirSenhaInitial: RedefinirSenhaState = { ok: false, message: "" };
+
+// Coordenador geral redefine a senha de um voluntário manualmente (admin API,
+// bypass de RLS por design — o gate de role aqui é a barreira real). O
+// voluntário recebe a nova senha por e-mail, contornando o caso do link de
+// recuperação expirado/consumido.
+export async function redefinirSenhaVoluntario(
+  profileId: string,
+  novaSenha: string
+): Promise<RedefinirSenhaState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ...redefinirSenhaInitial, message: "Sessão expirada." };
+
+  const { data: perfil } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (perfil?.role !== "coordenador_geral") {
+    return {
+      ...redefinirSenhaInitial,
+      message: "Somente o coordenador geral pode redefinir senhas.",
+    };
+  }
+
+  const parsed = novaSenhaSchema.safeParse(novaSenha);
+  if (!parsed.success) {
+    return {
+      ...redefinirSenhaInitial,
+      message: parsed.error.issues[0]?.message ?? "Senha inválida.",
+    };
+  }
+
+  const { data: alvo } = await supabase
+    .from("profiles")
+    .select("email, full_name, voluntario_id")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!alvo?.email) {
+    return { ...redefinirSenhaInitial, message: "Perfil não encontrado." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(profileId, {
+    password: parsed.data,
+  });
+  if (error) {
+    console.error("redefinirSenhaVoluntario: updateUserById failed", error);
+    return {
+      ...redefinirSenhaInitial,
+      message: "Não foi possível redefinir a senha. Tente novamente.",
+    };
+  }
+
+  // Falha no envio não desfaz a redefinição — apenas avisa o coordenador.
+  const sendResult = await sendNovaSenha({
+    to: alvo.email,
+    nome: alvo.full_name ?? "",
+    novaSenha: parsed.data,
+  });
+  if (sendResult.error) {
+    console.error("redefinirSenhaVoluntario: sendNovaSenha failed", sendResult.error);
+    return {
+      ok: true,
+      message:
+        "Senha redefinida, mas não foi possível enviar o e-mail. Comunique a nova senha ao voluntário.",
+    };
+  }
+
+  if (alvo.voluntario_id) {
+    revalidatePath(`/voluntarios/${alvo.voluntario_id}`);
+    revalidatePath("/voluntarios");
+  }
+  return {
+    ok: true,
+    message: "Senha redefinida. O voluntário recebeu a nova senha por e-mail.",
+  };
+}
+
 

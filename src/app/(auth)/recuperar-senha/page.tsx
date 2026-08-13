@@ -1,7 +1,14 @@
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 import RecuperarSenhaForm from "./recuperar-form";
 
-export default function RecuperarSenhaPage() {
+export default async function RecuperarSenhaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const erro = params.erro;
+
   return (
     <main className="flex min-h-dvh flex-1 items-stretch bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20">
       <aside
@@ -50,6 +57,15 @@ export default function RecuperarSenhaPage() {
           <p className="text-sm text-slate-600">
             Digite seu e-mail abaixo e enviaremos um link para redefinir sua senha.
           </p>
+          {erro === "link_invalido" && (
+            <p
+              role="alert"
+              className="flex w-full items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base font-medium text-red-800 ring-1 ring-red-200/60"
+            >
+              <AlertCircle size={18} aria-hidden="true" className="shrink-0" />
+              O link expirou ou já foi usado. Solicite um novo link abaixo.
+            </p>
+          )}
         </div>
         <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60">
           <RecuperarSenhaForm />

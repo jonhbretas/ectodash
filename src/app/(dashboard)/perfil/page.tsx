@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { UserRound, Lock, Mail, Shield, MapPin, Hash, Building2, Briefcase, Calendar, ArrowLeft, NotebookPen } from "lucide-react";
+import { UserRound, Lock, Mail, Shield, MapPin, Hash, Building2, Briefcase, Calendar, ArrowLeft, NotebookPen, KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
 import { roleLabel } from "@/lib/role-labels";
 import { exibirUnidade } from "@/lib/unidade-label";
 import PageContainer from "../page-container";
 import MeuPerfilForm from "../voluntarios/meu-perfil-form";
+import AlterarSenhaForm from "../voluntarios/alterar-senha-form";
 import AtividadesSection from "../voluntarios/atividades-section";
 
 export default async function MeuPerfilPage() {
@@ -119,6 +120,18 @@ export default async function MeuPerfilPage() {
               </div>
               <div className="p-5">
                 <MeuPerfilForm nomeAtual={displayName(profile)} />
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 overflow-hidden">
+              <div className="border-b border-slate-100 px-5 py-3">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <KeyRound size={14} aria-hidden="true" />
+                  Alterar senha
+                </span>
+              </div>
+              <div className="p-5">
+                <AlterarSenhaForm />
               </div>
             </div>
 
