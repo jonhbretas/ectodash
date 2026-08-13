@@ -362,7 +362,16 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
 
       <header className="sticky top-0 z-40 flex h-14 w-full items-center border-b border-[#e8ddd4]/60 glass px-4 lg:hidden">
         <div className="min-w-0 shrink-0">
-          <SidebarBrand collapsed={true} />
+          <a
+            href="/"
+            aria-label="EctoLab — página inicial"
+            className="flex min-h-12 items-center gap-2"
+          >
+            <img src="/favicon.png" alt="" className="h-9 w-9 shrink-0" />
+            <span className="font-[family-name:var(--font-poppins)] text-lg font-semibold tracking-wide text-slate-800">
+              EctoLab
+            </span>
+          </a>
         </div>
         <div className="ml-auto">
           <button
