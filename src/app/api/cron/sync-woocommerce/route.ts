@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         products_synced: counts.products,
         orders_synced: counts.orders,
         customers_synced: counts.customers,
-        error_message: errorMessage,
+        error: errorMessage,
       })
       .eq("id", runId);
   }
