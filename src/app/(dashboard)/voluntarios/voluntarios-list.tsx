@@ -165,7 +165,7 @@ export default function VoluntariosListClient({
 
     return (
       <section key={no.nome} className={`flex w-full flex-col gap-3 ${nivel > 0 ? "ml-4 border-l-2 border-zinc-100 pl-4" : ""}`}>
-        <div className="flex w-full items-center gap-3">
+        <div className="flex w-full flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => toggleCollapse(no.nome)}
@@ -173,15 +173,15 @@ export default function VoluntariosListClient({
             className="flex min-w-0 flex-1 items-center gap-3 text-left"
           >
             <span
-              className={`rounded-full ${isCollapsed ? "bg-zinc-200 text-zinc-600" : "bg-[#E6E6E6] text-[#2195B9]"}`}
+              className={`shrink-0 rounded-full ${isCollapsed ? "bg-zinc-200 text-zinc-600" : "bg-[#E6E6E6] text-[#2195B9]"}`}
               aria-hidden="true"
             >
               {isCollapsed ? <Plus size={20} className="m-1" /> : <Minus size={20} className="m-1" />}
             </span>
-            <h2 className={`flex-1 ${nivel > 0 ? "text-xl sm:text-2xl" : "text-2xl font-semibold sm:text-3xl"} ${isSemArea ? "font-semibold text-zinc-500" : "font-semibold text-zinc-900"}`}>
+            <h2 className={`min-w-0 flex-1 ${nivel > 0 ? "text-xl sm:text-2xl" : "text-2xl font-semibold sm:text-3xl"} ${isSemArea ? "font-semibold text-zinc-500" : "font-semibold text-zinc-900"}`}>
               {no.nome}
             </h2>
-            <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
               {branchRows.length} {branchRows.length === 1 ? "voluntário" : "voluntários"}
             </span>
           </button>
@@ -189,7 +189,7 @@ export default function VoluntariosListClient({
             <button
               type="button"
               onClick={() => selectAllInArea(branchRows)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
+              className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-100 px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
             >
               {allSelected ? <CheckSquare size={18} /> : <Square size={18} />}
               {allSelected ? "Todos" : someSelected ? `${branchRows.filter((r) => selectedIds.has(r.id)).length}` : "Selecionar"}
@@ -232,7 +232,7 @@ export default function VoluntariosListClient({
       </div>
 
       {selectedIdsArr.length > 0 && (
-        <div className="sticky top-2 z-30 flex w-full flex-col gap-3 rounded-2xl bg-[#E6E6E6] p-4 shadow-[0_4px_12px_rgba(33,149,185,0.15)] ring-1 ring-[#E6E6E6]/60">
+        <div className="z-30 flex w-full flex-col gap-3 rounded-2xl bg-[#E6E6E6] p-4 shadow-[0_4px_12px_rgba(33,149,185,0.15)] ring-1 ring-[#E6E6E6]/60 sm:sticky sm:top-2">
           <div className="flex w-full flex-wrap items-center gap-3">
             <span className="text-lg font-medium text-[#28627B]">
               {selectedIdsArr.length} {selectedIdsArr.length === 1 ? "selecionado" : "selecionados"}
@@ -361,10 +361,10 @@ function PendingButton({ children, className }: { children: React.ReactNode; cla
 
 function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
       {icon}
-      <div className="flex flex-col">
-        <span className="text-base font-medium text-zinc-500">{label}</span>
+      <div className="flex min-w-0 flex-col">
+        <span className="truncate text-base font-medium text-zinc-500">{label}</span>
         <span className="text-2xl font-semibold text-zinc-900">{value}</span>
       </div>
     </div>
@@ -381,88 +381,90 @@ function VoluntarioCard({
   const effectiveRole = linked?.role ?? row.role ?? "voluntario_comum";
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 sm:px-5 sm:py-4 ${isLast ? "" : "border-b border-zinc-100"}`}>
-      {showCheckbox && (
-        <button
-          type="button"
-          onClick={onToggleSelect}
-          className="shrink-0 rounded p-0.5 transition-colors hover:bg-zinc-100"
-          aria-label={isSelected ? "Desmarcar" : "Selecionar"}
-        >
-          {isSelected ? <CheckSquare size={22} className="text-[#2195B9]" /> : <Square size={22} className="text-zinc-400" />}
-        </button>
-      )}
-
-      <div className="flex min-w-0 flex-1 flex-col gap-1 rounded-lg">
-        <Link
-          href={`/voluntarios/${row.id}`}
-          className="flex flex-col gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-        >
-          <span className="flex flex-wrap items-center gap-2">
-            <span className={`truncate text-xl font-medium ${row.ativo ? "text-zinc-900" : "text-zinc-500 line-through"}`}>
-              {row.nome}
-            </span>
-            {linked && (
-              <span className="flex items-center gap-1 rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-base font-medium text-[#28627B] ring-1 ring-[#E6E6E6]/60">
-                <UserRoundCheck size={14} aria-hidden="true" />
-                Vinculado
-              </span>
-            )}
-            {row.situacao === "ocioso" && (
-              <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-base font-medium text-amber-800 ring-1 ring-amber-200/60">
-                <MoonStar size={14} aria-hidden="true" />
-                Ocioso
-              </span>
-            )}
-            {afastado && (
-              <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-base font-medium text-amber-800 ring-1 ring-amber-200/60">
-                Saída: {formatData(row.data_saida)}
-              </span>
-            )}
-          </span>
-          <span className="truncate text-base text-zinc-600">
-            {[row.codigo_pf ? `Cód. PF ${row.codigo_pf}` : null, exibirUnidade(row.unidade), row.funcao, linked?.email ?? null]
-              .filter(Boolean).join(" · ")}
-          </span>
-          <span className="truncate text-base text-zinc-500">
-            {row.org_depto ?? "—"} · Desde {formatData(row.data_inicio) ?? "—"}
-          </span>
-        </Link>
-        {(row.telefone1 || row.telefone2) && (
-          <span className="flex flex-wrap items-center gap-2 text-base">
-            {row.telefone1 && (
-              <a
-                href={`https://wa.me/${phoneToDigits(row.telefone1).startsWith("55") ? phoneToDigits(row.telefone1) : "55" + phoneToDigits(row.telefone1)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-green-700 hover:text-green-900 hover:underline"
-              >
-                <MessageCircle size={14} aria-hidden="true" />
-                {formatPhoneDisplay(row.telefone1)}
-              </a>
-            )}
-            {row.telefone2 && (
-              <a
-                href={`https://wa.me/${phoneToDigits(row.telefone2).startsWith("55") ? phoneToDigits(row.telefone2) : "55" + phoneToDigits(row.telefone2)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-green-700 hover:text-green-900 hover:underline"
-              >
-                <MessageCircle size={14} aria-hidden="true" />
-                {formatPhoneDisplay(row.telefone2)}
-              </a>
-            )}
-          </span>
+    <div className={`flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-4 ${isLast ? "" : "border-b border-zinc-100"}`}>
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        {showCheckbox && (
+          <button
+            type="button"
+            onClick={onToggleSelect}
+            className="mt-0.5 shrink-0 rounded p-0.5 transition-colors hover:bg-zinc-100"
+            aria-label={isSelected ? "Desmarcar" : "Selecionar"}
+          >
+            {isSelected ? <CheckSquare size={22} className="text-[#2195B9]" /> : <Square size={22} className="text-zinc-400" />}
+          </button>
         )}
+
+        <div className="flex min-w-0 flex-1 flex-col gap-1 rounded-lg">
+          <Link
+            href={`/voluntarios/${row.id}`}
+            className="flex flex-col gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          >
+            <span className="flex flex-wrap items-center gap-2">
+              <span className={`min-w-0 truncate text-xl font-medium ${row.ativo ? "text-zinc-900" : "text-zinc-500 line-through"}`}>
+                {row.nome}
+              </span>
+              {linked && (
+                <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-base font-medium text-[#28627B] ring-1 ring-[#E6E6E6]/60">
+                  <UserRoundCheck size={14} aria-hidden="true" />
+                  Vinculado
+                </span>
+              )}
+              {row.situacao === "ocioso" && (
+                <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-0.5 text-base font-medium text-amber-800 ring-1 ring-amber-200/60">
+                  <MoonStar size={14} aria-hidden="true" />
+                  Ocioso
+                </span>
+              )}
+              {afastado && (
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-0.5 text-base font-medium text-amber-800 ring-1 ring-amber-200/60">
+                  Saída: {formatData(row.data_saida)}
+                </span>
+              )}
+            </span>
+            <span className="truncate text-base text-zinc-600">
+              {[row.codigo_pf ? `Cód. PF ${row.codigo_pf}` : null, exibirUnidade(row.unidade), row.funcao, linked?.email ?? null]
+                .filter(Boolean).join(" · ")}
+            </span>
+            <span className="truncate text-base text-zinc-500">
+              {row.org_depto ?? "—"} · Desde {formatData(row.data_inicio) ?? "—"}
+            </span>
+          </Link>
+          {(row.telefone1 || row.telefone2) && (
+            <span className="flex flex-wrap items-center gap-2 text-base">
+              {row.telefone1 && (
+                <a
+                  href={`https://wa.me/${phoneToDigits(row.telefone1).startsWith("55") ? phoneToDigits(row.telefone1) : "55" + phoneToDigits(row.telefone1)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 whitespace-nowrap text-green-700 hover:text-green-900 hover:underline"
+                >
+                  <MessageCircle size={14} aria-hidden="true" />
+                  {formatPhoneDisplay(row.telefone1)}
+                </a>
+              )}
+              {row.telefone2 && (
+                <a
+                  href={`https://wa.me/${phoneToDigits(row.telefone2).startsWith("55") ? phoneToDigits(row.telefone2) : "55" + phoneToDigits(row.telefone2)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 whitespace-nowrap text-green-700 hover:text-green-900 hover:underline"
+                >
+                  <MessageCircle size={14} aria-hidden="true" />
+                  {formatPhoneDisplay(row.telefone2)}
+                </a>
+              )}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-base font-medium text-zinc-800 ring-1 ring-zinc-200/60">
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-zinc-100 px-3 py-1 text-base font-medium text-zinc-800 ring-1 ring-zinc-200/60">
           {roleLabel(effectiveRole)}
         </span>
         <Link
           href={`/voluntarios/${row.id}/editar`}
-          className="flex min-h-12 items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          className="flex min-h-12 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <Pencil size={16} aria-hidden="true" />
           Editar
