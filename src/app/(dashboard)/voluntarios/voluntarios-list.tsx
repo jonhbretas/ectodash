@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState, useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Users, UserRoundCheck, Pencil, CalendarClock, Settings2, X, CheckSquare, Square, CheckCircle2, Plus, Minus, MoonStar, UserX, MessageCircle } from "lucide-react";
+import { Users, UserRoundCheck, Pencil, CalendarClock, Settings2, X, CheckSquare, Square, CheckCircle2, Plus, Minus, MoonStar, UserX, MessageCircle, Loader2 } from "lucide-react";
+import { useFormStatus } from "react-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { roleLabel } from "@/lib/role-labels";
@@ -104,6 +106,14 @@ export default function VoluntariosListClient({
   const [showBulkPanel, setShowBulkPanel] = useState(false);
   const [bulkAcao, setBulkAcao] = useState<"desativar" | "ativar" | "migrar_area" | null>(null);
   const [bulkState, bulkAction] = useActionState<BulkState, FormData>(atualizarVoluntariosEmMassa, { ok: false, message: "", processados: 0 });
+  const router = useRouter();
+
+  useEffect(() => {
+    if (bulkState.processados > 0) {
+      router.refresh();
+      clearSelection();
+    }
+  }, [bulkState.processados, router]);
 
   function toggleSelect(id: number) {
     setSelectedIds((prev) => {
@@ -304,12 +314,9 @@ export default function VoluntariosListClient({
                     </div>
                   )}
 
-                  <button
-                    type="submit"
-                    className="flex min-h-12 items-center gap-2 rounded-xl bg-[#2195B9] px-5 text-lg font-medium text-white transition-colors hover:bg-[#28627B]"
-                  >
+                  <PendingButton className="flex min-h-12 items-center gap-2 rounded-xl bg-[#2195B9] px-5 text-lg font-medium text-white transition-colors hover:bg-[#28627B]">
                     Confirmar
-                  </button>
+                  </PendingButton>
 
                   {bulkState.message && (
                     <p className={`text-base ${bulkState.ok ? "text-green-800" : "text-red-700"}`}>
@@ -329,6 +336,26 @@ export default function VoluntariosListClient({
           renderNo({ nome: "Desligados", rows: desligados, subAreas: [] }, 0)}
       </div>
     </>
+  );
+}
+
+function PendingButton({ children, className }: { children: React.ReactNode; className?: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={`${className ?? ""} ${pending ? "pointer-events-none opacity-70" : ""}`}
+    >
+      {pending ? (
+        <>
+          <Loader2 size={18} className="animate-spin" />
+          Processando…
+        </>
+      ) : (
+        children
+      )}
+    </button>
   );
 }
 
