@@ -281,6 +281,13 @@ export default async function FinanceiroPage({
 
   const ultimosLancamentos = filtered.slice(0, 20);
 
+  // Aplicação mês a mês: só meses com valor preenchido, do mais antigo ao
+  // mais recente (mesmo sentido cronológico da tabela "Mês a mês").
+  const aplicacaoRows = references
+    .filter((ref): ref is MonthlyReference & { aplicacao: number } => ref.aplicacao !== null)
+    .sort((a, b) => a.mes.localeCompare(b.mes))
+    .map((ref) => ({ mes: ref.mes, aplicacao: ref.aplicacao }));
+
   const receitaLabel = filters.mes ? "Receita do mês" : "Receita no período";
   const despesaLabel = filters.mes ? "Despesa do mês" : "Despesa no período";
   const resultadoLabel = filters.mes ? "Resultado do mês" : "Resultado no período";
@@ -404,6 +411,64 @@ export default async function FinanceiroPage({
                       {prev ? (
                         <DeltaCell
                           pct={deltaPct(prev.resultado, row.resultado)}
+                          upIsGood
+                        />
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Aplicação mês a mês — referência de aplicação de cada mês (linha
+          "APLICAÇÃO ..." da planilha ou preenchida nos cards). Só meses com
+          valor preenchido aparecem. */}
+      <section className="flex w-full flex-col gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-2xl font-semibold text-zinc-900">
+            Aplicação mês a mês
+          </h2>
+          <span className="text-base text-zinc-500">
+            {aplicacaoRows.length}{" "}
+            {aplicacaoRows.length === 1 ? "mês" : "meses"} com aplicação
+          </span>
+        </div>
+        <div className="overflow-x-auto rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+          <table className="w-full min-w-[24rem] text-left">
+            <thead>
+              <tr className="border-b border-zinc-100 text-sm uppercase tracking-wide text-zinc-500">
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Mês
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  Valor aplicado
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  Δ vs mês anterior
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {aplicacaoRows.map((row, index) => {
+                const prev = index > 0 ? aplicacaoRows[index - 1] : null;
+                return (
+                  <tr
+                    key={row.mes}
+                    className="border-b border-zinc-100 text-lg text-zinc-900 last:border-b-0 transition-colors hover:bg-zinc-50"
+                  >
+                    <td className="px-4 py-3 font-medium">{labelMes(row.mes)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-[#2195B9]">
+                      {brl.format(row.aplicacao)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {prev ? (
+                        <DeltaCell
+                          pct={deltaPct(prev.aplicacao, row.aplicacao)}
                           upIsGood
                         />
                       ) : (
