@@ -167,7 +167,7 @@ export default async function AnalisePage() {
         <p className="text-sm text-slate-500">Metricas de produtividade e evolucao da instituicao.</p>
       </div>
 
-      <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <StatCard label="Demandas" value={total} Icon={ClipboardList} />
         <StatCard label="Concluidas" value={concluidas} Icon={CheckCircle2} iconClassName="text-green-600" />
         <StatCard label="Taxa de conclusao" value={`${taxaConclusao}%`} Icon={TrendingUp} iconClassName={taxaConclusao >= 60 ? "text-green-600" : "text-amber-600"} />
@@ -179,7 +179,8 @@ export default async function AnalisePage() {
       <section className="flex w-full flex-col gap-3">
         <h2 className="text-lg font-semibold tracking-tight text-slate-900">Evolucao mensal de demandas</h2>
         <div className="rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60">
-          <div className="grid grid-cols-7 gap-2">
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[300px] grid-cols-7 gap-2">
             <div />
             {evolucao.map((mes) => (
               <div key={mes.label} className="flex flex-col items-center gap-1.5">
@@ -190,6 +191,7 @@ export default async function AnalisePage() {
                 <span className="text-xs font-medium text-slate-500">{mes.label}</span>
               </div>
             ))}
+            </div>
           </div>
           <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#2195B9]" aria-hidden="true" /> Criadas</span>
@@ -212,8 +214,8 @@ export default async function AnalisePage() {
             {voluntarioRows.map((row, index) => (
               <div key={row.nome} className={`flex flex-col gap-1.5 ${index > 0 ? "border-t border-slate-100 pt-3" : ""} ${index < voluntarioRows.length - 1 ? "pb-3" : ""}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-slate-900">{row.nome}</span>
-                  <span className="text-xs text-slate-500">{row.feitas}/{row.total} concluidas ({row.total > 0 ? Math.round((row.feitas / row.total) * 100) : 0}%)</span>
+                  <span className="min-w-0 truncate text-sm font-medium text-slate-900" title={row.nome}>{row.nome}</span>
+                  <span className="shrink-0 text-xs text-slate-500">{row.feitas}/{row.total} concluidas ({row.total > 0 ? Math.round((row.feitas / row.total) * 100) : 0}%)</span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div className="h-full rounded-full bg-gradient-to-r from-[#2195B9] to-emerald-500" style={{ width: `${(row.total / maxVoluntario) * 100}%` }} role="img" aria-label={`${row.nome}: ${row.total} demandas, ${row.feitas} concluidas`} />
@@ -251,7 +253,8 @@ export default async function AnalisePage() {
         <section className="flex w-full flex-col gap-3">
           <h2 className="text-lg font-semibold tracking-tight text-slate-900">Evolucao financeira</h2>
           <div className="rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60">
-            <div className="grid grid-cols-7 gap-2">
+            <div className="overflow-x-auto">
+              <div className="grid min-w-[300px] grid-cols-7 gap-2">
               <div />
               {financeiroRows.map((mes) => {
                 const maxValor = Math.max(1, ...financeiroRows.flatMap((m) => [m.entradas, m.saidas]));
@@ -265,6 +268,7 @@ export default async function AnalisePage() {
                   </div>
                 );
               })}
+              </div>
             </div>
             <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
               <span className="flex items-center gap-1.5"><TrendingUp size={16} className="text-emerald-600" aria-hidden="true" /> Receita</span>

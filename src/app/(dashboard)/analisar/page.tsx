@@ -163,7 +163,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
           <div className="flex items-center gap-3">
             <label
               htmlFor="arquivo-input"
-              className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#2195B9]"
+              className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#2195B9]"
             >
               <Upload size={16} aria-hidden="true" strokeWidth={1.5} />
               Escolher arquivo
@@ -181,8 +181,8 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
               />
             </label>
             {arquivoNome ? (
-              <span className="flex items-center gap-2 rounded-xl bg-[#E6E6E6] px-3 py-2 text-sm font-medium text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
-                {arquivoNome}
+              <span className="flex min-w-0 max-w-full items-center gap-2 rounded-xl bg-[#E6E6E6] px-3 py-2 text-sm font-medium text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
+                <span className="truncate">{arquivoNome}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -566,8 +566,8 @@ function ResultsScreen({
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">
+                          <div className="min-w-0 flex-1">
+                            <p className="break-words text-sm font-semibold text-slate-900">
                               {e.titulo}
                             </p>
                             {e.descricao && (

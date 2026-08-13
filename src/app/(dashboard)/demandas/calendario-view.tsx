@@ -70,7 +70,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-2xl font-semibold capitalize text-zinc-900">
+        <h3 className="min-w-0 truncate text-2xl font-semibold capitalize text-zinc-900">
           {monthLabel}
         </h3>
         <div className="flex items-center gap-1">
@@ -104,7 +104,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
         {WEEKDAYS.map((weekday) => (
           <div
             key={weekday}
-            className="px-1 pb-1 text-center text-base font-semibold text-zinc-600"
+            className="px-1 pb-1 text-center text-sm font-semibold text-zinc-600 sm:text-base"
           >
             {weekday}
           </div>
@@ -128,7 +128,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
                   }`}
                 >
                   <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-medium ${
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium sm:h-8 sm:w-8 sm:text-lg ${
                       isToday
                         ? "bg-[#2195B9] text-white"
                         : inMonth

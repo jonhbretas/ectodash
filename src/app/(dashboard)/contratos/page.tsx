@@ -319,7 +319,7 @@ export default async function ContratosPage({
         <div className="flex w-full flex-col gap-10">
           {meses.map((mes) => (
             <section key={mes.key} className="flex w-full flex-col gap-4">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
                 <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
                   {mes.label}
@@ -374,7 +374,7 @@ export default async function ContratosPage({
 
           {avulsos.length > 0 && (
             <section className="flex w-full flex-col gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <FolderOpen size={22} className="text-[#2195B9]" aria-hidden="true" />
                 <h2 className="text-2xl font-semibold text-zinc-900">
                   Sem evento vinculado

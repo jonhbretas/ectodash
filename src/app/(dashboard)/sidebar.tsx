@@ -284,9 +284,9 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
       />
       <div className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-slate-200 glass-strong px-5 py-6 animate-slide-in-right">
         <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <SidebarBrand collapsed={false} size="lg" />
-          </div>
+        <div className="flex-1 min-w-0">
+          <SidebarBrand collapsed={false} size="lg" />
+        </div>
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -362,7 +362,7 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
 
       <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[#e8ddd4]/60 glass px-4 lg:hidden">
         <div className="flex-1 min-w-0">
-          <SidebarBrand collapsed={false} />
+          <SidebarBrand collapsed={true} />
         </div>
         <button
           type="button"

@@ -254,8 +254,8 @@ export default function ModelosClient({ modelos }: { modelos: ModeloRow[] }) {
       <AssinafyPanel />
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-2xl font-semibold text-zinc-900">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="min-w-0 text-2xl font-semibold text-zinc-900">
             Modelos ({modelos.length})
           </h2>
           <button

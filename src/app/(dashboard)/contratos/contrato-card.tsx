@@ -178,8 +178,8 @@ export default function ContratoCard({ contrato, vencido = false, eventoData, ca
         <span className="rounded-full bg-purple-50 px-2.5 py-0.5 font-medium text-purple-800 ring-1 ring-purple-200/60">
           {categoriaLabel}
         </span>
-        {contrato.aluno_email && <span>{contrato.aluno_email}</span>}
-        {contrato.aluno_documento && <span>{contrato.aluno_documento}</span>}
+        {contrato.aluno_email && <span className="break-all">{contrato.aluno_email}</span>}
+        {contrato.aluno_documento && <span className="break-all">{contrato.aluno_documento}</span>}
         {valorLabel && <span className="font-semibold text-zinc-700">{valorLabel}</span>}
         {!vencido && contrato.expira_em && (
           <span className="text-amber-700">

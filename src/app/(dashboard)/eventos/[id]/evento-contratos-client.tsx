@@ -546,7 +546,7 @@ function AlunosBloco(props: EventoContratosProps) {
                 />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="font-medium text-zinc-900">{nome || "—"}</span>
-                  <span className="text-sm text-zinc-500">{aluno.email}</span>
+                  <span className="break-all text-sm text-zinc-500">{aluno.email}</span>
                   <span className="flex flex-wrap gap-1">
                     {produtosDoAluno.map((curso) => (
                       <span

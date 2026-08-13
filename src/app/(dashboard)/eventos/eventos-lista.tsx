@@ -166,7 +166,7 @@ export default function EventosLista({
 
           {anteriores.length > 0 && (
             <details className="group w-full">
-              <summary className="flex min-h-14 w-full cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-white px-5 py-4 ring-1 ring-zinc-200/60 marker:hidden transition-colors hover:ring-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-14 w-full cursor-pointer list-none flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-5 py-4 ring-1 ring-zinc-200/60 marker:hidden transition-colors hover:ring-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] [&::-webkit-details-marker]:hidden">
                 <span className="text-2xl font-semibold text-zinc-900">
                   Eventos anteriores ({anteriores.length})
                 </span>
@@ -211,7 +211,7 @@ function MonthSection({
 }) {
   return (
     <div className="flex w-full flex-col gap-3">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
         <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
           {label}

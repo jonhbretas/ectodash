@@ -169,7 +169,7 @@ export default async function DipsPage({
         <div className="flex w-full flex-col gap-8">
           {groups.map((group) => (
             <section key={group.pais} className="flex w-full flex-col gap-5">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="h-8 w-1.5 rounded-full bg-green-600" aria-hidden="true" />
                 <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900 sm:text-3xl">
                   <Globe2 size={26} aria-hidden="true" className="text-green-600" />

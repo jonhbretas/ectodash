@@ -65,7 +65,7 @@ export default function VoluntarioPicker({
             onClick={() => setOpen(false)}
             aria-label="Fechar seletor"
           />
-          <div className="absolute left-0 top-full z-20 mt-2 w-64 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
             <input
               ref={buscaRef}
               value={busca}
