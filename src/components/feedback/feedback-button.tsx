@@ -63,6 +63,18 @@ function anexosValidos(files: File[]): string | null {
   return null;
 }
 
+// Timeout para uploads que travam (rede lenta, servidor sem responder).
+const UPLOAD_TIMEOUT_MS = 30_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), ms)
+    ),
+  ]);
+}
+
 // Envia as imagens direto do navegador ao bucket privado feedback-anexos.
 // O RLS exige caminho {user_id}/... — quem não está autenticado falha aqui.
 async function enviarAnexosParaStorage(
@@ -80,16 +92,29 @@ async function enviarAnexosParaStorage(
   const caminhos: string[] = [];
   for (const arquivo of files) {
     const caminho = `${user.id}/${crypto.randomUUID()}.${EXTENSAO_POR_MIME[arquivo.type]}`;
-    const { error } = await supabase.storage
-      .from("feedback-anexos")
-      .upload(caminho, arquivo, { contentType: arquivo.type, upsert: false });
-    if (error) {
+    try {
+      const { error } = await withTimeout(
+        supabase.storage
+          .from("feedback-anexos")
+          .upload(caminho, arquivo, { contentType: arquivo.type, upsert: false }),
+        UPLOAD_TIMEOUT_MS
+      );
+      if (error) {
+        if (caminhos.length > 0) {
+          await supabase.storage.from("feedback-anexos").remove(caminhos);
+        }
+        return {
+          ok: false,
+          erro: "Não foi possível enviar as imagens. Tente novamente em instantes.",
+        };
+      }
+    } catch {
       if (caminhos.length > 0) {
         await supabase.storage.from("feedback-anexos").remove(caminhos);
       }
       return {
         ok: false,
-        erro: "Não foi possível enviar as imagens. Tente novamente em instantes.",
+        erro: "Envio demorou demais. Verifique sua conexão e tente novamente.",
       };
     }
     caminhos.push(caminho);
@@ -187,16 +212,21 @@ export default function FeedbackButton() {
       return;
     }
     setEnviando(true);
-    const resultado = await enviarAnexosParaStorage(anexos);
-    if (!resultado.ok) {
+    try {
+      const resultado = await enviarAnexosParaStorage(anexos);
+      if (!resultado.ok) {
+        setErroAnexos(resultado.erro);
+        return;
+      }
+      caminhosEnviadosRef.current = resultado.caminhos;
+      const formData = new FormData(event.currentTarget);
+      formData.set("anexos", JSON.stringify(resultado.caminhos));
+      formAction(formData);
+    } catch {
+      setErroAnexos("Ocorreu um erro inesperado. Tente novamente.");
+    } finally {
       setEnviando(false);
-      setErroAnexos(resultado.erro);
-      return;
     }
-    caminhosEnviadosRef.current = resultado.caminhos;
-    const formData = new FormData(event.currentTarget);
-    formData.set("anexos", JSON.stringify(resultado.caminhos));
-    formAction(formData);
   }
 
   // Depois de enviar com sucesso, fecha o diálogo sozinho para o usuário
