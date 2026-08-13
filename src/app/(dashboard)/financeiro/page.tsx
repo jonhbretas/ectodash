@@ -232,6 +232,17 @@ export default async function FinanceiroPage({
   const targetMes = filters.mes ?? mesOptions[0] ?? null;
   const targetRef = targetMes ? refByMes.get(targetMes) : null;
 
+  // Aplicação: se o mês-alvo não tem valor, usa a aplicação mais recente
+  // disponível (a planilha preenche só alguns meses) — o card mostra o
+  // último valor conhecido em vez de "—".
+  const aplicacaoRef =
+    targetRef?.aplicacao != null
+      ? targetRef
+      : references
+          .filter((ref): ref is MonthlyReference & { aplicacao: number } => ref.aplicacao != null)
+          .sort((a, b) => b.mes.localeCompare(a.mes))[0] ?? null;
+  const aplicacaoMesLabel = aplicacaoRef ? labelMes(aplicacaoRef.mes) : "";
+
   // Variação % vs mês anterior — só quando há mês selecionado; sem filtro,
   // o período é "tudo" e não há mês de comparação.
   const prevMes = filters.mes ? prevMonthKey(filters.mes) : null;
@@ -323,8 +334,9 @@ export default async function FinanceiroPage({
           despesaTotal: targetRef?.despesaTotal ?? null,
           saldoTotal: targetRef?.saldoTotal ?? null,
           saldoCaixa: targetRef?.saldoCaixa ?? null,
-          aplicacao: targetRef?.aplicacao ?? null,
+          aplicacao: aplicacaoRef?.aplicacao ?? null,
         }}
+        aplicacaoMesLabel={aplicacaoMesLabel}
       />
 
       {/* Mês a mês — full-width table, selected month highlighted. */}

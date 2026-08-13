@@ -60,10 +60,13 @@ export type ReferenceCardsProps = {
     saldoCaixa: number | null;
     aplicacao: number | null;
   };
+  // Mês da aplicação exibida — pode diferir do mês-alvo quando a planilha
+  // só preenche a aplicação em alguns meses (fallback para a mais recente).
+  aplicacaoMesLabel?: string;
 };
 
 export default function ReferenceCards(props: ReferenceCardsProps) {
-  const { mes, labelMes: labelMesTexto, refs } = props;
+  const { mes, labelMes: labelMesTexto, refs, aplicacaoMesLabel } = props;
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
@@ -106,7 +109,11 @@ export default function ReferenceCards(props: ReferenceCardsProps) {
           label="Valor aplicado"
           value={refs.aplicacao === null ? "—" : brl.format(refs.aplicacao)}
           icon={<PiggyBank size={24} aria-hidden="true" className="shrink-0 text-[#2195B9]" />}
-          sublabel={refs.aplicacao === null ? "Preencha para acompanhar" : `referência de ${labelMesTexto}`}
+          sublabel={
+            refs.aplicacao === null
+              ? "Preencha para acompanhar"
+              : `referência de ${aplicacaoMesLabel || labelMesTexto}`
+          }
           onEdit={() => setDialogOpen(true)}
         />
         <Card
