@@ -169,6 +169,7 @@ export default function DemandaForm({
     resolver: zodResolver(demandaSchema),
     defaultValues: {
       status: "pendente",
+      responsavelIds: defaultValues?.responsavelIds ?? [],
       membroIds: defaultValues?.membroIds ?? [],
       ...defaultValues,
     },
@@ -183,6 +184,7 @@ export default function DemandaForm({
   const [status, setStatus] = useState<DemandaFormValues["status"]>(
     defaultValues?.status ?? "pendente"
   );
+  const [prazoIso, setPrazoIso] = useState(defaultValues?.prazo ?? "");
 
   // Seleção múltipla de responsáveis e membros — checkboxes mobile-friendly
   // substituem o <select multiple> que não funciona em iOS/Android.
@@ -209,6 +211,7 @@ export default function DemandaForm({
       responsavelIds.forEach((id) => fd.append("responsavelIds", id));
       fd.delete("membroIds");
       membroIdsLocal.forEach((id) => fd.append("membroIds", id));
+      fd.set("prazo", _values.prazo);
       formAction(fd);
     }
   };
@@ -250,8 +253,13 @@ export default function DemandaForm({
               </Label>
               <DateInput
                 id="prazo"
+                name="prazo"
                 className={fieldInputClass}
-                {...register("prazo")}
+                value={prazoIso}
+                onChange={(e) => {
+                  setPrazoIso(e.target.value);
+                  setValue("prazo", e.target.value);
+                }}
               />
               {errors.prazo && (
                 <span className={errorClass}>{errors.prazo.message}</span>
@@ -279,11 +287,11 @@ export default function DemandaForm({
                         value={id}
                         checked={responsavelIds.includes(id)}
                         onChange={(e) => {
-                          setResponsavelIds((prev) =>
-                            e.target.checked
-                              ? [...prev, id]
-                              : prev.filter((v) => v !== id)
-                          );
+                          const next = e.target.checked
+                            ? [...responsavelIds, id]
+                            : responsavelIds.filter((v) => v !== id);
+                          setResponsavelIds(next);
+                          setValue("responsavelIds", next);
                         }}
                         className="h-5 w-5 rounded border-zinc-300 accent-[#2195B9]"
                       />
@@ -317,11 +325,11 @@ export default function DemandaForm({
                         value={id}
                         checked={membroIdsLocal.includes(id)}
                         onChange={(e) => {
-                          setMembroIdsLocal((prev) =>
-                            e.target.checked
-                              ? [...prev, id]
-                              : prev.filter((v) => v !== id)
-                          );
+                          const next = e.target.checked
+                            ? [...membroIdsLocal, id]
+                            : membroIdsLocal.filter((v) => v !== id);
+                          setMembroIdsLocal(next);
+                          setValue("membroIds", next);
                         }}
                         className="h-5 w-5 rounded border-zinc-300 accent-[#2195B9]"
                       />
@@ -535,8 +543,13 @@ export default function DemandaForm({
           </Label>
           <DateInput
             id="prazo"
+            name="prazo"
             className={fieldInputClass}
-            {...register("prazo")}
+            value={prazoIso}
+            onChange={(e) => {
+              setPrazoIso(e.target.value);
+              setValue("prazo", e.target.value);
+            }}
           />
           {errors.prazo && (
             <span className={errorClass}>{errors.prazo.message}</span>
