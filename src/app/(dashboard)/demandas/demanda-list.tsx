@@ -276,13 +276,13 @@ export default function DemandaList({
           </h2>
           <p className="max-w-md text-xl text-zinc-500">
             Quando alguém criar uma demanda, ela vai aparecer aqui. Toque em
-            &quot;Nova demanda&quot; para começar.
+            &quot;Criar&quot; para começar.
           </p>
           <Link
             href="/demandas/nova"
             className="flex min-h-14 items-center justify-center rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white transition-all duration-200 hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
-            Nova demanda
+            Criar
           </Link>
         </div>
       ) : grouped ? (

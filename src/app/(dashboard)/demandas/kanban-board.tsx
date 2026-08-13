@@ -425,7 +425,7 @@ export default function KanbanBoard({
           className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 ring-1 ring-zinc-200/60 transition-all duration-200 hover:bg-white hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] lg:hidden"
         >
           <PlusCircle size={22} aria-hidden="true" />
-          Nova demanda
+          Criar
         </Link>
     </div>
   );

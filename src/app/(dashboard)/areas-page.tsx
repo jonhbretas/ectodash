@@ -81,7 +81,7 @@ export default async function AreasPage({
             href="/demandas/nova"
             className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5"
           >
-            Nova demanda
+            Criar
           </Link>
         </div>
       ) : (

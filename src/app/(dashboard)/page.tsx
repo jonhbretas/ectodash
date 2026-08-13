@@ -329,7 +329,7 @@ export default async function DashboardPage({
                 className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-4 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5"
               >
                 <Plus size={18} aria-hidden="true" />
-                Nova demanda
+                Criar
               </Link>
             </div>
           </div>
