@@ -218,23 +218,27 @@ function refKey(descricao: string): string {
 }
 
 // Papéis de referência reconhecidos por nome de linha. A ordem importa:
-// nomes mais específicos vêm antes dos genéricos ("SALDO" puro cai no
-// papel saldoCaixa apenas se nada mais casar).
+// nomes mais específicos vêm antes dos genéricos. Regex por PREFIXO — a
+// planilha real usa nomes compostos ("APLICAÇÃO Sisprime", "SALDO DA CC
+// Sisprime p/ conferência", "SALDO PagBank"), então âncoras exatas
+// deixariam essas linhas caírem como despesa.
 const REFERENCE_ROLES: {
   re: RegExp;
   field: "saldoAnterior" | "receitaTotal" | "despesaTotal" | "saldoTotal" | "saldoCaixa" | "aplicacao";
 }[] = [
-  { re: /^saldo (anterior|inicial)$/, field: "saldoAnterior" },
-  { re: /^(total (de )?receitas?|receita total)$/, field: "receitaTotal" },
-  { re: /^(total (de )?despesas?|despesa total)$/, field: "despesaTotal" },
-  { re: /^(saldo|soma) total$/, field: "saldoTotal" },
-  { re: /^(saldo (de |do |em |no )?caixa|saldo)$/, field: "saldoCaixa" },
-  { re: /^aplica(c|ç)(ao|ões|oes)$/, field: "aplicacao" },
+  { re: /^saldo (anterior|inicial)/, field: "saldoAnterior" },
+  { re: /^(total (de )?receitas?|receita total)/, field: "receitaTotal" },
+  { re: /^(total (de )?despesas?|despesa total)/, field: "despesaTotal" },
+  { re: /^(saldo|soma) total/, field: "saldoTotal" },
+  { re: /^aplica/, field: "aplicacao" },
+  // Saldo genérico (SALDO DE CAIXA, SALDO SISPRIME, SALDO PagBank…).
+  // NUNCA operação — referência de acompanhamento.
+  { re: /^saldo\b/, field: "saldoCaixa" },
 ];
 
-// "TOTAL GERAL", "SUBTOTAL", "SOMA", "SOMATÓRIO..." — qualquer linha cujo
-// nome contenha total/soma/subtotal é referência, nunca operação.
-const TOTAL_LIKE = /\b(total|soma|subtotal)\b/;
+// "TOTAL GERAL", "SUBTOTAL", "SOMA", "SOMATÓRIO..." e linhas de resultado
+// ("RECEITA - DESPESA") — qualquer linha que não seja item de operação.
+const TOTAL_LIKE = /\b(total|soma|subtotal|receita\s*-\s*despesa)\b/;
 
 function classifyReference(descricao: string): "extra" | keyof Omit<FinancialReference, "mes" | "extra"> | null {
   const key = refKey(descricao);

@@ -278,6 +278,35 @@ describe("parseEctolabRows", () => {
     expect(jan?.extra["TOTAL GERAL (Receitas Diversas)"]).toBe(18857.82);
   });
 
+  it("não trata linhas compostas reais (APLICAÇÃO Sisprime, SALDO SISPRIME) como lançamento", () => {
+    const rows = [
+      ["Fluxo de Caixa - 2026"],
+      HEADER_ROW,
+      makeRow("Doação", "Doações", "3.000,00"),
+      makeRow("TOTAL GERAL", "Receitas Diversas", "3.000,00"),
+      makeRow("Facebook", "Comunicação e MKT", null, null, null, "  255,86 "),
+      makeRow("APLICAÇÃO Sisprime", "", "198.387,05"),
+      makeRow("SALDO SISPRIME", "", "42.467,15"),
+      makeRow("SALDO PagBank", "", "3.100,00"),
+      makeRow("SALDO DA CC Sisprime p/ conferência", "", "42.467,15"),
+      makeRow("RECEITA - DESPESA", "", "2.744,14"),
+    ];
+
+    const result = parse(rows);
+    expect(result).not.toBeNull();
+    // Só Doação (entrada) e Facebook (despesa) — as linhas compostas são
+    // referências, não lançamentos.
+    expect(result!.entries.length).toBe(2);
+    expect(result!.entries.map((e) => e.descricao)).toEqual(["Doação", "Facebook"]);
+
+    const jan = result!.references.find((r) => r.mes === "01/2026");
+    expect(jan?.aplicacao).toBe(198387.05);
+    // "APLICAÇÃO Sisprime" entra em aplicacao; saldos em saldoCaixa.
+    expect(jan?.saldoCaixa).toBe(42467.15);
+    // RECEITA - DESPESA é linha de resultado → extra.
+    expect(result!.references.some((r) => Object.keys(r.extra).some((k) => k.includes("RECEITA - DESPESA")))).toBe(true);
+  });
+
   it("pula linhas com valor zero ou vazio", () => {
     const rows = [
       ["Fluxo de Caixa - 2026"],
