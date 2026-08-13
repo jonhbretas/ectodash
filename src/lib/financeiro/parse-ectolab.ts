@@ -15,11 +15,34 @@
 // A planilha tem seções de RECEITAS (antes do primeiro TOTAL GERAL) e
 // DESPESAS (depois do primeiro TOTAL GERAL, agrupadas por centro de
 // custo). Cada célula mensal vira um lançamento individual na data do
-// último dia daquele mês. O SALDO ANTERIOR é importado como uma única
-// entrada no último dia do mês anterior ao primeiro mês com valor,
-// garantindo que o caixa computado pelo dashboard bata com a planilha.
+// último dia daquele mês.
+//
+// Linhas de REFERÊNCIA — SALDO ANTERIOR, RECEITA TOTAL, DESPESA TOTAL,
+// SALDO TOTAL, SALDO DE CAIXA, APLICAÇÃO e qualquer linha cujo nome
+// contenha "total"/"soma"/"subtotal" — NUNCA viram lançamento de operação:
+// elas são capturadas por mês em `references` (a conta de receita/despesa
+// do dashboard usa apenas linhas de item).
 
 import type { FinancialEntry } from "@/lib/sheets/parse-rows";
+
+// Referência mensal agregada — um registro por mês (MM/yyyy), com os
+// campos fixos conhecidos e `extra` para outras linhas de total/soma que a
+// planilha trouxer sem casar com nenhum papel fixo.
+export type FinancialReference = {
+  mes: string; // MM/yyyy
+  saldoAnterior: number | null;
+  receitaTotal: number | null;
+  despesaTotal: number | null;
+  saldoTotal: number | null;
+  saldoCaixa: number | null;
+  aplicacao: number | null;
+  extra: Record<string, number>;
+};
+
+export type EctolabParseResult = {
+  entries: FinancialEntry[];
+  references: FinancialReference[];
+};
 
 const MONTH_NAMES: string[] = [
   "janeiro",
@@ -136,6 +159,93 @@ function monthToDate(year: number, monthName: string): string | null {
   return date.toISOString().slice(0, 10);
 }
 
+// Mesmo parse de valor do parseValor, mas para REFERÊNCIAS: aceita zero e
+// valores negativos (saldo de caixa negativo, saldo anterior a débito,
+// resgate de aplicação) e parênteses contábeis "(1.234,56)". O sinal do
+// lançamento vem do tipo entrada/saida — a referência carrega o sinal real.
+function parseRefValor(raw: unknown): number | null {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === "number") {
+    return Number.isFinite(raw) ? raw : null;
+  }
+
+  const str = String(raw).trim();
+  if (!str || str === "-" || str === "R$ -") return null;
+
+  if (str.includes("#") || /\b(div\/0|ref|value|num|name|null)\b/i.test(str)) {
+    return null;
+  }
+
+  let cleaned = str.replace(/^R\$\s*/i, "").replace(/\s/g, "");
+  if (!cleaned) return null;
+
+  let negative = false;
+  if (cleaned.startsWith("(") && cleaned.endsWith(")")) {
+    negative = true;
+    cleaned = cleaned.slice(1, -1);
+  } else if (cleaned.startsWith("-")) {
+    negative = true;
+    cleaned = cleaned.slice(1);
+  }
+
+  // PT-BR: vírgula é decimal, ponto é milhar
+  if (cleaned.includes(",")) {
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+  } else if (cleaned.includes(".")) {
+    const parts = cleaned.split(".");
+    const last = parts[parts.length - 1];
+    if (parts.length > 1 && last.length === 3) {
+      cleaned = cleaned.replace(/\./g, "");
+    }
+  }
+
+  const value = Number(cleaned);
+  if (!Number.isFinite(value)) return null;
+  return negative ? -value : value;
+}
+
+export { parseRefValor };
+
+// Chave normalizada para classificar linhas de referência: sem acentos,
+// minúscula, sem espaços repetidos ("SALDO DE CAIXA" -> "saldo de caixa").
+function refKey(descricao: string): string {
+  return descricao
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+// Papéis de referência reconhecidos por nome de linha. A ordem importa:
+// nomes mais específicos vêm antes dos genéricos ("SALDO" puro cai no
+// papel saldoCaixa apenas se nada mais casar).
+const REFERENCE_ROLES: {
+  re: RegExp;
+  field: "saldoAnterior" | "receitaTotal" | "despesaTotal" | "saldoTotal" | "saldoCaixa" | "aplicacao";
+}[] = [
+  { re: /^saldo (anterior|inicial)$/, field: "saldoAnterior" },
+  { re: /^(total (de )?receitas?|receita total)$/, field: "receitaTotal" },
+  { re: /^(total (de )?despesas?|despesa total)$/, field: "despesaTotal" },
+  { re: /^(saldo|soma) total$/, field: "saldoTotal" },
+  { re: /^(saldo (de |do |em |no )?caixa|saldo)$/, field: "saldoCaixa" },
+  { re: /^aplica(c|ç)(ao|ões|oes)$/, field: "aplicacao" },
+];
+
+// "TOTAL GERAL", "SUBTOTAL", "SOMA", "SOMATÓRIO..." — qualquer linha cujo
+// nome contenha total/soma/subtotal é referência, nunca operação.
+const TOTAL_LIKE = /\b(total|soma|subtotal)\b/;
+
+function classifyReference(descricao: string): "extra" | keyof Omit<FinancialReference, "mes" | "extra"> | null {
+  const key = refKey(descricao);
+  if (!key) return null;
+  for (const role of REFERENCE_ROLES) {
+    if (role.re.test(key)) return role.field;
+  }
+  if (TOTAL_LIKE.test(key)) return "extra";
+  return null;
+}
+
 /**
  * Detecta se a grade de linhas parece ser uma planilha EctoLab
  * (fluxo de caixa mensal com colunas de mês).
@@ -145,12 +255,13 @@ export function isEctolabFormat(rows: unknown[][]): boolean {
 }
 
 /**
- * Converte a grade de uma planilha EctoLab em entradas financeiras.
+ * Converte a grade de uma planilha EctoLab em entradas financeiras +
+ * referências mensais (linhas de total/soma/saldo/aplicação).
  * Retorna `null` quando não consegue detectar o cabeçalho de meses.
  */
 export function parseEctolabRows(
   rows: unknown[][]
-): FinancialEntry[] | null {
+): EctolabParseResult | null {
   const year = extractYear(rows) ?? new Date().getFullYear();
   const headerResult = findMonthHeaderRow(rows);
   if (!headerResult) return null;
@@ -167,7 +278,32 @@ export function parseEctolabRows(
   const colCat = Math.max(0, firstMonthCol - 1);
 
   const entries: FinancialEntry[] = [];
+  const references: FinancialReference[] = [];
+  const refByMes = new Map<string, FinancialReference>();
   let foundFirstTotal = false;
+
+  function refBucket(mes: string): FinancialReference {
+    let bucket = refByMes.get(mes);
+    if (!bucket) {
+      bucket = {
+        mes,
+        saldoAnterior: null,
+        receitaTotal: null,
+        despesaTotal: null,
+        saldoTotal: null,
+        saldoCaixa: null,
+        aplicacao: null,
+        extra: {},
+      };
+      refByMes.set(mes, bucket);
+    }
+    return bucket;
+  }
+
+  // "MM/yyyy" a partir de uma data yyyy-MM-dd (último dia do mês).
+  function mesKeyOf(date: string): string {
+    return `${date.slice(5, 7)}/${date.slice(0, 4)}`;
+  }
 
   for (let i = headerRowIndex + 1; i < rows.length; i++) {
     const row = rows[i];
@@ -181,40 +317,28 @@ export function parseEctolabRows(
 
     const upperDesc = desc.toUpperCase();
 
-    // Detecta TOTAL GERAL — marca fim da seção de receitas
+    // TOTAL GERAL — marca fim da seção de receitas E é também uma linha de
+    // referência (capturada em `extra`, nunca vira lançamento).
     if (upperDesc === "TOTAL GERAL") {
       foundFirstTotal = true;
-      continue;
     }
 
-    // Linhas de resumo do rodapé
-    if (
-      upperDesc === "RECEITA TOTAL" ||
-      upperDesc === "DESPESA TOTAL" ||
-      upperDesc === "SALDO DE CAIXA"
-    ) {
-      continue;
-    }
-
-    // SALDO ANTERIOR — importa apenas o primeiro mês com valor como
-    // entrada de abertura no último dia do mês anterior
-    if (upperDesc === "SALDO ANTERIOR") {
+    // Linhas de referência: total/soma/saldo/aplicação não entram na conta
+    // de receita/despesa da operação — são capturadas por mês e exibidas em
+    // cards de acompanhamento no dashboard.
+    const role = classifyReference(desc);
+    if (role !== null) {
       for (const [colIndex, monthName] of monthIndices) {
-        const valor = parseValor(row[colIndex]);
-        if (valor !== null) {
-          const data = monthToDate(year, monthName);
-          if (data) {
-            const prev = new Date(`${data}T00:00:00`);
-            prev.setDate(0); // último dia do mês anterior
-            entries.push({
-              tipo: "entrada",
-              descricao: "SALDO ANTERIOR",
-              valor,
-              data: prev.toISOString().slice(0, 10),
-              categoria: null,
-            });
-          }
-          break; // apenas o primeiro mês com valor
+        const valor = parseRefValor(row[colIndex]);
+        if (valor === null) continue;
+        const data = monthToDate(year, monthName);
+        if (!data) continue;
+        const bucket = refBucket(mesKeyOf(data));
+        if (role === "extra") {
+          const key = `${desc}${categoria ? ` (${categoria})` : ""}`;
+          if (!(key in bucket.extra)) bucket.extra[key] = valor;
+        } else if (bucket[role] === null) {
+          bucket[role] = valor;
         }
       }
       continue;
@@ -244,5 +368,8 @@ export function parseEctolabRows(
     }
   }
 
-  return entries;
+  for (const bucket of refByMes.values()) references.push(bucket);
+  references.sort((a, b) => a.mes.localeCompare(b.mes));
+
+  return { entries, references };
 }

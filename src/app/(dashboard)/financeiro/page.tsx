@@ -13,12 +13,10 @@
 // every month (highlighting the selection).
 import Link from "next/link";
 import {
-  ArrowDownCircle,
-  ArrowUpCircle,
+  ArrowDownRight,
+  ArrowUpRight,
   Lock,
-  Scale,
   Wallet,
-  TrendingUp,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
@@ -29,6 +27,7 @@ import {
   parseFinanceiroFilters,
   type FinanceiroFilters as FinanceiroFilterState,
 } from "./financeiro-filter-schema";
+import ReferenceCards from "./reference-cards";
 import SheetSyncPanel, {
   type SheetSyncRunRow,
 } from "../painel/sheet-sync-panel";
@@ -49,6 +48,18 @@ type EntryRow = {
   valor: number;
   data: string;
   categoria: string | null;
+};
+
+// Referência mensal (linhas de total/soma/saldo/aplicação da planilha ou
+// preenchidas nos cards) — nunca um lançamento de operação.
+type MonthlyReference = {
+  mes: string;
+  saldoAnterior: number | null;
+  receitaTotal: number | null;
+  despesaTotal: number | null;
+  saldoTotal: number | null;
+  saldoCaixa: number | null;
+  aplicacao: number | null;
 };
 
 // One Intl formatter for the whole page — BRL currency, pt-BR grouping.
@@ -111,7 +122,7 @@ export default async function FinanceiroPage({
 
   // Both reads in parallel — the page's data never depends on the run-log
   // read, so awaiting them sequentially would only add latency.
-  const [entriesResult, runsResult] = await Promise.all([
+  const [entriesResult, runsResult, refsResult] = await Promise.all([
     supabase
       .from("financial_entries")
       .select("id, tipo, descricao, valor, data, categoria")
@@ -123,6 +134,11 @@ export default async function FinanceiroPage({
       )
       .order("started_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("financial_monthly_references")
+      .select(
+        "mes, saldo_anterior, receita_total, despesa_total, saldo_total, saldo_caixa, aplicacao"
+      ),
   ]);
 
   const entries: EntryRow[] = (entriesResult.data ?? []).map((row) => ({
@@ -143,7 +159,17 @@ export default async function FinanceiroPage({
     errorMessage: row.error_message,
   }));
 
-  if (entries.length === 0) {
+  const references: MonthlyReference[] = (refsResult.data ?? []).map((row) => ({
+    mes: row.mes,
+    saldoAnterior: row.saldo_anterior,
+    receitaTotal: row.receita_total,
+    despesaTotal: row.despesa_total,
+    saldoTotal: row.saldo_total,
+    saldoCaixa: row.saldo_caixa,
+    aplicacao: row.aplicacao,
+  }));
+
+  if (entries.length === 0 && references.length === 0) {
     return (
       <PageContainer>
         <Header />
@@ -165,8 +191,13 @@ export default async function FinanceiroPage({
   // Filter-option pools come from the UNFILTERED entry set, so a filter
   // never disappears an option it isn't filtering on (same contract as the
   // demandas screen's base read). Months newest-first; categories sorted.
+  // Referências também alimentam o seletor de mês (um mês pode ter só
+  // referências preenchidas, sem lançamentos).
   const mesOptions = [
-    ...new Set(entries.map((entry) => monthKey(entry.data))),
+    ...new Set([
+      ...entries.map((entry) => monthKey(entry.data)),
+      ...references.map((ref) => ref.mes),
+    ]),
   ].sort((a, b) => b.localeCompare(a));
   const categoriaOptions = [
     ...new Set(
@@ -176,34 +207,61 @@ export default async function FinanceiroPage({
     ),
   ].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-  // The filtered working set — every section below reads from it.
-  const filtered = entries.filter((entry) => {
-    if (filters.mes && monthKey(entry.data) !== filters.mes) return false;
-    if (filters.tipo && entry.tipo !== filters.tipo) return false;
+  function matches(entry: EntryRow, f: FinanceiroFilterState): boolean {
+    if (f.mes && monthKey(entry.data) !== f.mes) return false;
+    if (f.tipo && entry.tipo !== f.tipo) return false;
     if (
-      filters.categoria &&
-      (entry.categoria?.trim() || "Sem categoria") !== filters.categoria
+      f.categoria &&
+      (entry.categoria?.trim() || "Sem categoria") !== f.categoria
     ) {
       return false;
     }
     return true;
-  });
+  }
+
+  // The filtered working set — every section below reads from it.
+  const filtered = entries.filter((entry) => matches(entry, filters));
 
   const entradas = sumByTipo(filtered, "entrada");
   const saidas = sumByTipo(filtered, "saida");
   const resultado = entradas - saidas;
 
-  // Caixa: with a month selected it is the running balance at the END of
-  // that month (all-time entries, tipo/categoria filters don't change the
-  // real balance); without one, the running total across everything.
-  const caixaAcumulado = filters.mes
-    ? caixaAteFimDoMes(filters.mes, entries)
-    : computeSummary(entries).caixaAtual;
+  // Mês-alvo dos cards de referência: o mês filtrado ou o mais recente com
+  // dados. As referências são abertas nesse mês.
+  const refByMes = new Map(references.map((ref) => [ref.mes, ref]));
+  const targetMes = filters.mes ?? mesOptions[0] ?? null;
+  const targetRef = targetMes ? refByMes.get(targetMes) : null;
+
+  // Variação % vs mês anterior — só quando há mês selecionado; sem filtro,
+  // o período é "tudo" e não há mês de comparação.
+  const prevMes = filters.mes ? prevMonthKey(filters.mes) : null;
+  const prevFiltered = prevMes
+    ? entries.filter((entry) => matches(entry, { ...filters, mes: prevMes }))
+    : [];
+  const deltaEntradas = filters.mes
+    ? deltaPct(sumByTipo(prevFiltered, "entrada"), entradas)
+    : null;
+  const deltaSaidas = filters.mes
+    ? deltaPct(sumByTipo(prevFiltered, "saida"), saidas)
+    : null;
+  const deltaResultado = filters.mes
+    ? deltaPct(
+        sumByTipo(prevFiltered, "entrada") - sumByTipo(prevFiltered, "saida"),
+        resultado
+      )
+    : null;
 
   // "Mês a mês" ignores the month filter (it IS the per-month view) but
   // honors tipo/categoria so the table answers "saídas por mês" etc.
   const tableEntries = filters.tipo || filters.categoria ? filtered : entries;
   const { monthlyRows } = computeSummary(tableEntries);
+
+  // "Caixa acumulado no ano": saldo anterior da conta (referência mais
+  // antiga) + soma dos resultados do ano até o mês-alvo.
+  const caixaAcumuladoAno =
+    targetMes !== null
+      ? caixaAcumuladoNoAno(targetMes, entries, references)
+      : computeSummary(entries).caixaAtual;
 
   // Saídas por categoria — from the filtered set (so the month filter
   // applies), only when the tipo filter isn't already "entrada".
@@ -223,12 +281,9 @@ export default async function FinanceiroPage({
 
   const ultimosLancamentos = filtered.slice(0, 20);
 
-  const stats = {
-    entradasLabel: filters.mes ? "Entradas do mês" : "Entradas no período",
-    saidasLabel: filters.mes ? "Saídas do mês" : "Saídas no período",
-    resultadoLabel: filters.mes ? "Resultado do mês" : "Resultado no período",
-    caixaLabel: filters.mes ? "Caixa no fim do mês" : "Caixa acumulado",
-  };
+  const receitaLabel = filters.mes ? "Receita do mês" : "Receita no período";
+  const despesaLabel = filters.mes ? "Despesa do mês" : "Despesa no período";
+  const resultadoLabel = filters.mes ? "Resultado do mês" : "Resultado no período";
 
   return (
     <PageContainer>
@@ -242,34 +297,25 @@ export default async function FinanceiroPage({
         currentFilters={filters}
       />
 
-      {/* Stats — modern pills with semantic grouping, like the demandas
-          screen. Values describe the filtered period. */}
-      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatPill
-          label={stats.entradasLabel}
-          value={brl.format(entradas)}
-          Icon={ArrowUpCircle}
-          iconClassName="text-green-600"
-        />
-        <StatPill
-          label={stats.saidasLabel}
-          value={brl.format(saidas)}
-          Icon={ArrowDownCircle}
-          iconClassName="text-red-600"
-        />
-        <StatPill
-          label={stats.resultadoLabel}
-          value={brl.format(resultado)}
-          Icon={Scale}
-          iconClassName={resultado < 0 ? "text-red-600" : "text-[#2195B9]"}
-        />
-        <StatPill
-          label={stats.caixaLabel}
-          value={brl.format(caixaAcumulado)}
-          Icon={TrendingUp}
-          iconClassName={caixaAcumulado < 0 ? "text-red-600" : "text-green-600"}
-        />
-      </div>
+      {/* Cards — receita/despesa/resultado e caixa do ano calculados dos
+          lançamentos; saldo em caixa e valor aplicado são referências
+          mensais editáveis (nunca entram na conta das operações). */}
+      <ReferenceCards
+        mes={targetMes ?? ""}
+        labelMes={targetMes ? labelMes(targetMes) : ""}
+        receita={{ label: receitaLabel, value: entradas, delta: deltaEntradas }}
+        despesa={{ label: despesaLabel, value: saidas, delta: deltaSaidas }}
+        resultado={{ label: resultadoLabel, value: resultado, delta: deltaResultado }}
+        caixaAno={{ label: "Caixa acumulado no ano", value: caixaAcumuladoAno }}
+        refs={{
+          saldoAnterior: targetRef?.saldoAnterior ?? null,
+          receitaTotal: targetRef?.receitaTotal ?? null,
+          despesaTotal: targetRef?.despesaTotal ?? null,
+          saldoTotal: targetRef?.saldoTotal ?? null,
+          saldoCaixa: targetRef?.saldoCaixa ?? null,
+          aplicacao: targetRef?.aplicacao ?? null,
+        }}
+      />
 
       {/* Mês a mês — full-width table, selected month highlighted. */}
       <section className="flex w-full flex-col gap-4">
@@ -280,7 +326,7 @@ export default async function FinanceiroPage({
           </span>
         </div>
         <div className="overflow-x-auto rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-          <table className="w-full min-w-[36rem] text-left">
+          <table className="w-full min-w-[52rem] text-left">
             <thead>
               <tr className="border-b border-zinc-100 text-sm uppercase tracking-wide text-zinc-500">
                 <th scope="col" className="px-4 py-3 font-medium">
@@ -290,16 +336,26 @@ export default async function FinanceiroPage({
                   Entradas
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
+                  Δ Entradas
+                </th>
+                <th scope="col" className="px-4 py-3 font-medium">
                   Saídas
+                </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Δ Saídas
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
                   Resultado
                 </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Δ Resultado
+                </th>
               </tr>
             </thead>
             <tbody>
-              {monthlyRows.map((row) => {
+              {monthlyRows.map((row, index) => {
                 const selected = row.mes === filters.mes;
+                const prev = index > 0 ? monthlyRows[index - 1] : null;
                 return (
                   <tr
                     key={row.mes}
@@ -320,8 +376,22 @@ export default async function FinanceiroPage({
                     <td className="px-4 py-3 text-green-700">
                       {brl.format(row.entradas)}
                     </td>
+                    <td className="px-4 py-3">
+                      {prev ? (
+                        <DeltaCell pct={deltaPct(prev.entradas, row.entradas)} upIsGood />
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-red-700">
                       {brl.format(row.saidas)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {prev ? (
+                        <DeltaCell pct={deltaPct(prev.saidas, row.saidas)} />
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
                     </td>
                     <td
                       className={`px-4 py-3 ${
@@ -329,6 +399,16 @@ export default async function FinanceiroPage({
                       }`}
                     >
                       {brl.format(row.resultado)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {prev ? (
+                        <DeltaCell
+                          pct={deltaPct(prev.resultado, row.resultado)}
+                          upIsGood
+                        />
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -482,36 +562,6 @@ function Header() {
   );
 }
 
-// Stat pill in the same visual language as the demandas screen's stat
-// cards — white, soft ring, icon+label paired, value below.
-function StatPill({
-  label,
-  value,
-  Icon,
-  iconClassName,
-}: {
-  label: string;
-  value: string;
-  Icon: typeof ArrowUpCircle;
-  iconClassName: string;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label={`${label}: ${value}`}
-      className="flex min-w-0 items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
-    >
-      <Icon size={24} aria-hidden="true" className={`shrink-0 ${iconClassName}`} />
-      <div className="flex min-w-0 flex-col">
-        <span className="text-base font-medium text-zinc-500">{label}</span>
-        <span className="truncate text-xl font-semibold text-zinc-900 sm:text-2xl">
-          {value}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 function monthKey(data: string): string {
   return format(new Date(`${data}T00:00:00`), "MM/yyyy", { locale: ptBR });
 }
@@ -522,15 +572,64 @@ function sumByTipo(entries: EntryRow[], tipo: "entrada" | "saida"): number {
     .reduce((sum, entry) => sum + entry.valor, 0);
 }
 
-// Running balance at the end of the given month (MM/yyyy) — entries on or
-// before the month's last day, in the global (tipo/categoria-agnostic)
-// sense the word "caixa" implies.
-function caixaAteFimDoMes(mes: string, entries: EntryRow[]): number {
-  const [month, year] = mes.split("/");
-  const lastDay = format(new Date(Number(year), Number(month), 0), "yyyy-MM-dd");
-  let total = 0;
+// Δ% vs o mês anterior na tabela "Mês a mês" — seta + valor, verde quando
+// a variação é boa para aquela coluna (entradas/resultado sobem bem;
+// saídas subirem é ruim).
+function DeltaCell({ pct, upIsGood }: { pct: number | null; upIsGood?: boolean }) {
+  if (pct === null) return <span className="text-zinc-400">—</span>;
+  const up = pct >= 0;
+  const good = up === Boolean(upIsGood);
+  const Icon = up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 whitespace-nowrap font-medium ${
+        good ? "text-green-700" : "text-red-700"
+      }`}
+    >
+      <Icon size={16} aria-hidden="true" />
+      {formatDeltaPct(pct)}
+    </span>
+  );
+}
+
+function deltaPct(prev: number, current: number): number | null {
+  if (prev === 0) return null;
+  return ((current - prev) / Math.abs(prev)) * 100;
+}
+
+function formatDeltaPct(pct: number): string {
+  const prefix = pct >= 0 ? "+" : "−";
+  return `${prefix}${Math.abs(pct).toLocaleString("pt-BR", {
+    maximumFractionDigits: 1,
+  })}%`;
+}
+
+// "MM/yyyy" do mês anterior ao dado (ex.: "01/2026" -> "12/2025").
+function prevMonthKey(mes: string): string {
+  const [month, year] = mes.split("/").map(Number);
+  const prev = month === 1 ? { m: 12, y: year - 1 } : { m: month - 1, y: year };
+  return `${String(prev.m).padStart(2, "0")}/${prev.y}`;
+}
+
+// "Caixa acumulado no ano" — saldo anterior da conta (a referência mais
+// antiga registrada, em qualquer ano, pois ela já carrega o acumulado) +
+// soma dos resultados dos lançamentos do ano-alvo até o mês dado. As
+// referências nunca são lançamentos; o saldo de abertura vive nelas.
+function caixaAcumuladoNoAno(
+  mes: string,
+  entries: EntryRow[],
+  references: MonthlyReference[]
+): number {
+  const ano = Number(mes.split("/")[1]);
+  const saldoAnterior =
+    [...references]
+      .sort((a, b) => a.mes.localeCompare(b.mes))
+      .find((ref) => ref.saldoAnterior !== null)?.saldoAnterior ?? 0;
+
+  let total = saldoAnterior;
   for (const entry of entries) {
-    if (entry.data <= lastDay) {
+    if (entry.data.slice(0, 4) !== String(ano)) continue;
+    if (monthKey(entry.data) <= mes) {
       total += entry.tipo === "entrada" ? entry.valor : -entry.valor;
     }
   }

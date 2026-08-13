@@ -10,10 +10,11 @@ import {
   isEctolabFormat,
   MONTH_NAMES,
   parseEctolabRows,
+  type FinancialReference,
 } from "./parse-ectolab";
 
 export type ParseFileResult =
-  | { ok: true; entries: FinancialEntry[] }
+  | { ok: true; entries: FinancialEntry[]; references: FinancialReference[] }
   | { ok: false; error: string };
 
 // Minimal RFC-4180-ish CSV tokenizer: handles quoted fields (with embedded
@@ -215,22 +216,22 @@ export async function parseFinanceiroFile(
 
   // Auto-detect format: EctoLab monthly cash-flow vs flat ledger
   if (isEctolabFormat(rows)) {
-    const entries = parseEctolabRows(rows);
-    if (entries === null) {
+    const parsed = parseEctolabRows(rows);
+    if (parsed === null) {
       return {
         ok: false,
         error:
           "Detectamos o formato de fluxo de caixa mensal, mas não conseguimos extrair os lançamentos. Verifique se as colunas de mês (Janeiro … Dezembro) estão presentes.",
       };
     }
-    if (entries.length === 0) {
+    if (parsed.entries.length === 0 && parsed.references.length === 0) {
       return {
         ok: false,
         error:
           "Nenhum lançamento encontrado no fluxo de caixa (todos os valores estão zerados?).",
       };
     }
-    return { ok: true, entries };
+    return { ok: true, entries: parsed.entries, references: parsed.references };
   }
 
   const entries = parseSheetRows(rows);
@@ -247,5 +248,6 @@ export async function parseFinanceiroFile(
       error: "Nenhum lançamento encontrado no arquivo (apenas cabeçalho?).",
     };
   }
-  return { ok: true, entries };
+  // Formato lista simples não tem linhas de referência — nada a capturar.
+  return { ok: true, entries, references: [] };
 }
