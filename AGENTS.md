@@ -20,3 +20,7 @@ Ao analisar qualquer evento, tarefa ou DIP com IA, **sempre**:
 ## Git
 
 - **Sempre commit + push** após concluir qualquer tarefa/ajuste (o usuário pediu explicitamente; não perguntar de novo).
+
+## Supabase
+
+- **Sempre `supabase db push`** após criar/alterar qualquer migration em `supabase/migrations/` (o usuário pediu explicitamente; rodar com `--linked --yes` sem perguntar).
