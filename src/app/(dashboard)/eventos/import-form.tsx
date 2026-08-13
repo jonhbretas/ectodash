@@ -6,7 +6,9 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { UploadCloud } from "lucide-react";
-import { importarEventos, importarEventosInitialState } from "./actions";
+import { importarEventos, type ImportarEventosState } from "./actions";
+
+const initialState: ImportarEventosState = { ok: false, message: "" };
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -25,7 +27,7 @@ export default function ImportEventosForm() {
   const router = useRouter();
   const [state, formAction] = useActionState(
     importarEventos,
-    importarEventosInitialState
+    initialState
   );
 
   return (

@@ -12,8 +12,6 @@ export type ImportarEventosState = {
 
 const initialState: ImportarEventosState = { ok: false, message: "" };
 
-export { initialState as importarEventosInitialState };
-
 export type AdicionarTarefasState = {
   ok: boolean;
   message: string;
@@ -24,16 +22,12 @@ const adicionarTarefasInitialState: AdicionarTarefasState = {
   message: "",
 };
 
-export { adicionarTarefasInitialState };
-
 export type EditarEventoState = {
   ok: boolean;
   message: string;
 };
 
 const editarEventoInitialState: EditarEventoState = { ok: false, message: "" };
-
-export { editarEventoInitialState };
 
 const editarEventoSchema = z.object({
   id: z.preprocess(
@@ -338,8 +332,6 @@ export type MesclarEventosState = {
 
 const mesclarEventosInitialState: MesclarEventosState = { ok: false, message: "" };
 
-export { mesclarEventosInitialState };
-
 // Merge de eventos duplicados (migration 0046) — a análise automática de
 // atas pode extrair o mesmo evento duas vezes; o coordenador escolhe qual
 // fica (manter) e qual é absorvido (remover). Todas as referências do
@@ -505,8 +497,6 @@ export type ModelosState = {
 };
 
 const modelosInitialState: ModelosState = { ok: false, message: "" };
-
-export { modelosInitialState };
 
 const tipoSchema = z.object({
   nome: z.string().trim().min(1, "Dê um nome ao tipo.").max(100),

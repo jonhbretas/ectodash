@@ -12,10 +12,11 @@ import {
   adicionarTarefaModelo,
   removerTarefaModelo,
   removerTipoEvento,
-  modelosInitialState,
 } from "./actions";
 
 type ModelosState = { ok: boolean; message: string };
+
+const modelosInitialState: ModelosState = { ok: false, message: "" };
 
 function StatusLine({ state }: { state: ModelosState }) {
   if (!state.message) return null;

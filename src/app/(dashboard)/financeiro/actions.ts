@@ -17,8 +17,6 @@ const initialState: ImportarFinanceiroState = {
   resumo: null,
 };
 
-export { initialState as importarFinanceiroInitialState };
-
 // Manual CSV/XLSX import + AI didactic summary. The role branch below is
 // UX-layer convenience — financial_entries' own RLS policies (0006/0008)
 // are the real boundary; a wrong-role caller's delete/insert would return

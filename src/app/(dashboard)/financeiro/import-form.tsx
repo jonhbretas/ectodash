@@ -10,8 +10,14 @@ import { useRouter } from "next/navigation";
 import { UploadCloud, Sparkles } from "lucide-react";
 import {
   importarFinanceiro,
-  importarFinanceiroInitialState,
+  type ImportarFinanceiroState,
 } from "./actions";
+
+const initialState: ImportarFinanceiroState = {
+  ok: false,
+  message: "",
+  resumo: null,
+};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -30,7 +36,7 @@ export default function ImportFinanceiroForm() {
   const router = useRouter();
   const [state, formAction] = useActionState(
     importarFinanceiro,
-    importarFinanceiroInitialState
+    initialState
   );
 
   return (

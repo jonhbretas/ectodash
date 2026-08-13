@@ -7,10 +7,12 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
-import {
-  adicionarTarefasDoModelo,
-  adicionarTarefasInitialState,
-} from "../actions";
+import { adicionarTarefasDoModelo, type AdicionarTarefasState } from "../actions";
+
+const adicionarTarefasInitialState: AdicionarTarefasState = {
+  ok: false,
+  message: "",
+};
 
 function SubmitButton() {
   const { pending } = useFormStatus();

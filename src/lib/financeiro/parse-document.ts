@@ -2,7 +2,6 @@
 // Auditoria 0063/M3: parse de XLSX via read-excel-file (mantida) — o pacote
 // xlsx (SheetJS npm) está descontinuado e tem CVEs conhecidas.
 import readXlsxFile from "read-excel-file/node";
-import { PDFParse } from "pdf-parse";
 import { parseCsv } from "./parse-file";
 import { classifyDescription, type NormalizedFinancialRow } from "./automation";
 
@@ -66,11 +65,21 @@ export async function parseFinancialDocument(file: File): Promise<DocumentParseR
   const name = file.name.toLowerCase();
   if (name.endsWith(".ofx")) { const rows = parseOfx(await file.text()); return { format: "OFX", sourceType: "BANK_STATEMENT", rows, warnings: rows.length ? [] : ["Nenhuma transação OFX encontrada."] }; }
   if (name.endsWith(".pdf")) {
-    const parser = new PDFParse({ data: Buffer.from(await file.arrayBuffer()) });
-    const result = await parser.getText();
-    await parser.destroy();
-    const rows = rowsFromGrid(result.text.split("\n").map((line) => line.split(/\s{2,}|\t/)), "PDF");
-    return { format: "PDF", sourceType: "BANK_STATEMENT", rows, warnings: rows.length ? [] : ["PDF lido, mas o layout precisa de revisão manual."] };
+    // Lazy-load: pdf-parse -> pdfjs-dist requires DOM globals (DOMMatrix,
+    // Path2D, ImageData) that don't exist in the serverless Node runtime —
+    // loading it eagerly crashes every non-PDF import too (production logs:
+    // "ReferenceError: DOMMatrix is not defined"). Only pull it in for PDFs,
+    // and never let a PDF parsing failure 500 the whole batch.
+    try {
+      const { PDFParse } = await import("pdf-parse");
+      const parser = new PDFParse({ data: Buffer.from(await file.arrayBuffer()) });
+      const result = await parser.getText();
+      await parser.destroy();
+      const rows = rowsFromGrid(result.text.split("\n").map((line) => line.split(/\s{2,}|\t/)), "PDF");
+      return { format: "PDF", sourceType: "BANK_STATEMENT", rows, warnings: rows.length ? [] : ["PDF lido, mas o layout precisa de revisão manual."] };
+    } catch {
+      return { format: "PDF", sourceType: "BANK_STATEMENT", rows: [], warnings: ["PDF não pôde ser processado neste ambiente — envie o extrato como .csv ou .xlsx."] };
+    }
   }
   if (name.endsWith(".csv")) { const rows = rowsFromGrid(parseCsv(await file.text())); return { format: "CSV", sourceType: "UNKNOWN", rows, warnings: rows.length ? [] : ["Cabeçalho financeiro não identificado."] }; }
   if (name.endsWith(".xls")) {

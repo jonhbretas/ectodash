@@ -9,14 +9,12 @@ import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, X, Check } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
-import {
-  editarEvento,
-  editarEventoInitialState,
-  type EditarEventoState,
-} from "./actions";
+import { editarEvento, type EditarEventoState } from "./actions";
 
 const inputClass =
   "min-h-12 w-full rounded-xl border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
+
+const editarEventoInitialState: EditarEventoState = { ok: false, message: "" };
 
 export default function EditarEventoPanel({
   evento,
