@@ -46,13 +46,13 @@ describe("matchResponsavel", () => {
     ).toBe("a");
   });
 
-  it("resolves a duplicate first name to whichever profile appears first in iteration order (accepted known limitation, not a bug)", () => {
+  it("rejects a duplicate first name as ambiguous instead of guessing the first", () => {
     const profiles = [
       { id: "a", email: "maria.silva@example.invalid" },
       { id: "b", email: "maria.santos@example.invalid" },
     ];
 
-    expect(matchResponsavel("Maria", profiles)).toBe("a");
+    expect(matchResponsavel("Maria", profiles)).toBeNull();
   });
 });
 
@@ -66,7 +66,7 @@ describe("matchResponsavelRoster", () => {
   ];
 
   it("matches a roster name and resolves the linked profile id", () => {
-    expect(matchResponsavelRoster("Ana", profiles, roster)).toEqual({
+    expect(matchResponsavelRoster("Ana Beatriz Souza", profiles, roster)).toEqual({
       profileId: "p1",
       rosterId: 1,
     });
@@ -86,8 +86,33 @@ describe("matchResponsavelRoster", () => {
     });
   });
 
+  it("matches by first+last token when the mention has middle names", () => {
+    expect(
+      matchResponsavelRoster(
+        "Carlos Henrique Pereira",
+        profiles,
+        roster
+      )
+    ).toEqual({ profileId: null, rosterId: 2 });
+  });
+
+  it("matches a mention that is the roster name plus extra middle tokens", () => {
+    expect(
+      matchResponsavelRoster("Ana Beatriz Souza e Silva", profiles, roster)
+    ).toEqual({ profileId: "p1", rosterId: 1 });
+  });
+
   it("falls back to account matching when the roster has no hit", () => {
     expect(matchResponsavelRoster("Ana", profiles, [])).toEqual({
+      profileId: "p1",
+      rosterId: null,
+    });
+  });
+
+  it("rejects short one-token mentions instead of substring-guessing", () => {
+    // "Ana" is 3 chars — below the containment minimum. The account
+    // fallback is unique here so the profile resolves, but no roster row.
+    expect(matchResponsavelRoster("Ana", profiles, roster)).toEqual({
       profileId: "p1",
       rosterId: null,
     });
@@ -104,6 +129,69 @@ describe("matchResponsavelRoster", () => {
     expect(matchResponsavelRoster("Zeca", profiles, roster)).toEqual({
       profileId: null,
       rosterId: null,
+    });
+  });
+
+  it("rejects a mention shared by two roster rows as ambiguous", () => {
+    const duplicados = [
+      { id: 1, nome: "Ana Prado", profileId: null },
+      { id: 2, nome: "Ana Yogan", profileId: null },
+      { id: 3, nome: "Mariana Cabral", profileId: null },
+    ];
+    // No roster row wins (ambiguous); the unique account fallback still
+    // resolves the profile — but never a guessed roster row.
+    expect(matchResponsavelRoster("Ana", profiles, duplicados)).toEqual({
+      profileId: "p1",
+      rosterId: null,
+    });
+  });
+
+  it("rejects a short token that lands inside an unrelated name", () => {
+    // "Ara" is contained in "Eliane Amarante" AND "Jose Luis Ara Sobrinho" —
+    // the old matcher linked the wrong volunteer; now it's ambiguous → null.
+    const roster = [
+      { id: 23, nome: "Eliane Amarante", profileId: null },
+      { id: 44, nome: "Jose Luis Ara Sobrinho", profileId: null },
+    ];
+    expect(matchResponsavelRoster("Ara", [], roster)).toEqual({
+      profileId: null,
+      rosterId: null,
+    });
+  });
+
+  it("resolves real-world shortened roster names by first+last token", () => {
+    const roster = [
+      { id: 2, nome: "Almir Pereira", profileId: null },
+      { id: 3, nome: "Ana Prado", profileId: null },
+      { id: 58, nome: "Marcos Ulaf", profileId: null },
+      { id: 81, nome: "Regina Krupka", profileId: null },
+      { id: 64, nome: "Mariana Cabral", profileId: null },
+      { id: 44, nome: "Jose Luis Ara Sobrinho", profileId: null },
+      { id: 952, nome: "Dal Van Brum", profileId: null },
+      { id: 15, nome: "Dalvan Brum", profileId: null },
+    ];
+
+    expect(
+      matchResponsavelRoster("Almir dos Santos Pereira", [], roster)
+    ).toEqual({ profileId: null, rosterId: 2 });
+    expect(
+      matchResponsavelRoster("Ana Paula do Prado", [], roster)
+    ).toEqual({ profileId: null, rosterId: 3 });
+    expect(
+      matchResponsavelRoster("Marcos Vinícius Ulaf", [], roster)
+    ).toEqual({ profileId: null, rosterId: 58 });
+    expect(
+      matchResponsavelRoster("Regina Maria Krupka", [], roster)
+    ).toEqual({ profileId: null, rosterId: 81 });
+    expect(
+      matchResponsavelRoster("Mariana Cabral Schveitzer", [], roster)
+    ).toEqual({ profileId: null, rosterId: 64 });
+    expect(
+      matchResponsavelRoster("Jose Luis Ara", [], roster)
+    ).toEqual({ profileId: null, rosterId: 44 });
+    expect(matchResponsavelRoster("Dal Van Brum", [], roster)).toEqual({
+      profileId: null,
+      rosterId: 952,
     });
   });
 });

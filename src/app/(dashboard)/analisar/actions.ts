@@ -639,6 +639,64 @@ async function salvarAta(
     return { ataId: null, erro: "ata" };
   }
 
+  // Auto-vínculo de participantes ao roster — mesma regra do fluxo
+  // /reunioes (analise-actions.ts): cada nome em texto livre é casado com
+  // voluntarios.nome; sem match confiável fica só no texto livre e o
+  // criador vincula depois na tela da ata.
+  const participantesTexto = (parsed.data.participantes ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (participantesTexto.length > 0) {
+    const [rosterRows, profileRows] = await Promise.all([
+      supabase.from("voluntarios").select("id, nome").eq("ativo", true),
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, voluntario_id")
+        .not("voluntario_id", "is", null),
+    ]);
+    const profiles = (profileRows.data ?? []).map((p) => ({
+      id: p.id,
+      email: p.email,
+      full_name: p.full_name,
+    }));
+    const roster = (rosterRows.data ?? []).map((v) => ({
+      id: v.id,
+      nome: v.nome,
+      profileId:
+        (profileRows.data ?? []).find((p) => p.voluntario_id === v.id)?.id ??
+        null,
+    }));
+
+    const vinculos = [
+      ...new Map(
+        participantesTexto
+          .map((nome) => matchResponsavelRoster(nome, profiles, roster))
+          .filter(
+            (match): match is { profileId: string | null; rosterId: number } =>
+              match.rosterId !== null
+          )
+          .map((match) => [
+            match.rosterId,
+            { ata_id: novaAta.id, voluntario_id: match.rosterId },
+          ])
+      ).values(),
+    ];
+
+    if (vinculos.length > 0) {
+      const { error: vinculoError } = await supabase
+        .from("ata_participantes")
+        .insert(vinculos);
+      if (vinculoError) {
+        console.error(
+          "salvarTudoDaAnalise: ata_participantes auto-link failed",
+          vinculoError
+        );
+      }
+    }
+  }
+
   return { ataId: novaAta.id, erro: null };
 }
 

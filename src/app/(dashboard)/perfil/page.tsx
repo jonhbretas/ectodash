@@ -142,42 +142,6 @@ export default async function MeuPerfilPage() {
                 editavel
               />
             )}
-
-            {profile.voluntario_id && (
-              <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 overflow-hidden">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-                  <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    <NotebookPen size={14} aria-hidden="true" />
-                    Participação em reuniões gerais
-                  </span>
-                  <span className="rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-sm font-semibold text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
-                    {participacoesComAta.length}
-                  </span>
-                </div>
-                {participacoesComAta.length === 0 ? (
-                  <p className="px-5 py-4 text-sm text-slate-500">
-                    Você ainda não foi vinculado como participante de nenhuma ata.
-                  </p>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {participacoesComAta.map((p) => (
-                      <Link
-                        key={p.ataId}
-                        href={`/reunioes/${p.ataId}`}
-                        className="flex items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-                      >
-                        <span className="truncate text-sm font-medium text-slate-900">
-                          {p.titulo}
-                        </span>
-                        <span className="shrink-0 text-sm text-slate-500">
-                          {new Date(`${p.data}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="flex flex-col gap-6">
@@ -264,6 +228,42 @@ export default async function MeuPerfilPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {profile.voluntario_id && (
+              <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 overflow-hidden">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                  <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <NotebookPen size={14} aria-hidden="true" />
+                    Participação em reuniões gerais
+                  </span>
+                  <span className="rounded-full bg-[#E6E6E6] px-2.5 py-0.5 text-sm font-semibold text-[#2195B9] ring-1 ring-[#E6E6E6]/60">
+                    {participacoesComAta.length}
+                  </span>
+                </div>
+                {participacoesComAta.length === 0 ? (
+                  <p className="px-5 py-4 text-sm text-slate-500">
+                    Você ainda não foi vinculado como participante de nenhuma ata.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {participacoesComAta.map((p) => (
+                      <Link
+                        key={p.ataId}
+                        href={`/reunioes/${p.ataId}`}
+                        className="flex items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                      >
+                        <span className="truncate text-sm font-medium text-slate-900">
+                          {p.titulo}
+                        </span>
+                        <span className="shrink-0 text-sm text-slate-500">
+                          {new Date(`${p.data}T00:00:00`).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

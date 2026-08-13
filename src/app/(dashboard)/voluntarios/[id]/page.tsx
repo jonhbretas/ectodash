@@ -413,11 +413,43 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
           </dl>
         </div>
 
-        <AtividadesSection
-          voluntarioId={voluntario.id}
-          atuais={atividades}
-          editavel={canManage || ehProprioCadastro}
-        />
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+          <AtividadesSection
+            voluntarioId={voluntario.id}
+            atuais={atividades}
+            editavel={canManage || ehProprioCadastro}
+          />
+
+          <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+              <NotebookPen size={22} aria-hidden="true" />
+              Participação em reuniões gerais ({participacoes.length})
+            </h2>
+            {participacoes.length === 0 ? (
+              <p className="text-lg text-zinc-500">
+                Este voluntário ainda não foi vinculado como participante de
+                nenhuma ata.
+              </p>
+            ) : (
+              <div className="flex flex-col rounded-xl ring-1 ring-zinc-200/60">
+                {participacoes.map((participacao) => (
+                  <Link
+                    key={participacao.ataId}
+                    href={`/reunioes/${participacao.ataId}`}
+                    className="flex flex-col gap-1 border-b border-zinc-100 px-4 py-3 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="text-lg text-zinc-900">
+                      {participacao.titulo}
+                    </span>
+                    <span className="text-base text-zinc-700">
+                      {formatData(participacao.data_reuniao)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
 
         <CargosManager
           voluntarioId={voluntario.id}
@@ -501,36 +533,6 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
               </section>
             )}
           </div>
-
-          <section className="flex flex-col gap-3">
-            <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-              <NotebookPen size={24} aria-hidden="true" />
-              Participação em reuniões gerais ({participacoes.length})
-            </h2>
-            {participacoes.length === 0 ? (
-              <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-700 ring-1 ring-zinc-200/60">
-                Este voluntário ainda não foi vinculado como participante de
-                nenhuma ata.
-              </p>
-            ) : (
-              <div className="flex flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-                {participacoes.map((participacao) => (
-                  <Link
-                    key={participacao.ataId}
-                    href={`/reunioes/${participacao.ataId}`}
-                    className="flex flex-col gap-1 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <span className="text-xl text-zinc-900">
-                      {participacao.titulo}
-                    </span>
-                    <span className="text-base text-zinc-700">
-                      {formatData(participacao.data_reuniao)}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
         </div>
       </div>
     </PageContainer>
