@@ -3,11 +3,23 @@
 // src/components/feedback/feedback-button.tsx
 // Botão flutuante de feedback (bug ou sugestão) exibido no canto inferior
 // direito do dashboard. Captura a página atual e o navegador automaticamente
-// para facilitar a reprodução do problema.
-import { useEffect, useState } from "react";
+// para facilitar a reprodução do problema, e aceita até 3 imagens anexadas
+// (JPG, PNG, WebP ou GIF) — validadas no cliente e no servidor.
+//
+// Upload direto do navegador: as imagens vão do navegador ao bucket privado
+// feedback-anexos via RLS (migration 0069) sem passar pela Vercel; a server
+// action recebe apenas os caminhos já enviados e valida o formato antes de
+// gravar na tabela feedback.
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
-import { Bug, CheckCircle2, Lightbulb, MessageSquarePlus } from "lucide-react";
+import {
+  Bug,
+  CheckCircle2,
+  ImagePlus,
+  Lightbulb,
+  MessageSquarePlus,
+  X,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,11 +28,74 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
 import { enviarFeedback, type FeedbackState } from "./actions";
 
 const initialState: FeedbackState = { ok: false, message: "" };
 
 type TipoFeedback = "bug" | "sugestao";
+
+const ANEXOS_MAX = 3;
+const ANEXO_MAX_BYTES = 5 * 1024 * 1024;
+const MIME_ACEITOS = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+const EXTENSAO_POR_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+// Validação espelhada no servidor (actions.ts) — o usuário descobre erros
+// antes de enviar, sem round-trip.
+function anexosValidos(files: File[]): string | null {
+  if (files.length > ANEXOS_MAX) {
+    return `Você pode anexar no máximo ${ANEXOS_MAX} imagens por envio.`;
+  }
+  for (const arquivo of files) {
+    if (!MIME_ACEITOS.includes(arquivo.type)) {
+      return "Anexe apenas imagens (JPG, PNG, WebP ou GIF).";
+    }
+    if (arquivo.size > ANEXO_MAX_BYTES) {
+      return "Cada imagem pode ter no máximo 5 MB.";
+    }
+  }
+  return null;
+}
+
+// Envia as imagens direto do navegador ao bucket privado feedback-anexos.
+// O RLS exige caminho {user_id}/... — quem não está autenticado falha aqui.
+async function enviarAnexosParaStorage(
+  files: File[]
+): Promise<{ ok: true; caminhos: string[] } | { ok: false; erro: string }> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, erro: "Sessão expirada. Entre novamente e tente de novo." };
+  }
+
+  const caminhos: string[] = [];
+  for (const arquivo of files) {
+    const caminho = `${user.id}/${crypto.randomUUID()}.${EXTENSAO_POR_MIME[arquivo.type]}`;
+    const { error } = await supabase.storage
+      .from("feedback-anexos")
+      .upload(caminho, arquivo, { contentType: arquivo.type, upsert: false });
+    if (error) {
+      if (caminhos.length > 0) {
+        await supabase.storage.from("feedback-anexos").remove(caminhos);
+      }
+      return {
+        ok: false,
+        erro: "Não foi possível enviar as imagens. Tente novamente em instantes.",
+      };
+    }
+    caminhos.push(caminho);
+  }
+  return { ok: true, caminhos };
+}
 
 const OPCOES_TIPO: Array<{
   valor: TipoFeedback;
@@ -37,15 +112,14 @@ const OPCOES_TIPO: Array<{
   },
 ];
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+function SubmitButton({ desabilitado }: { desabilitado: boolean }) {
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={desabilitado}
       className="min-h-14 w-full rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:cursor-not-allowed disabled:opacity-70"
     >
-      {pending ? "Enviando..." : "Enviar feedback"}
+      {desabilitado ? "Enviando..." : "Enviar feedback"}
     </button>
   );
 }
@@ -55,8 +129,46 @@ export default function FeedbackButton() {
   const [tipo, setTipo] = useState<TipoFeedback>("sugestao");
   const [pagina, setPagina] = useState("");
   const [navegador, setNavegador] = useState("");
-  const [state, formAction] = useActionState(enviarFeedback, initialState);
+  const [state, formAction, isPending] = useActionState(enviarFeedback, initialState);
   const [formKey, setFormKey] = useState(0);
+  const [anexos, setAnexos] = useState<File[]>([]);
+  const [erroAnexos, setErroAnexos] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const caminhosEnviadosRef = useRef<string[]>([]);
+
+  // Previews revogados quando a lista muda ou o diálogo fecha — evita vazamento
+  // de memória com URLs de objeto.
+  const previews = useMemo(
+    () => anexos.map((arquivo) => URL.createObjectURL(arquivo)),
+    [anexos]
+  );
+  useEffect(() => {
+    return () => previews.forEach(URL.revokeObjectURL);
+  }, [previews]);
+
+  // Se a server action rejeitar o envio, apaga as imagens que já subiram para
+  // o bucket — evita arquivos órfãos num bucket que ninguém administra.
+  useEffect(() => {
+    if (state.ok || !state.message) return;
+    const caminhos = caminhosEnviadosRef.current;
+    if (caminhos.length === 0) return;
+    caminhosEnviadosRef.current = [];
+    createClient().storage.from("feedback-anexos").remove(caminhos);
+  }, [state]);
+
+  function selecionarAnexos(event: ChangeEvent<HTMLInputElement>) {
+    const novos = Array.from(event.target.files ?? []);
+    const todos = [...anexos, ...novos];
+    const erro = anexosValidos(todos);
+    setErroAnexos(erro);
+    event.target.value = "";
+    if (!erro) setAnexos(todos);
+  }
+
+  function removerAnexo(indice: number) {
+    setErroAnexos(null);
+    setAnexos(anexos.filter((_, i) => i !== indice));
+  }
 
   // Captura a página atual e o navegador no momento do clique — assim o
   // registro reflete a tela em que o usuário estava ao abrir o diálogo.
@@ -64,6 +176,27 @@ export default function FeedbackButton() {
     setPagina(window.location.pathname + window.location.search);
     setNavegador(window.navigator.userAgent);
     setOpen(true);
+  }
+
+  // Intercepta o submit: primeiro envia as imagens ao bucket (direto do
+  // navegador), depois chama a server action com apenas os caminhos.
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (anexos.length === 0) {
+      formAction(new FormData(event.currentTarget));
+      return;
+    }
+    setEnviando(true);
+    const resultado = await enviarAnexosParaStorage(anexos);
+    if (!resultado.ok) {
+      setEnviando(false);
+      setErroAnexos(resultado.erro);
+      return;
+    }
+    caminhosEnviadosRef.current = resultado.caminhos;
+    const formData = new FormData(event.currentTarget);
+    formData.set("anexos", JSON.stringify(resultado.caminhos));
+    formAction(formData);
   }
 
   // Depois de enviar com sucesso, fecha o diálogo sozinho para o usuário
@@ -80,6 +213,9 @@ export default function FeedbackButton() {
       // Remonta o formulário para zerar campos, estado e mensagens.
       setFormKey((k) => k + 1);
       setTipo("sugestao");
+      setAnexos([]);
+      setErroAnexos(null);
+      setEnviando(false);
     }
   }
 
@@ -118,7 +254,7 @@ export default function FeedbackButton() {
           ) : (
             <form
               key={formKey}
-              action={formAction}
+              onSubmit={handleSubmit}
               className="flex flex-col gap-5"
               aria-live="polite"
             >
@@ -126,7 +262,7 @@ export default function FeedbackButton() {
                 <legend className="text-xl font-medium text-zinc-900">
                   O que é isso?
                 </legend>
-                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Tipo de feedback">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Tipo de feedback">
                   {OPCOES_TIPO.map(({ valor, rotulo, descricao, Icone }) => (
                     <button
                       key={valor}
@@ -183,7 +319,59 @@ export default function FeedbackButton() {
                 />
               </div>
 
-              <SubmitButton />
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="feedback-anexos"
+                  className="text-xl font-medium text-zinc-900"
+                >
+                  Imagens (opcional)
+                </Label>
+                <input
+                  id="feedback-anexos"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  onChange={selecionarAnexos}
+                  className="block w-full cursor-pointer rounded-lg border border-zinc-400 bg-white text-lg text-zinc-700 file:mr-4 file:rounded-lg file:border-0 file:bg-[#2195B9] file:px-4 file:py-2.5 file:text-lg file:font-medium file:text-white hover:file:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                />
+                <p className="flex items-center gap-1.5 text-base text-zinc-500">
+                  <ImagePlus size={16} aria-hidden="true" />
+                  Até {ANEXOS_MAX} imagens (JPG, PNG, WebP ou GIF), 5 MB cada — útil
+                  para mostrar o que aconteceu na tela.
+                </p>
+                {anexos.length > 0 && (
+                  <ul className="grid grid-cols-3 gap-2" aria-label="Imagens anexadas">
+                    {anexos.map((arquivo, indice) => (
+                      <li
+                        key={`${arquivo.name}-${indice}`}
+                        className="relative"
+                        aria-label={arquivo.name}
+                      >
+                        <img
+                          src={previews[indice]}
+                          alt={`Anexo ${indice + 1}: ${arquivo.name}`}
+                          className="h-20 w-full rounded-lg border border-zinc-300 bg-zinc-100 object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removerAnexo(indice)}
+                          aria-label={`Remover anexo ${arquivo.name}`}
+                          className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-zinc-900 text-white shadow transition-colors hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                        >
+                          <X size={14} aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {erroAnexos && (
+                  <p role="alert" className="text-base text-red-700">
+                    {erroAnexos}
+                  </p>
+                )}
+              </div>
+
+              <SubmitButton desabilitado={isPending || enviando} />
 
               {!state.ok && state.message && (
                 <p className="text-base text-red-700">{state.message}</p>

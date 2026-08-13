@@ -7,7 +7,10 @@ import FeedbackView, { type RelatoRow } from "./feedback-view";
 // Tela de relatos de bugs e melhorias enviados pelo botão flutuante.
 // Todo usuário autenticado vê os próprios envios; o coordenador geral
 // (único com RLS de leitura total na tabela feedback — migration 0056)
-// vê todos e gerencia o status de acompanhamento.
+// vê todos e gerencia o status de acompanhamento. Anexos de imagem são
+// URLs assinadas do bucket privado feedback-anexos (migration 0069).
+
+const URL_ASSINADA_SEGUNDOS = 60 * 60 * 24; // 24h
 
 export default async function FeedbackPage() {
   const supabase = await createClient();
@@ -25,26 +28,41 @@ export default async function FeedbackPage() {
   const { data: itens } = await supabase
     .from("feedback")
     .select(
-      "id, tipo, mensagem, pagina, navegador, status, created_at, profiles(full_name, email)"
+      "id, tipo, mensagem, pagina, navegador, status, created_at, anexos, profiles(full_name, email)"
     )
     .order("created_at", { ascending: false });
 
-  const relatos: RelatoRow[] = (itens ?? []).map((item) => {
-    const autor = item.profiles as unknown as {
-      full_name: string | null;
-      email: string | null;
-    } | null;
-    return {
-      id: String(item.id),
-      tipo: item.tipo as "bug" | "sugestao",
-      mensagem: String(item.mensagem),
-      pagina: item.pagina ? String(item.pagina) : null,
-      navegador: item.navegador ? String(item.navegador) : null,
-      status: item.status as "novo" | "visto" | "resolvido",
-      createdAt: String(item.created_at),
-      autor: autor?.full_name?.trim() || autor?.email || "Usuário",
-    };
-  });
+  const relatos: RelatoRow[] = await Promise.all(
+    (itens ?? []).map(async (item) => {
+      const autor = item.profiles as unknown as {
+        full_name: string | null;
+        email: string | null;
+      } | null;
+
+      const caminhos = (item.anexos ?? []) as string[];
+      const anexos: RelatoRow["anexos"] = [];
+      for (const caminho of caminhos) {
+        const { data } = await supabase.storage
+          .from("feedback-anexos")
+          .createSignedUrl(caminho, URL_ASSINADA_SEGUNDOS);
+        if (data) {
+          anexos.push({ nome: caminho.split("/").pop() ?? "imagem", url: data.signedUrl });
+        }
+      }
+
+      return {
+        id: String(item.id),
+        tipo: item.tipo as "bug" | "sugestao",
+        mensagem: String(item.mensagem),
+        pagina: item.pagina ? String(item.pagina) : null,
+        navegador: item.navegador ? String(item.navegador) : null,
+        status: item.status as "novo" | "visto" | "resolvido",
+        createdAt: String(item.created_at),
+        autor: autor?.full_name?.trim() || autor?.email || "Usuário",
+        anexos,
+      };
+    })
+  );
 
   return (
     <PageContainer>

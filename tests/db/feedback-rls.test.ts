@@ -93,14 +93,18 @@ describe.skipIf(!canRun)(
           user_id: autor.id,
           tipo: "bug",
           mensagem: "O botão de salvar não responde na página de demandas.",
+          anexos: [`${autor.id}/00000000-0000-0000-0000-000000000000.png`],
         })
-        .select("id, tipo, mensagem, status")
+        .select("id, tipo, mensagem, status, anexos")
         .single();
 
       expect(insertError).toBeNull();
       expect(inserted?.id).toBeDefined();
       expect(inserted?.tipo).toBe("bug");
       expect(inserted?.status).toBe("novo");
+      expect(inserted?.anexos).toEqual([
+        `${autor.id}/00000000-0000-0000-0000-000000000000.png`,
+      ]);
       const feedbackId = inserted!.id as string;
       createdFeedbackIds.push(feedbackId);
 

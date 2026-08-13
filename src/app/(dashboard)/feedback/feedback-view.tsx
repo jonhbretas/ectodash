@@ -20,6 +20,7 @@ export type RelatoRow = {
   status: "novo" | "visto" | "resolvido";
   createdAt: string;
   autor: string;
+  anexos: { nome: string; url: string }[];
 };
 
 type FiltroTipo = "todos" | "bug" | "sugestao";
@@ -208,6 +209,31 @@ export default function FeedbackView({
                 <p className="whitespace-pre-wrap break-words text-xl leading-relaxed text-zinc-900">
                   {r.mensagem}
                 </p>
+
+                {r.anexos.length > 0 && (
+                  <ul
+                    className="grid grid-cols-3 gap-2"
+                    aria-label="Imagens anexadas ao relato"
+                  >
+                    {r.anexos.map((anexo) => (
+                      <li key={anexo.url}>
+                        <a
+                          href={anexo.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Abrir ${anexo.nome} em nova aba`}
+                          className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                        >
+                          <img
+                            src={anexo.url}
+                            alt={`Imagem anexada: ${anexo.nome}`}
+                            className="h-32 w-full rounded-lg border border-zinc-300 bg-zinc-100 object-cover transition-opacity hover:opacity-80"
+                          />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 {(r.pagina || r.navegador) && (
                   <dl className="flex flex-col gap-1 rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
