@@ -4,6 +4,9 @@ import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Acesso } from "@/lib/acesso";
 import FeedbackButton from "@/components/feedback/feedback-button";
+import NotificacoesResolvidas, {
+  type NotificacaoRow,
+} from "@/components/notificacoes/notificacoes-resolvidas";
 import Sidebar from "./sidebar";
 
 export default async function DashboardLayout({
@@ -57,6 +60,22 @@ export default async function DashboardLayout({
     cargos: (cargos ?? []) as Acesso["cargos"],
   };
 
+  // Notificações não lidas — relatos de bug/sugestão do usuário que foram
+  // marcados como resolvidos (migration 0070). Exibidas uma vez ao logar.
+  const { data: notificacoesRaw } = await supabase
+    .from("notificacoes")
+    .select("id, titulo, mensagem, link, created_at")
+    .eq("lida", false)
+    .order("created_at", { ascending: false });
+
+  const notificacoes: NotificacaoRow[] = (notificacoesRaw ?? []).map((n) => ({
+    id: String(n.id),
+    titulo: String(n.titulo),
+    mensagem: String(n.mensagem),
+    link: n.link ? String(n.link) : null,
+    createdAt: String(n.created_at),
+  }));
+
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20 lg:flex-row">
       <Sidebar acesso={acesso} />
@@ -64,6 +83,7 @@ export default async function DashboardLayout({
         {children}
       </div>
       <FeedbackButton />
+      <NotificacoesResolvidas itens={notificacoes} />
     </div>
   );
 }
