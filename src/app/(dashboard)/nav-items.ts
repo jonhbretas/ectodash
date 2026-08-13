@@ -118,7 +118,17 @@ export const navEntries: SidebarEntry[] = [
   },
 
   // ─── Financeiro (role financeiro ou cargo com o módulo) ───
-  { href: "/financeiro", label: "Financeiro", Icon: Wallet, modulo: "financeiro" },
+  {
+    type: "group",
+    label: "Financeiro",
+    Icon: Wallet,
+    href: "/financeiro",
+    modulo: "financeiro",
+    children: [
+      { href: "/financeiro", label: "Visão geral", Icon: Wallet, modulo: "financeiro" },
+      { href: "/financeiro/lancamentos", label: "Lançamentos", Icon: Receipt, modulo: "financeiro" },
+    ],
+  },
 
   // ─── Contratos (módulo exclusivo do coordenador geral — acesso.ts) ───
   {

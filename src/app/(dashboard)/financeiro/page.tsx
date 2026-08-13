@@ -279,7 +279,10 @@ export default async function FinanceiroPage({
     0
   );
 
-  const ultimosLancamentos = filtered.slice(0, 20);
+  // Amostra do filtro atual — nunca mais alta que a seção "Saídas por
+  // categoria" ao lado (o wrapper tem max-h + scroll). A lista completa,
+  // paginada e com busca por nome, vive em /financeiro/lancamentos.
+  const ultimosLancamentos = filtered.slice(0, 8);
 
   // Aplicação mês a mês: só meses com valor preenchido, do mais antigo ao
   // mais recente (mesmo sentido cronológico da tabela "Mês a mês").
@@ -537,11 +540,22 @@ export default async function FinanceiroPage({
             <h2 className="text-2xl font-semibold text-zinc-900">
               Últimos lançamentos
             </h2>
-            <span className="text-base text-zinc-500">
-              {filtered.length} {filtered.length === 1 ? "lançamento" : "lançamentos"}
-            </span>
+            <div className="flex items-baseline gap-3">
+              <span className="text-base text-zinc-500">
+                {filtered.length}{" "}
+                {filtered.length === 1 ? "lançamento" : "lançamentos"}
+              </span>
+              <Link
+                href="/financeiro/lancamentos"
+                className="text-base font-medium text-[#2195B9] transition-colors hover:text-[#28627B]"
+              >
+                Ver todos
+              </Link>
+            </div>
           </div>
-          <div className="overflow-x-auto rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+          {/* max-h + overflow: a seção nunca cresce além da altura de
+              "Saídas por categoria" ao lado; linhas extras rolam. */}
+          <div className="max-h-[27rem] overflow-auto rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
             <table className="w-full min-w-[40rem] text-left">
               <thead>
                 <tr className="border-b border-zinc-100 text-sm uppercase tracking-wide text-zinc-500">
