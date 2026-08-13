@@ -63,10 +63,12 @@ export type ReferenceCardsProps = {
   // Mês da aplicação exibida — pode diferir do mês-alvo quando a planilha
   // só preenche a aplicação em alguns meses (fallback para a mais recente).
   aplicacaoMesLabel?: string;
+  // Mês do saldo em caixa usado no card "Caixa total" (mesmo fallback).
+  caixaMesLabel?: string;
 };
 
 export default function ReferenceCards(props: ReferenceCardsProps) {
-  const { mes, labelMes: labelMesTexto, refs, aplicacaoMesLabel } = props;
+  const { mes, labelMes: labelMesTexto, refs, aplicacaoMesLabel, caixaMesLabel } = props;
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
@@ -120,7 +122,11 @@ export default function ReferenceCards(props: ReferenceCardsProps) {
           label={props.caixaAno.label}
           value={brl.format(props.caixaAno.value)}
           icon={<TrendingUp size={24} aria-hidden="true" className="shrink-0 text-green-600" />}
-          sublabel="saldo anterior + resultado acumulado"
+          sublabel={
+            caixaMesLabel
+              ? `aplicação + saldo em caixa de ${caixaMesLabel}`
+              : "aplicação + saldo em caixa"
+          }
         />
       </div>
 

@@ -231,9 +231,9 @@ export default async function FinanceiroPage({
   const targetMes = filters.mes ?? mesOptions[0] ?? null;
   const targetRef = targetMes ? refByMes.get(targetMes) : null;
 
-  // Aplicação: se o mês-alvo não tem valor, usa a aplicação mais recente
-  // disponível (a planilha preenche só alguns meses) — o card mostra o
-  // último valor conhecido em vez de "—".
+  // "Caixa acumulado": valor aplicado + saldo em caixa (referências do
+  // mês-alvo, com fallback para o valor mais recente disponível quando o
+  // mês-alvo não os tem — a planilha preenche a aplicação em alguns meses).
   const aplicacaoRef =
     targetRef?.aplicacao != null
       ? targetRef
@@ -241,6 +241,15 @@ export default async function FinanceiroPage({
           .filter((ref): ref is MonthlyReference & { aplicacao: number } => ref.aplicacao != null)
           .sort((a, b) => b.mes.localeCompare(a.mes))[0] ?? null;
   const aplicacaoMesLabel = aplicacaoRef ? labelMes(aplicacaoRef.mes) : "";
+  const saldoCaixaRef =
+    targetRef?.saldoCaixa != null
+      ? targetRef
+      : references
+          .filter((ref): ref is MonthlyReference & { saldoCaixa: number } => ref.saldoCaixa != null)
+          .sort((a, b) => b.mes.localeCompare(a.mes))[0] ?? null;
+  const caixaAcumuladoAno =
+    (aplicacaoRef?.aplicacao ?? 0) + (saldoCaixaRef?.saldoCaixa ?? 0);
+  const caixaMesLabel = saldoCaixaRef ? labelMes(saldoCaixaRef.mes) : "";
 
   // Variação % vs mês anterior — só quando há mês selecionado; sem filtro,
   // o período é "tudo" e não há mês de comparação.
@@ -265,13 +274,6 @@ export default async function FinanceiroPage({
   // honors tipo/categoria so the table answers "saídas por mês" etc.
   const tableEntries = filters.tipo || filters.categoria ? filtered : entries;
   const { monthlyRows } = computeSummary(tableEntries);
-
-  // "Caixa acumulado no ano": saldo anterior da conta (referência mais
-  // antiga) + soma dos resultados do ano até o mês-alvo.
-  const caixaAcumuladoAno =
-    targetMes !== null
-      ? caixaAcumuladoNoAno(targetMes, entries, references)
-      : computeSummary(entries).caixaAtual;
 
   // Saídas por categoria — from the filtered set (so the month filter
   // applies), only when the tipo filter isn't already "entrada".
@@ -324,7 +326,7 @@ export default async function FinanceiroPage({
         receita={{ label: receitaLabel, value: entradas, delta: deltaEntradas }}
         despesa={{ label: despesaLabel, value: saidas, delta: deltaSaidas }}
         resultado={{ label: resultadoLabel, value: resultado, delta: deltaResultado }}
-        caixaAno={{ label: "Caixa acumulado no ano", value: caixaAcumuladoAno }}
+        caixaAno={{ label: "Caixa total (aplicado + em caixa)", value: caixaAcumuladoAno }}
         refs={{
           saldoAnterior: targetRef?.saldoAnterior ?? null,
           receitaTotal: targetRef?.receitaTotal ?? null,
@@ -334,6 +336,7 @@ export default async function FinanceiroPage({
           aplicacao: aplicacaoRef?.aplicacao ?? null,
         }}
         aplicacaoMesLabel={aplicacaoMesLabel}
+        caixaMesLabel={caixaMesLabel}
       />
 
       {/* Mês a mês — full-width table, selected month highlighted. */}
@@ -697,31 +700,6 @@ function prevMonthKey(mes: string): string {
   const [month, year] = mes.split("/").map(Number);
   const prev = month === 1 ? { m: 12, y: year - 1 } : { m: month - 1, y: year };
   return `${String(prev.m).padStart(2, "0")}/${prev.y}`;
-}
-
-// "Caixa acumulado no ano" — saldo anterior da conta (a referência mais
-// antiga registrada, em qualquer ano, pois ela já carrega o acumulado) +
-// soma dos resultados dos lançamentos do ano-alvo até o mês dado. As
-// referências nunca são lançamentos; o saldo de abertura vive nelas.
-function caixaAcumuladoNoAno(
-  mes: string,
-  entries: EntryRow[],
-  references: MonthlyReference[]
-): number {
-  const ano = Number(mes.split("/")[1]);
-  const saldoAnterior =
-    [...references]
-      .sort((a, b) => a.mes.localeCompare(b.mes))
-      .find((ref) => ref.saldoAnterior !== null)?.saldoAnterior ?? 0;
-
-  let total = saldoAnterior;
-  for (const entry of entries) {
-    if (entry.data.slice(0, 4) !== String(ano)) continue;
-    if (monthKey(entry.data) <= mes) {
-      total += entry.tipo === "entrada" ? entry.valor : -entry.valor;
-    }
-  }
-  return total;
 }
 
 // Pure aggregation — one pass over the entries, no per-month queries:
