@@ -75,51 +75,83 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
+// Fallback para contextos não seguros (HTTP/IP), onde crypto.randomUUID não
+// existe — mantém o formato UUID v4 exigido pela validação do servidor.
+function uuidV4(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function mensagemDeErro(erro: unknown): string {
+  if (erro instanceof Error) return erro.message;
+  return String(erro);
+}
+
+// Limpa arquivos já enviados quando um upload falha — nunca deixa a limpeza
+// mascarar o erro original.
+async function limparAnexosEnviados(caminhos: string[]) {
+  try {
+    await createClient().storage.from("feedback-anexos").remove(caminhos);
+  } catch {
+    // limpeza é best-effort; o erro original do upload tem prioridade
+  }
+}
+
 // Envia as imagens direto do navegador ao bucket privado feedback-anexos.
 // O RLS exige caminho {user_id}/... — quem não está autenticado falha aqui.
 async function enviarAnexosParaStorage(
   files: File[]
 ): Promise<{ ok: true; caminhos: string[] } | { ok: false; erro: string }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { ok: false, erro: "Sessão expirada. Entre novamente e tente de novo." };
-  }
+    if (!user) {
+      return { ok: false, erro: "Sessão expirada. Entre novamente e tente de novo." };
+    }
 
-  const caminhos: string[] = [];
-  for (const arquivo of files) {
-    const caminho = `${user.id}/${crypto.randomUUID()}.${EXTENSAO_POR_MIME[arquivo.type]}`;
-    try {
-      const { error } = await withTimeout(
-        supabase.storage
-          .from("feedback-anexos")
-          .upload(caminho, arquivo, { contentType: arquivo.type, upsert: false }),
-        UPLOAD_TIMEOUT_MS
-      );
-      if (error) {
-        if (caminhos.length > 0) {
-          await supabase.storage.from("feedback-anexos").remove(caminhos);
+    const caminhos: string[] = [];
+    for (const arquivo of files) {
+      const caminho = `${user.id}/${uuidV4()}.${EXTENSAO_POR_MIME[arquivo.type]}`;
+      try {
+        const { error } = await withTimeout(
+          supabase.storage
+            .from("feedback-anexos")
+            .upload(caminho, arquivo, { contentType: arquivo.type, upsert: false }),
+          UPLOAD_TIMEOUT_MS
+        );
+        if (error) {
+          await limparAnexosEnviados(caminhos);
+          return {
+            ok: false,
+            erro: `Não foi possível enviar as imagens (${error.message}). Tente novamente.`,
+          };
         }
+      } catch (erro) {
+        await limparAnexosEnviados(caminhos);
         return {
           ok: false,
-          erro: "Não foi possível enviar as imagens. Tente novamente em instantes.",
+          erro: `Envio das imagens falhou (${mensagemDeErro(erro)}). Verifique sua conexão e tente novamente.`,
         };
       }
-    } catch {
-      if (caminhos.length > 0) {
-        await supabase.storage.from("feedback-anexos").remove(caminhos);
-      }
-      return {
-        ok: false,
-        erro: "Envio demorou demais. Verifique sua conexão e tente novamente.",
-      };
+      caminhos.push(caminho);
     }
-    caminhos.push(caminho);
+    return { ok: true, caminhos };
+  } catch (erro) {
+    return {
+      ok: false,
+      erro: `Ocorreu um erro ao preparar o envio (${mensagemDeErro(erro)}). Tente novamente.`,
+    };
   }
-  return { ok: true, caminhos };
 }
 
 const OPCOES_TIPO: Array<{
@@ -222,8 +254,11 @@ export default function FeedbackButton() {
       const formData = new FormData(event.currentTarget);
       formData.set("anexos", JSON.stringify(resultado.caminhos));
       formAction(formData);
-    } catch {
-      setErroAnexos("Ocorreu um erro inesperado. Tente novamente.");
+    } catch (erro) {
+      console.error("[feedback] erro inesperado no envio:", erro);
+      setErroAnexos(
+        `Ocorreu um erro inesperado (${mensagemDeErro(erro)}). Tente novamente.`
+      );
     } finally {
       setEnviando(false);
     }
