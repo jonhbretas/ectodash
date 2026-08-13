@@ -9,7 +9,7 @@
 // the button row.
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { ChevronDown, ChevronUp, Eraser, UploadCloud } from "lucide-react";
+import { ChevronDown, ChevronUp, Eraser, UploadCloud, Archive } from "lucide-react";
 import ImportFinanceiroForm from "./import-form";
 import { limparFinanceiro, type LimparFinanceiroState } from "./actions";
 
@@ -42,6 +42,26 @@ export default function ImportFinanceiroToggle() {
             <ChevronDown size={20} aria-hidden="true" />
           )}
         </button>
+
+        <div className="relative group">
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            className="flex min-h-14 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-100 px-5 text-xl font-medium text-zinc-400 sm:w-auto"
+          >
+            <Archive size={22} aria-hidden="true" />
+            Livro financeiro
+          </button>
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute right-0 top-full z-10 mt-2 hidden max-w-xs rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white shadow-lg group-hover:block group-focus-within:block"
+          >
+            Livro financeiro automatizado — funcionalidade desativada no
+            momento. Use o botão Importar planilha ao lado para importar a
+            planilha de fluxo de caixa.
+          </span>
+        </div>
 
         <form
           action={(formData) => {
