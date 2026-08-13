@@ -368,12 +368,21 @@ export default async function DashboardPage({
                   <KanbanBoard
                     key={`${boardKey}-${group.label}`}
                     demandas={group.items}
+                    canGerir={
+                      role === "coordenador_geral" || role === "coordenador_area"
+                    }
                   />
                 </div>
               ))}
             </div>
           ) : (
-            <KanbanBoard key={boardKey} demandas={demandaList} />
+            <KanbanBoard
+              key={boardKey}
+              demandas={demandaList}
+              canGerir={
+                role === "coordenador_geral" || role === "coordenador_area"
+              }
+            />
           )
         ) : view === "calendario" ? (
           <CalendarioView demandas={demandaList} />

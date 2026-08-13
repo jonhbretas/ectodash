@@ -1034,3 +1034,76 @@ export async function excluirDemanda(
   revalidatePath("/");
   return { ok: true, message: "Demanda excluída." };
 }
+
+export type MesclarDemandasState = { ok: boolean; message: string };
+
+// Merge de demandas duplicadas (kanban). O cliente escolhe qual demanda
+// fica (manterId) e quais são absorvidas (removerIds); a função
+// mesclar_demandas() (migration 0072) move responsáveis/membros/comentários/
+// checklist e preenche campos vazios da mantida, depois apaga as absorvidas.
+// Os ids são re-validados server-side; o gate de permissão (mesma regra da
+// policy de DELETE 0053) é aplicado dentro da função para CADA demanda.
+export async function mesclarDemandas(
+  manterId: number,
+  removerIds: number[]
+): Promise<MesclarDemandasState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  const manterValido = idsNumericos([String(manterId)]);
+  if (manterValido.length === 0) {
+    return { ok: false, message: "Demanda inválida." };
+  }
+
+  const removerValidos = idsNumericos(removerIds.map(String));
+  if (removerValidos.length === 0) {
+    return { ok: false, message: "Nenhuma demanda para absorver." };
+  }
+
+  const { data: resultado, error } = await supabase.rpc("mesclar_demandas", {
+    p_manter_id: manterValido[0],
+    p_remover_ids: removerValidos,
+  });
+
+  if (error) {
+    console.error("mesclarDemandas: rpc failed", error);
+    return {
+      ok: false,
+      message:
+        "Não foi possível mesclar as demandas. Verifique suas permissões e tente de novo.",
+    };
+  }
+
+  if (resultado !== "ok") {
+    const mensagens: Record<string, string> = {
+      sem_permissao:
+        "Você não tem permissão para mesclar uma ou mais demandas selecionadas.",
+      mesma_demanda: "A demanda mantida não pode estar entre as absorvidas.",
+      sem_removidas: "Nenhuma demanda selecionada para absorver.",
+      demanda_nao_encontrada:
+        "Uma das demandas selecionadas não existe mais. Atualize a tela e tente de novo.",
+    };
+    return {
+      ok: false,
+      message:
+        mensagens[resultado] ??
+        "Não foi possível mesclar as demandas. Tente de novo.",
+    };
+  }
+
+  revalidatePath("/");
+  const count = removerValidos.length;
+  return {
+    ok: true,
+    message:
+      count === 1
+        ? "Demanda absorvida pela demanda mantida."
+        : `${count} demandas absorvidas pela demanda mantida.`,
+  };
+}

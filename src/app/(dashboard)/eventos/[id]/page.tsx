@@ -248,7 +248,14 @@ export default async function EventoPage({ params }: EventoPageProps) {
           </p>
         </div>
       ) : (
-        <KanbanBoard key={`evento-${id}`} demandas={demandas} />
+        <KanbanBoard
+          key={`evento-${id}`}
+          demandas={demandas}
+          canGerir={
+            profileResult.data?.role === "coordenador_geral" ||
+            profileResult.data?.role === "coordenador_area"
+          }
+        />
       )}
     </PageContainer>
   );
