@@ -75,6 +75,71 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   );
 }
 
+// Lista de voluntários com busca por digitação — substitui a lista longa de
+// checkboxes por um campo de busca que filtra os nomes enquanto digita
+// (responsáveis e membros da demanda no formulário).
+function VoluntarioChecklist({
+  voluntarios,
+  selectedIds,
+  onToggle,
+  emptyLabel = "Nenhum voluntário encontrado.",
+}: {
+  voluntarios: VoluntarioOption[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  emptyLabel?: string;
+}) {
+  const [busca, setBusca] = useState("");
+  const termo = busca.trim().toLowerCase();
+  const filtrados = termo
+    ? voluntarios.filter((v) => v.nome.toLowerCase().includes(termo))
+    : voluntarios;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+      <div className="border-b border-zinc-200 p-2">
+        <input
+          type="search"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar voluntário por nome..."
+          aria-label="Buscar voluntário por nome"
+          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-lg text-zinc-900 outline-none transition-colors hover:border-zinc-300 focus:ring-2 focus:ring-[#2195B9]"
+        />
+      </div>
+      <div className="max-h-44 overflow-y-auto p-2">
+        {filtrados.length === 0 ? (
+          <p className="px-2 py-3 text-base text-zinc-400">{emptyLabel}</p>
+        ) : (
+          filtrados.map((voluntario) => {
+            const id = String(voluntario.id);
+            return (
+              <label
+                key={voluntario.id}
+                className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg px-2 py-1 text-xl text-zinc-900 transition-colors hover:bg-zinc-50"
+              >
+                <input
+                  type="checkbox"
+                  value={id}
+                  checked={selectedIds.includes(id)}
+                  onChange={() => onToggle(id)}
+                  className="h-5 w-5 rounded border-zinc-300 accent-[#2195B9]"
+                />
+                <span className="truncate">
+                  {voluntario.nome}
+                  {!voluntario.temConta && (
+                    <span className="text-base text-zinc-400"> (sem acesso)</span>
+                  )}
+                </span>
+              </label>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 type DemandaFormProps = {
   voluntarios: VoluntarioOption[];
   eventos: EventoOption[];
@@ -355,37 +420,17 @@ export default function DemandaForm({
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <span className={fieldLabelClass}>Responsável *</span>
-              <div className="max-h-44 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-3">
-                {voluntarios.map((voluntario) => {
-                  const id = String(voluntario.id);
-                  return (
-                    <label
-                      key={voluntario.id}
-                      className="flex min-h-12 items-center gap-3 rounded-lg px-2 py-1 text-xl text-zinc-900 transition-colors hover:bg-zinc-50"
-                    >
-                      <input
-                        type="checkbox"
-                        value={id}
-                        checked={responsavelIds.includes(id)}
-                        onChange={(e) => {
-                          const next = e.target.checked
-                            ? [...responsavelIds, id]
-                            : responsavelIds.filter((v) => v !== id);
-                          setResponsavelIds(next);
-                          setValue("responsavelIds", next);
-                        }}
-                        className="h-5 w-5 rounded border-zinc-300 accent-[#2195B9]"
-                      />
-                      <span>
-                        {voluntario.nome}
-                        {!voluntario.temConta && (
-                          <span className="text-base text-zinc-400"> (sem acesso)</span>
-                        )}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+              <VoluntarioChecklist
+                voluntarios={voluntarios}
+                selectedIds={responsavelIds}
+                onToggle={(id) => {
+                  const next = responsavelIds.includes(id)
+                    ? responsavelIds.filter((v) => v !== id)
+                    : [...responsavelIds, id];
+                  setResponsavelIds(next);
+                  setValue("responsavelIds", next);
+                }}
+              />
               {errors.responsavelIds && (
                 <span className={errorClass}>{errors.responsavelIds.message}</span>
               )}
@@ -393,37 +438,17 @@ export default function DemandaForm({
 
             <div className="flex flex-col gap-1.5">
               <span className={fieldLabelClass}>Membros / acompanhantes (opcional)</span>
-              <div className="max-h-44 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-3">
-                {voluntarios.map((voluntario) => {
-                  const id = String(voluntario.id);
-                  return (
-                    <label
-                      key={voluntario.id}
-                      className="flex min-h-12 items-center gap-3 rounded-lg px-2 py-1 text-xl text-zinc-900 transition-colors hover:bg-zinc-50"
-                    >
-                      <input
-                        type="checkbox"
-                        value={id}
-                        checked={membroIdsLocal.includes(id)}
-                        onChange={(e) => {
-                          const next = e.target.checked
-                            ? [...membroIdsLocal, id]
-                            : membroIdsLocal.filter((v) => v !== id);
-                          setMembroIdsLocal(next);
-                          setValue("membroIds", next);
-                        }}
-                        className="h-5 w-5 rounded border-zinc-300 accent-[#2195B9]"
-                      />
-                      <span>
-                        {voluntario.nome}
-                        {!voluntario.temConta && (
-                          <span className="text-base text-zinc-400"> (sem acesso)</span>
-                        )}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+              <VoluntarioChecklist
+                voluntarios={voluntarios}
+                selectedIds={membroIdsLocal}
+                onToggle={(id) => {
+                  const next = membroIdsLocal.includes(id)
+                    ? membroIdsLocal.filter((v) => v !== id)
+                    : [...membroIdsLocal, id];
+                  setMembroIdsLocal(next);
+                  setValue("membroIds", next);
+                }}
+              />
               <p className="text-base text-zinc-500">
                 Acompanhantes acompanham a demanda e recebem os mesmos
                 lembretes por e-mail.
