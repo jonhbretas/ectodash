@@ -15,6 +15,7 @@ import { matchResponsavelRoster, normalize } from "@/lib/ai/match-responsavel";
 export type CreateDemandaState = {
   ok: boolean;
   message: string;
+  id?: number | null;
 };
 
 export async function createDemanda(
@@ -27,7 +28,7 @@ export async function createDemanda(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+    return { ok: false, message: "Sessão expirada. Faça login novamente.", id: null };
   }
 
   // A native <select multiple> submits one same-named form field per
@@ -50,7 +51,7 @@ export async function createDemanda(
   );
 
   if (!parsed.success || !eventoId.success || !etiquetaId.success) {
-    return { ok: false, message: "Verifique os campos destacados." };
+    return { ok: false, message: "Verifique os campos destacados.", id: null };
   }
 
   // The authorship column is deliberately never set from client input here
@@ -77,6 +78,7 @@ export async function createDemanda(
       ok: false,
       message:
         "Não foi possível salvar a demanda agora. Verifique sua internet e tente de novo.",
+      id: null,
     };
   }
 
@@ -132,7 +134,7 @@ export async function createDemanda(
   }
 
   revalidatePath("/");
-  return { ok: true, message: "Demanda criada com sucesso." };
+  return { ok: true, message: "Demanda criada com sucesso.", id: demanda.id as number };
 }
 
 export type UpdateDemandaState = {
@@ -982,3 +984,53 @@ export async function excluirDemandas(
   };
 }
 
+
+
+export type ExcluirDemandaState = { ok: boolean; message: string };
+
+// Single-demanda delete from the detail/edit page ("excluir demanda"). The
+// id is a function parameter bound server-side, never read from client input.
+// RLS (migration 0053) governs whether the caller may delete the row.
+export async function excluirDemanda(
+  id: number
+): Promise<ExcluirDemandaState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  if (!idsNumericos([String(id)]).includes(id)) {
+    return { ok: false, message: "Demanda inválida." };
+  }
+
+  const { data: deletada, error } = await supabase
+    .from("demandas")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("excluirDemanda: delete failed", error);
+    return {
+      ok: false,
+      message:
+        "Não foi possível excluir a demanda. Verifique suas permissões e tente de novo.",
+    };
+  }
+
+  if (!deletada) {
+    return {
+      ok: false,
+      message:
+        "Não foi possível excluir a demanda. Verifique suas permissões e tente de novo.",
+    };
+  }
+
+  revalidatePath("/");
+  return { ok: true, message: "Demanda excluída." };
+}

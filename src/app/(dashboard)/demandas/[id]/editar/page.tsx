@@ -6,6 +6,7 @@ import DemandaInlineEditor from "../../demanda-inline-editor";
 import ConcludeButton from "../../conclude-button";
 import DemandaChecklist from "../../demanda-checklist";
 import DemandaComentarios from "../../demanda-comentarios";
+import ExcluirDemandaButton from "../../excluir-demanda-button";
 import PageContainer from "../../../page-container";
 
 // corrigirDemandaComIa's AI call may run past the default 10s function
@@ -23,6 +24,13 @@ export default async function EditarDemandaPage({
   const id = Number(idParam);
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
 
   if (!Number.isFinite(id)) {
     return (
@@ -67,6 +75,7 @@ export default async function EditarDemandaPage({
     { data: comentariosRaw },
     { data: areasInstitucionais },
     { data: projetosRows },
+    perfilResult,
   ] = await Promise.all([
     supabase.from("demanda_responsaveis").select("profile_id, voluntario_id").eq("demanda_id", id),
     supabase.from("demanda_membros").select("profile_id, voluntario_id").eq("demanda_id", id),
@@ -83,6 +92,11 @@ export default async function EditarDemandaPage({
       .eq("demanda_id", id).order("created_at", { ascending: true }),
     supabase.from("areas_institucionais").select("nome").order("nome"),
     supabase.from("projetos").select("nome").order("nome"),
+    supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single(),
   ]);
 
   // Normalize the persisted assignments (profile_id OR voluntario_id, per
@@ -136,6 +150,12 @@ export default async function EditarDemandaPage({
       createdAt: row.created_at,
     };
   });
+
+  // UX gate mirroring the list view's bulk-delete gate (coordenador_geral or
+  // coordenador_area). RLS (migration 0053) remains the real boundary.
+  const perfilRole = perfilResult.data?.role ?? null;
+  const canExcluir =
+    perfilRole === "coordenador_geral" || perfilRole === "coordenador_area";
 
   return (
     <PageContainer>

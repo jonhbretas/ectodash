@@ -14,6 +14,15 @@ import {
   SelectLabel,
   SelectItem,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CheckCircle2 } from "lucide-react";
 import { agruparEventosPorMes } from "@/lib/eventos-agrupados";
 import {
   createDemanda,
@@ -27,6 +36,7 @@ import { demandaSchema, type DemandaFormValues } from "./demanda-schema";
 const initialState: CreateDemandaState | UpdateDemandaState = {
   ok: false,
   message: "",
+  id: null,
 };
 
 export type VoluntarioOption = {
@@ -164,6 +174,7 @@ export default function DemandaForm({
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<DemandaFormValues>({
     resolver: zodResolver(demandaSchema),
@@ -212,13 +223,83 @@ export default function DemandaForm({
       fd.delete("membroIds");
       membroIdsLocal.forEach((id) => fd.append("membroIds", id));
       fd.set("prazo", _values.prazo);
+      // Re-arm the success dialog: a new submission may succeed and should
+      // show it again even after a previous "Criar outra" dismissed it.
+      setDialogDismissed(false);
       formAction(fd);
     }
   };
 
+  // Success dialog for the create flow: the Server Action returns the new
+  // demanda's id, and the dialog offers "Ver demanda" / "Criar outra".
+  // Visibilidade deriva de state (ok + id) combinado com um flag local de
+  // dispensa — nenhum effect necessário.
+  const [dialogDismissed, setDialogDismissed] = useState(false);
+
+  const demandaCriadaId =
+    mode === "create" &&
+    !dialogDismissed &&
+    state.ok &&
+    "id" in state &&
+    state.id != null
+      ? state.id
+      : null;
+
+  function resetFormulario() {
+    reset({ status: "pendente", responsavelIds: [], membroIds: [] });
+    setEventoId("");
+    setArea("");
+    setProjeto("");
+    setStatus("pendente");
+    setPrazoIso("");
+    setResponsavelIds([]);
+    setMembroIdsLocal([]);
+    setEtiquetaId("");
+    setDialogDismissed(true);
+  }
+
   const cardClass =
     "flex flex-col gap-5 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60";
   const sectionTitleClass = "text-base font-semibold text-zinc-400 uppercase tracking-wider";
+
+  const sucessoDialog = (
+    <Dialog
+      open={demandaCriadaId !== null}
+      onOpenChange={(open) => {
+        if (!open) setDialogDismissed(true);
+      }}
+    >
+      <DialogContent className="bg-white">
+        <DialogHeader className="flex flex-col items-center gap-3 text-center sm:text-center">
+          <CheckCircle2 className="size-12 text-emerald-500" aria-hidden="true" />
+          <DialogTitle className="text-2xl font-semibold text-zinc-900">
+            Demanda criada com sucesso!
+          </DialogTitle>
+          <DialogDescription className="text-lg text-zinc-600">
+            A demanda foi registrada e já aparece na lista.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+          <button
+            type="button"
+            onClick={resetFormulario}
+            className="min-h-12 flex-1 rounded-xl bg-zinc-100 px-4 py-3 text-lg font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          >
+            Criar outra demanda
+          </button>
+          {demandaCriadaId !== null && (
+            <Link
+              href={`/demandas/${demandaCriadaId}/editar`}
+              onClick={() => setDialogDismissed(true)}
+              className="flex min-h-12 flex-1 items-center justify-center rounded-xl bg-[#2195B9] px-4 py-3 text-lg font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+            >
+              Ver demanda
+            </Link>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   if (wide) {
     return (
@@ -503,9 +584,10 @@ export default function DemandaForm({
           </Link>
         </div>
 
-        <div aria-live="polite" className="min-h-7 text-lg text-zinc-700">
-          {state.message}
+        <div aria-live="polite" className={`min-h-7 text-lg ${state.ok ? "text-zinc-700" : "text-red-600"}`}>
+          {mode === "create" && state.ok ? "" : state.message}
         </div>
+        {mode === "create" && sucessoDialog}
       </form>
     );
   }
@@ -756,9 +838,10 @@ export default function DemandaForm({
         Cancelar
       </Link>
 
-      <div aria-live="polite" className="min-h-7 text-lg text-zinc-700">
-        {state.message}
+      <div aria-live="polite" className={`min-h-7 text-lg ${state.ok ? "text-zinc-700" : "text-red-600"}`}>
+        {mode === "create" && state.ok ? "" : state.message}
       </div>
+      {mode === "create" && sucessoDialog}
     </form>
   );
 }
