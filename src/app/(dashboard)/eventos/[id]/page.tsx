@@ -20,7 +20,7 @@ import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
 import PageContainer from "../../page-container";
-import KanbanBoard from "../../demandas/kanban-board";
+import KanbanArea from "../../demandas/kanban-area";
 import AdicionarTarefasButton from "./adicionar-tarefas-button";
 import EditarEventoPanel from "../editar-evento-panel";
 
@@ -248,7 +248,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
           </p>
         </div>
       ) : (
-        <KanbanBoard
+        <KanbanArea
           key={`evento-${id}`}
           demandas={demandas}
           canGerir={

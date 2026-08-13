@@ -7,12 +7,11 @@ import { DemandaAgruparFilter } from "./demandas/demanda-quick-filters";
 import DemandaViewToggle, {
   type DemandaView,
 } from "./demandas/demanda-view-toggle";
-import KanbanBoard from "./demandas/kanban-board";
+import KanbanArea from "./demandas/kanban-area";
 import CalendarioView from "./demandas/calendario-view";
 import PageContainer from "./page-container";
 import { Plus, UserCheck } from "lucide-react";
 import { parseDemandaFilters } from "./demandas/demanda-filter-schema";
-import { groupDemandas } from "./demandas/demanda-groups";
 import { cn } from "@/lib/utils";
 
 export default async function DashboardPage({
@@ -344,46 +343,22 @@ export default async function DashboardPage({
           </p>
         )}
 
-        {view !== "lista" && (
+        {view === "calendario" && (
           <div className="flex flex-wrap items-center gap-2">
             <DemandaAgruparFilter currentFilters={filters} />
           </div>
         )}
 
         {view === "kanban" ? (
-          filters.agrupar ? (
-            <div className="flex w-full flex-col gap-8">
-              {groupDemandas(demandaList, filters.agrupar).map((group) => (
-                <div key={group.label} className="flex w-full flex-col gap-4">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-semibold text-zinc-900">
-                      {group.label}
-                    </h3>
-                    <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-base font-medium text-zinc-600">
-                      {group.items.length === 1
-                        ? "1 demanda"
-                        : `${group.items.length} demandas`}
-                    </span>
-                  </div>
-                  <KanbanBoard
-                    key={`${boardKey}-${group.label}`}
-                    demandas={group.items}
-                    canGerir={
-                      role === "coordenador_geral" || role === "coordenador_area"
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <KanbanBoard
-              key={boardKey}
-              demandas={demandaList}
-              canGerir={
-                role === "coordenador_geral" || role === "coordenador_area"
-              }
-            />
-          )
+          <KanbanArea
+            key={boardKey}
+            demandas={demandaList}
+            canGerir={
+              role === "coordenador_geral" || role === "coordenador_area"
+            }
+            agrupar={filters.agrupar ?? null}
+            agruparFilter={<DemandaAgruparFilter currentFilters={filters} />}
+          />
         ) : view === "calendario" ? (
           <CalendarioView demandas={demandaList} />
         ) : (
