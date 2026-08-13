@@ -239,8 +239,11 @@ export default function FeedbackButton() {
   // navegador), depois chama a server action com apenas os caminhos.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Captura o form agora (síncrono): depois de um `await`, o
+    // event.currentTarget é anulado pelo navegador e viraria TypeError.
+    const form = event.currentTarget;
     if (anexos.length === 0) {
-      formAction(new FormData(event.currentTarget));
+      formAction(new FormData(form));
       return;
     }
     setEnviando(true);
@@ -251,7 +254,7 @@ export default function FeedbackButton() {
         return;
       }
       caminhosEnviadosRef.current = resultado.caminhos;
-      const formData = new FormData(event.currentTarget);
+      const formData = new FormData(form);
       formData.set("anexos", JSON.stringify(resultado.caminhos));
       formAction(formData);
     } catch (erro) {
