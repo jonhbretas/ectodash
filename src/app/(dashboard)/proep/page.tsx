@@ -556,7 +556,7 @@ export default function ProepPage() {
             <option value="">Selecione a turma</option>
             {editions.map(ed => (
               <option key={ed.id} value={ed.id}>
-                {ed.name} {ed.start_date ? `(${new Date(ed.start_date + "T00:00:00").toLocaleDateString("pt-BR")})` : ""}
+                PROEP {ed.start_date ? `(${new Date(ed.start_date + "T00:00:00").toLocaleDateString("pt-BR")})` : ""}
               </option>
             ))}
           </select>
