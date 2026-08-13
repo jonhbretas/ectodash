@@ -313,3 +313,75 @@ export async function salvarReferenciasFinanceiras(
     message: `Referências de ${labelMes(mes)} salvas.`,
   };
 }
+
+export type LimparFinanceiroState = {
+  ok: boolean;
+  message: string;
+};
+
+const limparInitialState: LimparFinanceiroState = {
+  ok: false,
+  message: "",
+};
+
+// Esvazia os lançamentos e as referências mensais do financeiro, deixando o
+// painel pronto para uma importação nova. Deleção inteira de tabela — as
+// mesmas políticas RLS do import (financeiro/coordenador_geral) valem aqui.
+export async function limparFinanceiro(
+  prevState: LimparFinanceiroState,
+  formData: FormData
+): Promise<LimparFinanceiroState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ...limparInitialState, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const allowed =
+    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+
+  if (!allowed) {
+    return { ...limparInitialState, message: "Você não tem acesso ao financeiro." };
+  }
+
+  const { error: entriesError } = await supabase
+    .from("financial_entries")
+    .delete()
+    .gte("id", 0);
+
+  if (entriesError) {
+    console.error("limparFinanceiro: delete entries failed", entriesError);
+    return {
+      ...limparInitialState,
+      message: "Não foi possível limpar os lançamentos. Tente novamente.",
+    };
+  }
+
+  const { error: refsError } = await supabase
+    .from("financial_monthly_references")
+    .delete()
+    .gte("mes", "");
+
+  if (refsError) {
+    console.error("limparFinanceiro: delete references failed", refsError);
+    return {
+      ...limparInitialState,
+      message: "Lançamentos limpos, mas as referências mensais não puderam ser removidas.",
+    };
+  }
+
+  revalidatePath("/financeiro");
+  return {
+    ok: true,
+    message: "Dados financeiros limpos. Agora é só importar a nova planilha.",
+  };
+}

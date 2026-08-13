@@ -3,20 +3,29 @@
 // Financeiro import card — CSV/XLSX upload replacing the current entries
 // (same whole-table-replace semantics as the cron sync), plus the AI
 // didactic summary of the imported numbers. On success it refreshes the
-// dashboard below via router.refresh().
+// dashboard below via router.refresh(). A "Limpar dados" button lets the
+// user wipe the current entries (and monthly references) before importing
+// a fresh spreadsheet — useful when the panel looks contaminated.
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { UploadCloud, Sparkles } from "lucide-react";
+import { Eraser, UploadCloud, Sparkles } from "lucide-react";
 import {
   importarFinanceiro,
+  limparFinanceiro,
   type ImportarFinanceiroState,
+  type LimparFinanceiroState,
 } from "./actions";
 
 const initialState: ImportarFinanceiroState = {
   ok: false,
   message: "",
   resumo: null,
+};
+
+const limparInitialState: LimparFinanceiroState = {
+  ok: false,
+  message: "",
 };
 
 function SubmitButton() {
@@ -37,6 +46,10 @@ export default function ImportFinanceiroForm() {
   const [state, formAction] = useActionState(
     importarFinanceiro,
     initialState
+  );
+  const [limparState, limparAction] = useActionState(
+    limparFinanceiro,
+    limparInitialState
   );
 
   return (
@@ -82,6 +95,35 @@ export default function ImportFinanceiroForm() {
         <SubmitButton />
       </form>
 
+      <div className="flex flex-col gap-2 border-t border-zinc-100 pt-4">
+        <p className="text-base text-zinc-700">
+          Antes de importar uma planilha nova, você pode apagar os dados
+          atuais:
+        </p>
+        <form
+          action={(formData) => {
+            if (
+              window.confirm(
+                "Apagar TODOS os lançamentos e referências do financeiro? Essa ação não pode ser desfeita."
+              )
+            ) {
+              limparAction(formData);
+            }
+          }}
+        >
+          <ClearButton />
+        </form>
+        {limparState.message && (
+          <p
+            className={`text-base ${
+              limparState.ok ? "text-green-800" : "text-red-700"
+            }`}
+          >
+            {limparState.message}
+          </p>
+        )}
+      </div>
+
       <div aria-live="polite" className="flex flex-col gap-2">
         {state.message && (
           <p
@@ -115,5 +157,19 @@ export default function ImportFinanceiroForm() {
         </button>
       )}
     </section>
+  );
+}
+
+function ClearButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-lg font-medium text-red-700 transition-colors hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+    >
+      <Eraser size={20} aria-hidden="true" />
+      {pending ? "Limpando..." : "Limpar dados"}
+    </button>
   );
 }
