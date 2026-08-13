@@ -77,7 +77,9 @@ function findMonthHeaderRow(
 function parseValor(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === "") return null;
   if (typeof raw === "number") {
-    return raw === 0 ? null : raw;
+    // Células negativas (saldo/resultado do período) não são lançamentos —
+    // financial_entries exige valor >= 0 e o sinal vem de tipo entrada/saida.
+    return raw > 0 ? raw : null;
   }
 
   const str = String(raw).trim();
@@ -106,7 +108,7 @@ function parseValor(raw: unknown): number | null {
   }
 
   const value = Number(cleaned);
-  if (!Number.isFinite(value) || value === 0) return null;
+  if (!Number.isFinite(value) || value <= 0) return null;
   return value;
 }
 

@@ -193,6 +193,21 @@ describe("parseEctolabRows", () => {
     expect(entries!.length).toBe(0);
   });
 
+  it("pula células com valor negativo (saldo/resultado, não lançamento)", () => {
+    const rows = [
+      ["Fluxo de Caixa - 2026"],
+      HEADER_ROW,
+      makeRow("Doação", "Doações", 500, -700, 0),
+      makeRow("TOTAL GERAL", "Receitas Diversas", "0,00"),
+    ];
+
+    const entries = parseEctolabRows(rows);
+    expect(entries).not.toBeNull();
+    expect(entries!.length).toBe(1);
+    expect(entries![0].valor).toBe(500);
+    expect(entries![0].data).toBe("2026-01-31");
+  });
+
   it("aceita valores como números (vindo de XLSX raw)", () => {
     const rows = [
       ["Fluxo de Caixa - 2026"],

@@ -107,9 +107,15 @@ async function importarFinanceiroInner(
 
   if (insertError) {
     console.error("importarFinanceiro: insert failed", insertError);
+    // 23514 = check constraint violation (e.g. valor negativo) — expose the
+    // DB detail so a malformed spreadsheet row is actionable, not cryptic.
+    const detail =
+      insertError.code === "23514"
+        ? " Algum valor veio negativo ou inválido na planilha — ajuste e tente novamente."
+        : "";
     return {
       ...initialState,
-      message: "Não foi possível salvar os lançamentos importados.",
+      message: `Não foi possível salvar os lançamentos importados.${detail}`,
     };
   }
 
