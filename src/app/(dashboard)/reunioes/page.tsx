@@ -208,7 +208,7 @@ function AtaAgendaRow({ ata }: { ata: AtaRow }) {
           <h3 className="min-w-0 text-xl font-semibold text-zinc-900">
             {ata.titulo}
           </h3>
-          <span className="flex shrink-0 flex-wrap items-center gap-1.5 text-base text-zinc-500">
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-base text-zinc-500">
             {participantesCount > 0 && (
               <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-base text-zinc-700">
                 <Users size={14} aria-hidden="true" />
@@ -218,7 +218,7 @@ function AtaAgendaRow({ ata }: { ata: AtaRow }) {
             {deliberacoesCount > 0 && (
               <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-base text-zinc-700">
                 <MessageSquareText size={14} aria-hidden="true" />
-                {deliberacoesCount} {deliberacoesCount === 1 ? "deliberação" : "deliberações"}
+                {deliberacoesCount} {deliberacoesCount === 1 ? "tarefa" : "tarefas"}
               </span>
             )}
             {ata.dipCount > 0 && (
