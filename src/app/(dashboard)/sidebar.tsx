@@ -240,7 +240,7 @@ function SidebarBrand({
       title={collapsed ? "EctoLab — página inicial" : undefined}
       aria-label="EctoLab — página inicial"
       className={`flex min-h-12 items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
-        collapsed ? "justify-center gap-0" : "w-full"
+        collapsed ? "justify-start gap-0" : "w-full"
       }`}
     >
       <img
@@ -360,21 +360,23 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
         </div>
       </aside>
 
-      <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[#e8ddd4]/60 glass px-4 lg:hidden">
-        <div className="flex-1 min-w-0">
+      <header className="sticky top-0 z-40 flex h-14 w-full items-center border-b border-[#e8ddd4]/60 glass px-4 lg:hidden">
+        <div className="min-w-0 shrink-0">
           <SidebarBrand collapsed={true} />
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-expanded={open}
-          aria-label="Abrir menu"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M3 6h18M3 12h18M3 18h18" />
-          </svg>
-        </button>
+        <div className="ml-auto">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-expanded={open}
+            aria-label="Abrir menu"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {drawer}

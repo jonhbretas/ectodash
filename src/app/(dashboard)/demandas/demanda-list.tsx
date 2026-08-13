@@ -13,10 +13,7 @@ import {
 } from "lucide-react";
 import DemandaCard from "./demanda-card";
 import DemandaTable from "./demanda-table";
-import {
-  DemandaStatusFilter,
-  DemandaAgruparFilter,
-} from "./demanda-quick-filters";
+import { DemandaAgruparFilter } from "./demanda-quick-filters";
 import { excluirDemandas } from "./actions";
 import {
   groupDemandas,
@@ -35,9 +32,9 @@ export type Demanda = DemandaGroupable;
 export type DemandaListProps = {
   demandas: Demanda[];
   // currentFilters: the same parsed searchParams page.tsx passes to
-  // DemandaFilters — needed here so the inline status/grouping controls
-  // (DemandaStatusFilter / DemandaAgruparFilter) can read the current URL
-  // state and navigate with the same router.push pattern.
+  // DemandaFilters — needed here so the inline grouping control
+  // (DemandaAgruparFilter) can read the current URL state and navigate
+  // with the same router.push pattern.
   currentFilters: DemandaFilters;
   // groupBy: when set, the list splits into labeled sections instead of one
   // flat sorted list (05-UI-SPEC.md Screen Inventory 1a). compareDemandas is
@@ -151,21 +148,22 @@ export default function DemandaList({
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-2xl font-semibold text-zinc-900">Demandas</h2>
-        <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-base font-medium text-zinc-600">
-          {countLabel}
-        </span>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-semibold text-zinc-900">Demandas</h2>
+          <span className="hidden rounded-full bg-zinc-100 px-2.5 py-0.5 text-base font-medium text-zinc-600 sm:inline-block">
+            {countLabel}
+          </span>
+        </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <DemandaStatusFilter currentFilters={currentFilters} />
           <DemandaAgruparFilter currentFilters={currentFilters} />
 
           {canExcluir && demandas.length > 0 && !selectionMode && (
             <button
               type="button"
               onClick={enterSelection}
-              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:text-base"
             >
               <CheckSquare size={16} aria-hidden="true" />
               Selecionar

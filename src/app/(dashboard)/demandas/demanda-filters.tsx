@@ -37,6 +37,12 @@ import type { DemandaFilters } from "./demanda-filter-schema";
 
 const ALL_VALUE = "__todas__";
 
+const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "pendente", label: "Pendente" },
+  { value: "em_andamento", label: "Em andamento" },
+  { value: "concluida", label: "Concluída" },
+];
+
 function dataEventoLabel(data: string): string {
   const [ano, mes, dia] = data.split("-");
   return `${dia}/${mes}/${ano}`;
@@ -100,7 +106,7 @@ export default function DemandaFilters({
   }
 
   function removeFilter(
-    key: "area" | "projeto" | "evento" | "etiqueta" | "responsavel"
+    key: "area" | "projeto" | "evento" | "etiqueta" | "responsavel" | "status"
   ) {
     navigateWith({ [key]: undefined });
   }
@@ -114,6 +120,14 @@ export default function DemandaFilters({
   );
 
   const activeChips = [
+    {
+      key: "status" as const,
+      label: `Status: ${
+        STATUS_OPTIONS.find((s) => s.value === currentFilters.status?.split(",")[0])
+          ?.label ?? currentFilters.status
+      }`,
+      title: "Status",
+    },
     {
       key: "area" as const,
       label: `Área: ${currentFilters.area}`,
@@ -151,6 +165,7 @@ export default function DemandaFilters({
       title: "Voluntário",
     },
   ].filter((chip) => {
+    if (chip.key === "status") return Boolean(currentFilters.status);
     if (chip.key === "area") return Boolean(currentFilters.area);
     if (chip.key === "projeto") return Boolean(currentFilters.projeto);
     if (chip.key === "evento") return Boolean(currentFilters.evento);
@@ -203,7 +218,7 @@ export default function DemandaFilters({
         className="flex min-h-10 items-center gap-2 rounded-xl bg-zinc-100 px-3.5 text-base font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <SlidersHorizontal size={18} aria-hidden="true" />
-        Filtros
+        <span className="max-sm:hidden">Filtros</span>
         {activeCount > 0 && (
           <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#2195B9] px-1.5 text-sm font-semibold text-white">
             {activeCount}
@@ -274,6 +289,19 @@ export default function DemandaFilters({
             )}
 
             <div className="grid grid-cols-1 gap-3">
+              {selectControl(
+                "Filtrar por status",
+                currentFilters.status?.split(",")[0],
+                ALL_VALUE,
+                "Todos os status",
+                (value) => navigateWith({ status: value }),
+                STATUS_OPTIONS.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))
+              )}
+
               {selectControl(
                 "Filtrar por área",
                 currentFilters.area,

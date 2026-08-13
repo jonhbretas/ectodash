@@ -3,20 +3,14 @@ import { displayName } from "@/lib/display-name";
 import Link from "next/link";
 import DemandaList from "./demandas/demanda-list";
 import DemandaFilters from "./demandas/demanda-filters";
-import {
-  DemandaStatusFilter,
-  DemandaAgruparFilter,
-} from "./demandas/demanda-quick-filters";
+import { DemandaAgruparFilter } from "./demandas/demanda-quick-filters";
 import DemandaViewToggle, {
   type DemandaView,
 } from "./demandas/demanda-view-toggle";
 import KanbanBoard from "./demandas/kanban-board";
 import CalendarioView from "./demandas/calendario-view";
 import PageContainer from "./page-container";
-import {
-  Plus,
-  UserCheck,
-} from "lucide-react";
+import { Plus, UserCheck } from "lucide-react";
 import { parseDemandaFilters } from "./demandas/demanda-filter-schema";
 import { groupDemandas } from "./demandas/demanda-groups";
 import { cn } from "@/lib/utils";
@@ -285,55 +279,61 @@ export default async function DashboardPage({
 
   return (
     <PageContainer>
-      <header className="flex w-full flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            Olá, {displayName(profile ?? { email: user.email ?? "" })}
-          </h1>
-          <p className="text-sm text-slate-500">
-            Acompanhe suas demandas e prazos por aqui.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <DemandaFilters
-            areaOptions={areaOptions}
-            projetoOptions={projetoOptions}
-            eventoOptions={eventosResult.data ?? []}
-            etiquetaOptions={etiquetasResult.data ?? []}
-            responsavelOptions={responsavelOptions}
-            currentFilters={filters}
-          />
-
-          <div className="mr-2 lg:mr-4">
-            <DemandaViewToggle currentView={view} />
+      <header className="flex w-full flex-col gap-4">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">
+              Olá, {displayName(profile ?? { email: user.email ?? "" })}
+            </h1>
+            <p className="text-sm text-slate-500">
+              Acompanhe suas demandas e prazos por aqui.
+            </p>
           </div>
 
-          {meuVoluntarioId !== null && (
-            <Link
-              href={minhasDemandasHref}
-              title={
-                minhasDemandasAtivas
-                  ? "Voltar para todas as demandas"
-                  : "Mostrar apenas as demandas atribuídas a você"
-              }
-              className={cn(
-                "flex h-10 items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]",
-                minhasDemandasAtivas
-                  ? "bg-[#E6E6E6] text-[#2195B9] ring-[#E6E6E6] hover:bg-[#E6E6E6]"
-                  : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+            <div className="flex items-center gap-2">
+              <DemandaFilters
+                areaOptions={areaOptions}
+                projetoOptions={projetoOptions}
+                eventoOptions={eventosResult.data ?? []}
+                etiquetaOptions={etiquetasResult.data ?? []}
+                responsavelOptions={responsavelOptions}
+                currentFilters={filters}
+              />
+              <div className="mr-0 sm:mr-2 lg:mr-4">
+                <DemandaViewToggle currentView={view} />
+              </div>
+            </div>
+
+            <div className="flex flex-1 items-center gap-2 sm:flex-initial">
+              {meuVoluntarioId !== null && (
+                <Link
+                  href={minhasDemandasHref}
+                  title={
+                    minhasDemandasAtivas
+                      ? "Voltar para todas as demandas"
+                      : "Mostrar apenas as demandas atribuídas a você"
+                  }
+                  className={cn(
+                    "flex h-10 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5",
+                    minhasDemandasAtivas
+                      ? "bg-[#E6E6E6] text-[#2195B9] ring-[#E6E6E6] hover:bg-[#E6E6E6]"
+                      : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                  )}
+                >
+                  <UserCheck size={18} aria-hidden="true" />
+                  Minhas demandas
+                </Link>
               )}
-            >
-              <UserCheck size={18} aria-hidden="true" />
-              Minhas demandas
-            </Link>
-          )}
-          <Link
-            href="/demandas/nova"
-            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-          >
-            <Plus size={18} aria-hidden="true" />
-            Nova demanda
-          </Link>
+              <Link
+                href="/demandas/nova"
+                className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-4 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5"
+              >
+                <Plus size={18} aria-hidden="true" />
+                Nova demanda
+              </Link>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -346,7 +346,6 @@ export default async function DashboardPage({
 
         {view !== "lista" && (
           <div className="flex flex-wrap items-center gap-2">
-            <DemandaStatusFilter currentFilters={filters} />
             <DemandaAgruparFilter currentFilters={filters} />
           </div>
         )}
