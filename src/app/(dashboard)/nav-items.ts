@@ -63,6 +63,7 @@ export const navEntries: SidebarEntry[] = [
     children: [
       { href: "/", label: "Demandas", Icon: ClipboardList, modulo: "demandas" },
       { href: "/reunioes", label: "Atas de Reuniões", Icon: NotebookPen, modulo: "reunioes" },
+      { href: "/projetos", label: "Projetos", Icon: FolderKanban, modulo: "projetos" },
     ],
   },
 
@@ -85,7 +86,6 @@ export const navEntries: SidebarEntry[] = [
     label: "Conhecimento",
     Icon: FolderKanban,
     children: [
-      { href: "/projetos", label: "Projetos", Icon: FolderKanban, modulo: "projetos" },
       { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical, modulo: "pesquisas" },
       { href: "/proep", label: "PROEP", Icon: GraduationCap, modulo: "proep" },
     ],
