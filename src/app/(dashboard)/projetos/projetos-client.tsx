@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { PlusCircle, Pencil, Trash2, X, Check } from "lucide-react";
+import Link from "next/link";
+import { PlusCircle, Pencil, Trash2, X, Check, ArrowRight } from "lucide-react";
 import { criarProjeto, editarProjeto, excluirProjeto, type ProjetoState } from "./projetos-actions";
 
 type ProjetoRow = {
@@ -60,7 +61,18 @@ export default function ProjetosClient({
                   <>
                     <div className="flex min-w-0 flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xl font-medium text-zinc-900">{proj.nome}</span>
+                        <Link
+                          href={`/?projeto=${encodeURIComponent(proj.nome)}`}
+                          title={`Ver demandas do projeto ${proj.nome}`}
+                          className="group inline-flex min-w-0 items-center gap-1.5 text-xl font-medium text-zinc-900 transition-colors hover:text-[#2195B9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                        >
+                          <span className="truncate">{proj.nome}</span>
+                          <ArrowRight
+                            size={16}
+                            aria-hidden="true"
+                            className="shrink-0 text-zinc-400 transition-colors group-hover:text-[#2195B9]"
+                          />
+                        </Link>
                         <span className={`rounded-full px-2.5 py-0.5 text-base font-medium ring-1 ${
                           proj.status === "ativo" ? "bg-green-50 text-green-800 ring-green-200/60" :
                           proj.status === "concluido" ? "bg-[#E6E6E6] text-[#28627B] ring-[#E6E6E6]/60" :
