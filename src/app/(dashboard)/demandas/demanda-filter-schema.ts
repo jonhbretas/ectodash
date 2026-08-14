@@ -14,8 +14,8 @@ import { z } from "zod";
 // responsavel: validated as a UUID, since it's always a profiles.id value,
 // never an arbitrary string.
 //
-// agrupar: a closed two-value enum — "Sem agrupamento" is the ABSENCE of
-// this param, not a third enum value (05-UI-SPEC.md Copywriting Contract).
+// agrupar: a closed three-value enum — "Sem agrupamento" is the ABSENCE of
+// this param, not a fourth enum value (05-UI-SPEC.md Copywriting Contract).
 //
 // view: which visualization renders below the filters — "lista" (default,
 // the existing card/table layout) is the ABSENCE of this param, so
@@ -75,7 +75,7 @@ export const demandaFilterSchema = z.object({
       )
       .optional()
   ),
-  agrupar: z.enum(["area", "responsavel"]).optional(),
+  agrupar: z.enum(["area", "responsavel", "projeto"]).optional(),
   view: z.enum(["lista", "kanban", "calendario"]).optional(),
 });
 

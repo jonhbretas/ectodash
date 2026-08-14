@@ -16,6 +16,7 @@ export type DemandaGroupable = {
 };
 
 export const SEM_AREA_DEFINIDA = "Sem área definida";
+export const SEM_PROJETO_DEFINIDO = "Sem projeto definido";
 
 // Single comparator implementing the whole sort rule in one place: atrasada
 // first, then prazo ascending, then concluída last regardless of prazo
@@ -43,13 +44,26 @@ export function compareDemandas(
 // 05-02-SUMMARY.md since 05-UI-SPEC.md does not explicitly resolve it.
 export function groupDemandas(
   demandas: DemandaGroupable[],
-  groupBy: "area" | "responsavel"
+  groupBy: "area" | "projeto" | "responsavel"
 ): { label: string; items: DemandaGroupable[] }[] {
+  const emptyLabel =
+    groupBy === "area"
+      ? SEM_AREA_DEFINIDA
+      : groupBy === "projeto"
+        ? SEM_PROJETO_DEFINIDO
+        : "Sem responsável definido";
   const groups = new Map<string, DemandaGroupable[]>();
 
   for (const demanda of demandas) {
     if (groupBy === "area") {
       const key = demanda.area?.trim() ? demanda.area : SEM_AREA_DEFINIDA;
+      const items = groups.get(key) ?? [];
+      items.push(demanda);
+      groups.set(key, items);
+    } else if (groupBy === "projeto") {
+      const key = demanda.projeto?.trim()
+        ? demanda.projeto
+        : SEM_PROJETO_DEFINIDO;
       const items = groups.get(key) ?? [];
       items.push(demanda);
       groups.set(key, items);
@@ -66,11 +80,11 @@ export function groupDemandas(
     }
   }
 
-  // Sem área definida always sorts last; every other group sorts
+  // The "Sem ... definido" group always sorts last; every other group sorts
   // alphabetically for a stable, predictable section order.
   const labels = [...groups.keys()].sort((a, b) => {
-    if (a === SEM_AREA_DEFINIDA) return 1;
-    if (b === SEM_AREA_DEFINIDA) return -1;
+    if (a === emptyLabel) return 1;
+    if (b === emptyLabel) return -1;
     return a.localeCompare(b);
   });
 

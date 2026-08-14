@@ -46,7 +46,7 @@ export type DemandaListProps = {
   // flat sorted list (05-UI-SPEC.md Screen Inventory 1a). compareDemandas is
   // applied WITHIN each group independently, never globally when grouping
   // is active.
-  groupBy?: "area" | "responsavel";
+  groupBy?: "area" | "projeto" | "responsavel";
   // filtersActive: whether ≥1 of área/responsável is currently set, passed
   // down from page.tsx — used to pick which empty state to render when the
   // list is empty. This is a STRUCTURAL distinction, not just a copy choice

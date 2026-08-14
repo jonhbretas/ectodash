@@ -26,7 +26,7 @@ export type KanbanAreaProps = {
   // coordenador_area), same shape as DemandaList's canExcluir. RLS and the
   // merge function still govern every destructive write server-side.
   canGerir?: boolean;
-  agrupar?: "area" | "responsavel" | null;
+  agrupar?: "area" | "projeto" | "responsavel" | null;
   // Rendered to the left of the "Selecionar" button on the same row —
   // the grouping filter on the dashboard; nothing on the evento page.
   agruparFilter?: React.ReactNode;

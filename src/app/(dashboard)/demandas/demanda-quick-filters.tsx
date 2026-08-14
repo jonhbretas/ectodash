@@ -56,6 +56,7 @@ export function DemandaAgruparFilter({
       <SelectContent>
         <SelectItem value={NO_GROUPING_VALUE}>Sem agrupamento</SelectItem>
         <SelectItem value="area">Área</SelectItem>
+        <SelectItem value="projeto">Projeto</SelectItem>
         <SelectItem value="responsavel">Responsável</SelectItem>
       </SelectContent>
     </Select>

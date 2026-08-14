@@ -42,8 +42,9 @@ describe("demandaFilterSchema", () => {
     ).toThrow();
   });
 
-  it("accepts agrupar values of exactly area or responsavel, and rejects anything else", () => {
+  it("accepts agrupar values of exactly area, projeto or responsavel, and rejects anything else", () => {
     expect(() => demandaFilterSchema.parse({ agrupar: "area" })).not.toThrow();
+    expect(() => demandaFilterSchema.parse({ agrupar: "projeto" })).not.toThrow();
     expect(() => demandaFilterSchema.parse({ agrupar: "responsavel" })).not.toThrow();
     expect(() => demandaFilterSchema.parse({ agrupar: "status" })).toThrow();
   });
