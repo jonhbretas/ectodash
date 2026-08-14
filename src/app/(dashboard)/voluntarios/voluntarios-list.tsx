@@ -192,7 +192,7 @@ export default function VoluntariosListClient({
               className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-100 px-3 py-1.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-200"
             >
               {allSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-              {allSelected ? "Todos" : someSelected ? `${branchRows.filter((r) => selectedIds.has(r.id)).length}` : "Selecionar"}
+              <span className="hidden sm:inline">{allSelected ? "Todos" : someSelected ? `${branchRows.filter((r) => selectedIds.has(r.id)).length}` : "Selecionar"}</span>
             </button>
           )}
         </div>

@@ -651,8 +651,8 @@ function ReviewScreen({
                   key={demanda.id}
                   className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
                     demanda.incluida
-                      ? "border-zinc-200 bg-white"
-                      : "border-dashed border-zinc-300 bg-zinc-50 opacity-70"
+                      ? "border-[#2195B9]/40 bg-white shadow-[0_0_0_1px_rgba(33,149,185,0.1)]"
+                      : "border-zinc-200 bg-zinc-50/60 grayscale-[30%]"
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -906,8 +906,8 @@ function ReviewScreen({
                   key={evento.id}
                   className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
                     evento.incluido
-                      ? "border-zinc-200 bg-white"
-                      : "border-dashed border-zinc-300 bg-zinc-50 opacity-70"
+                      ? "border-[#2195B9]/40 bg-white shadow-[0_0_0_1px_rgba(33,149,185,0.1)]"
+                      : "border-zinc-200 bg-zinc-50/60 grayscale-[30%]"
                   }`}
                 >
                   <div className="flex items-center gap-3">
