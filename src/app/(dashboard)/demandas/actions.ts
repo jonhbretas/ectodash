@@ -9,6 +9,12 @@ import {
   voluntarioIdsDosDestinos,
 } from "@/lib/destinos-voluntario";
 import { demandaSchema, eventoIdSchema, etiquetaIdSchema, idsNumericos } from "./demanda-schema";
+import {
+  BULK_NAO_ALTERAR,
+  BULK_LIMPAR,
+  BULK_REMOVER,
+  type BulkEditDemandasValues,
+} from "./bulk-edit-schema";
 import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
 import { matchResponsavelRoster, normalize } from "@/lib/ai/match-responsavel";
 
@@ -940,29 +946,9 @@ export async function corrigirDemandaComIa(
 export type ExcluirDemandasState = { ok: boolean; message: string };
 
 // ── Edição em massa (seleção na lista) ──
-
-// Sentinels for bulk-edit fields: a field the user didn't touch must be
-// distinguishable from an explicit "clear/remove" — the dialog sends
-// NAO_ALTERAR (or empty string) for untouched fields and never includes
-// them in the actual UPDATE payload.
-export const BULK_NAO_ALTERAR = "__nao_alterar__";
-export const BULK_LIMPAR = "__limpar__";
-export const BULK_REMOVER = "__remover__";
-
-export type BulkEditDemandasValues = {
-  // NAO_ALTERAR | pendente | em_andamento | concluida
-  status: string;
-  // "" = não alterar | yyyy-mm-dd
-  prazo: string;
-  // NAO_ALTERAR | LIMPAR | texto livre
-  area: string;
-  projeto: string;
-  // NAO_ALTERAR | REMOVER | "123" (id do evento)
-  eventoId: string;
-  etiquetaId: string;
-  // Roster ids a ADICIONAR às selecionadas (nunca removidos)
-  responsavelIds: string[];
-};
+// Sentinels + payload shape live in bulk-edit-schema.ts (NOT here): Next.js
+// 16 forbids exporting non-async values from a "use server" file, and the
+// dialog needs those constants client-side.
 
 const bulkStatusSchema = z.enum(["pendente", "em_andamento", "concluida"]);
 const bulkPrazoSchema = z.string().date("Data inválida.");

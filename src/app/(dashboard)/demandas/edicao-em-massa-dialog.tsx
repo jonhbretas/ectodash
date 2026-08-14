@@ -17,12 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { FormSelect, FormCombobox } from "@/components/ui/form-select";
 import { DateInput } from "@/components/ui/date-input";
+import { editarDemandasEmMassa } from "./actions";
 import {
   BULK_NAO_ALTERAR,
   BULK_LIMPAR,
   BULK_REMOVER,
-  editarDemandasEmMassa,
-} from "./actions";
+} from "./bulk-edit-schema";
 
 export type BulkEditEvento = {
   id: number;
