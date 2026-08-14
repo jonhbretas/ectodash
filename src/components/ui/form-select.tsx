@@ -39,6 +39,7 @@ export function FormSelect({
   onValueChange,
   placeholder,
   ariaLabel,
+  id,
   className,
   options,
   children,
@@ -48,6 +49,7 @@ export function FormSelect({
   onValueChange: (value: string) => void;
   placeholder?: string;
   ariaLabel?: string;
+  id?: string;
   className?: string;
   options?: { value: string; label: string }[];
   children?: React.ReactNode;
@@ -62,6 +64,7 @@ export function FormSelect({
       >
         <SelectTrigger
           aria-label={ariaLabel}
+          id={id}
           className={cn(formSelectTriggerClass, className)}
         >
           <SelectValue placeholder={placeholder} />
@@ -100,6 +103,7 @@ export function FormCombobox({
   options,
   placeholder,
   ariaLabel,
+  id,
   className,
   customLabel = "Outro (digitar)...",
   labels,
@@ -110,6 +114,7 @@ export function FormCombobox({
   options: string[];
   placeholder?: string;
   ariaLabel?: string;
+  id?: string;
   className?: string;
   customLabel?: string;
   labels?: Record<string, string>;
@@ -141,6 +146,7 @@ export function FormCombobox({
       <Select value={atual} onValueChange={aoEscolher}>
         <SelectTrigger
           aria-label={ariaLabel}
+          id={id}
           className={cn(formSelectTriggerClass, className)}
         >
           <SelectValue placeholder={placeholder} />

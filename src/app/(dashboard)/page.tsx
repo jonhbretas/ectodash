@@ -370,6 +370,11 @@ export default async function DashboardPage({
             canExcluir={
               role === "coordenador_geral" || role === "coordenador_area"
             }
+            areas={areaOptions}
+            projetos={projetoOptions}
+            eventos={eventosResult.data ?? []}
+            etiquetas={etiquetasResult.data ?? []}
+            voluntarios={responsavelOptions}
           />
         )}
       </div>

@@ -9,12 +9,18 @@ import {
   CheckSquare,
   Square,
   Trash2,
+  Pencil,
   X,
 } from "lucide-react";
 import DemandaCard from "./demanda-card";
 import DemandaTable from "./demanda-table";
 import { DemandaAgruparFilter } from "./demanda-quick-filters";
 import { excluirDemandas } from "./actions";
+import EdicaoEmMassaDialog, {
+  type BulkEditEvento,
+  type BulkEditEtiqueta,
+  type BulkEditVoluntario,
+} from "./edicao-em-massa-dialog";
 import {
   groupDemandas,
   compareDemandas,
@@ -52,6 +58,14 @@ export type DemandaListProps = {
   // canExcluir: role gate for the bulk-selection toolbar (coordenador_geral
   // or coordenador_area). RLS still governs each delete server-side.
   canExcluir?: boolean;
+  // Bulk-edit dialog options — areas/projetos suggestions, eventos,
+  // etiquetas and the roster volunteers the selection toolbar's "Editar"
+  // button applies to the selected demandas.
+  areas?: string[];
+  projetos?: string[];
+  eventos?: BulkEditEvento[];
+  etiquetas?: BulkEditEtiqueta[];
+  voluntarios?: BulkEditVoluntario[];
 };
 
 export default function DemandaList({
@@ -60,6 +74,11 @@ export default function DemandaList({
   groupBy,
   filtersActive = false,
   canExcluir = false,
+  areas = [],
+  projetos = [],
+  eventos = [],
+  etiquetas = [],
+  voluntarios = [],
 }: DemandaListProps) {
   const router = useRouter();
   const [selectionMode, setSelectionMode] = useState(false);
@@ -67,6 +86,7 @@ export default function DemandaList({
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const sorted = [...demandas].sort(compareDemandas);
   const count = demandas.length;
@@ -146,6 +166,12 @@ export default function DemandaList({
     onToggle: toggleSelected,
   };
 
+  const aoEditar = (mensagem: string) => {
+    exitSelection();
+    setMessage({ ok: true, text: mensagem });
+    router.refresh();
+  };
+
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -188,14 +214,24 @@ export default function DemandaList({
                 {allSelected ? "Desmarcar todas" : "Selecionar todas"}
               </button>
               {selected.size > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setConfirming(true)}
-                  className="flex min-h-10 items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-base font-medium text-white transition-colors hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                  Excluir
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="flex min-h-10 items-center gap-1.5 rounded-lg bg-[#2195B9] px-3 py-1.5 text-base font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                  >
+                    <Pencil size={16} aria-hidden="true" />
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(true)}
+                    className="flex min-h-10 items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-base font-medium text-white transition-colors hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                    Excluir
+                  </button>
+                </>
               )}
               <button
                 type="button"
@@ -250,6 +286,19 @@ export default function DemandaList({
           {message.text}
         </p>
       )}
+
+      <EdicaoEmMassaDialog
+        key={editing ? "aberto" : "fechado"}
+        open={editing}
+        onOpenChange={setEditing}
+        ids={[...selected]}
+        areas={areas}
+        projetos={projetos}
+        eventos={eventos}
+        etiquetas={etiquetas}
+        voluntarios={voluntarios}
+        onSucesso={aoEditar}
+      />
 
       {count === 0 && filtersActive ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">

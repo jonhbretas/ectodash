@@ -939,6 +939,200 @@ export async function corrigirDemandaComIa(
 
 export type ExcluirDemandasState = { ok: boolean; message: string };
 
+// ── Edição em massa (seleção na lista) ──
+
+// Sentinels for bulk-edit fields: a field the user didn't touch must be
+// distinguishable from an explicit "clear/remove" — the dialog sends
+// NAO_ALTERAR (or empty string) for untouched fields and never includes
+// them in the actual UPDATE payload.
+export const BULK_NAO_ALTERAR = "__nao_alterar__";
+export const BULK_LIMPAR = "__limpar__";
+export const BULK_REMOVER = "__remover__";
+
+export type BulkEditDemandasValues = {
+  // NAO_ALTERAR | pendente | em_andamento | concluida
+  status: string;
+  // "" = não alterar | yyyy-mm-dd
+  prazo: string;
+  // NAO_ALTERAR | LIMPAR | texto livre
+  area: string;
+  projeto: string;
+  // NAO_ALTERAR | REMOVER | "123" (id do evento)
+  eventoId: string;
+  etiquetaId: string;
+  // Roster ids a ADICIONAR às selecionadas (nunca removidos)
+  responsavelIds: string[];
+};
+
+const bulkStatusSchema = z.enum(["pendente", "em_andamento", "concluida"]);
+const bulkPrazoSchema = z.string().date("Data inválida.");
+const bulkTextoOpcionalSchema = z.string().trim().max(200);
+
+// Bulk edit from the list view ("editar selecionadas"). Only fields the
+// user actually changed are written (sentinels above), so untouched fields
+// keep their per-demanda values — e.g. status can be moved to "concluida"
+// without touching each demanda's área/projeto/evento. Responsáveis are
+// only ADDED (never removed) to all selected demandas; rows that already
+// link that volunteer are skipped by pre-checking existing links. Ids are
+// re-validated server-side; RLS governs which rows each user may update.
+export async function editarDemandasEmMassa(
+  ids: number[],
+  valores: BulkEditDemandasValues
+): Promise<ExcluirDemandasState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  const idsValidos = idsNumericos(ids.map(String));
+  if (idsValidos.length === 0) {
+    return { ok: false, message: "Nenhuma demanda selecionada." };
+  }
+
+  const update: Record<string, string | number | null> = {};
+
+  if (valores.status && valores.status !== BULK_NAO_ALTERAR) {
+    const parsed = bulkStatusSchema.safeParse(valores.status);
+    if (!parsed.success) return { ok: false, message: "Status inválido." };
+    update.status = parsed.data;
+  }
+
+  if (valores.prazo && valores.prazo !== "") {
+    const parsed = bulkPrazoSchema.safeParse(valores.prazo);
+    if (!parsed.success) return { ok: false, message: "Prazo inválido." };
+    update.prazo = parsed.data;
+  }
+
+  // "" only happens when the user opened the "Outro (digitar)" combobox mode
+  // without typing — treated as no-change (an explicit "Limpar" sentinel
+  // exists for clearing).
+  if (valores.area !== BULK_NAO_ALTERAR && valores.area !== "") {
+    if (valores.area === BULK_LIMPAR) {
+      update.area = null;
+    } else {
+      const parsed = bulkTextoOpcionalSchema.safeParse(valores.area);
+      if (!parsed.success) return { ok: false, message: "Área inválida." };
+      update.area = parsed.data;
+    }
+  }
+
+  if (valores.projeto !== BULK_NAO_ALTERAR && valores.projeto !== "") {
+    if (valores.projeto === BULK_LIMPAR) {
+      update.projeto = null;
+    } else {
+      const parsed = bulkTextoOpcionalSchema.safeParse(valores.projeto);
+      if (!parsed.success) return { ok: false, message: "Projeto inválido." };
+      update.projeto = parsed.data;
+    }
+  }
+
+  if (valores.eventoId !== BULK_NAO_ALTERAR) {
+    if (valores.eventoId === BULK_REMOVER) {
+      update.evento_id = null;
+    } else {
+      const parsed = eventoIdSchema.safeParse(valores.eventoId);
+      if (!parsed.success) return { ok: false, message: "Evento inválido." };
+      update.evento_id = parsed.data ?? null;
+    }
+  }
+
+  if (valores.etiquetaId !== BULK_NAO_ALTERAR) {
+    if (valores.etiquetaId === BULK_REMOVER) {
+      update.etiqueta_id = null;
+    } else {
+      const parsed = etiquetaIdSchema.safeParse(valores.etiquetaId);
+      if (!parsed.success) return { ok: false, message: "Etiqueta inválida." };
+      update.etiqueta_id = parsed.data ?? null;
+    }
+  }
+
+  if (Object.keys(update).length > 0) {
+    const { error } = await supabase
+      .from("demandas")
+      .update(update)
+      .in("id", idsValidos);
+
+    if (error) {
+      console.error("editarDemandasEmMassa: update failed", error);
+      return {
+        ok: false,
+        message:
+          "Não foi possível editar as demandas. Verifique suas permissões e tente de novo.",
+      };
+    }
+  }
+
+  const responsaveisParaAdicionar = idsNumericos(valores.responsavelIds);
+  if (responsaveisParaAdicionar.length > 0) {
+    const destinos = await resolverDestinosVoluntario(
+      supabase,
+      responsaveisParaAdicionar
+    );
+    if (destinos.length === 0) {
+      return { ok: false, message: "Nenhum responsável válido selecionado." };
+    }
+
+    // Pre-check existing links so the batched insert never trips the unique
+    // indexes (0020) — same "only the delta" discipline as updateDemanda.
+    const { data: existentes } = await supabase
+      .from("demanda_responsaveis")
+      .select("demanda_id, profile_id, voluntario_id")
+      .in("demanda_id", idsValidos);
+
+    const jaVinculados = new Set<string>();
+    for (const row of existentes ?? []) {
+      if (row.profile_id) jaVinculados.add(`${row.demanda_id}|p:${row.profile_id}`);
+      if (row.voluntario_id)
+        jaVinculados.add(`${row.demanda_id}|v:${row.voluntario_id}`);
+    }
+
+    const rows: {
+      demanda_id: number;
+      profile_id?: string | null;
+      voluntario_id?: number | null;
+    }[] = [];
+    for (const id of idsValidos) {
+      for (const destino of destinos) {
+        const chave =
+          "profile_id" in destino
+            ? `${id}|p:${destino.profile_id}`
+            : `${id}|v:${destino.voluntario_id}`;
+        if (jaVinculados.has(chave)) continue;
+        rows.push({ demanda_id: id, ...destino });
+      }
+    }
+
+    if (rows.length > 0) {
+      const { error: responsaveisError } = await supabase
+        .from("demanda_responsaveis")
+        .insert(rows);
+
+      if (responsaveisError) {
+        console.error(
+          "editarDemandasEmMassa: demanda_responsaveis insert failed",
+          responsaveisError
+        );
+        return {
+          ok: false,
+          message: "Não foi possível adicionar os responsáveis às demandas.",
+        };
+      }
+    }
+  }
+
+  revalidatePath("/");
+  const count = idsValidos.length;
+  return {
+    ok: true,
+    message:
+      count === 1 ? "1 demanda atualizada." : `${count} demandas atualizadas.`,
+  };
+}
+
 // Bulk delete from the list view ("excluir selecionadas"). Ids come from the
 // client as a serializable array and are re-validated server-side (never
 // trusted raw). RLS governs which rows each user may delete (migration 0053);
