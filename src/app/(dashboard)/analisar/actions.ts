@@ -65,6 +65,11 @@ const atualizacaoEntrySchema = z.object({
   comentario: z.string().trim().min(1).max(3000),
 });
 
+const pautaEntrySchema = z.object({
+  titulo: z.string().trim().min(1).max(200),
+  contexto: z.string().trim().max(3000).optional().or(z.literal("")),
+});
+
 const responseSchema = z.object({
   tipo: z.enum([
     "eventos",
@@ -79,6 +84,7 @@ const responseSchema = z.object({
   ata: ataEntrySchema.optional(),
   dips: z.array(dipEntrySchema).max(100).optional(),
   atualizacoes: z.array(atualizacaoEntrySchema).max(50).optional(),
+  pautas: z.array(pautaEntrySchema).max(50).optional(),
 });
 
 export type AnalisarState = {
@@ -123,6 +129,7 @@ export type AnalisarState = {
     observacoes: string;
   }> | null;
   atualizacoes: Array<{ titulo: string; comentario: string }> | null;
+  pautas: Array<{ key: string; titulo: string; contexto: string }> | null;
   // Possible duplicates against existing records, keyed by the item's
   // client key (demandas/eventos/dips). The review screen asks the user
   // what to do with each one (pular / mesclar / criar mesmo assim).
@@ -161,6 +168,7 @@ function erroState(message: string): AnalisarState {
     ata: null,
     dips: null,
     atualizacoes: null,
+    pautas: null,
     duplicados: { demandas: {}, eventos: {}, dips: {} },
     voluntarios: [],
   };
@@ -206,11 +214,12 @@ Responda APENAS com JSON. O JSON deve ter este formato:
   "demandas": [{"titulo": "tarefa", "responsavel_texto": "nome da pessoa no texto", "prazo_texto": "prazo como mencionado", "prazo_sugerido": "data concreta AAAA-MM-DD"}],
   "ata": {"titulo": "título da ata", "data": "AAAA-MM-DD ("" se não mencionada)", "horario": "HH:mm ("" se não mencionado)", "participantes": ["nomes"], "pontos_principais": ["pontos"], "deliberacoes": ["deliberações"], "resumo": "resumo da reunião"},
   "dips": [{"localidade": "cidade/região", "pais": "país", "data": "AAAA-MM-DD ("" se não mencionada)", "participantes": 123 (número, "" quando não mencionado), "observacoes": "detalhes"}],
-  "atualizacoes": [{"titulo": "título da demanda JÁ EXISTENTE mencionada", "comentario": "o que mudou"}]
+  "atualizacoes": [{"titulo": "título da demanda JÁ EXISTENTE mencionada", "comentario": "o que mudou"}],
+  "pautas": [{"titulo": "assunto adiado para a PRÓXIMA reunião", "contexto": "resumo do porquê/o que discutir"}]
 }
 Inclua SOMENTE os campos relevantes ao tipo detectado (ex: se for uma ata de reunião, inclua "ata" e os demais arrays de conteúdo; nunca crie campos de dados financeiros).
 Os dados financeiros NÃO são extraídos neste fluxo: valores, entradas, saídas ou movimentações monetárias mencionadas no texto NÃO devem virar lançamentos — o financeiro é alimentado exclusivamente pela planilha no módulo Financeiro.
-Quando o conteúdo for uma transcrição ou ata de reunião, inclua "ata" completo, "demandas" (deliberações NOVAS com responsável e prazo claros), "dips" (menções à Dinâmica DIP, um registro por menção), "atualizacoes" (menções a demandas que já existiam, ex.: "atualizar demanda X") e "eventos" (toda menção a um acontecimento futuro com data, como reuniões, cursos, encontros, congressos, qualificações, viradas de consciência — extraia do texto mesmo que a data seja relativa, usando ${hoje} como referência). Se uma seção não tiver itens, use o array vazio.
+Quando o conteúdo for uma transcrição ou ata de reunião, inclua "ata" completo, "demandas" (deliberações NOVAS com responsável e prazo claros), "dips" (menções à Dinâmica DIP, um registro por menção), "atualizacoes" (menções a demandas que já existiam, ex.: "atualizar demanda X"), "pautas" (assuntos que ficaram PARA A PRÓXIMA reunião, ex.: "vamos falar disso semana que vem", "isso fica para a próxima reunião" — NÃO inclua assuntos já deliberados nesta reunião) e "eventos" (toda menção a um acontecimento futuro com data, como reuniões, cursos, encontros, congressos, qualificações, viradas de consciência — extraia do texto mesmo que a data seja relativa, usando ${hoje} como referência). Se uma seção não tiver itens, use o array vazio.
 DATAS: sempre AAAA-MM-DD. Para prazos relativos ("sexta", "amanhã", "fim do mês"), calcule a data concreta a partir de hoje (${hoje}).
 Se o conteúdo não se encaixar em nenhuma categoria, use tipo "outro" e forneça apenas titulo e resumo.`,
     `Hoje é ${hoje}. Analise o conteúdo abaixo e extraia os dados estruturados:\n\n${wrapUserContent(texto.slice(0, MAX_TEXT_CHARS))}`,
@@ -497,6 +506,13 @@ export async function analisarComIA(
           })
         : null,
       atualizacoes: data.atualizacoes ?? null,
+      pautas: data.pautas
+        ? data.pautas.map((p) => ({
+            key: crypto.randomUUID(),
+            titulo: p.titulo,
+            contexto: p.contexto || "",
+          }))
+        : null,
       duplicados,
       voluntarios,
     };
@@ -563,6 +579,7 @@ export type SalvarTudoInput = {
     dipId?: number | null;
   }>;
   atualizacoes?: Array<{ titulo: string; comentario: string }>;
+  pautas?: Array<{ titulo: string; contexto: string | null }>;
 };
 
 // demandas.prazo is NOT NULL (0003_demandas.sql) — the review always
@@ -605,6 +622,15 @@ const salvarAtualizacoesSchema = z
     z.object({
       titulo: z.string().trim().min(1).max(300),
       comentario: z.string().trim().min(1).max(3000),
+    })
+  )
+  .max(50);
+
+const salvarPautasSchema = z
+  .array(
+    z.object({
+      titulo: z.string().trim().min(1).max(200),
+      contexto: z.string().trim().max(3000).nullable(),
     })
   )
   .max(50);
@@ -794,6 +820,37 @@ async function salvarAtualizacoes(
   return { salvos, erros };
 }
 
+async function salvarPautas(
+  supabase: SupabaseClient,
+  pautas: SalvarTudoInput["pautas"]
+): Promise<{ salvos: number; erros: string[] }> {
+  if (!pautas || pautas.length === 0) return { salvos: 0, erros: [] };
+
+  const parsed = salvarPautasSchema.safeParse(pautas);
+  if (!parsed.success) {
+    return { salvos: 0, erros: ["pautas (dados inválidos)"] };
+  }
+
+  const rows = parsed.data
+    .filter((p) => p.titulo.trim().length > 0)
+    .map((p) => ({
+      titulo: p.titulo,
+      contexto: p.contexto || null,
+      origem: "ata",
+      status: "pendente",
+    }));
+
+  if (rows.length === 0) return { salvos: 0, erros: [] };
+
+  const { error } = await supabase.from("pautas").insert(rows);
+  if (error) {
+    console.error("salvarTudoDaAnalise: pautas insert failed", error);
+    return { salvos: 0, erros: ["pautas"] };
+  }
+
+  return { salvos: rows.length, erros: [] };
+}
+
 async function salvarEventos(
   supabase: SupabaseClient,
   events: SalvarTudoInput["eventos"]
@@ -962,7 +1019,7 @@ export async function salvarTudoDaAnalise(
   // id. Everything else is independent and runs in parallel.
   const ata = await salvarAta(supabase, input.ata);
 
-  const [eventos, demandas, dips, atualizacoes] =
+  const [eventos, demandas, dips, atualizacoes, pautas] =
     await Promise.all([
       salvarEventos(supabase, input.eventos),
       salvarDemandas(supabase, input.demandas),
@@ -978,6 +1035,7 @@ export async function salvarTudoDaAnalise(
               ? `${input.ata.titulo} (${input.ata.data})`
               : ""
           ),
+      salvarPautas(supabase, input.pautas),
     ]);
 
   const partes: string[] = [];
@@ -1003,6 +1061,9 @@ export async function salvarTudoDaAnalise(
       `${atualizacoes.salvos} ${atualizacoes.salvos === 1 ? "atualização" : "atualizações"}`
     );
   }
+  if (pautas.salvos > 0) {
+    partes.push(`${pautas.salvos} ${pautas.salvos === 1 ? "pauta" : "pautas"}`);
+  }
 
   const ignoradosTotal =
     eventos.ignorados + demandas.ignorados + dips.ignorados;
@@ -1018,6 +1079,7 @@ export async function salvarTudoDaAnalise(
     ...(ata.erro ? [ata.erro] : []),
     ...dips.erros,
     ...atualizacoes.erros,
+    ...pautas.erros,
   ];
 
   revalidatePath("/eventos");
@@ -1032,7 +1094,8 @@ export async function salvarTudoDaAnalise(
     demandas.comentados +
     (ata.ataId !== null && !ata.erro ? 1 : 0) +
     dips.salvos +
-    atualizacoes.salvos;
+    atualizacoes.salvos +
+    pautas.salvos;
 
   if (totalSalvo === 0 && erros.length > 0) {
     return {

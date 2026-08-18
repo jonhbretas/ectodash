@@ -12,7 +12,10 @@
 //   eventos    — events mentioned in the meeting (titulo, data, local,
 //                descricao) that should be created/catalogued;
 //   dips       — DIP mentions, one record per mention (localidade, pais,
-//                data, participantes, observacoes).
+//                data, participantes, observacoes);
+//   pautas     — agenda topics deferred to the NEXT meeting ("vamos falar
+//                semana que vem sobre X"), one record per topic, that feed
+//                the Reuniões hub's pauta list.
 import { z } from "zod";
 
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -98,6 +101,14 @@ export const ataAnaliseSchema = z.object({
       })
     )
     .max(100),
+  pautas: z
+    .array(
+      z.object({
+        titulo: z.string().trim().min(1).max(200),
+        contexto: z.string().trim().max(3000).optional().or(z.literal("")),
+      })
+    )
+    .max(50),
 });
 
 export type AtaAnalise = z.infer<typeof ataAnaliseSchema>;
@@ -105,6 +116,7 @@ export type AtaAnaliseDemanda = AtaAnalise["demandas"][number];
 export type AtaAnaliseEvento = AtaAnalise["eventos"][number];
 export type AtaAnaliseAtualizacao = AtaAnalise["atualizacoes"][number];
 export type AtaAnaliseDip = AtaAnalise["dips"][number];
+export type AtaAnalisePauta = AtaAnalise["pautas"][number];
 
 // Envelope for JSON-mode (DeepSeek/Zen requires a top-level object).
 export const ataAnaliseEnvelopeSchema = z.object({
@@ -146,4 +158,9 @@ export type AtaSalvarEvento = {
   data: string | null;
   local: string | null;
   descricao: string | null;
+};
+
+export type AtaSalvarPauta = {
+  titulo: string;
+  contexto: string | null;
 };

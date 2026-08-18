@@ -21,6 +21,7 @@ import {
   FileText,
   Save,
   Loader2,
+  ListChecks,
   NotebookPen,
   Users,
   MessageSquareText,
@@ -44,6 +45,7 @@ const initialState: AnalisarState = {
   ata: null,
   dips: null,
   atualizacoes: null,
+  pautas: null,
   duplicados: { demandas: {}, eventos: {}, dips: {} },
   voluntarios: [],
 };
@@ -294,8 +296,14 @@ function ResultsScreen({
   const temAtualizacoes = Boolean(
     state.atualizacoes && state.atualizacoes.length > 0
   );
+  const temPautas = Boolean(state.pautas && state.pautas.length > 0);
   const temAlgo =
-    temEventos || temDemandas || temAta || temDips || temAtualizacoes;
+    temEventos ||
+    temDemandas ||
+    temAta ||
+    temDips ||
+    temAtualizacoes ||
+    temPautas;
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<
@@ -415,6 +423,10 @@ function ResultsScreen({
           dipId: state.duplicados.dips[d.key]?.id ?? null,
         })),
       atualizacoes: state.atualizacoes ?? undefined,
+      pautas: state.pautas?.map((p) => ({
+        titulo: p.titulo,
+        contexto: p.contexto || null,
+      })),
     });
     setSaved(result);
     setSaving(false);
@@ -919,6 +931,38 @@ function ResultsScreen({
                     <span className="text-xs text-slate-400">
                       Sera anexado como comentario na demanda existente
                       correspondente.
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Pautas para a próxima reunião */}
+          {temPautas && (
+            <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+              <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <ListChecks size={20} className="text-[#2195B9]" aria-hidden="true" strokeWidth={1.75} />
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Pautas para a próxima reunião
+                </h3>
+              </header>
+              <div className="flex w-full flex-col gap-3">
+                {state.pautas!.map((pauta, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">
+                      {pauta.titulo}
+                    </span>
+                    {pauta.contexto && (
+                      <span className="text-xs leading-relaxed text-slate-600">
+                        {pauta.contexto}
+                      </span>
+                    )}
+                    <span className="text-xs text-slate-400">
+                      Será adicionada à pauta da próxima reunião.
                     </span>
                   </div>
                 ))}

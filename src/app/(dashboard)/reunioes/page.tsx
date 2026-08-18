@@ -1,12 +1,15 @@
-// /reunioes — meeting minutes list, full-width in the same visual language
-// as /eventos: atas grouped by month with prominent month headers and
-// date-box + card agenda rows. Each card summarizes the structured ata
-// (resumo, participantes, deliberações, DIPs vinculadas) and links to the
-// full view.
+// /reunioes — Reuniões hub: upcoming meeting agenda (pauta) + meeting
+// minutes history. The top section shows the next weekly meeting (toda
+// terça-feira) with the accumulated pauta list — topics volunteers and
+// coordenadores requested ("pedir pauta") or that the AI surfaced as
+// deferred from a previous ata. Below, the ata list keeps the /eventos
+// visual language: grouped by month, date-box + card agenda rows.
 import Link from "next/link";
 import {
-  CalendarDays,
+  CalendarClock,
+  CheckCheck,
   FileText,
+  ListChecks,
   MessageSquareText,
   NotebookPen,
   PlusCircle,
@@ -16,7 +19,11 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
+import { displayName } from "@/lib/display-name";
+import { proximaTerca } from "@/lib/proxima-reuniao";
 import PageContainer from "../page-container";
+import PautaForm from "./pauta-form";
+import PautaItemActions from "./pauta-item-actions";
 
 type AtaRow = {
   id: number;
@@ -27,6 +34,18 @@ type AtaRow = {
   participantes: string | null;
   deliberacoes: string | null;
   dipCount: number;
+};
+
+type PautaRow = {
+  id: number;
+  titulo: string;
+  contexto: string | null;
+  status: "pendente" | "discutida";
+  origem: "manual" | "ata";
+  ataId: number | null;
+  ataTitulo: string | null;
+  criadoPor: string;
+  autor: string;
 };
 
 const WEEKDAY_ABBR = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -68,6 +87,11 @@ function countLines(value: string | null): number {
     .filter(Boolean).length;
 }
 
+function relacionado(row: { reunioes: unknown }): { titulo: string | null } {
+  const r = Array.isArray(row.reunioes) ? row.reunioes[0] : row.reunioes;
+  return { titulo: (r as { titulo?: string } | null)?.titulo ?? null };
+}
+
 export default async function ReunioesPage() {
   const supabase = await createClient();
   const {
@@ -78,13 +102,21 @@ export default async function ReunioesPage() {
     return null;
   }
 
-  // RLS (migration 0007): every authenticated volunteer reads every ata.
-  const [atasResult, dipsResult] = await Promise.all([
+  // RLS (migration 0007/0076): every authenticated volunteer reads every ata
+  // and every pauta.
+  const [atasResult, dipsResult, pautasResult, profileResult] = await Promise.all([
     supabase
       .from("reunioes")
       .select("id, titulo, data_reuniao, horario, resumo, participantes, deliberacoes")
       .order("data_reuniao", { ascending: false }),
     supabase.from("dips").select("ata_id"),
+    supabase
+      .from("pautas")
+      .select(
+        "id, titulo, contexto, status, origem, ata_id, criado_por, created_at, profiles(full_name, email), reunioes(titulo)"
+      )
+      .order("created_at", { ascending: true }),
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
   ]);
 
   const dipCountByAta = new Map<number, number>();
@@ -103,6 +135,32 @@ export default async function ReunioesPage() {
     dipCount: dipCountByAta.get(row.id) ?? 0,
   }));
 
+  const canManagePauta = profileResult.data?.role === "coordenador_geral";
+
+  const pautas: PautaRow[] = (pautasResult.data ?? []).map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      id: row.id,
+      titulo: row.titulo,
+      contexto: row.contexto,
+      status: row.status,
+      origem: row.origem,
+      ataId: row.ata_id,
+      ataTitulo: relacionado({ reunioes: row.reunioes }).titulo,
+      criadoPor: row.criado_por,
+      autor: displayName({
+        full_name: profile?.full_name ?? null,
+        email: profile?.email ?? null,
+      }),
+    };
+  });
+
+  const pendentes = pautas.filter((p) => p.status === "pendente");
+  const discutidas = pautas.filter((p) => p.status === "discutida");
+
+  const proxima = proximaTerca();
+  const proximaLabel = format(proxima, "EEEE, dd 'de' MMMM", { locale: ptBR });
+
   const meses = groupByMonth(rows);
 
   return (
@@ -111,10 +169,10 @@ export default async function ReunioesPage() {
         <div className="flex flex-col gap-1">
           <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
             <NotebookPen size={30} aria-hidden="true" />
-            Atas de Reuniões
+            Reuniões
           </h1>
           <p className="text-xl text-zinc-500">
-            Histórico das reuniões — resumos, deliberações e DIPs.
+            Pauta da próxima reunião e histórico das atas.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -130,48 +188,173 @@ export default async function ReunioesPage() {
             className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <PlusCircle size={22} aria-hidden="true" />
-            Registrar manual
+            Registrar ata
           </Link>
         </div>
       </header>
 
-      {rows.length === 0 ? (
-        <div className="flex w-full flex-col items-center gap-4 rounded-2xl bg-white px-6 py-16 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-          <NotebookPen size={48} className="text-zinc-400" aria-hidden="true" />
-          <h2 className="text-3xl font-semibold text-zinc-900">
-            Nenhuma ata registrada ainda
-          </h2>
-          <p className="max-w-md text-xl text-zinc-700">
-            Envie a transcrição de uma reunião para a IA gerar a ata,
-            demandas e DIPs automaticamente — ou registre manualmente.
-          </p>
+      {/* ── Próxima reunião & Pauta ── */}
+      <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 pb-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+              <CalendarClock size={24} aria-hidden="true" className="text-[#2195B9]" />
+              Próxima reunião
+            </h2>
+            <p className="text-base capitalize text-zinc-500">{proximaLabel}</p>
+          </div>
+          <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
+            {pendentes.length}{" "}
+            {pendentes.length === 1 ? "pauta pendente" : "pautas pendentes"}
+          </span>
         </div>
-      ) : (
-        <div className="flex w-full flex-col gap-10">
-          {meses.map((group) => (
-            <section
-              key={group.key}
-              className="flex w-full flex-col gap-3"
-              aria-label={monthLabel(group.key)}
-            >
-              <div className="flex items-center gap-3">
-                <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
-                <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
-                  {monthLabel(group.key)}
-                </h2>
-                <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
-                  {group.rows.length} {group.rows.length === 1 ? "ata" : "atas"}
-                </span>
-              </div>
-              <div className="flex w-full flex-col gap-3">
-                {group.rows.map((ata) => (
-                  <AtaAgendaRow key={ata.id} ata={ata} />
+
+        <div className="grid w-full grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
+          {/* Pendentes */}
+          <div className="flex w-full flex-col gap-3">
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
+              <ListChecks size={20} aria-hidden="true" />
+              O que será discutido
+            </h3>
+            {pendentes.length === 0 ? (
+              <p className="text-base text-zinc-500">
+                Nenhuma pauta para a próxima reunião ainda. Seja a primeira
+                pessoa a sugerir um assunto.
+              </p>
+            ) : (
+              <ol className="flex w-full flex-col gap-2">
+                {pendentes.map((pauta, index) => (
+                  <li
+                    key={pauta.id}
+                    className="flex flex-col gap-1.5 rounded-xl border border-zinc-200 p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E6E6E6] text-sm font-semibold text-[#28627B]"
+                      >
+                        {index + 1}
+                      </span>
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="text-lg font-semibold leading-snug text-zinc-900">
+                          {pauta.titulo}
+                        </span>
+                        <span className="text-sm text-zinc-500">
+                          por {pauta.autor}
+                          {pauta.ataTitulo
+                            ? ` · da reunião "${pauta.ataTitulo}"`
+                            : ""}
+                        </span>
+                      </div>
+                    </div>
+                    {pauta.contexto && (
+                      <p className="whitespace-pre-wrap pl-10 text-base leading-relaxed text-zinc-700">
+                        {pauta.contexto}
+                      </p>
+                    )}
+                    {(canManagePauta || pauta.criadoPor === user.id) && (
+                      <div className="pl-10">
+                        <PautaItemActions
+                          pautaId={pauta.id}
+                          status={pauta.status}
+                        />
+                      </div>
+                    )}
+                  </li>
                 ))}
-              </div>
-            </section>
-          ))}
+              </ol>
+            )}
+          </div>
+
+          {/* Pedir pauta */}
+          <div className="flex w-full flex-col gap-2">
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
+              <PlusCircle size={20} aria-hidden="true" />
+              Pedir pauta
+            </h3>
+            <p className="text-base text-zinc-500">
+              Sugira um assunto para ser discutido na próxima reunião — todos
+              os voluntários e coordenadores podem pedir.
+            </p>
+            <PautaForm />
+          </div>
         </div>
-      )}
+
+        {discutidas.length > 0 && (
+          <details className="group w-full rounded-xl border border-zinc-200 bg-zinc-50/60">
+            <summary className="flex min-h-12 w-full cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-2 text-base font-medium text-zinc-700">
+                <CheckCheck size={18} aria-hidden="true" className="text-green-600" />
+                Já discutidas ({discutidas.length})
+              </span>
+              <span className="text-sm text-zinc-500">Expandir</span>
+            </summary>
+            <ul className="flex flex-col gap-1.5 border-t border-zinc-200 px-4 py-3">
+              {discutidas.map((pauta) => (
+                <li
+                  key={pauta.id}
+                  className="flex items-start gap-2 text-base text-zinc-500"
+                >
+                  <CheckCheck size={16} aria-hidden="true" className="mt-1 shrink-0 text-green-600" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-zinc-700 line-through decoration-zinc-300">
+                      {pauta.titulo}
+                    </span>
+                    <span className="text-sm text-zinc-400">por {pauta.autor}</span>
+                  </div>
+                  {(canManagePauta || pauta.criadoPor === user.id) && (
+                    <PautaItemActions pautaId={pauta.id} status={pauta.status} />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </section>
+
+      {/* ── Atas ── */}
+      <section className="flex w-full flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
+          <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
+            Atas
+          </h2>
+          <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-base font-medium text-[#28627B]">
+            {rows.length} {rows.length === 1 ? "ata" : "atas"}
+          </span>
+        </div>
+
+        {rows.length === 0 ? (
+          <div className="flex w-full flex-col items-center gap-4 rounded-2xl bg-white px-6 py-16 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            <NotebookPen size={48} className="text-zinc-400" aria-hidden="true" />
+            <h3 className="text-3xl font-semibold text-zinc-900">
+              Nenhuma ata registrada ainda
+            </h3>
+            <p className="max-w-md text-xl text-zinc-700">
+              Envie a transcrição de uma reunião para a IA gerar a ata,
+              demandas e DIPs automaticamente — ou registre manualmente.
+            </p>
+          </div>
+        ) : (
+          <div className="flex w-full flex-col gap-10">
+            {meses.map((group) => (
+              <div key={group.key} className="flex w-full flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="h-6 w-1 rounded-full bg-zinc-200" aria-hidden="true" />
+                  <h3 className="text-xl font-semibold text-zinc-700 sm:text-2xl">
+                    {monthLabel(group.key)}
+                  </h3>
+                </div>
+                <div className="flex w-full flex-col gap-3">
+                  {group.rows.map((ata) => (
+                    <AtaAgendaRow key={ata.id} ata={ata} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </PageContainer>
   );
 }

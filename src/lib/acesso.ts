@@ -54,7 +54,7 @@ export type ModuloRestrito = "painel" | "areas";
 
 export const MODULOS_LABELS: Record<ModuloAcesso, string> = {
   demandas: "Demandas",
-  reunioes: "Atas de Reuniões",
+  reunioes: "Reuniões",
   dips: "Dinâmica DIP",
   voluntarios: "Voluntários",
   eventos: "Eventos",

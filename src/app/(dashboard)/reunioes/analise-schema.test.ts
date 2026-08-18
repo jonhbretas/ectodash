@@ -33,6 +33,7 @@ describe("ataAnaliseSchema demandas", () => {
       eventos: [],
       atualizacoes: [],
       dips: [],
+      pautas: [],
     });
 
     const demanda = result.demandas[0];
@@ -51,6 +52,7 @@ describe("ataAnaliseSchema demandas", () => {
       eventos: [],
       atualizacoes: [],
       dips: [],
+      pautas: [],
     });
 
     const demanda = result.demandas[0];
@@ -74,8 +76,28 @@ describe("ataAnaliseSchema demandas", () => {
         eventos: [],
         atualizacoes: [],
         dips: [],
+        pautas: [],
       })
     ).toThrow();
+  });
+
+  it("aceita pautas adiadas para a próxima reunião", () => {
+    const result = ataAnaliseSchema.parse({
+      ata: baseAta,
+      demandas: [],
+      eventos: [],
+      atualizacoes: [],
+      dips: [],
+      pautas: [
+        { titulo: "Revisar metas do trimestre", contexto: "Ficou para a próxima reunião" },
+        { titulo: "Definir data da próxima DIP" },
+      ],
+    });
+
+    expect(result.pautas).toHaveLength(2);
+    expect(result.pautas[0].titulo).toBe("Revisar metas do trimestre");
+    expect(result.pautas[0].contexto).toBe("Ficou para a próxima reunião");
+    expect(result.pautas[1].contexto).toBeUndefined();
   });
 
   it("envelope JSON-mode continua exigindo a chave analise", () => {
@@ -86,6 +108,7 @@ describe("ataAnaliseSchema demandas", () => {
         eventos: [],
         atualizacoes: [],
         dips: [],
+        pautas: [],
       },
     });
     expect(ok.success).toBe(true);
@@ -96,6 +119,7 @@ describe("ataAnaliseSchema demandas", () => {
       eventos: [],
       atualizacoes: [],
       dips: [],
+      pautas: [],
     });
     expect(semEnvelope.success).toBe(false);
   });

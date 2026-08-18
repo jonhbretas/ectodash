@@ -62,7 +62,7 @@ export const navEntries: SidebarEntry[] = [
     Icon: ClipboardList,
     children: [
       { href: "/", label: "Demandas", Icon: ClipboardList, modulo: "demandas" },
-      { href: "/reunioes", label: "Atas de Reuniões", Icon: NotebookPen, modulo: "reunioes" },
+      { href: "/reunioes", label: "Reuniões", Icon: NotebookPen, modulo: "reunioes" },
       { href: "/projetos", label: "Projetos", Icon: FolderKanban, modulo: "projetos" },
     ],
   },

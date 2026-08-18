@@ -18,6 +18,7 @@ import {
   CalendarDays,
   FileUp,
   Loader2,
+  ListChecks,
   MessageSquareText,
   NotebookPen,
   Sparkles,
@@ -313,6 +314,13 @@ type EventoReview = {
   descricao: string;
 };
 
+type PautaReview = {
+  id: number;
+  incluida: boolean;
+  titulo: string;
+  contexto: string;
+};
+
 const fieldClassName =
   "min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 const labelClassName = "text-lg font-medium text-zinc-900";
@@ -418,6 +426,14 @@ function ReviewScreen({
       descricao: evento.descricao || "",
     }))
   );
+  const [pautas, setPautas] = useState<PautaReview[]>(() =>
+    analise.pautas.map((pauta, index) => ({
+      id: index,
+      incluida: true,
+      titulo: pauta.titulo,
+      contexto: pauta.contexto || "",
+    }))
+  );
 
   const salvarDemandas = demandas
     .filter((d) => d.incluida && d.titulo.trim().length > 0)
@@ -453,6 +469,13 @@ function ReviewScreen({
       descricao: e.descricao || null,
     }));
 
+  const salvarPautas = pautas
+    .filter((p) => p.incluida && p.titulo.trim().length > 0)
+    .map((p) => ({
+      titulo: p.titulo,
+      contexto: p.contexto.trim() || null,
+    }));
+
   // Eventos desta análise disponíveis para vincular às demandas — mesmo
   // predicado do save (incluído + título + data), mesma ordem, para que o
   // índice do ref "novo:<index>" bata com o índice no servidor.
@@ -478,6 +501,7 @@ function ReviewScreen({
     formData.set("eventos", JSON.stringify(salvarEventos));
     formData.set("atualizacoes", JSON.stringify(analise.atualizacoes));
     formData.set("dips", JSON.stringify(salvarDips));
+    formData.set("pautas", JSON.stringify(salvarPautas));
     return formData;
   }
 
@@ -992,6 +1016,85 @@ function ReviewScreen({
                       }
                       disabled={!evento.incluido}
                       className={`${fieldClassName} disabled:cursor-not-allowed`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Pautas para a próxima reunião */}
+        <section className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+              <ListChecks size={24} aria-hidden="true" />
+              Pautas para a próxima reunião
+            </h2>
+            <span className="text-base text-zinc-500">
+              {salvarPautas.length} {salvarPautas.length === 1 ? "pauta" : "pautas"}
+            </span>
+          </div>
+          {pautas.length === 0 ? (
+            <p className="text-lg text-zinc-600">
+              Nenhum assunto adiado para a próxima reunião identificado.
+            </p>
+          ) : (
+            <div className="flex w-full flex-col gap-3">
+              {pautas.map((pauta) => (
+                <div
+                  key={pauta.id}
+                  className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
+                    pauta.incluida
+                      ? "border-[#2195B9]/40 bg-white shadow-[0_0_0_1px_rgba(33,149,185,0.1)]"
+                      : "border-zinc-200 bg-zinc-50/60 grayscale-[30%]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      id={`pauta-incluida-${pauta.id}`}
+                      type="checkbox"
+                      checked={pauta.incluida}
+                      onChange={() =>
+                        setPautas((prev) =>
+                          prev.map((p) =>
+                            p.id === pauta.id ? { ...p, incluida: !p.incluida } : p
+                          )
+                        )
+                      }
+                      className="h-6 w-6 shrink-0 cursor-pointer accent-[#2195B9]"
+                    />
+                    <input
+                      aria-label={`Título da pauta ${pauta.id + 1}`}
+                      value={pauta.titulo}
+                      onChange={(e) =>
+                        setPautas((prev) =>
+                          prev.map((p) =>
+                            p.id === pauta.id ? { ...p, titulo: e.target.value } : p
+                          )
+                        )
+                      }
+                      disabled={!pauta.incluida}
+                      className={`${fieldClassName} disabled:cursor-not-allowed`}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor={`pauta-contexto-${pauta.id}`} className={labelClassName}>
+                      Contexto
+                    </label>
+                    <textarea
+                      id={`pauta-contexto-${pauta.id}`}
+                      value={pauta.contexto}
+                      onChange={(e) =>
+                        setPautas((prev) =>
+                          prev.map((p) =>
+                            p.id === pauta.id ? { ...p, contexto: e.target.value } : p
+                          )
+                        )
+                      }
+                      rows={2}
+                      disabled={!pauta.incluida}
+                      className={`${fieldClassName} min-h-16 resize-y disabled:cursor-not-allowed`}
                     />
                   </div>
                 </div>

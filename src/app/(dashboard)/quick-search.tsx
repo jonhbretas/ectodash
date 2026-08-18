@@ -29,7 +29,7 @@ type Resultado = {
 const META: Record<TipoResultado, { label: string; Icon: typeof ClipboardList }> = {
   demanda: { label: "Demandas", Icon: ClipboardList },
   evento: { label: "Eventos", Icon: CalendarDays },
-  ata: { label: "Atas de reuniões", Icon: NotebookPen },
+  ata: { label: "Reuniões", Icon: NotebookPen },
   voluntario: { label: "Voluntários", Icon: Users },
   projeto: { label: "Projetos", Icon: FolderKanban },
 };

@@ -29,6 +29,7 @@ import {
   type AtaSalvarEvento,
   type AtaSalvarAtualizacao,
   type AtaSalvarDip,
+  type AtaSalvarPauta,
 } from "./analise-schema";
 
 export type AnalisarTranscricaoState = {
@@ -67,12 +68,13 @@ const pasteSchema = z.object({
 
 const AI_SYSTEM_PROMPT =
   "Você analisa transcrições de reunião e responde APENAS com JSON. " +
-  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string, "etiqueta_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}]}}. ' +
+  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string, "etiqueta_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}], "pautas": [{"titulo": string, "contexto": string ("" se não houver) }]}}. ' +
   "Regras: demandas = deliberações NOVAS com responsável e prazo claros. " +
   "Para CADA demanda, identifique SEMPRE também: area_texto = a área institucional relacionada à demanda (ex.: Paratecnológico, Comunicação, Financeiro), projeto_texto = o projeto relacionado quando mencionado, evento_texto = o evento relacionado quando mencionado (use o MESMO título do evento da seção eventos quando aplicável), etiqueta_texto = a etiqueta relacionada quando mencionada. Use \"\" quando não houver menção. " +
   "eventos = eventos institucionais mencionados (ex.: qualificações, encontros, DIPs comemorativas, cursos, workshops, lives). Extraia titulo, data, local e descricao quando disponíveis. " +
   "atualizacoes = menções a demandas JÁ EXISTENTES (ex.: 'atualizar demanda X', 'a demanda Y avançou'); titulo deve ser o título da demanda existente; comentario descreve o que mudou. " +
   "dips = menções à Dinâmica DIP (localidades, países, datas, quantos participantes). " +
+  "pautas = assuntos que ficaram PARA A PRÓXIMA reunião (ex.: 'vamos falar disso na semana que vem', 'isso fica para a próxima reunião', 'deixamos de fora e voltamos depois'). titulo = o assunto adiado; contexto = resumo do porquê/o que discutir. Não inclua assuntos já deliberados nesta reunião. " +
   "Se uma seção não tiver itens, use o array vazio. Não escreva nada fora do JSON.";
 
 async function extractWithAi(texto: string): Promise<AtaAnalise> {
@@ -268,6 +270,15 @@ const salvarEventosSchema = z
   )
   .max(50);
 
+const salvarPautasSchema = z
+  .array(
+    z.object({
+      titulo: z.string().trim().min(1).max(200),
+      contexto: z.string().trim().max(3000).nullable(),
+    })
+  )
+  .max(50);
+
 function parseJsonField(formData: FormData, key: string): unknown {
   const raw = formData.get(key);
   if (typeof raw !== "string" || raw.trim().length === 0) return [];
@@ -309,13 +320,15 @@ export async function salvarAtaAnalise(
   );
   const dips = salvarDipsSchema.safeParse(parseJsonField(formData, "dips"));
   const eventos = salvarEventosSchema.safeParse(parseJsonField(formData, "eventos"));
+  const pautas = salvarPautasSchema.safeParse(parseJsonField(formData, "pautas"));
 
   if (
     !ata.success ||
     !demandas.success ||
     !atualizacoes.success ||
     !dips.success ||
-    !eventos.success
+    !eventos.success ||
+    !pautas.success
   ) {
     return {
       ok: false,
@@ -531,6 +544,25 @@ export async function salvarAtaAnalise(
     const { error: dipsError } = await supabase.from("dips").insert(dipRows);
     if (dipsError) {
       console.error("salvarAtaAnalise: dips insert failed", dipsError);
+    }
+  }
+
+  // Pautas adiadas para a próxima reunião — origem 'ata' ligada à ata que
+  // as levantou. Alimentam a lista de pauta do hub de Reuniões.
+  const pautaRows = (pautas.data as AtaSalvarPauta[])
+    .filter((pauta) => pauta.titulo.trim().length > 0)
+    .map((pauta) => ({
+      titulo: pauta.titulo,
+      contexto: pauta.contexto || null,
+      origem: "ata",
+      status: "pendente",
+      ata_id: ataId,
+    }));
+
+  if (pautaRows.length > 0) {
+    const { error: pautasError } = await supabase.from("pautas").insert(pautaRows);
+    if (pautasError) {
+      console.error("salvarAtaAnalise: pautas insert failed", pautasError);
     }
   }
 
