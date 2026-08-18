@@ -44,6 +44,8 @@ type PautaRow = {
   origem: "manual" | "ata";
   ataId: number | null;
   ataTitulo: string | null;
+  ataDiscutidaId: number | null;
+  ataDiscutidaTitulo: string | null;
   criadoPor: string;
   autor: string;
 };
@@ -87,11 +89,6 @@ function countLines(value: string | null): number {
     .filter(Boolean).length;
 }
 
-function relacionado(row: { reunioes: unknown }): { titulo: string | null } {
-  const r = Array.isArray(row.reunioes) ? row.reunioes[0] : row.reunioes;
-  return { titulo: (r as { titulo?: string } | null)?.titulo ?? null };
-}
-
 export default async function ReunioesPage() {
   const supabase = await createClient();
   const {
@@ -113,7 +110,7 @@ export default async function ReunioesPage() {
     supabase
       .from("pautas")
       .select(
-        "id, titulo, contexto, status, origem, ata_id, criado_por, created_at, profiles(full_name, email), reunioes(titulo)"
+        "id, titulo, contexto, status, origem, ata_id, ata_discutida_id, criado_por, created_at, updated_at, profiles(full_name, email)"
       )
       .order("created_at", { ascending: true }),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
@@ -123,6 +120,23 @@ export default async function ReunioesPage() {
   for (const row of dipsResult.data ?? []) {
     dipCountByAta.set(row.ata_id, (dipCountByAta.get(row.ata_id) ?? 0) + 1);
   }
+
+  // Single source for ata titles (origin and discussed) — resolved in JS to
+  // avoid the ambiguous PostgREST embed now that pautas has two FKs to
+  // reunioes (ata_id and ata_discutida_id).
+  const ataById = new Map<number, { titulo: string; data_reuniao: string }>();
+  for (const row of atasResult.data ?? []) {
+    ataById.set(row.id, { titulo: row.titulo, data_reuniao: row.data_reuniao });
+  }
+
+  const ataTitulo = (id: number | null): string | null =>
+    id === null ? null : (ataById.get(id)?.titulo ?? null);
+
+  // Options for the "Discutida" picker — most recent meeting first.
+  const ataOptions = (atasResult.data ?? []).map((row) => ({
+    id: row.id,
+    label: `${row.titulo} — ${format(new Date(`${row.data_reuniao}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}`,
+  }));
 
   const rows: AtaRow[] = (atasResult.data ?? []).map((row) => ({
     id: row.id,
@@ -146,7 +160,9 @@ export default async function ReunioesPage() {
       status: row.status,
       origem: row.origem,
       ataId: row.ata_id,
-      ataTitulo: relacionado({ reunioes: row.reunioes }).titulo,
+      ataTitulo: ataTitulo(row.ata_id),
+      ataDiscutidaId: row.ata_discutida_id,
+      ataDiscutidaTitulo: ataTitulo(row.ata_discutida_id),
       criadoPor: row.criado_por,
       autor: displayName({
         full_name: profile?.full_name ?? null,
@@ -257,6 +273,7 @@ export default async function ReunioesPage() {
                         <PautaItemActions
                           pautaId={pauta.id}
                           status={pauta.status}
+                          atas={ataOptions}
                         />
                       </div>
                     )}
@@ -300,10 +317,19 @@ export default async function ReunioesPage() {
                     <span className="text-zinc-700 line-through decoration-zinc-300">
                       {pauta.titulo}
                     </span>
-                    <span className="text-sm text-zinc-400">por {pauta.autor}</span>
+                    <span className="text-sm text-zinc-400">
+                      por {pauta.autor}
+                      {pauta.ataDiscutidaTitulo
+                        ? ` · discutida na reunião "${pauta.ataDiscutidaTitulo}"`
+                        : ""}
+                    </span>
                   </div>
                   {(canManagePauta || pauta.criadoPor === user.id) && (
-                    <PautaItemActions pautaId={pauta.id} status={pauta.status} />
+                    <PautaItemActions
+                      pautaId={pauta.id}
+                      status={pauta.status}
+                      atas={ataOptions}
+                    />
                   )}
                 </li>
               ))}

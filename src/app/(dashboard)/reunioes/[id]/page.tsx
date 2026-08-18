@@ -9,6 +9,7 @@ import {
   Clock,
   Download,
   FileText,
+  ListChecks,
   MessageSquareText,
   NotebookPen,
   Paperclip,
@@ -17,10 +18,12 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
+import { displayName } from "@/lib/display-name";
 import PageContainer from "../../page-container";
 import ExcluirAtaButton from "../excluir-ata-button";
 import DipActions from "../../dips/dip-actions";
 import { ParticipantesPanel } from "../participantes-panel";
+import PautaDiscutirButton from "../pauta-discutir-button";
 
 type AtaDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -54,8 +57,16 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
     );
   }
 
-  const [ataResult, dipsResult, profileResult, participantesResult, voluntariosResult, localidadesResult] =
-    await Promise.all([
+  const [
+    ataResult,
+    dipsResult,
+    profileResult,
+    participantesResult,
+    voluntariosResult,
+    localidadesResult,
+    pautasDiscutidasResult,
+    pautasPendentesResult,
+  ] = await Promise.all([
       supabase
         .from("reunioes")
         .select(
@@ -75,6 +86,16 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
         .eq("ata_id", id),
       supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("dip_localidades").select("localidade, pais").order("localidade"),
+      supabase
+        .from("pautas")
+        .select("id, titulo, contexto, criado_por, profiles(full_name, email)")
+        .eq("ata_discutida_id", id)
+        .order("updated_at", { ascending: true }),
+      supabase
+        .from("pautas")
+        .select("id, titulo, contexto, criado_por, profiles(full_name, email)")
+        .eq("status", "pendente")
+        .order("created_at", { ascending: true }),
     ]);
 
   if (ataResult.error || !ataResult.data) {
@@ -130,6 +151,37 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
   const canDelete =
     ata.criado_por === user.id ||
     profileResult.data?.role === "coordenador_geral";
+
+  const isCoordenadorGeral = profileResult.data?.role === "coordenador_geral";
+
+  const pautaAutor = (row: {
+    profiles: unknown;
+    criado_por: string;
+  }): { autor: string } => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      autor: displayName({
+        full_name: (profile as { full_name?: string | null } | null)?.full_name ?? null,
+        email: (profile as { email?: string | null } | null)?.email ?? null,
+      }),
+    };
+  };
+
+  const pautasDiscutidas = (pautasDiscutidasResult.data ?? []).map((row) => ({
+    id: row.id,
+    titulo: row.titulo,
+    contexto: row.contexto,
+    criadoPor: row.criado_por,
+    ...pautaAutor(row),
+  }));
+
+  const pautasPendentes = (pautasPendentesResult.data ?? []).map((row) => ({
+    id: row.id,
+    titulo: row.titulo,
+    contexto: row.contexto,
+    criadoPor: row.criado_por,
+    ...pautaAutor(row),
+  }));
 
   return (
     <PageContainer>
@@ -296,6 +348,80 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
             </div>
           </section>
         )}
+
+        {/* Pautas desta reunião */}
+        <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+          <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+            <ListChecks size={22} aria-hidden="true" />
+            Pautas desta reunião
+          </h2>
+
+          {pautasDiscutidas.length === 0 && pautasPendentes.length === 0 ? (
+            <p className="text-lg text-zinc-600">
+              Nenhuma pauta vinculada a esta reunião.
+            </p>
+          ) : (
+            <div className="flex w-full flex-col gap-3">
+              {pautasDiscutidas.length > 0 && (
+                <div className="flex w-full flex-col gap-2">
+                  <h3 className="text-base font-semibold text-green-700">
+                    Discutidas ({pautasDiscutidas.length})
+                  </h3>
+                  <ul className="flex w-full flex-col gap-2">
+                    {pautasDiscutidas.map((pauta) => (
+                      <li
+                        key={pauta.id}
+                        className="flex flex-col gap-0.5 rounded-xl border border-zinc-200 bg-zinc-50 p-3"
+                      >
+                        <span className="text-lg font-semibold text-zinc-900 line-through decoration-zinc-300">
+                          {pauta.titulo}
+                        </span>
+                        <span className="text-sm text-zinc-500">
+                          por {pauta.autor}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {pautasPendentes.length > 0 && (
+                <div className="flex w-full flex-col gap-2">
+                  <h3 className="text-base font-semibold text-zinc-700">
+                    Pendentes — marcar como discutida aqui ({pautasPendentes.length})
+                  </h3>
+                  <ul className="flex w-full flex-col gap-2">
+                    {pautasPendentes.map((pauta) => (
+                      <li
+                        key={pauta.id}
+                        className="flex flex-col gap-1.5 rounded-xl border border-zinc-200 p-3"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-lg font-semibold leading-snug text-zinc-900">
+                            {pauta.titulo}
+                          </span>
+                          <span className="text-sm text-zinc-500">
+                            por {pauta.autor}
+                          </span>
+                        </div>
+                        {pauta.contexto && (
+                          <p className="whitespace-pre-wrap text-base leading-relaxed text-zinc-700">
+                            {pauta.contexto}
+                          </p>
+                        )}
+                        {(isCoordenadorGeral || pauta.criadoPor === user.id) && (
+                          <div className="mt-1">
+                            <PautaDiscutirButton pautaId={pauta.id} ataId={id} />
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
 
         {ata.texto && (
           <details className="group w-full rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">

@@ -1,9 +1,13 @@
 "use client";
 
-// Per-pauta lifecycle controls (mark discussed / reopen / delete). These
-// call the pauta-actions server actions directly; the pautas RLS (0076) is
-// the real boundary — the caller only renders them when canManage is true
-// (creator or coordenador_geral), mirroring the reunioes delete button.
+// Per-pauta lifecycle controls (mark discussed linked to a meeting / reopen
+// / delete). These call the pauta-actions server actions directly; the
+// pautas RLS (0076) is the real boundary — the caller only renders them when
+// canManage is true (creator or coordenador_geral).
+//
+// "Discutida" now requires choosing the ata (reunião) where the topic was
+// handled: the pauta is linked via ata_discutida_id (0077) so the ata page
+// shows everything that was covered in that meeting.
 import { useState, useTransition } from "react";
 import { CheckCheck, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import {
@@ -12,9 +16,15 @@ import {
   reabrirPauta,
 } from "./pauta-actions";
 
+export type PautaAtaOption = {
+  id: number;
+  label: string;
+};
+
 type PautaItemActionsProps = {
   pautaId: number;
   status: "pendente" | "discutida";
+  atas: PautaAtaOption[];
 };
 
 const buttonClassName =
@@ -23,9 +33,13 @@ const buttonClassName =
 export default function PautaItemActions({
   pautaId,
   status,
+  atas,
 }: PautaItemActionsProps) {
   const [pending, startTransition] = useTransition();
   const [mensagem, setMensagem] = useState<string | null>(null);
+  const [ataSelecionada, setAtaSelecionada] = useState<number | "">(
+    atas[0]?.id ?? ""
+  );
 
   function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
     setMensagem(null);
@@ -35,13 +49,30 @@ export default function PautaItemActions({
     });
   }
 
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {status === "pendente" ? (
+  if (status === "pendente") {
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <select
+          value={ataSelecionada}
+          onChange={(e) =>
+            setAtaSelecionada(e.target.value === "" ? "" : Number(e.target.value))
+          }
+          aria-label="Ata da reunião em que foi discutida"
+          className="min-h-9 rounded-lg border border-zinc-300 bg-white px-2 text-sm text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+        >
+          <option value="">Em qual reunião?</option>
+          {atas.map((ata) => (
+            <option key={ata.id} value={ata.id}>
+              {ata.label}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
-          disabled={pending}
-          onClick={() => run(() => marcarPautaDiscutida(pautaId))}
+          disabled={pending || ataSelecionada === ""}
+          onClick={() =>
+            run(() => marcarPautaDiscutida(pautaId, Number(ataSelecionada)))
+          }
           className={`${buttonClassName} bg-green-700 text-white hover:bg-green-600`}
         >
           {pending ? (
@@ -51,17 +82,33 @@ export default function PautaItemActions({
           )}
           Discutida
         </button>
-      ) : (
         <button
           type="button"
           disabled={pending}
-          onClick={() => run(() => reabrirPauta(pautaId))}
-          className={`${buttonClassName} border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50`}
+          onClick={() => run(() => excluirPauta(pautaId))}
+          aria-label="Excluir pauta"
+          className={`${buttonClassName} border border-zinc-200 bg-white text-zinc-400 hover:bg-red-50 hover:text-red-600`}
         >
-          <RotateCcw size={14} aria-hidden="true" />
-          Reabrir
+          <Trash2 size={14} aria-hidden="true" />
         </button>
-      )}
+        {mensagem && (
+          <span className="w-full text-sm text-red-600">{mensagem}</span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => run(() => reabrirPauta(pautaId))}
+        className={`${buttonClassName} border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50`}
+      >
+        <RotateCcw size={14} aria-hidden="true" />
+        Reabrir
+      </button>
       <button
         type="button"
         disabled={pending}

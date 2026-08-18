@@ -64,10 +64,43 @@ export async function criarPauta(
 
 export type PautaAcaoResult = { ok: boolean; message?: string };
 
-async function updateStatus(
+export async function marcarPautaDiscutida(
   pautaId: number,
-  status: "pendente" | "discutida"
+  ataId: number
 ): Promise<PautaAcaoResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
+
+  const id = Number(pautaId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { ok: false, message: "Pauta inválida." };
+  }
+
+  const aId = Number(ataId);
+  if (!Number.isInteger(aId) || aId <= 0) {
+    return { ok: false, message: "Escolha a ata da reunião." };
+  }
+
+  // status = 'discutida' e o vínculo com a ata andam juntos (CHECK 0077).
+  const { error } = await supabase
+    .from("pautas")
+    .update({ status: "discutida", ata_discutida_id: aId })
+    .eq("id", id);
+
+  if (error) {
+    console.error("marcarPautaDiscutida: update failed", error);
+    return { ok: false, message: "Não foi possível atualizar a pauta." };
+  }
+
+  revalidatePath("/reunioes");
+  revalidatePath(`/reunioes/${aId}`);
+  return { ok: true };
+}
+
+export async function reabrirPauta(pautaId: number): Promise<PautaAcaoResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -81,26 +114,16 @@ async function updateStatus(
 
   const { error } = await supabase
     .from("pautas")
-    .update({ status })
+    .update({ status: "pendente", ata_discutida_id: null })
     .eq("id", id);
 
   if (error) {
-    console.error("pauta updateStatus: update failed", error);
-    return { ok: false, message: "Não foi possível atualizar a pauta." };
+    console.error("reabrirPauta: update failed", error);
+    return { ok: false, message: "Não foi possível reabrir a pauta." };
   }
 
   revalidatePath("/reunioes");
   return { ok: true };
-}
-
-export async function marcarPautaDiscutida(
-  pautaId: number
-): Promise<PautaAcaoResult> {
-  return updateStatus(pautaId, "discutida");
-}
-
-export async function reabrirPauta(pautaId: number): Promise<PautaAcaoResult> {
-  return updateStatus(pautaId, "pendente");
 }
 
 export async function excluirPauta(pautaId: number): Promise<PautaAcaoResult> {
