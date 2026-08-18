@@ -1,13 +1,19 @@
 "use server";
 
 // Pauta server actions — "pedir pauta" and the small lifecycle controls
-// (mark discussed / reopen / delete). Every write goes through the pautas
-// table's own RLS (0076): any authenticated volunteer can insert a pauta
-// (self-authored), only the creator or a coordenador_geral can update or
-// delete it. These actions are the UX layer; RLS is the real boundary.
+// (mark discussed / stand by / reopen / delete). Every write goes through the
+// pautas table's own RLS (0076): any authenticated volunteer can insert a
+// pauta (self-authored), only the creator or a coordenador_geral can update
+// or delete it. These actions are the UX layer; RLS is the real boundary.
+//
+// "Discutida" auto-resolves the ata by looking up the reuniao whose
+// data_reuniao matches the next Tuesday (proximaTerca). The dropdown was
+// removed — pauta always lands in the next meeting. Use "em espera" to
+// defer to a later meeting.
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { proximaTerca } from "@/lib/proxima-reuniao";
 
 export type CriarPautaState = {
   ok: boolean;
@@ -66,7 +72,7 @@ export type PautaAcaoResult = { ok: boolean; message?: string };
 
 export async function marcarPautaDiscutida(
   pautaId: number,
-  ataId: number
+  ataId?: number
 ): Promise<PautaAcaoResult> {
   const supabase = await createClient();
   const {
@@ -79,9 +85,25 @@ export async function marcarPautaDiscutida(
     return { ok: false, message: "Pauta inválida." };
   }
 
-  const aId = Number(ataId);
+  let aId = Number(ataId);
+
+  // Auto-resolve: find the ata for the next Tuesday's meeting.
   if (!Number.isInteger(aId) || aId <= 0) {
-    return { ok: false, message: "Escolha a ata da reunião." };
+    const proxima = proximaTerca();
+    const dataStr = proxima.toISOString().slice(0, 10);
+    const { data: reuniao } = await supabase
+      .from("reunioes")
+      .select("id")
+      .eq("data_reuniao", dataStr)
+      .maybeSingle();
+    if (!reuniao) {
+      return {
+        ok: false,
+        message:
+          "Nenhuma ata registrada para a próxima reunião. Registre a ata primeiro.",
+      };
+    }
+    aId = reuniao.id;
   }
 
   // status = 'discutida' e o vínculo com a ata andam juntos (CHECK 0077).
@@ -120,6 +142,58 @@ export async function reabrirPauta(pautaId: number): Promise<PautaAcaoResult> {
   if (error) {
     console.error("reabrirPauta: update failed", error);
     return { ok: false, message: "Não foi possível reabrir a pauta." };
+  }
+
+  revalidatePath("/reunioes");
+  return { ok: true };
+}
+
+export async function emEspera(pautaId: number): Promise<PautaAcaoResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
+
+  const id = Number(pautaId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { ok: false, message: "Pauta inválida." };
+  }
+
+  const { error } = await supabase
+    .from("pautas")
+    .update({ stand_by: true })
+    .eq("id", id);
+
+  if (error) {
+    console.error("emEspera: update failed", error);
+    return { ok: false, message: "Não foi possível colocar em espera." };
+  }
+
+  revalidatePath("/reunioes");
+  return { ok: true };
+}
+
+export async function retomarPauta(pautaId: number): Promise<PautaAcaoResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
+
+  const id = Number(pautaId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { ok: false, message: "Pauta inválida." };
+  }
+
+  const { error } = await supabase
+    .from("pautas")
+    .update({ stand_by: false })
+    .eq("id", id);
+
+  if (error) {
+    console.error("retomarPauta: update failed", error);
+    return { ok: false, message: "Não foi possível retomar a pauta." };
   }
 
   revalidatePath("/reunioes");

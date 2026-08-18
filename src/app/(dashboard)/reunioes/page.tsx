@@ -8,6 +8,7 @@ import Link from "next/link";
 import {
   CalendarClock,
   CheckCheck,
+  Clock,
   FileText,
   ListChecks,
   MessageSquareText,
@@ -42,6 +43,7 @@ type PautaRow = {
   contexto: string | null;
   status: "pendente" | "discutida";
   origem: "manual" | "ata";
+  standBy: boolean;
   ataId: number | null;
   ataTitulo: string | null;
   ataDiscutidaId: number | null;
@@ -110,7 +112,7 @@ export default async function ReunioesPage() {
     supabase
       .from("pautas")
       .select(
-        "id, titulo, contexto, status, origem, ata_id, ata_discutida_id, criado_por, created_at, updated_at, profiles(full_name, email)"
+        "id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, criado_por, created_at, updated_at, profiles(full_name, email)"
       )
       .order("created_at", { ascending: true }),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
@@ -131,12 +133,6 @@ export default async function ReunioesPage() {
 
   const ataTitulo = (id: number | null): string | null =>
     id === null ? null : (ataById.get(id)?.titulo ?? null);
-
-  // Options for the "Discutida" picker — most recent meeting first.
-  const ataOptions = (atasResult.data ?? []).map((row) => ({
-    id: row.id,
-    label: `${row.titulo} — ${format(new Date(`${row.data_reuniao}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}`,
-  }));
 
   const rows: AtaRow[] = (atasResult.data ?? []).map((row) => ({
     id: row.id,
@@ -159,6 +155,7 @@ export default async function ReunioesPage() {
       contexto: row.contexto,
       status: row.status,
       origem: row.origem,
+      standBy: row.stand_by,
       ataId: row.ata_id,
       ataTitulo: ataTitulo(row.ata_id),
       ataDiscutidaId: row.ata_discutida_id,
@@ -171,7 +168,8 @@ export default async function ReunioesPage() {
     };
   });
 
-  const pendentes = pautas.filter((p) => p.status === "pendente");
+  const pendentes = pautas.filter((p) => p.status === "pendente" && !p.standBy);
+  const emEspera = pautas.filter((p) => p.status === "pendente" && p.standBy);
   const discutidas = pautas.filter((p) => p.status === "discutida");
 
   const proxima = proximaTerca();
@@ -273,7 +271,7 @@ export default async function ReunioesPage() {
                         <PautaItemActions
                           pautaId={pauta.id}
                           status={pauta.status}
-                          atas={ataOptions}
+                          standBy={pauta.standBy}
                         />
                       </div>
                     )}
@@ -296,6 +294,43 @@ export default async function ReunioesPage() {
             <PautaForm />
           </div>
         </div>
+
+        {emEspera.length > 0 && (
+          <details className="group w-full rounded-xl border border-zinc-200 bg-zinc-50/60">
+            <summary className="flex min-h-12 w-full cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-2 text-base font-medium text-zinc-700">
+                <Clock size={18} aria-hidden="true" className="text-zinc-500" />
+                Em espera ({emEspera.length})
+              </span>
+              <span className="text-sm text-zinc-500">Expandir</span>
+            </summary>
+            <ul className="flex flex-col gap-1.5 border-t border-zinc-200 px-4 py-3">
+              {emEspera.map((pauta) => (
+                <li
+                  key={pauta.id}
+                  className="flex items-start gap-2 text-base text-zinc-500"
+                >
+                  <Clock size={16} aria-hidden="true" className="mt-1 shrink-0 text-zinc-400" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-zinc-700">
+                      {pauta.titulo}
+                    </span>
+                    <span className="text-sm text-zinc-400">
+                      por {pauta.autor}
+                    </span>
+                  </div>
+                  {(canManagePauta || pauta.criadoPor === user.id) && (
+                    <PautaItemActions
+                      pautaId={pauta.id}
+                      status={pauta.status}
+                      standBy={pauta.standBy}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
 
         {discutidas.length > 0 && (
           <details className="group w-full rounded-xl border border-zinc-200 bg-zinc-50/60">
@@ -328,7 +363,6 @@ export default async function ReunioesPage() {
                     <PautaItemActions
                       pautaId={pauta.id}
                       status={pauta.status}
-                      atas={ataOptions}
                     />
                   )}
                 </li>
