@@ -37,8 +37,11 @@ export default function PautaItemActions({
 }: PautaItemActionsProps) {
   const [pending, startTransition] = useTransition();
   const [mensagem, setMensagem] = useState<string | null>(null);
-  const [ataSelecionada, setAtaSelecionada] = useState<number | "">(
-    atas[0]?.id ?? ""
+  // Defaults to the most recent meeting (atas is ordered newest-first by the
+  // caller) so "Discutida" works in one click — the select only matters when
+  // the pauta was handled in an older meeting.
+  const [ataSelecionada, setAtaSelecionada] = useState<string>(
+    atas[0] ? String(atas[0].id) : ""
   );
 
   function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
@@ -54,15 +57,17 @@ export default function PautaItemActions({
       <div className="flex flex-wrap items-center gap-1.5">
         <select
           value={ataSelecionada}
-          onChange={(e) =>
-            setAtaSelecionada(e.target.value === "" ? "" : Number(e.target.value))
-          }
+          onChange={(e) => setAtaSelecionada(e.target.value)}
           aria-label="Ata da reunião em que foi discutida"
           className="min-h-9 rounded-lg border border-zinc-300 bg-white px-2 text-sm text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
-          <option value="">Em qual reunião?</option>
+          {atas.length === 0 ? (
+            <option value="">Sem atas registradas</option>
+          ) : (
+            <option value="">Em qual reunião?</option>
+          )}
           {atas.map((ata) => (
-            <option key={ata.id} value={ata.id}>
+            <option key={ata.id} value={String(ata.id)}>
               {ata.label}
             </option>
           ))}
