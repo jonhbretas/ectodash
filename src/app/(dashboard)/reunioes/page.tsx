@@ -20,7 +20,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
-import { proximaTerca } from "@/lib/proxima-reuniao";
+import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 import PageContainer from "../page-container";
 import PautaForm from "./pauta-form";
 import PautaItemActions from "./pauta-item-actions";
@@ -175,7 +175,7 @@ export default async function ReunioesPage() {
   const discutidas = pautas.filter((p) => p.status === "discutida");
 
   const proxima = proximaTerca();
-  const proximaLabel = format(proxima, "EEEE, dd 'de' MMMM", { locale: ptBR });
+  const proximaLabel = `${format(proxima, "EEEE, dd 'de' MMMM", { locale: ptBR })} · ${HORARIO_REUNIAO}`;
 
   const meses = groupByMonth(rows);
 
