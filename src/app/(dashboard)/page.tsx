@@ -89,9 +89,13 @@ export default async function DashboardPage({
   if (filters.etiqueta) {
     query = query.eq("etiqueta_id", Number(filters.etiqueta));
   }
-  if (filters.status) {
-    query = query.in("status", filters.status.split(","));
-  }
+  // Sem ?status explícito, o padrão oculta as concluídas (mostra apenas
+  // pendente + em_andamento). "Todos os status" é explícito e chega como
+  // status=pendente,em_andamento,concluida vindo do drawer de filtros.
+  query = query.in(
+    "status",
+    (filters.status ?? "pendente,em_andamento").split(",")
+  );
 
   const { data: baseDemandas } = await supabase
     .from("demandas_com_status")

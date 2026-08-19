@@ -37,6 +37,11 @@ import type { DemandaFilters } from "./demanda-filter-schema";
 
 const ALL_VALUE = "__todas__";
 
+// A ausência de ?status oculta as concluídas (default em page.tsx). Para
+// vê-las, o filtro precisa pedi-las explicitamente — logo "Todos os status"
+// navega com os três status, em vez de remover o parâmetro.
+const ALL_STATUS_VALUE = "pendente,em_andamento,concluida";
+
 const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "pendente", label: "Pendente" },
   { value: "em_andamento", label: "Em andamento" },
@@ -123,8 +128,13 @@ export default function DemandaFilters({
     {
       key: "status" as const,
       label: `Status: ${
-        STATUS_OPTIONS.find((s) => s.value === currentFilters.status?.split(",")[0])
-          ?.label ?? currentFilters.status
+        currentFilters.status
+          ?.split(",")
+          .map(
+            (s) =>
+              STATUS_OPTIONS.find((opt) => opt.value === s)?.label ?? s
+          )
+          .join(", ") ?? currentFilters.status
       }`,
       title: "Status",
     },
@@ -291,10 +301,18 @@ export default function DemandaFilters({
             <div className="grid grid-cols-1 gap-3">
               {selectControl(
                 "Filtrar por status",
-                currentFilters.status?.split(",")[0],
+                (() => {
+                  const status = currentFilters.status;
+                  if (!status || status === ALL_STATUS_VALUE) return ALL_VALUE;
+                  const first = status.split(",")[0];
+                  return status.split(",").length > 1 ? ALL_VALUE : first;
+                })(),
                 ALL_VALUE,
                 "Todos os status",
-                (value) => navigateWith({ status: value }),
+                (value) =>
+                  navigateWith({
+                    status: value === ALL_VALUE ? ALL_STATUS_VALUE : value,
+                  }),
                 STATUS_OPTIONS.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
