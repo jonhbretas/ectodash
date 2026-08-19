@@ -23,6 +23,7 @@ import PageContainer from "../../page-container";
 import ExcluirAtaButton from "../excluir-ata-button";
 import DipActions from "../../dips/dip-actions";
 import { ParticipantesPanel } from "../participantes-panel";
+import { AtaEditForm } from "../ata-edit-form";
 import PautaDiscutirButton from "../pauta-discutir-button";
 
 type AtaDetailPageProps = {
@@ -232,6 +233,20 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
       </header>
 
       <div className="flex w-full flex-col gap-5">
+        <AtaEditForm
+          ataId={id}
+          canManage={canDelete}
+          ata={{
+            titulo: ata.titulo,
+            data_reuniao: ata.data_reuniao,
+            resumo: ata.resumo,
+            pontos_principais: ata.pontos_principais,
+            deliberacoes: ata.deliberacoes,
+          }}
+          voluntarios={voluntarios}
+          participanteIds={vinculados.map((v) => v.id)}
+        />
+
         <ParticipantesPanel
           ataId={id}
           canManage={canDelete}

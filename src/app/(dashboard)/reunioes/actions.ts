@@ -91,6 +91,112 @@ export async function criarAta(
   return { ok: true, message: "Ata registrada com sucesso." };
 }
 
+export type EditarAtaResult = { ok: boolean; message: string };
+
+// Reuses the same field rules as criarAta plus the structured ata sections
+// (pontos_principais, deliberacoes) so the edit form validates like the
+// create form — same anti-spoofing discipline (RLS 0007 gates the update).
+const editarAtaSchema = z.object({
+  titulo: z.string().trim().min(1, "Dê um título à ata.").max(200),
+  data_reuniao: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha uma data válida."),
+  resumo: z.string().trim().max(20000).optional().or(z.literal("")),
+  pontos_principais: z.string().trim().max(20000).optional().or(z.literal("")),
+  deliberacoes: z.string().trim().max(20000).optional().or(z.literal("")),
+});
+
+// Edits an existing ata (any past one) — fields plus the roster-linked
+// participants in a single pass. Participant sync is a diff against the
+// current ata_participantes rows: removed ids are deleted, new ids inserted.
+// RLS (migrations 0007/0023) is the real boundary: only the ata creator or
+// a coordenador_geral can update the ata and attach/remove participants.
+export async function editarAta(formData: FormData): Promise<EditarAtaResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  const id = Number(formData.get("id"));
+  if (!Number.isFinite(id)) {
+    return { ok: false, message: "Ata inválida." };
+  }
+
+  const parsed = editarAtaSchema.safeParse({
+    titulo: formData.get("titulo"),
+    data_reuniao: formData.get("data_reuniao"),
+    resumo: formData.get("resumo"),
+    pontos_principais: formData.get("pontos_principais"),
+    deliberacoes: formData.get("deliberacoes"),
+  });
+
+  if (!parsed.success) {
+    return { ok: false, message: "Verifique os campos destacados." };
+  }
+
+  const voluntarioIds = (formData.getAll("voluntarioIds") as string[])
+    .map((raw) => Number(raw))
+    .filter((v) => Number.isInteger(v) && v > 0);
+
+  const { error: updateError } = await supabase
+    .from("reunioes")
+    .update({
+      titulo: parsed.data.titulo,
+      data_reuniao: parsed.data.data_reuniao,
+      resumo: parsed.data.resumo || null,
+      pontos_principais: parsed.data.pontos_principais || null,
+      deliberacoes: parsed.data.deliberacoes || null,
+    })
+    .eq("id", id);
+
+  if (updateError) {
+    console.error("editarAta: update failed", updateError);
+    return { ok: false, message: "Não foi possível salvar as alterações." };
+  }
+
+  const { data: atuais } = await supabase
+    .from("ata_participantes")
+    .select("voluntario_id")
+    .eq("ata_id", id);
+
+  const atuaisSet = new Set((atuais ?? []).map((row) => row.voluntario_id));
+  const desejadosSet = new Set(voluntarioIds);
+  const remover = [...atuaisSet].filter((v) => !desejadosSet.has(v));
+  const adicionar = voluntarioIds.filter((v) => !atuaisSet.has(v));
+
+  if (remover.length > 0) {
+    const { error: removeError } = await supabase
+      .from("ata_participantes")
+      .delete()
+      .eq("ata_id", id)
+      .in("voluntario_id", remover);
+
+    if (removeError) {
+      console.error("editarAta: participant remove failed", removeError);
+      return { ok: false, message: "Ata salva, mas os participantes não puderam ser atualizados." };
+    }
+  }
+
+  if (adicionar.length > 0) {
+    const { error: addError } = await supabase
+      .from("ata_participantes")
+      .insert(adicionar.map((voluntario_id) => ({ ata_id: id, voluntario_id })));
+
+    if (addError) {
+      console.error("editarAta: participant insert failed", addError);
+      return { ok: false, message: "Ata salva, mas os participantes não puderam ser atualizados." };
+    }
+  }
+
+  revalidatePath(`/reunioes/${id}`);
+  revalidatePath("/reunioes");
+  return { ok: true, message: "Ata atualizada." };
+}
+
 export type AtaParticipanteResult = { ok: boolean; message?: string };
 
 export async function addAtaParticipante(
