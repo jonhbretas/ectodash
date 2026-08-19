@@ -9,6 +9,8 @@ import { requireAnaliseComIA } from "@/lib/role-gates";
 import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
 import { parseXlsx } from "@/lib/financeiro/parse-file";
 import { sanitizeSearch } from "@/lib/utils";
+import { applyGlossary } from "@/lib/glossary";
+import { listarTermosGlossario } from "@/lib/glossary-db";
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -270,6 +272,18 @@ export async function analisarComIA(
 
   if (texto.length === 0) {
     return erroState(EMPTY_INPUT);
+  }
+
+  // Dicionário (0079): traduz termos do jargão (ex.: SIAEC → CEAEC) antes
+  // da análise. Falhas de leitura são toleradas — segue com o texto
+  // original se o dicionário não puder ser carregado.
+  try {
+    const termosGlossario = await listarTermosGlossario(supabase);
+    if (termosGlossario.length > 0) {
+      texto = applyGlossary(texto, termosGlossario);
+    }
+  } catch (err) {
+    console.error("analisarComIA: glossary load failed", err);
   }
 
   // Ordinary session-bound client only — same query shape nova/page.tsx

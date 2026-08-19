@@ -5,6 +5,8 @@ import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
 import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
 import { requireExtrairDemandas } from "@/lib/role-gates";
 import { extractionResponseSchema } from "./extraction-schema";
+import { applyGlossary } from "@/lib/glossary";
+import { listarTermosGlossario } from "@/lib/glossary-db";
 import { obterTranscricao } from "@/lib/meetings";
 
 export type ExtractDemandasState = {
@@ -115,6 +117,18 @@ export async function extractDemandas(
       };
     }
     texto = parsed.data.texto;
+  }
+
+  // Dicionário (0079): traduz termos do jargão (ex.: SIAEC → CEAEC) antes
+  // da extração. Falhas de leitura são toleradas — segue com o texto
+  // original se o dicionário não puder ser carregado.
+  try {
+    const termosGlossario = await listarTermosGlossario(supabase);
+    if (termosGlossario.length > 0) {
+      texto = applyGlossary(texto, termosGlossario);
+    }
+  } catch (err) {
+    console.error("extractDemandas: glossary load failed", err);
   }
 
   // Ordinary session-bound client only — same query shape nova/page.tsx

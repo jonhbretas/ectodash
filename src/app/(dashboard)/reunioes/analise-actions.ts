@@ -19,6 +19,8 @@ import { createClient } from "@/lib/supabase/server";
 import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
 import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
 import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
+import { applyGlossary } from "@/lib/glossary";
+import { listarTermosGlossario } from "@/lib/glossary-db";
 import { obterTranscricao } from "@/lib/meetings";
 import { parseArquivoFonte, ArquivoNaoSuportadoError, ArquivoVazioError } from "@/lib/atas/parse-file";
 import { sanitizeSearch } from "@/lib/utils";
@@ -172,6 +174,18 @@ async function analisarTranscricaoImpl(
 
   // Same session-bound client only — never the service-role factory.
   try {
+    // Dicionário (0079): traduz termos do jargão (ex.: SIAEC → CEAEC) antes
+    // da análise. Falhas de leitura são toleradas — a análise segue com o
+    // texto original se o dicionário não puder ser carregado.
+    let termosGlossario: { term: string; replacement: string }[] = [];
+    try {
+      termosGlossario = await listarTermosGlossario(supabase);
+    } catch (err) {
+      console.error("analisarTranscricao: glossary load failed", err);
+    }
+    if (termosGlossario.length > 0) {
+      texto = applyGlossary(texto, termosGlossario);
+    }
     const analise = await extractWithAi(texto);
     if (!analise.ata.resumo && analise.ata.titulo.trim().length === 0) {
       return {

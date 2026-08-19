@@ -5,6 +5,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
 import { requireUtilidades } from "@/lib/role-gates";
+import { applyGlossary } from "@/lib/glossary";
+import { listarTermosGlossario } from "@/lib/glossary-db";
 
 export type UtilidadeState = { ok: boolean; message: string };
 
@@ -245,8 +247,19 @@ export async function gerarItensComIA(
   const supabase = gate.supabase;
 
   const textoRaw = formData.get("texto");
-  const texto = typeof textoRaw === "string" ? textoRaw.trim() : "";
+  let texto = typeof textoRaw === "string" ? textoRaw.trim() : "";
   if (!texto) return gerarItensErro(EMPTY_INPUT);
+
+  // Dicionário (0079): traduz termos do jargão antes da IA (ex.: SIAEC →
+  // CEAEC). Falhas de leitura são toleradas — segue com o texto original.
+  try {
+    const termosGlossario = await listarTermosGlossario(gate.supabase);
+    if (termosGlossario.length > 0) {
+      texto = applyGlossary(texto, termosGlossario);
+    }
+  } catch (err) {
+    console.error("gerarItensComIA: glossary load failed", err);
+  }
 
   // Títulos já cadastrados para sinalizar possíveis duplicados na revisão
   // (regra de análise de demandas do AGENTS.md — atualizar, não duplicar).

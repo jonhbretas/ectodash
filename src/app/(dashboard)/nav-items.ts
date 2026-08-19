@@ -25,6 +25,7 @@ import {
   FileText,
   Map,
   MessageSquareWarning,
+  BookOpen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -145,6 +146,7 @@ export const navEntries: SidebarEntry[] = [
 
   // ─── Ferramentas ───
   { href: "/utilidades", label: "Utilidades", Icon: Wrench, modulo: "utilidades" },
+  { href: "/dicionario", label: "Dicionário", Icon: BookOpen, modulo: "utilidades" },
 
   // ─── Relatos (todos veem os próprios; coordenador geral gerencia tudo) ───
   { href: "/feedback", label: "Relatos e melhorias", Icon: MessageSquareWarning },
