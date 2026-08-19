@@ -1,6 +1,6 @@
 "use client";
 
-// src/app/(dashboard)/dicionario/dicionario-view.tsx
+// src/app/(dashboard)/utilidades/dicionario/dicionario-view.tsx
 // Tela do Dicionário: cadastro, lista, edição e preview de tradução.
 // Gestão (criar/editar/excluir) só aparece para coordenador_geral — os
 // gates estão nas server actions e a RLS (0079) é a fronteira real.

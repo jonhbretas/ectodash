@@ -1,4 +1,4 @@
-// src/app/(dashboard)/contratos/contrato-card.tsx
+// src/app/(dashboard)/utilidades/contratos/contrato-card.tsx
 // Card de um contrato na listagem: status, links (PDF, pasta no Drive) e as
 // ações do ciclo de assinatura (enviar para Assinafy, upload do assinado,
 // marcar assinado, sincronizar, cancelar). Cada ação é um form com

@@ -1,11 +1,11 @@
-// /contratos/novo — formulário de geração de contrato: modelo padronizado +
+// /utilidades/contratos/novo — formulário de geração de contrato: modelo padronizado +
 // evento (opcional) + aluno (busca no WooCommerce ou digitação manual).
 // O envio cria o contrato, as pastas no Drive e o PDF (server action).
 import Link from "next/link";
 import { ArrowLeft, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeSearch } from "@/lib/utils";
-import PageContainer from "../../page-container";
+import PageContainer from "../../../page-container";
 import ContratoForm from "../contrato-form";
 
 export const metadata = { title: "Novo contrato — EctoDash" };
@@ -90,7 +90,7 @@ export default async function NovoContratoPage({
     <PageContainer>
       <header className="flex w-full flex-col gap-1">
         <Link
-          href="/contratos"
+          href="/utilidades/contratos"
           className="flex items-center gap-1 text-base text-zinc-500 transition-colors hover:text-[#2195B9]"
         >
           <ArrowLeft size={16} aria-hidden="true" />

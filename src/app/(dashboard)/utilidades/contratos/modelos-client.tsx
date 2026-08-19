@@ -1,4 +1,4 @@
-// src/app/(dashboard)/contratos/modelos-client.tsx
+// src/app/(dashboard)/utilidades/contratos/modelos-client.tsx
 // Gestão de modelos de contrato: formulário (novo/editar) com editor de
 // texto + chips de variáveis, lista de modelos com ativar/desativar, e o
 // painel de configuração do webhook da Assinafy.

@@ -1,6 +1,6 @@
 "use server";
 
-// src/app/(dashboard)/dicionario/dicionario-actions.ts
+// src/app/(dashboard)/utilidades/dicionario/dicionario-actions.ts
 // CRUD do Dicionário (glossary_terms). Todo efeito colateral passa pelo
 // gate de coordenador_geral — a RLS (0079) é a fronteira real.
 
@@ -60,7 +60,7 @@ export async function criarTermoGlossario(
     return { ok: false, message: "Não foi possível cadastrar o termo." };
   }
 
-  revalidatePath("/dicionario");
+  revalidatePath("/utilidades/dicionario");
   return { ok: true, message: "Termo cadastrado." };
 }
 
@@ -107,7 +107,7 @@ export async function atualizarTermoGlossario(
     return { ok: false, message: "Não foi possível salvar as alterações." };
   }
 
-  revalidatePath("/dicionario");
+  revalidatePath("/utilidades/dicionario");
   return { ok: true, message: "Termo atualizado." };
 }
 
@@ -140,7 +140,7 @@ export async function alternarTermoGlossario(
     return { ok: false, message: "Não foi possível atualizar o termo." };
   }
 
-  revalidatePath("/dicionario");
+  revalidatePath("/utilidades/dicionario");
   return { ok: true, message: active ? "Termo ativado." : "Termo desativado." };
 }
 
@@ -168,6 +168,6 @@ export async function excluirTermoGlossario(
     return { ok: false, message: "Não foi possível excluir o termo." };
   }
 
-  revalidatePath("/dicionario");
+  revalidatePath("/utilidades/dicionario");
   return { ok: true, message: "Termo excluído." };
 }

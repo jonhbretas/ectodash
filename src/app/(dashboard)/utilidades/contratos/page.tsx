@@ -1,4 +1,4 @@
-// /contratos — painel do módulo de contratos: cards dos contratos gerados,
+// /utilidades/contratos — painel do módulo de contratos: cards dos contratos gerados,
 // agrupados por mês do evento (e por evento dentro do mês, com data + nome).
 // Contratos sem evento ficam numa seção própria no fim. Cada card referencia
 // o PDF (baixar, enviar para assinatura, upload do assinado) e a pasta no
@@ -16,7 +16,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
-import PageContainer from "../page-container";
+import PageContainer from "../../page-container";
 import {
   categoriaLabel,
   formatarValor,
@@ -236,14 +236,14 @@ export default async function ContratosPage({
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            href="/contratos/modelos"
+            href="/utilidades/contratos/modelos"
             className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             <Settings2 size={22} aria-hidden="true" />
             Modelos
           </Link>
           <Link
-            href="/contratos/novo"
+            href="/utilidades/contratos/novo"
             className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white transition-colors hover:bg-[#28627B]"
           >
             <Plus size={22} aria-hidden="true" />
@@ -289,7 +289,7 @@ export default async function ContratosPage({
         </button>
         {(eventoFiltro || statusFiltro) && (
           <Link
-            href="/contratos"
+            href="/utilidades/contratos"
             className="flex min-h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white px-5 text-lg font-medium text-zinc-700 hover:bg-zinc-50"
           >
             Limpar filtros
@@ -308,7 +308,7 @@ export default async function ContratosPage({
             O PDF vai para a pasta do evento no Drive automaticamente.
           </p>
           <Link
-            href="/contratos/novo"
+            href="/utilidades/contratos/novo"
             className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-6 text-xl font-medium text-white transition-colors hover:bg-[#28627B]"
           >
             <Plus size={22} aria-hidden="true" />

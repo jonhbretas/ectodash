@@ -1,4 +1,4 @@
-// src/app/(dashboard)/contratos/actions.ts
+// src/app/(dashboard)/utilidades/contratos/actions.ts
 // Server actions do módulo de contratos: criação (com pastas no Drive e PDF),
 // envio para assinatura (Assinafy), retorno de assinado, modelos e webhook.
 // O núcleo de geração/assinatura vive em lib/contratos/{geracao,assinatura}.ts
@@ -104,7 +104,7 @@ export async function criarContrato(
       driveWarning = ` O PDF não foi salvo no Google Drive (erro interno).`;
     }
 
-    revalidatePath("/contratos");
+    revalidatePath("/utilidades/contratos");
     return {
       ok: true,
       message: "Contrato criado e salvo no Drive." + driveWarning,
@@ -126,7 +126,7 @@ export async function enviarParaAssinatura(
   try {
     const { supabase } = await requireCoordenador();
     const resultado = await enviarContratoParaAssinatura(supabase, id);
-    revalidatePath("/contratos");
+    revalidatePath("/utilidades/contratos");
     if (!resultado.ok) return { ok: false, message: resultado.message };
     return {
       ok: true,
@@ -182,7 +182,7 @@ export async function uploadAssinado(
       })
       .eq("id", id);
 
-    revalidatePath("/contratos");
+    revalidatePath("/utilidades/contratos");
     return { ok: true, message: "PDF assinado salvo e contrato marcado como assinado." };
   } catch (error) {
     console.error("[contratos] uploadAssinado failed", error);
@@ -223,7 +223,7 @@ export async function sincronizarAssinado(
     }
     await supabase.from("contratos").update(update).eq("id", id);
 
-    revalidatePath("/contratos");
+    revalidatePath("/utilidades/contratos");
     return { ok: true, message: "PDF certificado sincronizado do Assinafy." };
   } catch (error) {
     console.error("[contratos] sincronizarAssinado failed", error);
@@ -242,7 +242,7 @@ export async function marcarAssinadoManual(
   try {
     const { supabase } = await requireCoordenador();
     await supabase.from("contratos").update({ status: "assinado" }).eq("id", id);
-    revalidatePath("/contratos");
+    revalidatePath("/utilidades/contratos");
     return { ok: true, message: "Contrato marcado como assinado." };
   } catch {
     return { ok: false, message: "Erro ao marcar como assinado." };
@@ -257,7 +257,7 @@ export async function cancelarContrato(
   try {
     const { supabase } = await requireCoordenador();
     await supabase.from("contratos").update({ status: "cancelado" }).eq("id", id);
-    revalidatePath("/contratos");
+    revalidatePath("/utilidades/contratos");
     return { ok: true, message: "Contrato cancelado." };
   } catch {
     return { ok: false, message: "Erro ao cancelar o contrato." };
@@ -293,7 +293,7 @@ export async function criarModelo(
     });
     if (error) return { ok: false, message: "Não foi possível criar o modelo." };
 
-    revalidatePath("/contratos/modelos");
+    revalidatePath("/utilidades/contratos/modelos");
     return { ok: true, message: "Modelo criado." };
   } catch (error) {
     console.error("[contratos] criarModelo failed", error);
@@ -334,7 +334,7 @@ export async function atualizarModelo(
       .eq("id", id);
     if (error) return { ok: false, message: "Não foi possível atualizar o modelo." };
 
-    revalidatePath("/contratos/modelos");
+    revalidatePath("/utilidades/contratos/modelos");
     return { ok: true, message: "Modelo atualizado." };
   } catch (error) {
     console.error("[contratos] atualizarModelo failed", error);
@@ -361,7 +361,7 @@ export async function toggleModeloAtivo(
       .from("contrato_modelos")
       .update({ ativo: !modelo?.ativo })
       .eq("id", id);
-    revalidatePath("/contratos/modelos");
+    revalidatePath("/utilidades/contratos/modelos");
     return { ok: true, message: modelo?.ativo ? "Modelo desativado." : "Modelo ativado." };
   } catch {
     return { ok: false, message: "Erro ao alternar o modelo." };

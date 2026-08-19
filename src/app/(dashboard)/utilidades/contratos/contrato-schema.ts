@@ -1,4 +1,4 @@
-// src/app/(dashboard)/contratos/contrato-schema.ts
+// src/app/(dashboard)/utilidades/contratos/contrato-schema.ts
 // Schema compartilhado entre o formulário de novo contrato e a server action
 // (mesmo padrão do módulo de demandas). IDs chegam como string do FormData
 // (hidden inputs) e são validados por regex antes de converter.

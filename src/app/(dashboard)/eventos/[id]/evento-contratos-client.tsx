@@ -29,8 +29,8 @@ import {
   salvarConteudoPersonalizado,
   vincularProdutoEvento,
   type EventoActionState,
-} from "../../contratos/evento-actions";
-import ContratoCard from "../../contratos/contrato-card";
+} from "../../utilidades/contratos/evento-actions";
+import ContratoCard from "../../utilidades/contratos/contrato-card";
 
 export type EventoContratosProps = {
   evento: { id: number; titulo: string; data_evento: string; local: string | null };
@@ -393,7 +393,7 @@ function ModelosBloco(props: EventoContratosProps) {
       {modelosAtivos.length === 0 ? (
         <p className="rounded-xl bg-amber-50 px-4 py-3 text-base text-amber-800 ring-1 ring-amber-200/60">
           Nenhum modelo ativo.{" "}
-          <Link href="/contratos/modelos" className="underline">
+          <Link href="/utilidades/contratos/modelos" className="underline">
             Crie modelos padronizados primeiro
           </Link>
           .

@@ -2,7 +2,7 @@ import { BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/role-gates";
 import { listarTermosGlossario } from "@/lib/glossary-db";
-import PageContainer from "../page-container";
+import PageContainer from "../../page-container";
 import DicionarioView from "./dicionario-view";
 
 export default async function DicionarioPage() {

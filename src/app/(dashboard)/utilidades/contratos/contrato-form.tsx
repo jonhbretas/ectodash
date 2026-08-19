@@ -1,4 +1,4 @@
-// src/app/(dashboard)/contratos/contrato-form.tsx
+// src/app/(dashboard)/utilidades/contratos/contrato-form.tsx
 // Formulário de novo contrato (react-hook-form + zod, mesmo padrão do
 // módulo de demandas). O aluno pode ser buscado na base do WooCommerce ou
 // digitado manualmente — ambos alimentam os campos de variáveis.
@@ -108,7 +108,7 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
         {modelos.length === 0 && (
           <p className="text-base text-amber-700">
             Nenhum modelo ativo.{" "}
-            <Link href="/contratos/modelos" className="underline">
+            <Link href="/utilidades/contratos/modelos" className="underline">
               Crie um modelo primeiro
             </Link>
             .
@@ -157,7 +157,7 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
             onClick={() => {
               const input = document.querySelector<HTMLInputElement>('input[name="busca"]');
               const termo = (input?.value ?? "").trim();
-              window.location.href = `/contratos/novo${termo ? `?busca=${encodeURIComponent(termo)}` : ""}`;
+              window.location.href = `/utilidades/contratos/novo${termo ? `?busca=${encodeURIComponent(termo)}` : ""}`;
             }}
           >
             Buscar

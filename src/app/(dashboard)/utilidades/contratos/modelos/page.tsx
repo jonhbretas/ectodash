@@ -1,10 +1,10 @@
-// /contratos/modelos — gestão dos modelos padronizados (contrato de curso,
+// /utilidades/contratos/modelos — gestão dos modelos padronizados (contrato de curso,
 // cessão de imagem, consentimento...). Coordenador-only; RLS permite leitura
 // a todos e escrita ao criador/coordenador.
 import Link from "next/link";
 import { ArrowLeft, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import PageContainer from "../../page-container";
+import PageContainer from "../../../page-container";
 import ModelosClient from "../modelos-client";
 
 export const metadata = { title: "Modelos de contrato — EctoDash" };
@@ -43,7 +43,7 @@ export default async function ModelosPage() {
     <PageContainer>
       <header className="flex w-full flex-col gap-1">
         <Link
-          href="/contratos"
+          href="/utilidades/contratos"
           className="flex items-center gap-1 text-base text-zinc-500 transition-colors hover:text-[#2195B9]"
         >
           <ArrowLeft size={16} aria-hidden="true" />

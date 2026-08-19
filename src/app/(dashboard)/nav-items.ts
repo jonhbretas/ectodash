@@ -131,22 +131,21 @@ export const navEntries: SidebarEntry[] = [
     ],
   },
 
-  // ─── Contratos (módulo exclusivo do coordenador geral — acesso.ts) ───
+  // ─── Utilidades (ferramentas: acervo, dicionário e contratos) ───
   {
     type: "group",
-    label: "Contratos",
-    Icon: FileSignature,
-    href: "/contratos",
-    modulo: "contratos",
+    label: "Utilidades",
+    Icon: Wrench,
+    href: "/utilidades",
+    modulo: "utilidades",
     children: [
-      { href: "/contratos", label: "Contratos", Icon: FileSignature, modulo: "contratos" },
-      { href: "/contratos/modelos", label: "Modelos", Icon: FileText, modulo: "contratos" },
+      { href: "/utilidades", label: "Utilidades", Icon: Wrench, modulo: "utilidades" },
+      { href: "/utilidades/dicionario", label: "Dicionário", Icon: BookOpen, modulo: "utilidades" },
+      // Contratos é módulo exclusivo do coordenador geral (acesso.ts).
+      { href: "/utilidades/contratos", label: "Contratos", Icon: FileSignature, modulo: "contratos" },
+      { href: "/utilidades/contratos/modelos", label: "Modelos", Icon: FileText, modulo: "contratos" },
     ],
   },
-
-  // ─── Ferramentas ───
-  { href: "/utilidades", label: "Utilidades", Icon: Wrench, modulo: "utilidades" },
-  { href: "/dicionario", label: "Dicionário", Icon: BookOpen, modulo: "utilidades" },
 
   // ─── Relatos (todos veem os próprios; coordenador geral gerencia tudo) ───
   { href: "/feedback", label: "Relatos e melhorias", Icon: MessageSquareWarning },

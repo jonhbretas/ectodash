@@ -1,4 +1,4 @@
-// src/app/(dashboard)/contratos/evento-actions.ts
+// src/app/(dashboard)/utilidades/contratos/evento-actions.ts
 // Server actions da gestão de contratos POR EVENTO: vínculo evento↔produto da
 // loja, modelos habilitados por evento (com texto personalizado opcional),
 // geração em lote para os alunos selecionados e envio em lote para assinatura.
@@ -22,7 +22,7 @@ const MAX_ENVIOS_LOTE = 30;
 
 function revalidateEvento(eventoId: number) {
   revalidatePath(`/eventos/${eventoId}/contratos`);
-  revalidatePath("/contratos");
+  revalidatePath("/utilidades/contratos");
 }
 
 function prazoCom(diasTexto: string): string | null {
