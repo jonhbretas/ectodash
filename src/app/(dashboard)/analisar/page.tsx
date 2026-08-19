@@ -336,12 +336,12 @@ function ResultsScreen({
   );
 
   // Per-item decision for possible duplicates detected server-side:
-  // demandas → "pular" (same task), "comentar" (merge as comment) or
-  // "criar" (new task); eventos/dips → "pular" or "criar". Defaults to
-  // "pular" so re-uploading the same transcript never duplicates anything
-  // without an explicit user choice.
-  const [demandaAcoes, setDemandaAcoes] = useState<Record<string, "pular" | "comentar" | "criar">>(() => {
-    const map: Record<string, "pular" | "comentar" | "criar"> = {};
+  // demandas → "pular" (same task), "comentar" (add comment only),
+  // "incrementar" (update details + add comment) or "criar" (new task);
+  // eventos/dips → "pular" or "criar". Defaults to "pular" so re-uploading
+  // the same transcript never duplicates anything without an explicit user choice.
+  const [demandaAcoes, setDemandaAcoes] = useState<Record<string, "pular" | "comentar" | "incrementar" | "criar">>(() => {
+    const map: Record<string, "pular" | "comentar" | "incrementar" | "criar"> = {};
     for (const d of state.demandas ?? []) {
       map[d.key] = state.duplicados.demandas[d.key] ? "pular" : "criar";
     }
@@ -394,7 +394,9 @@ function ResultsScreen({
             comentario:
               acao === "comentar"
                 ? `Mencionada novamente em "${referencia}".`
-                : null,
+                : acao === "incrementar"
+                  ? `Atualizada com novos detalhes da análise "${referencia}".`
+                  : null,
           };
         }),
       ata: temAta
@@ -728,22 +730,25 @@ function ResultsScreen({
                               onChange={(ev) =>
                                 setDemandaAcoes((prev) => ({
                                   ...prev,
-                                  [d.key]: ev.target.value as "pular" | "comentar" | "criar",
+                                  [d.key]: ev.target.value as "pular" | "comentar" | "incrementar" | "criar",
                                 }))
                               }
                               className="min-h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"
                             >
                               <option value="pular">Pular (ja existe)</option>
                               <option value="comentar">Mesma tarefa — anexar comentario</option>
+                              <option value="incrementar">Incrementar demanda — atualizar detalhes</option>
                               <option value="criar">Criar mesmo assim</option>
                             </select>
                           </label>
                           <p className="w-full text-xs text-zinc-600">
                             {demandaAcoes[d.key] === "comentar"
                               ? "Nenhuma demanda nova será criada; um comentário com a menção desta análise será anexado à demanda existente."
-                              : demandaAcoes[d.key] === "pular"
-                                ? "A demanda existente não será alterada."
-                                : "Uma nova demanda será criada mesmo havendo um registro parecido."}
+                              : demandaAcoes[d.key] === "incrementar"
+                                ? "Os detalhes da demanda existente serão atualizados (prazo, responsável) e um comentário será anexado."
+                                : demandaAcoes[d.key] === "pular"
+                                  ? "A demanda existente não será alterada."
+                                  : "Uma nova demanda será criada mesmo havendo um registro parecido."}
                           </p>
                         </div>
                       )}

@@ -567,8 +567,9 @@ export type SalvarTudoInput = {
     responsavelTexto?: string;
     // "criar" (default) creates a new demanda; "pular" skips a possible
     // duplicate; "comentar" attaches an update comment to the existing
-    // demanda (demandaId) instead of creating a new row.
-    acao?: "criar" | "pular" | "comentar";
+    // demanda (demandaId); "incrementar" updates the demanda details and
+    // attaches an update comment.
+    acao?: "criar" | "pular" | "comentar" | "incrementar";
     demandaId?: number | null;
     comentario?: string | null;
   }>;
@@ -928,6 +929,70 @@ async function salvarDemandas(
       if (comentarioError) {
         console.error(
           "salvarTudoDaAnalise: demanda merge comment failed",
+          comentarioError
+        );
+        erros.push(d.titulo);
+        continue;
+      }
+      comentados++;
+      continue;
+    }
+
+    // "incrementar": update existing demanda details (prazo, responsavel)
+    // and attach an update comment.
+    if (d.acao === "incrementar" && d.demandaId) {
+      // Update demanda prazo if provided
+      if (d.prazoSugerido) {
+        const { error: updateError } = await supabase
+          .from("demandas")
+          .update({ prazo: d.prazoSugerido })
+          .eq("id", d.demandaId);
+
+        if (updateError) {
+          console.error(
+            "salvarTudoDaAnalise: demanda increment update failed",
+            updateError
+          );
+          erros.push(d.titulo);
+          continue;
+        }
+      }
+
+      // Link new responsavel if provided
+      if (d.responsavelId) {
+        const destinos = await resolverDestinosVoluntario(
+          supabase,
+          [Number(d.responsavelId)]
+        );
+        const destino = destinos[0];
+
+        if (destino) {
+          const { error: linkError } = await supabase
+            .from("demanda_responsaveis")
+            .insert({ demanda_id: d.demandaId, ...destino });
+
+          if (linkError) {
+            console.error(
+              "salvarTudoDaAnalise: demanda increment responsavel link failed",
+              linkError
+            );
+          }
+        }
+      }
+
+      // Attach update comment
+      const { error: comentarioError } = await supabase
+        .from("demanda_comentarios")
+        .insert({
+          demanda_id: d.demandaId,
+          conteudo:
+            d.comentario ??
+            `Atualizada com novos detalhes da análise (${d.titulo}).`,
+        });
+
+      if (comentarioError) {
+        console.error(
+          "salvarTudoDaAnalise: demanda increment comment failed",
           comentarioError
         );
         erros.push(d.titulo);
