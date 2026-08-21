@@ -192,7 +192,6 @@ async function main() {
       role: volunteer.role,
       areas_lideradas: volunteer.areas_lideradas,
       ativo: true,
-      email: volunteer.email,
       telefone1: volunteer.telefone1,
       telefone2: volunteer.telefone2,
     };

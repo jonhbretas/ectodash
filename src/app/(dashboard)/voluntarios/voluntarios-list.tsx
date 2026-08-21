@@ -3,37 +3,23 @@
 import { useState, useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Users, UserRoundCheck, Pencil, CalendarClock, Settings2, X, CheckSquare, Square, CheckCircle2, Plus, Minus, MoonStar, UserX, MessageCircle, Loader2 } from "lucide-react";
+import {
+  Users, UserRoundCheck, Pencil, CalendarClock, Settings2, X,
+  CheckSquare, Square, CheckCircle2, Plus, Minus, MoonStar, UserX,
+  MessageCircle, Loader2, Layers, List,
+} from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { roleLabel } from "@/lib/role-labels";
 import { exibirUnidade } from "@/lib/unidade-label";
 import { atualizarVoluntariosEmMassa, type BulkState } from "./actions";
+import VoluntarioTable, { type VoluntarioTableRow } from "./voluntario-table";
 
-type VoluntarioRow = {
-  id: number;
-  nome: string;
-  codigo_pf: string | null;
-  unidade: string | null;
-  org_depto: string | null;
-  funcao: string | null;
-  data_inicio: string | null;
-  data_saida: string | null;
-  obs: string | null;
-  area_atuacao: string | null;
-  role: string | null;
-  ativo: boolean;
-  situacao: string | null;
-  telefone1: string | null;
-  telefone2: string | null;
-  profiles: { email: string; role: string }[] | { email: string; role: string } | null;
-};
+type VoluntarioRow = VoluntarioTableRow;
 
 const SEM_AREA_DEFINIDA = "Sem área definida";
 
-// Árvore de áreas (registro institucional): uma área mãe com suas subáreas
-// aninhadas e os voluntários de cada nível.
 export type AreaNode = {
   nome: string;
   rows: VoluntarioRow[];
@@ -50,18 +36,15 @@ function formatData(iso: string | null): string | null {
   return format(new Date(`${iso}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
 }
 
-// Format phone number to only digits for WhatsApp link
 function phoneToDigits(phone: string): string {
   return phone.replace(/\D/g, "");
 }
 
-// Format phone for display
 function formatPhoneDisplay(phone: string): string {
   const digits = phoneToDigits(phone);
   if (digits.length <= 2) return phone;
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  // International or long numbers
   return phone;
 }
 
@@ -76,19 +59,16 @@ export default function VoluntariosListClient({
   canManage,
   areaOptions,
 }: {
-  // Árvore de áreas (mãe → subáreas) já montada pelo servidor.
   areas: AreaNode[];
   all: VoluntarioRow[];
   ativos: number;
   ociosos: number;
   afastados: number;
   vinculados: number;
-  // Desativados (ativo = false) — seção própria "Desligados" no fim.
   desligados: VoluntarioRow[];
   canManage: boolean;
   areaOptions: string[];
 }) {
-  // Derivar opções de unidade a partir dos voluntários existentes
   const unidadeOptions = [
     ...new Set(
       all
@@ -98,8 +78,7 @@ export default function VoluntariosListClient({
   ].sort((a, b) => a.localeCompare(b));
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  // Todas as áreas começam recolhidas, exceto a primeira da árvore
-  // (Desligados também começa recolhida).
+  const [groupByArea, setGroupByArea] = useState(false);
   const [collapsedAreas, setCollapsedAreas] = useState<Set<string>>(() => {
     const nomes: string[] = [];
     function coletar(nos: AreaNode[]) {
@@ -159,8 +138,6 @@ export default function VoluntariosListClient({
 
   const selectedIdsArr = [...selectedIds];
 
-  // Todas as linhas de um nó (as próprias + as das subáreas) — usadas para
-  // a contagem e a seleção em massa do nó inteiro.
   function rowsDoNo(no: AreaNode): VoluntarioRow[] {
     return [...no.rows, ...no.subAreas.flatMap(rowsDoNo)];
   }
@@ -229,6 +206,9 @@ export default function VoluntariosListClient({
     );
   }
 
+  const sorted = [...all].sort((a, b) => a.nome.localeCompare(b.nome));
+  const allAtivos = [...sorted.filter((r) => r.ativo), ...desligados];
+
   return (
     <>
       <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -278,46 +258,22 @@ export default function VoluntariosListClient({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setBulkAcao("ativar")}
-                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "ativar" ? "bg-green-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-                >
+                <button type="button" onClick={() => setBulkAcao("ativar")} className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "ativar" ? "bg-green-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}>
                   Ativar
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkAcao("desativar")}
-                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "desativar" ? "bg-red-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-                >
+                <button type="button" onClick={() => setBulkAcao("desativar")} className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "desativar" ? "bg-red-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}>
                   Desativar
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkAcao("migrar_area")}
-                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_area" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-                >
+                <button type="button" onClick={() => setBulkAcao("migrar_area")} className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_area" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}>
                   Migrar de área
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkAcao("migrar_unidade")}
-                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_unidade" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-                >
+                <button type="button" onClick={() => setBulkAcao("migrar_unidade")} className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_unidade" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}>
                   Alterar unidade
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkAcao("migrar_epicom")}
-                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_epicom" ? "bg-purple-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-                >
+                <button type="button" onClick={() => setBulkAcao("migrar_epicom")} className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_epicom" ? "bg-purple-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}>
                   Definir Epicom
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkAcao("migrar_telefone")}
-                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_telefone" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
-                >
+                <button type="button" onClick={() => setBulkAcao("migrar_telefone")} className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_telefone" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}>
                   Alterar telefone
                 </button>
               </div>
@@ -330,14 +286,7 @@ export default function VoluntariosListClient({
                   {bulkAcao === "migrar_area" && (
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="nova_area_bulk" className="text-lg font-medium text-zinc-900">Nova área</label>
-                      <input
-                        id="nova_area_bulk"
-                        name="nova_area"
-                        required
-                        list="areas-bulk"
-                        placeholder="Digite a nova área"
-                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-                      />
+                      <input id="nova_area_bulk" name="nova_area" required list="areas-bulk" placeholder="Digite a nova área" className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]" />
                       <datalist id="areas-bulk">
                         {areaOptions.map((a) => <option key={a} value={a} />)}
                       </datalist>
@@ -347,14 +296,7 @@ export default function VoluntariosListClient({
                   {bulkAcao === "migrar_unidade" && (
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="nova_unidade_bulk" className="text-lg font-medium text-zinc-900">Nova unidade/localidade</label>
-                      <input
-                        id="nova_unidade_bulk"
-                        name="nova_unidade"
-                        required
-                        list="unidades-bulk"
-                        placeholder="Digite a nova unidade"
-                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-                      />
+                      <input id="nova_unidade_bulk" name="nova_unidade" required list="unidades-bulk" placeholder="Digite a nova unidade" className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]" />
                       <datalist id="unidades-bulk">
                         {unidadeOptions.map((u) => <option key={u} value={u} />)}
                       </datalist>
@@ -364,12 +306,7 @@ export default function VoluntariosListClient({
                   {bulkAcao === "migrar_epicom" && (
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="novo_epicom_bulk" className="text-lg font-medium text-zinc-900">Epicom</label>
-                      <select
-                        id="novo_epicom_bulk"
-                        name="novo_epicom"
-                        required
-                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-                      >
+                      <select id="novo_epicom_bulk" name="novo_epicom" required className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]">
                         <option value="true">Sim — pode ocupar função Epicom</option>
                         <option value="false">Não — voluntário comum</option>
                       </select>
@@ -379,14 +316,7 @@ export default function VoluntariosListClient({
                   {bulkAcao === "migrar_telefone" && (
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="novo_telefone_bulk" className="text-lg font-medium text-zinc-900">Novo telefone</label>
-                      <input
-                        id="novo_telefone_bulk"
-                        name="novo_telefone"
-                        required
-                        type="tel"
-                        placeholder="(00) 00000-0000"
-                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-                      />
+                      <input id="novo_telefone_bulk" name="novo_telefone" required type="tel" placeholder="(00) 00000-0000" className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]" />
                     </div>
                   )}
 
@@ -406,11 +336,70 @@ export default function VoluntariosListClient({
         </div>
       )}
 
-      <div className="flex w-full flex-col gap-6">
-        {areas.map((no) => renderNo(no, 0))}
-        {desligados.length > 0 &&
-          renderNo({ nome: "Desligados", rows: desligados, subAreas: [] }, 0)}
+      {/* Toolbar: toggle between table and grouped view */}
+      <div className="flex w-full items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setGroupByArea(false)}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-base font-medium transition-colors ${
+            !groupByArea
+              ? "bg-[#2195B9] text-white"
+              : "bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
+          }`}
+        >
+          <List size={18} />
+          <span className="hidden sm:inline">Lista</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setGroupByArea(true)}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-base font-medium transition-colors ${
+            groupByArea
+              ? "bg-[#2195B9] text-white"
+              : "bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
+          }`}
+        >
+          <Layers size={18} />
+          <span className="hidden sm:inline">Por área</span>
+        </button>
+        <span className="ml-2 text-base text-zinc-500">
+          {all.length} {all.length === 1 ? "voluntário" : "voluntários"}
+        </span>
       </div>
+
+      {groupByArea ? (
+        <div className="flex w-full flex-col gap-6">
+          {areas.map((no) => renderNo(no, 0))}
+          {desligados.length > 0 &&
+            renderNo({ nome: "Desligados", rows: desligados, subAreas: [] }, 0)}
+        </div>
+      ) : (
+        <>
+          {/* Mobile: cards */}
+          <div className="flex w-full flex-col gap-3 lg:hidden">
+            {allAtivos.map((row, index) => (
+              <div key={row.id} className="flex w-full flex-col rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+                <VoluntarioCard
+                  row={row}
+                  isLast={true}
+                  isSelected={selectedIds.has(row.id)}
+                  onToggleSelect={() => toggleSelect(row.id)}
+                  showCheckbox={canManage}
+                />
+              </div>
+            ))}
+          </div>
+          {/* Desktop: table */}
+          <div className="hidden lg:block">
+            <VoluntarioTable
+              voluntarios={allAtivos}
+              selectionActive={selectedIdsArr.length > 0}
+              selectedIds={selectedIds}
+              onToggle={toggleSelect}
+            />
+          </div>
+        </>
+      )}
     </>
   );
 }
