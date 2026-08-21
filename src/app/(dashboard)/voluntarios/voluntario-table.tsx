@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckSquare, Square, MessageCircle, UserRoundCheck, MoonStar } from "lucide-react";
+import { CheckSquare, Square, Phone, UserRoundCheck, MoonStar } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -179,7 +179,7 @@ export default function VoluntarioTable({
                 {formatData(row.data_inicio) ?? "—"}
               </TableCell>
               <TableCell className="px-5 py-3">
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex flex-col gap-0.5">
                   {linked?.email && (
                     <span className="truncate text-sm text-zinc-500" title={linked.email}>
                       {linked.email}
@@ -190,10 +190,10 @@ export default function VoluntarioTable({
                       href={`https://wa.me/${phoneToDigits(row.telefone1).startsWith("55") ? phoneToDigits(row.telefone1) : "55" + phoneToDigits(row.telefone1)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex shrink-0 items-center gap-0.5 text-green-700 hover:text-green-900 hover:underline"
-                      title={formatPhoneDisplay(row.telefone1)}
+                      className="flex items-center gap-1 text-sm text-[#2195B9] hover:text-[#28627B] hover:underline"
                     >
-                      <MessageCircle size={12} />
+                      <Phone size={12} />
+                      {formatPhoneDisplay(row.telefone1)}
                     </a>
                   )}
                 </div>

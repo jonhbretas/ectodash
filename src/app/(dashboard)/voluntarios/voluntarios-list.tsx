@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Users, UserRoundCheck, Pencil, CalendarClock, Settings2, X,
   CheckSquare, Square, CheckCircle2, Plus, Minus, MoonStar, UserX,
-  MessageCircle, Loader2, Layers, List,
+  Phone, Loader2, Layers, List,
 } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { format } from "date-fns";
@@ -78,6 +78,7 @@ export default function VoluntariosListClient({
   ].sort((a, b) => a.localeCompare(b));
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
   const [groupByArea, setGroupByArea] = useState(false);
   const [collapsedAreas, setCollapsedAreas] = useState<Set<string>>(() => {
     const nomes: string[] = [];
@@ -132,6 +133,7 @@ export default function VoluntariosListClient({
 
   function clearSelection() {
     setSelectedIds(new Set());
+    setSelectionMode(false);
     setShowBulkPanel(false);
     setBulkAcao(null);
   }
@@ -194,7 +196,7 @@ export default function VoluntariosListClient({
                     isLast={index === no.rows.length - 1}
                     isSelected={selectedIds.has(row.id)}
                     onToggleSelect={() => toggleSelect(row.id)}
-                    showCheckbox={canManage}
+                  showCheckbox={selectionMode && canManage}
                   />
                 ))}
               </div>
@@ -220,7 +222,7 @@ export default function VoluntariosListClient({
         <StatPill icon={<UserX size={22} className="text-red-500" />} label="Desligados" value={desligados.length} />
       </div>
 
-      {selectedIdsArr.length > 0 && (
+      {selectionMode && (
         <div className="z-30 flex w-full flex-col gap-3 rounded-2xl bg-[#E6E6E6] p-4 shadow-[0_4px_12px_rgba(33,149,185,0.15)] ring-1 ring-[#E6E6E6]/60 sm:sticky sm:top-2">
           <div className="flex w-full flex-wrap items-center gap-3">
             <span className="text-lg font-medium text-[#28627B]">
@@ -336,7 +338,7 @@ export default function VoluntariosListClient({
         </div>
       )}
 
-      {/* Toolbar: toggle between table and grouped view */}
+      {/* Toolbar: toggle between table and grouped view + selection mode */}
       <div className="flex w-full items-center gap-2">
         <button
           type="button"
@@ -362,6 +364,16 @@ export default function VoluntariosListClient({
           <Layers size={18} />
           <span className="hidden sm:inline">Por área</span>
         </button>
+        {canManage && !selectionMode && (
+          <button
+            type="button"
+            onClick={() => { setSelectionMode(true); setSelectedIds(new Set()); }}
+            className="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            <CheckSquare size={18} />
+            <span className="hidden sm:inline">Selecionar</span>
+          </button>
+        )}
         <span className="ml-2 text-base text-zinc-500">
           {all.length} {all.length === 1 ? "voluntário" : "voluntários"}
         </span>
@@ -393,7 +405,7 @@ export default function VoluntariosListClient({
           <div className="hidden lg:block">
             <VoluntarioTable
               voluntarios={allAtivos}
-              selectionActive={selectedIdsArr.length > 0}
+              selectionActive={selectionMode}
               selectedIds={selectedIds}
               onToggle={toggleSelect}
             />
@@ -501,9 +513,9 @@ function VoluntarioCard({
                   href={`https://wa.me/${phoneToDigits(row.telefone1).startsWith("55") ? phoneToDigits(row.telefone1) : "55" + phoneToDigits(row.telefone1)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 whitespace-nowrap text-green-700 hover:text-green-900 hover:underline"
+                  className="flex items-center gap-1 whitespace-nowrap text-[#2195B9] hover:text-[#28627B] hover:underline"
                 >
-                  <MessageCircle size={14} aria-hidden="true" />
+                  <Phone size={14} aria-hidden="true" />
                   {formatPhoneDisplay(row.telefone1)}
                 </a>
               )}
@@ -512,9 +524,9 @@ function VoluntarioCard({
                   href={`https://wa.me/${phoneToDigits(row.telefone2).startsWith("55") ? phoneToDigits(row.telefone2) : "55" + phoneToDigits(row.telefone2)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 whitespace-nowrap text-green-700 hover:text-green-900 hover:underline"
+                  className="flex items-center gap-1 whitespace-nowrap text-[#2195B9] hover:text-[#28627B] hover:underline"
                 >
-                  <MessageCircle size={14} aria-hidden="true" />
+                  <Phone size={14} aria-hidden="true" />
                   {formatPhoneDisplay(row.telefone2)}
                 </a>
               )}

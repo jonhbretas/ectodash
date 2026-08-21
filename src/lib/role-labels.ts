@@ -8,7 +8,7 @@
 export const ROLE_LABELS: Record<string, string> = {
   coordenador_geral: "Coordenador geral",
   coordenador_area: "Coordenador de área",
-  voluntario_comum: "Voluntário comum",
+  voluntario_comum: "Voluntário",
   financeiro: "Financeiro",
   voluntariado: "Voluntariado",
 };
