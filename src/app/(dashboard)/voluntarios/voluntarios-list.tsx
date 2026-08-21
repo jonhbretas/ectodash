@@ -88,6 +88,15 @@ export default function VoluntariosListClient({
   canManage: boolean;
   areaOptions: string[];
 }) {
+  // Derivar opções de unidade a partir dos voluntários existentes
+  const unidadeOptions = [
+    ...new Set(
+      all
+        .map((v) => v.unidade)
+        .filter((u): u is string => Boolean(u && u.trim()))
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   // Todas as áreas começam recolhidas, exceto a primeira da árvore
   // (Desligados também começa recolhida).
@@ -104,7 +113,7 @@ export default function VoluntariosListClient({
     return new Set(nomes.slice(1));
   });
   const [showBulkPanel, setShowBulkPanel] = useState(false);
-  const [bulkAcao, setBulkAcao] = useState<"desativar" | "ativar" | "migrar_area" | null>(null);
+  const [bulkAcao, setBulkAcao] = useState<"desativar" | "ativar" | "migrar_area" | "migrar_unidade" | "migrar_epicom" | "migrar_telefone" | null>(null);
   const [bulkState, bulkAction] = useActionState<BulkState, FormData>(atualizarVoluntariosEmMassa, { ok: false, message: "", processados: 0 });
   const router = useRouter();
 
@@ -290,6 +299,27 @@ export default function VoluntariosListClient({
                 >
                   Migrar de área
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkAcao("migrar_unidade")}
+                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_unidade" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
+                >
+                  Alterar unidade
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkAcao("migrar_epicom")}
+                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_epicom" ? "bg-purple-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
+                >
+                  Definir Epicom
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkAcao("migrar_telefone")}
+                  className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_telefone" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}
+                >
+                  Alterar telefone
+                </button>
               </div>
 
               {bulkAcao && (
@@ -311,6 +341,52 @@ export default function VoluntariosListClient({
                       <datalist id="areas-bulk">
                         {areaOptions.map((a) => <option key={a} value={a} />)}
                       </datalist>
+                    </div>
+                  )}
+
+                  {bulkAcao === "migrar_unidade" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="nova_unidade_bulk" className="text-lg font-medium text-zinc-900">Nova unidade/localidade</label>
+                      <input
+                        id="nova_unidade_bulk"
+                        name="nova_unidade"
+                        required
+                        list="unidades-bulk"
+                        placeholder="Digite a nova unidade"
+                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                      />
+                      <datalist id="unidades-bulk">
+                        {unidadeOptions.map((u) => <option key={u} value={u} />)}
+                      </datalist>
+                    </div>
+                  )}
+
+                  {bulkAcao === "migrar_epicom" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="novo_epicom_bulk" className="text-lg font-medium text-zinc-900">Epicom</label>
+                      <select
+                        id="novo_epicom_bulk"
+                        name="novo_epicom"
+                        required
+                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                      >
+                        <option value="true">Sim — pode ocupar função Epicom</option>
+                        <option value="false">Não — voluntário comum</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {bulkAcao === "migrar_telefone" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="novo_telefone_bulk" className="text-lg font-medium text-zinc-900">Novo telefone</label>
+                      <input
+                        id="novo_telefone_bulk"
+                        name="novo_telefone"
+                        required
+                        type="tel"
+                        placeholder="(00) 00000-0000"
+                        className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+                      />
                     </div>
                   )}
 

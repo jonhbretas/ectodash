@@ -298,6 +298,7 @@ type VoluntarioBulkRow = {
   area_atuacao: string | null;
   role: string | null;
   ativo: boolean;
+  epicom: boolean;
   areas_lideradas: string[] | null;
   telefone1: string | null;
   telefone2: string | null;
@@ -312,25 +313,31 @@ type VoluntarioBulkRow = {
 function paramsDaAcao(
   row: VoluntarioBulkRow,
   acao: string,
-  novaArea?: string
+  overrides?: {
+    novaArea?: string;
+    novaUnidade?: string;
+    novoEpicom?: boolean;
+    novoTelefone1?: string;
+  }
 ) {
   return {
     p_cadastro_id: row.id,
     p_nome: row.nome,
     p_codigo_pf: row.codigo_pf,
-    p_unidade: row.unidade,
+    p_unidade: acao === "migrar_unidade" ? (overrides?.novaUnidade ?? row.unidade) : row.unidade,
     p_org_depto: row.org_depto,
     p_funcao: row.funcao,
     p_data_inicio: row.data_inicio,
     p_data_saida: row.data_saida,
     p_obs: row.obs,
-    p_area_atuacao: acao === "migrar_area" ? (novaArea ?? row.area_atuacao) : row.area_atuacao,
+    p_area_atuacao: acao === "migrar_area" ? (overrides?.novaArea ?? row.area_atuacao) : row.area_atuacao,
     p_papel: row.role,
     p_areas_lideradas: row.areas_lideradas ?? [],
     p_ativo:
       acao === "ativar" ? true : acao === "desativar" ? false : row.ativo,
-    p_telefone1: row.telefone1,
+    p_telefone1: acao === "migrar_telefone" ? (overrides?.novoTelefone1 ?? row.telefone1) : row.telefone1,
     p_telefone2: row.telefone2,
+    p_epicom: acao === "migrar_epicom" ? (overrides?.novoEpicom ?? (row as Record<string, unknown>).epicom === true) : (row as Record<string, unknown>).epicom === true,
   };
 }
 
@@ -354,23 +361,51 @@ export async function atualizarVoluntariosEmMassa(
 
   const acao = formData.get("acao");
 
-  let novaArea: string | undefined;
+  const overrides: {
+    novaArea?: string;
+    novaUnidade?: string;
+    novoEpicom?: boolean;
+    novoTelefone1?: string;
+  } = {};
+
   if (acao === "migrar_area") {
     const raw = formData.get("nova_area");
     if (typeof raw !== "string" || !raw.trim()) {
       return { ok: false, message: "Escolha a nova área.", processados: 0 };
     }
-    novaArea = raw.trim();
+    overrides.novaArea = raw.trim();
   }
 
-  if (acao !== "ativar" && acao !== "desativar" && acao !== "migrar_area") {
+  if (acao === "migrar_unidade") {
+    const raw = formData.get("nova_unidade");
+    if (typeof raw !== "string" || !raw.trim()) {
+      return { ok: false, message: "Escolha a nova unidade.", processados: 0 };
+    }
+    overrides.novaUnidade = raw.trim();
+  }
+
+  if (acao === "migrar_epicom") {
+    const raw = formData.get("novo_epicom");
+    overrides.novoEpicom = raw === "true";
+  }
+
+  if (acao === "migrar_telefone") {
+    const raw = formData.get("novo_telefone");
+    if (typeof raw !== "string" || !raw.trim()) {
+      return { ok: false, message: "Digite o novo telefone.", processados: 0 };
+    }
+    overrides.novoTelefone1 = raw.trim();
+  }
+
+  const acoesValidas = ["ativar", "desativar", "migrar_area", "migrar_unidade", "migrar_epicom", "migrar_telefone"];
+  if (!acoesValidas.includes(acao as string)) {
     return { ok: false, message: "Ação desconhecida.", processados: 0 };
   }
 
   const { data: rows } = await supabase
     .from("voluntarios")
     .select(
-      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, areas_lideradas, telefone1, telefone2"
+      "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, epicom, areas_lideradas, telefone1, telefone2"
     )
     .in("id", ids);
 
@@ -383,7 +418,7 @@ export async function atualizarVoluntariosEmMassa(
     if (!row) continue;
     const { data, error } = await supabase.rpc(
       "atualizar_voluntario",
-      paramsDaAcao(row, acao, novaArea)
+      paramsDaAcao(row, acao as string, overrides)
     );
     if (error) {
       console.error("atualizarVoluntariosEmMassa: rpc failed", error, { id });
@@ -398,7 +433,12 @@ export async function atualizarVoluntariosEmMassa(
   revalidatePath("/painel");
 
   const acaoLabel =
-    acao === "ativar" ? "ativado(s)" : acao === "desativar" ? "desativado(s)" : `migrados para "${novaArea}"`;
+    acao === "ativar" ? "ativado(s)" :
+    acao === "desativar" ? "desativado(s)" :
+    acao === "migrar_area" ? `migrados para "${overrides.novaArea}"` :
+    acao === "migrar_unidade" ? `unidade alterada para "${overrides.novaUnidade}"` :
+    acao === "migrar_epicom" ? `epicom definido como ${overrides.novoEpicom ? "sim" : "não"}` :
+    acao === "migrar_telefone" ? `telefone atualizado` : "";
   const negadosLabel =
     negados > 0
       ? ` · ${negados} sem permissão de edição`
