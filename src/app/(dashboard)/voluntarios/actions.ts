@@ -402,20 +402,33 @@ export async function atualizarVoluntariosEmMassa(
     return { ok: false, message: "Ação desconhecida.", processados: 0 };
   }
 
-  const { data: rows } = await supabase
+  const { data: rows, error: selectErr } = await supabase
     .from("voluntarios")
     .select(
       "id, nome, codigo_pf, unidade, org_depto, funcao, data_inicio, data_saida, obs, area_atuacao, role, ativo, epicom, areas_lideradas, telefone1, telefone2"
     )
     .in("id", ids);
 
-  const porId = new Map((rows ?? []).map((row) => [row.id, row]));
+  if (selectErr) {
+    console.error("atualizarVoluntariosEmMassa: select failed", selectErr);
+    return { ok: false, message: `Erro ao buscar voluntários: ${selectErr.message}`, processados: 0 };
+  }
+
+  if (!rows || rows.length === 0) {
+    console.error("atualizarVoluntariosEmMassa: select returned 0 rows for ids", ids);
+    return { ok: false, message: "Nenhum voluntário encontrado para os IDs selecionados.", processados: 0 };
+  }
+
+  const porId = new Map(rows.map((row) => [Number(row.id), row]));
 
   let processados = 0;
   let negados = 0;
   for (const id of ids) {
     const row = porId.get(id) as VoluntarioBulkRow | undefined;
-    if (!row) continue;
+    if (!row) {
+      console.warn("atualizarVoluntariosEmMassa: id not found in porId", id);
+      continue;
+    }
     const { data, error } = await supabase.rpc(
       "atualizar_voluntario",
       paramsDaAcao(row, acao as string, overrides)
