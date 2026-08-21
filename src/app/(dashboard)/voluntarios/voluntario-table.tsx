@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CheckSquare, Square, Phone, UserRoundCheck, MoonStar } from "lucide-react";
@@ -68,6 +68,7 @@ export default function VoluntarioTable({
   selectedIds,
   onToggle,
 }: VoluntarioTableProps) {
+  const router = useRouter();
   return (
     <Table className="w-full table-fixed overflow-hidden rounded-2xl ring-1 ring-zinc-200/60">
       <TableHeader>
@@ -219,17 +220,12 @@ export default function VoluntarioTable({
           }
 
           return (
-            <TableRow key={row.id} className={baseClassName}>
-              <TableCell colSpan={selectionActive ? 8 : 7} className="p-0">
-                <Link
-                  href={`/voluntarios/${row.id}`}
-                  className="flex w-full items-stretch focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-                >
-                  <div className="flex w-full items-center">
-                    {rowContent}
-                  </div>
-                </Link>
-              </TableCell>
+            <TableRow
+              key={row.id}
+              className={baseClassName}
+              onClick={() => router.push(`/voluntarios/${row.id}`)}
+            >
+              {rowContent}
             </TableRow>
           );
         })}
