@@ -186,6 +186,7 @@ export async function gerarAlocacao(
   }
 
   // Buscar IDs dos voluntários vinculados à localidade da escala (via tabela pivô)
+  // Se não encontrar vínculos, usa todos os voluntários ativos (fallback)
   let localidadeVoluntariosIds: number[] | null = null;
   if (escala.localidade) {
     const { data: localidadeRegistro } = await supabase
@@ -200,12 +201,13 @@ export async function gerarAlocacao(
         .select("voluntario_id")
         .eq("localidade_id", localidadeRegistro.id);
 
-      localidadeVoluntariosIds = (vinculos ?? []).map((v) => v.voluntario_id);
+      // Só aplica o filtro se houver vínculos cadastrados
+      if (vinculos && vinculos.length > 0) {
+        localidadeVoluntariosIds = vinculos.map((v) => v.voluntario_id);
+      }
     }
   }
 
-  // Por enquanto, todos os voluntários ativos são elegíveis.
-  // Filtro por localidade via tabela pivô voluntario_localidades_vinculo.
   const voluntariosFiltrados = localidadeVoluntariosIds !== null
     ? voluntarios.filter((v) => localidadeVoluntariosIds!.includes(v.id))
     : voluntarios;
@@ -1070,9 +1072,9 @@ export async function listarVoluntariosElegiveis(
   if (!escala) return [];
 
   // Buscar IDs dos voluntários vinculados à localidade da escala (via tabela pivô)
+  // Se não encontrar vínculos, usa todos os voluntários ativos (fallback)
   let localidadeVoluntariosIds: number[] | null = null;
   if (escala.localidade) {
-    // Buscar o localidade_id pelo nome da localidade
     const { data: localidadeRegistro } = await supabase
       .from("voluntario_localidades")
       .select("id")
@@ -1085,7 +1087,10 @@ export async function listarVoluntariosElegiveis(
         .select("voluntario_id")
         .eq("localidade_id", localidadeRegistro.id);
 
-      localidadeVoluntariosIds = (vinculos ?? []).map((v) => v.voluntario_id);
+      // Só aplica o filtro se houver vínculos cadastrados
+      if (vinculos && vinculos.length > 0) {
+        localidadeVoluntariosIds = vinculos.map((v) => v.voluntario_id);
+      }
     }
   }
 
