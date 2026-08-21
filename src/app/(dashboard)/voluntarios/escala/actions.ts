@@ -21,44 +21,29 @@ const criarEscalaSchema = z.object({
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-/** Funções da escala com suas restrições */
+/** Funções da escala — Epicon será cargo especial no futuro, por enquanto aberto */
 const FUNCOES: {
   nome: string;
   vagas: number;
-  requerEpicom?: boolean;
-  requerDocente?: boolean;
-  apenasNaoEpicom?: boolean;
 }[] = [
-  { nome: "Epicon", vagas: 1, requerEpicom: true },
+  { nome: "Epicon", vagas: 1 },
   { nome: "Observador Parapsíquico", vagas: 1 },
-  { nome: "Cronometrista", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Energizador 1", vagas: 1, requerDocente: true },
-  { nome: "Energizador 2", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Energizador 3", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Monitoria", vagas: 2, apenasNaoEpicom: true },
-  { nome: "Acoplador 1", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Acoplador 2", vagas: 1, apenasNaoEpicom: true },
+  { nome: "Cronometrista", vagas: 1 },
+  { nome: "Energizador 1", vagas: 1 },
+  { nome: "Energizador 2", vagas: 1 },
+  { nome: "Energizador 3", vagas: 1 },
+  { nome: "Monitoria", vagas: 2 },
+  { nome: "Acoplador 1", vagas: 1 },
+  { nome: "Acoplador 2", vagas: 1 },
 ];
 
 /** Verifica se um voluntário é elegível para uma função */
 function isElegivel(
-  vol: { id: number; epicom: boolean; atividades: string[] },
-  funcao: { nome: string; vagas: number; requerEpicom?: boolean; requerDocente?: boolean; apenasNaoEpicom?: boolean },
+  vol: { id: number },
+  _funcao: { nome: string; vagas: number },
   alocados: Set<number>
 ): boolean {
-  if (alocados.has(vol.id)) return false;
-
-  // Restrição Epicon
-  if (funcao.requerEpicom && !vol.epicom) return false;
-
-  // Restrição Energizador 1 (docente_conscienciologia)
-  if (funcao.requerDocente && !vol.atividades.includes("docente_conscienciologia"))
-    return false;
-
-  // Funções exclusivas para não-epicom (exceto Observador Parapsíquico que aceita ambos)
-  if (funcao.apenasNaoEpicom && vol.epicom) return false;
-
-  return true;
+  return !alocados.has(vol.id);
 }
 
 // ── Actions ──────────────────────────────────────────────────────────
@@ -179,7 +164,7 @@ export async function gerarAlocacao(
   // Buscar voluntários ativos
   const { data: voluntarios } = await supabase
     .from("voluntarios")
-    .select("id, nome, epicom, unidade, situacao")
+    .select("id, nome, epicom, unidade")
     .eq("ativo", true)
     .is("data_saida", null);
 
@@ -187,66 +172,9 @@ export async function gerarAlocacao(
     return { ok: false, message: "Nenhum voluntário ativo encontrado." };
   }
 
-  // Buscar vínculos de localidade (quais localidades cada voluntário frequenta)
-  const voluntarioIds = voluntarios.map((v) => v.id);
-  const { data: vinculos } = await supabase
-    .from("voluntario_localidades_vinculo")
-    .select("voluntario_id, localidade_id")
-    .in("voluntario_id", voluntarioIds);
-
-  // Buscar mapeamento localidade_id -> nome
-  const { data: localidadesRows } = await supabase
-    .from("voluntario_localidades")
-    .select("id, nome");
-
-  const localidadeNomePorId = new Map(
-    (localidadesRows ?? []).map((l) => [l.id, l.nome])
-  );
-
-  // Conjunto de IDs de localidade que o voluntário frequenta
-  const localidadesPorVoluntario = new Map<number, Set<string>>();
-  for (const v of voluntarios) {
-    localidadesPorVoluntario.set(v.id, new Set());
-  }
-  for (const vinculo of vinculos ?? []) {
-    const nome = localidadeNomePorId.get(vinculo.localidade_id);
-    if (nome) {
-      localidadesPorVoluntario.get(vinculo.voluntario_id)?.add(nome);
-    }
-  }
-
-  // Filtrar voluntários elegíveis para a localidade da escala:
-  // - Se o voluntário NÃO tem vínculos, ele é elegível para QUALQUER localidade
-  // - Se o voluntário TEM vínculos, ele só é elegível para as localidades vinculadas
-  const voluntariosFiltrados = escala.localidade
-    ? voluntarios.filter((v) => {
-        const locs = localidadesPorVoluntario.get(v.id);
-        // Sem vínculos = disponível para qualquer localidade
-        if (!locs || locs.size === 0) return true;
-        // Com vínculos = só para as localidades vinculadas
-        return locs.has(escala.localidade);
-      })
-    : voluntarios;
-
-  if (voluntariosFiltrados.length === 0) {
-    return { ok: false, message: "Nenhum voluntário elegível encontrado para esta localidade." };
-  }
-
-  // Buscar atividades (docente_conscienciologia) para cada voluntário
-  const idsFiltrados = voluntariosFiltrados.map((v) => v.id);
-  const { data: atividades } = await supabase
-    .from("voluntario_atividades")
-    .select("voluntario_id, atividade")
-    .in("voluntario_id", idsFiltrados);
-
-  const atividadesPorVoluntario = new Map<number, string[]>();
-  for (const v of voluntariosFiltrados) {
-    atividadesPorVoluntario.set(v.id, []);
-  }
-  for (const a of atividades ?? []) {
-    const lista = atividadesPorVoluntario.get(a.voluntario_id);
-    if (lista) lista.push(a.atividade);
-  }
+  // Por enquanto, todos os voluntários ativos são elegíveis.
+  // Filtro por localidade será ativado quando o campo unidade estiver padronizado.
+  const voluntariosFiltrados = voluntarios;
 
   // Buscar histórico de funções (round-robin ponderado)
   const { data: historico } = await supabase.rpc("historico_funcoes_voluntario", {
@@ -297,13 +225,11 @@ export async function gerarAlocacao(
   );
 
   // Montar voluntários elegíveis (excluir ausentes E indisponíveis)
-  const volComAtividades = voluntariosFiltrados
+  const volElegiveis = voluntariosFiltrados
     .filter((v) => !ausentesSet.has(v.id) && !indisponiveisSet.has(v.id))
     .map((v) => ({
       id: v.id,
       nome: v.nome,
-      epicom: v.epicom ?? false,
-      atividades: atividadesPorVoluntario.get(v.id) ?? [],
     }));
 
   // Alocação round-robin: para cada função, ordenar por menos participações
@@ -312,7 +238,7 @@ export async function gerarAlocacao(
 
   for (const funcao of FUNCOES) {
     for (let vaga = 0; vaga < funcao.vagas; vaga++) {
-      const elegiveis = volComAtividades.filter((v) =>
+      const elegiveis = volElegiveis.filter((v) =>
         isElegivel(v, funcao, alocados)
       );
 
