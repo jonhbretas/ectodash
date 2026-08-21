@@ -71,7 +71,9 @@ export default function EscalaTable({
     porFuncao.set(f, []);
   }
   for (const a of alocacoes) {
-    const lista = porFuncao.get(a.funcao);
+    // Mapear nomes com vagas múltiplas: "Monitoria 1" → "Monitoria"
+    const base = a.funcao.replace(/ \d+$/, "");
+    const lista = porFuncao.get(base);
     if (lista) lista.push(a);
   }
 

@@ -257,7 +257,9 @@ export async function gerarAlocacao(
   const totalPorFuncaoVoluntario = new Map<string, number>();
   const ultimaDataPorFuncaoVoluntario = new Map<string, string | null>();
   for (const h of historico ?? []) {
-    const key = `${h.voluntario_id}:${h.funcao}`;
+    // Normalizar: "Monitoria 1" → "Monitoria" para agrupar vagas múltiplas
+    const baseFuncao = h.funcao.replace(/ \d+$/, "");
+    const key = `${h.voluntario_id}:${baseFuncao}`;
     totalPorFuncaoVoluntario.set(key, h.total);
     ultimaDataPorFuncaoVoluntario.set(key, h.ultima_data);
   }
@@ -310,7 +312,9 @@ export async function gerarAlocacao(
 
       const escolhido = elegiveis[0];
       alocados.add(escolhido.id);
-      alocacoes.push({ funcao: funcao.nome, voluntario_id: escolhido.id });
+      const nomeFuncao =
+        funcao.vagas > 1 ? `${funcao.nome} ${vaga + 1}` : funcao.nome;
+      alocacoes.push({ funcao: nomeFuncao, voluntario_id: escolhido.id });
     }
   }
 
