@@ -299,6 +299,25 @@ Plans:
 
 - [x] 11-01 — Módulo completo: migration 0042 (contratos, modelos, pastas, webhook log, RLS) + libs (variáveis, PDF pdfkit, render, pastas Drive, cliente Assinafy) + rotas (/api/contratos/[id]/pdf, /api/contratos/webhook) + UI (/contratos, /contratos/novo, /contratos/modelos, menu) + testes (6 RLS live, 4 unit) + env vars ASSINAFY_* (2026-08-10)
 
+### Phase 12: Escala Dinâmica — Confirmação, Visualização Regional e Dashboard
+
+**Goal**: A escala de voluntários é dinâmica: voluntários confirmam/recusam alocações após publicação, visualização por região em abas com tabela horizontal tipo Gantt, e dashboard de comprometimento com métricas.
+**Mode:** mvp
+**Depends on**: Escala de voluntários existente (migrations 0080-0084)
+**Requirements**: ESC-DIN-01 a ESC-DIN-04 (definidas em 2026-08-21)
+**Success Criteria** (what must be TRUE):
+
+  1. Após publicar escala, voluntários podem confirmar ou recusar a função asignada.
+  2. Página de escalas mostra abas por região com tabela horizontal de alocação temporal.
+  3. Dashboard mostra métricas de compromisso por voluntário, função e região.
+  4. Tabela horizontal mantém funções fixas à esquerda enquanto datas rolam para a direita.
+
+**Plans**: TBD
+
+Plans:
+
+- [ ] 12-01: TBD
+
 ## Progress
 
 **Execution Order:**
@@ -317,6 +336,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 9. Google Sheets Sync | 1/1* | Code shipped, awaiting human setup | - |
 | 10. Financial Dashboard | 1/1* | Implemented, awaiting real data | - |
 | 11. Contratos e Assinatura Eletrônica | 1/1* | SHIPPED (migration 0042 + UI + API + Assinafy); awaiting human setup | 2026-08-10 |
+| 12. Escala Dinâmica | 0/1 | Planned |  |
 
 \* Phases 9-10 executed lean (no PLAN/SUMMARY ceremony) per the user's 2026-08-04 decision to accelerate: migration 0006 + sync-sheets cron route + /painel sync panel + /financeiro dashboard shipped in one pass. The remaining blockers are human-setup actions: Google service account + spreadsheet share + env vars (Phase 9), and a real sync run to verify Phase 10 against real data.
 
