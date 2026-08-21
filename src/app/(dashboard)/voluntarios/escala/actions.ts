@@ -253,14 +253,27 @@ export async function gerarAlocacao(
     p_localidade: escala.localidade || null,
   });
 
+  // Histórico por função (normalizado: "Monitoria 1" → "Monitoria")
   const totalPorFuncaoVoluntario = new Map<string, number>();
   const ultimaDataPorFuncaoVoluntario = new Map<string, string | null>();
+  // Última vez que o voluntário fez QUALQUER função (para rotação geral)
+  const ultimaDataGeralPorVoluntario = new Map<number, string | null>();
+  const totalGeralPorVoluntario = new Map<number, number>();
+
   for (const h of historico ?? []) {
-    // Normalizar: "Monitoria 1" → "Monitoria" para agrupar vagas múltiplas
     const baseFuncao = h.funcao.replace(/ \d+$/, "");
     const key = `${h.voluntario_id}:${baseFuncao}`;
     totalPorFuncaoVoluntario.set(key, h.total);
     ultimaDataPorFuncaoVoluntario.set(key, h.ultima_data);
+
+    // Acumular total geral e última data de qualquer função
+    const prevTotal = totalGeralPorVoluntario.get(h.voluntario_id) ?? 0;
+    totalGeralPorVoluntario.set(h.voluntario_id, prevTotal + h.total);
+
+    const prevData = ultimaDataGeralPorVoluntario.get(h.voluntario_id);
+    if (!prevData || (h.ultima_data && h.ultima_data > prevData)) {
+      ultimaDataGeralPorVoluntario.set(h.voluntario_id, h.ultima_data);
+    }
   }
 
   // Buscar ausências
@@ -271,9 +284,21 @@ export async function gerarAlocacao(
 
   const ausentesSet = new Set((ausencias ?? []).map((a) => a.voluntario_id));
 
-  // Montar voluntários elegíveis
+  // Buscar disponibilidade (voluntários que marcaram que NÃO podem ir)
+  const { data: disponibilidades } = await supabase
+    .from("escala_disponibilidade")
+    .select("voluntario_id, disponivel")
+    .eq("escala_id", escalaId);
+
+  const indisponiveisSet = new Set(
+    (disponibilidades ?? [])
+      .filter((d) => !d.disponivel)
+      .map((d) => d.voluntario_id)
+  );
+
+  // Montar voluntários elegíveis (excluir ausentes E indisponíveis)
   const volComAtividades = voluntariosFiltrados
-    .filter((v) => !ausentesSet.has(v.id))
+    .filter((v) => !ausentesSet.has(v.id) && !indisponiveisSet.has(v.id))
     .map((v) => ({
       id: v.id,
       nome: v.nome,
@@ -293,19 +318,35 @@ export async function gerarAlocacao(
 
       if (elegiveis.length === 0) continue;
 
-      // Ordenar: menos vezes exercendo esta função → mais tempo sem exercer → nome
+      // Ordenar por:
+      // 1. Menos vezes exercendo ESTA função (normalizada)
+      // 2. Mais tempo sem exercer ESTA função
+      // 3. Menos vezes no total (carga geral menor)
+      // 4. Mais tempo desde QUALQUER função (rotação entre funções)
+      // 5. Nome
       elegiveis.sort((a, b) => {
         const keyA = `${a.id}:${funcao.nome}`;
         const keyB = `${b.id}:${funcao.nome}`;
-        const totalA = totalPorFuncaoVoluntario.get(keyA) ?? 0;
-        const totalB = totalPorFuncaoVoluntario.get(keyB) ?? 0;
-        if (totalA !== totalB) return totalA - totalB;
+        const totalFuncaoA = totalPorFuncaoVoluntario.get(keyA) ?? 0;
+        const totalFuncaoB = totalPorFuncaoVoluntario.get(keyB) ?? 0;
+        if (totalFuncaoA !== totalFuncaoB) return totalFuncaoA - totalFuncaoB;
 
-        const dataA = ultimaDataPorFuncaoVoluntario.get(keyA) ?? null;
-        const dataB = ultimaDataPorFuncaoVoluntario.get(keyB) ?? null;
-        if (dataA && dataB) return dataA < dataB ? -1 : dataA > dataB ? 1 : 0;
-        if (dataA) return 1;
-        if (dataB) return -1;
+        const dataFuncaoA = ultimaDataPorFuncaoVoluntario.get(keyA) ?? null;
+        const dataFuncaoB = ultimaDataPorFuncaoVoluntario.get(keyB) ?? null;
+        if (dataFuncaoA && dataFuncaoB) return dataFuncaoA < dataFuncaoB ? -1 : dataFuncaoA > dataFuncaoB ? 1 : 0;
+        if (dataFuncaoA) return 1;
+        if (dataFuncaoB) return -1;
+
+        const totalGeralA = totalGeralPorVoluntario.get(a.id) ?? 0;
+        const totalGeralB = totalGeralPorVoluntario.get(b.id) ?? 0;
+        if (totalGeralA !== totalGeralB) return totalGeralA - totalGeralB;
+
+        const dataGeralA = ultimaDataGeralPorVoluntario.get(a.id) ?? null;
+        const dataGeralB = ultimaDataGeralPorVoluntario.get(b.id) ?? null;
+        if (dataGeralA && dataGeralB) return dataGeralA < dataGeralB ? -1 : dataGeralA > dataGeralB ? 1 : 0;
+        if (dataGeralA) return 1;
+        if (dataGeralB) return -1;
+
         return a.nome.localeCompare(b.nome);
       });
 
