@@ -9,6 +9,7 @@ import EscalaStatusBadge from "../escala-status-badge";
 import EscalaTable from "../escala-table";
 import GerarEscalaButton from "../gerar-escala-button";
 import DisponibilidadePanel from "../disponibilidade-panel";
+import AlertasRepeticaoPanel from "../alertas-repeticao-panel";
 
 type EscalaDetalhe = {
   id: number;
@@ -75,7 +76,7 @@ export default async function EscalaDetalhePage({
   // Buscar alocações com nomes dos voluntários
   const { data: alocacoesRaw } = await supabase
     .from("escala_alocacao")
-    .select("id, funcao, voluntario_id, voluntarios(id, nome, unidade)")
+    .select("id, funcao, voluntario_id, efetivado, substituido_por, voluntarios(id, nome, unidade)")
     .eq("escala_id", escala.id);
 
   const alocacoes = (alocacoesRaw ?? []).map((a) => {
@@ -88,6 +89,8 @@ export default async function EscalaDetalhePage({
       voluntario_id: a.voluntario_id,
       voluntario_nome: vol?.nome ?? "Voluntário removido",
       voluntario_unidade: vol?.unidade ?? null,
+      efetivado: a.efetivado ?? false,
+      substituido_por: a.substituido_por ?? null,
       is_ausente: false,
     };
   });
@@ -167,6 +170,10 @@ export default async function EscalaDetalhePage({
           <GerarEscalaButton escalaId={escala.id} />
         )}
       </header>
+
+      {canManage && (
+        <AlertasRepeticaoPanel escalaId={escala.id} alocacoes={alocacoes} />
+      )}
 
       <EscalaTable
         escalaId={escala.id}

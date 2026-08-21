@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { UserX, UserCheck, Trash2 } from "lucide-react";
+import { UserX, UserCheck, Trash2, UserPlus, ArrowLeftRight, CheckCircle2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -10,8 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { marcarAusencia, removerAusencia, excluirEscala, atualizarStatusEscala } from "./actions";
+import { marcarAusencia, removerAusencia, excluirEscala, atualizarStatusEscala, desalocarVoluntario, efetivarAlocacao, desefetivarAlocacao } from "./actions";
 import AusenciaDialog from "./ausencia-dialog";
+import AlocacaoManualDialog from "./alocacao-manual-dialog";
+import SubstituicaoDialog from "./substituicao-dialog";
 
 type Alocacao = {
   id: number;
@@ -19,6 +21,8 @@ type Alocacao = {
   voluntario_id: number;
   voluntario_nome: string;
   voluntario_unidade: string | null;
+  efetivado: boolean;
+  substituido_por: number | null;
   is_ausente: boolean;
 };
 
@@ -40,6 +44,23 @@ const FUNCOES_ORDEM = [
   "Acoplador 2",
 ];
 
+const FUNCOES_VAGAS: Record<string, number> = {
+  Epicon: 1,
+  "Observador Parapsíquico": 1,
+  Cronometrista: 1,
+  "Energizador 1": 1,
+  "Energizador 2": 1,
+  "Energizador 3": 1,
+  Monitoria: 2,
+  "Acoplador 1": 1,
+  "Acoplador 2": 1,
+};
+
+function monitorLabel(funcao: string): string | null {
+  const m = funcao.match(/^Monitoria (\d+)$/);
+  return m ? `M${m[1]}` : null;
+}
+
 export default function EscalaTable({
   escalaId,
   alocacoes,
@@ -57,9 +78,17 @@ export default function EscalaTable({
 }) {
   const [pending, startTransition] = useTransition();
   const [ausenciaDialogOpen, setAusenciaDialogOpen] = useState(false);
+  const [alocacaoDialogOpen, setAlocacaoDialogOpen] = useState(false);
+  const [substituicaoDialogOpen, setSubstituicaoDialogOpen] = useState(false);
   const [selectedVoluntario, setSelectedVoluntario] = useState<{
     id: number;
     nome: string;
+  } | null>(null);
+  const [selectedFuncao, setSelectedFuncao] = useState<string>("");
+  const [substituicaoData, setSubstituicaoData] = useState<{
+    funcao: string;
+    voluntarioId: number;
+    voluntarioNome: string;
   } | null>(null);
 
   const ausentesSet = new Set(ausencias.map((a) => a.voluntario_id));
@@ -70,7 +99,6 @@ export default function EscalaTable({
     porFuncao.set(f, []);
   }
   for (const a of alocacoes) {
-    // Mapear nomes com vagas múltiplas: "Monitoria 1" → "Monitoria"
     const base = a.funcao.replace(/ \d+$/, "");
     const lista = porFuncao.get(base);
     if (lista) lista.push(a);
@@ -84,6 +112,41 @@ export default function EscalaTable({
   function handleRemoverAusencia(voluntarioId: number) {
     startTransition(async () => {
       await removerAusencia(escalaId, voluntarioId);
+    });
+  }
+
+  function handleAlocar(funcao: string) {
+    // Se a função tem vagas múltiplas, gerar o nome com vaga
+    const vagas = FUNCOES_VAGAS[funcao] ?? 1;
+    const alocacoesExistentes = porFuncao.get(funcao) ?? [];
+    if (alocacoesExistentes.length < vagas) {
+      const nomeFuncao = vagas > 1 ? `${funcao} ${alocacoesExistentes.length + 1}` : funcao;
+      setSelectedFuncao(nomeFuncao);
+      setAlocacaoDialogOpen(true);
+    }
+  }
+
+  function handleDesalocar(voluntarioId: number) {
+    if (!confirm("Remover este voluntário da escala?")) return;
+    startTransition(async () => {
+      await desalocarVoluntario(escalaId, voluntarioId);
+    });
+  }
+
+  function handleSubstituir(funcao: string, voluntarioId: number, voluntarioNome: string) {
+    setSubstituicaoData({ funcao, voluntarioId, voluntarioNome });
+    setSubstituicaoDialogOpen(true);
+  }
+
+  function handleEfetivar(voluntarioId: number) {
+    startTransition(async () => {
+      await efetivarAlocacao(escalaId, voluntarioId);
+    });
+  }
+
+  function handleDesefetivar(voluntarioId: number) {
+    startTransition(async () => {
+      await desefetivarAlocacao(escalaId, voluntarioId);
     });
   }
 
@@ -118,8 +181,8 @@ export default function EscalaTable({
               <TableHead className="text-lg font-semibold text-zinc-900">
                 Voluntário(s)
               </TableHead>
-              {canManage && status === "rascunho" && (
-                <TableHead className="w-[100px] text-right text-lg font-semibold text-zinc-900">
+              {canManage && (
+                <TableHead className="w-[120px] text-right text-lg font-semibold text-zinc-900">
                   Ações
                 </TableHead>
               )}
@@ -128,10 +191,17 @@ export default function EscalaTable({
           <TableBody>
             {FUNCOES_ORDEM.map((funcao) => {
               const alocacoesFuncao = porFuncao.get(funcao) ?? [];
+              const vagas = FUNCOES_VAGAS[funcao] ?? 1;
+              const vagasRestantes = vagas - alocacoesFuncao.length;
               return (
                 <TableRow key={funcao}>
                   <TableCell className="text-lg font-medium text-zinc-900">
                     {funcao}
+                    {vagas > 1 && (
+                      <span className="ml-1 text-sm text-zinc-400">
+                        ({alocacoesFuncao.length}/{vagas})
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {alocacoesFuncao.length === 0 ? (
@@ -148,11 +218,21 @@ export default function EscalaTable({
                               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-lg ${
                                 isAusente
                                   ? "bg-red-50 text-red-700 line-through"
-                                  : "bg-zinc-50 text-zinc-900"
+                                  : a.efetivado
+                                    ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
+                                    : "bg-zinc-50 text-zinc-900"
                               }`}
                             >
                               {isAusente && (
                                 <UserX size={16} className="text-red-500" aria-hidden="true" />
+                              )}
+                              {a.efetivado && !isAusente && (
+                                <CheckCircle2 size={16} className="text-emerald-500" aria-hidden="true" />
+                              )}
+                              {monitorLabel(a.funcao) && (
+                                <span className="font-semibold text-[#2195B9]">
+                                  {monitorLabel(a.funcao)}
+                                </span>
                               )}
                               <span>{a.voluntario_nome}</span>
                               {a.voluntario_unidade && (
@@ -160,30 +240,79 @@ export default function EscalaTable({
                                   ({a.voluntario_unidade})
                                 </span>
                               )}
-                              {canManage && status === "rascunho" && (
+                              {canManage && (
                                 <div className="flex items-center gap-1 ml-2">
-                                  {isAusente ? (
+                                  {/* Efetivação toggle */}
+                                  {!isAusente && status === "publicada" && (
+                                    a.efetivado ? (
+                                      <button
+                                        onClick={() => handleDesefetivar(a.voluntario_id)}
+                                        className="text-emerald-600 hover:text-emerald-800 transition-colors"
+                                        title="Desmarcar efetivação"
+                                      >
+                                        <CheckCircle2 size={14} aria-hidden="true" />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleEfetivar(a.voluntario_id)}
+                                        className="text-zinc-400 hover:text-emerald-600 transition-colors"
+                                        title="Marcar como efetivado (quem realmente fez)"
+                                      >
+                                        <CheckCircle2 size={14} aria-hidden="true" />
+                                      </button>
+                                    )
+                                  )}
+                                  {/* Ausência/Restaurar */}
+                                  {status === "rascunho" && (
+                                    isAusente ? (
+                                      <button
+                                        onClick={() =>
+                                          handleRemoverAusencia(a.voluntario_id)
+                                        }
+                                        className="text-emerald-600 hover:text-emerald-800 transition-colors"
+                                        title="Restaurar voluntário"
+                                      >
+                                        <UserCheck size={14} aria-hidden="true" />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() =>
+                                          handleMarcarAusencia(
+                                            a.voluntario_id,
+                                            a.voluntario_nome
+                                          )
+                                        }
+                                        className="text-amber-600 hover:text-amber-800 transition-colors"
+                                        title="Marcar ausência"
+                                      >
+                                        <UserX size={14} aria-hidden="true" />
+                                      </button>
+                                    )
+                                  )}
+                                  {/* Substituir */}
+                                  {status === "rascunho" && !isAusente && (
                                     <button
                                       onClick={() =>
-                                        handleRemoverAusencia(a.voluntario_id)
-                                      }
-                                      className="text-emerald-600 hover:text-emerald-800 transition-colors"
-                                      title="Restaurar voluntário"
-                                    >
-                                      <UserCheck size={14} aria-hidden="true" />
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() =>
-                                        handleMarcarAusencia(
+                                        handleSubstituir(
+                                          a.funcao,
                                           a.voluntario_id,
                                           a.voluntario_nome
                                         )
                                       }
-                                      className="text-amber-600 hover:text-amber-800 transition-colors"
-                                      title="Marcar ausência"
+                                      className="text-blue-500 hover:text-blue-700 transition-colors"
+                                      title="Trocar voluntário"
                                     >
-                                      <UserX size={14} aria-hidden="true" />
+                                      <ArrowLeftRight size={14} aria-hidden="true" />
+                                    </button>
+                                  )}
+                                  {/* Desalocar */}
+                                  {status === "rascunho" && (
+                                    <button
+                                      onClick={() => handleDesalocar(a.voluntario_id)}
+                                      className="text-red-400 hover:text-red-600 transition-colors"
+                                      title="Remolver da escala"
+                                    >
+                                      <Trash2 size={12} aria-hidden="true" />
                                     </button>
                                   )}
                                 </div>
@@ -194,9 +323,18 @@ export default function EscalaTable({
                       </div>
                     )}
                   </TableCell>
-                  {canManage && status === "rascunho" && (
+                  {canManage && (
                     <TableCell className="text-right">
-                      {/* Actions column - empty for now, actions are inline */}
+                      {status === "rascunho" && vagasRestantes > 0 && (
+                        <button
+                          onClick={() => handleAlocar(funcao)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#2195B9]/10 px-3 py-1.5 text-sm font-medium text-[#2195B9] transition-colors hover:bg-[#2195B9]/20"
+                          title={`Alocar voluntário em ${funcao}`}
+                        >
+                          <UserPlus size={14} aria-hidden="true" />
+                          Alocar
+                        </button>
+                      )}
                     </TableCell>
                   )}
                 </TableRow>
@@ -289,6 +427,28 @@ export default function EscalaTable({
           escalaId={escalaId}
           voluntarioId={selectedVoluntario.id}
           voluntarioNome={selectedVoluntario.nome}
+        />
+      )}
+
+      {/* Dialog de alocação manual */}
+      {selectedFuncao && (
+        <AlocacaoManualDialog
+          open={alocacaoDialogOpen}
+          onOpenChange={setAlocacaoDialogOpen}
+          escalaId={escalaId}
+          funcao={selectedFuncao}
+        />
+      )}
+
+      {/* Dialog de substituição */}
+      {substituicaoData && (
+        <SubstituicaoDialog
+          open={substituicaoDialogOpen}
+          onOpenChange={setSubstituicaoDialogOpen}
+          escalaId={escalaId}
+          funcao={substituicaoData.funcao}
+          antigoVoluntarioId={substituicaoData.voluntarioId}
+          antigoVoluntarioNome={substituicaoData.voluntarioNome}
         />
       )}
     </div>

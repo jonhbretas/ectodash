@@ -37,6 +37,19 @@ const FUNCOES: {
   { nome: "Acoplador 2", vagas: 1 },
 ];
 
+/** Pontuação de desejabilidade por função (menor = menos desejável) */
+const PONTUACAO_DESEJABILIDADE: Record<string, number> = {
+  Monitoria: 1,
+  Cronometrista: 2,
+  "Acoplador 1": 3,
+  "Acoplador 2": 3,
+  "Energizador 3": 4,
+  "Energizador 2": 5,
+  "Energizador 1": 6,
+  "Observador Parapsíquico": 7,
+  Epicon: 7,
+};
+
 /** Verifica se um voluntário é elegível para uma função */
 function isElegivel(
   vol: { id: number },
@@ -187,6 +200,8 @@ export async function gerarAlocacao(
   // Última vez que o voluntário fez QUALQUER função (para rotação geral)
   const ultimaDataGeralPorVoluntario = new Map<number, string | null>();
   const totalGeralPorVoluntario = new Map<number, number>();
+  // Última função exercida por cada voluntário (para lógica de desejabilidade)
+  const ultimaFuncaoPorVoluntario = new Map<number, { funcao: string; data: string | null }>();
 
   for (const h of historico ?? []) {
     const baseFuncao = h.funcao.replace(/ \d+$/, "");
@@ -201,6 +216,12 @@ export async function gerarAlocacao(
     const prevData = ultimaDataGeralPorVoluntario.get(h.voluntario_id);
     if (!prevData || (h.ultima_data && h.ultima_data > prevData)) {
       ultimaDataGeralPorVoluntario.set(h.voluntario_id, h.ultima_data);
+    }
+
+    // Rastrear a última função (mais recente) de cada voluntário
+    const prevFuncao = ultimaFuncaoPorVoluntario.get(h.voluntario_id);
+    if (!prevFuncao || (h.ultima_data && (!prevFuncao.data || h.ultima_data > prevFuncao.data))) {
+      ultimaFuncaoPorVoluntario.set(h.voluntario_id, { funcao: baseFuncao, data: h.ultima_data });
     }
   }
 
@@ -249,7 +270,8 @@ export async function gerarAlocacao(
       // 2. Mais tempo sem exercer ESTA função
       // 3. Menos vezes no total (carga geral menor)
       // 4. Mais tempo desde QUALQUER função (rotação entre funções)
-      // 5. Nome
+      // 5. Bônus de desejabilidade: quem fez função menos desejável recentemente ganha prioridade
+      // 6. Nome
       elegiveis.sort((a, b) => {
         const keyA = `${a.id}:${funcao.nome}`;
         const keyB = `${b.id}:${funcao.nome}`;
@@ -272,6 +294,16 @@ export async function gerarAlocacao(
         if (dataGeralA && dataGeralB) return dataGeralA < dataGeralB ? -1 : dataGeralA > dataGeralB ? 1 : 0;
         if (dataGeralA) return 1;
         if (dataGeralB) return -1;
+
+        // Bônus de desejabilidade: quem fez função MENOS desejável recentemente
+        // ganha prioridade para funções MAIS desejáveis
+        const pontuacaoAtual = PONTUACAO_DESEJABILIDADE[funcao.nome] ?? 0;
+        const ultimaFuncaoA = ultimaFuncaoPorVoluntario.get(a.id);
+        const ultimaFuncaoB = ultimaFuncaoPorVoluntario.get(b.id);
+        const bonusA = ultimaFuncaoA ? (pontuacaoAtual - (PONTUACAO_DESEJABILIDADE[ultimaFuncaoA.funcao] ?? 0)) : 0;
+        const bonusB = ultimaFuncaoB ? (pontuacaoAtual - (PONTUACAO_DESEJABILIDADE[ultimaFuncaoB.funcao] ?? 0)) : 0;
+        // Quem fez função mais desejável (menor pontuação) = maior bônus = menor valor
+        if (bonusA !== bonusB) return bonusB - bonusA;
 
         return a.nome.localeCompare(b.nome);
       });
@@ -653,4 +685,437 @@ export async function buscarEscalasMes(ano: number, mes: number) {
       };
     }),
   }));
+}
+
+// ── Alocação Manual ──────────────────────────────────────────────────
+
+/** Verificar permissão de gerenciamento de escala */
+async function verificarPermissaoEscala(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, message: "Sessão expirada. Faça login novamente." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "coordenador_geral" && profile?.role !== "voluntariado") {
+    return { ok: false as const, message: "Sem permissão para alterar escalas." };
+  }
+
+  return { ok: true as const, user };
+}
+
+/** Alocar voluntário manualmente em uma função */
+export async function alocarVoluntario(
+  escalaId: number,
+  funcao: string,
+  voluntarioId: number
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return auth;
+
+  // Verificar se a escala está em rascunho
+  const { data: escala } = await supabase
+    .from("escala_semanal")
+    .select("status")
+    .eq("id", escalaId)
+    .single();
+
+  if (!escala) return { ok: false, message: "Escala não encontrada." };
+  if (escala.status !== "rascunho") {
+    return { ok: false, message: "Só é possível alocar em escalas em rascunho." };
+  }
+
+  // Verificar se o voluntário já tem alocação nesta escala
+  const { data: existente } = await supabase
+    .from("escala_alocacao")
+    .select("id, funcao")
+    .eq("escala_id", escalaId)
+    .eq("voluntario_id", voluntarioId)
+    .maybeSingle();
+
+  if (existente) {
+    return { ok: false, message: "Este voluntário já está alocado nesta escala (função: " + existente.funcao + ")." };
+  }
+
+  // Verificar se o voluntário está ausente
+  const { data: ausencia } = await supabase
+    .from("escala_ausencia")
+    .select("id")
+    .eq("escala_id", escalaId)
+    .eq("voluntario_id", voluntarioId)
+    .maybeSingle();
+
+  if (ausencia) {
+    return { ok: false, message: "Este voluntário está marcado como ausente." };
+  }
+
+  // Verificar restrições de função (Epicon precisa de epicom, Energizador 1 precisa de docente_conscienciologia)
+  const funcaoBase = funcao.replace(/ \d+$/, "");
+  if (funcaoBase === "Epicon") {
+    const { data: vol } = await supabase
+      .from("voluntarios")
+      .select("epicom")
+      .eq("id", voluntarioId)
+      .single();
+    if (vol && !vol.epicom) {
+      return { ok: false, message: "A função Epicon requer que o voluntário tenha o cargo de Epicon." };
+    }
+  }
+
+  if (funcaoBase === "Energizador 1") {
+    const { data: atividade } = await supabase
+      .from("voluntario_atividades")
+      .select("id")
+      .eq("voluntario_id", voluntarioId)
+      .eq("atividade", "docente_conscienciologia")
+      .maybeSingle();
+    if (!atividade) {
+      return { ok: false, message: "A função Energizador 1 requer a atividade 'docente_conscienciologia'." };
+    }
+  }
+
+  // Não-Epicon/Observador não podem ter epicom
+  if (funcaoBase !== "Epicon" && funcaoBase !== "Observador Parapsíquico") {
+    const { data: vol } = await supabase
+      .from("voluntarios")
+      .select("epicom")
+      .eq("id", voluntarioId)
+      .single();
+    if (vol && vol.epicom) {
+      return { ok: false, message: "Voluntários com cargo Epicon só podem exercer Epicon ou Observador Parapsíquico." };
+    }
+  }
+
+  // Inserir alocação
+  const { error } = await supabase
+    .from("escala_alocacao")
+    .insert({
+      escala_id: escalaId,
+      funcao,
+      voluntario_id: voluntarioId,
+    });
+
+  if (error) {
+    console.error("alocarVoluntario: insert failed", error);
+    return { ok: false, message: "Erro ao alocar voluntário." };
+  }
+
+  // Verificar alertas de repetição no mês
+  const { data: alertas } = await supabase.rpc("alertas_repeticao_mes", {
+    p_escala_id: escalaId,
+  });
+
+  let alertaMsg = "";
+  if (alertas && alertas.length > 0) {
+    const mesmoVol = alertas.find((a: { voluntario_id: number; funcao: string; total_mes: number }) => a.voluntario_id === voluntarioId);
+    if (mesmoVol) {
+      alertaMsg = ` ⚠️ Atenção: este voluntário já fez ${mesmoVol.funcao} ${mesmoVol.total_mes} vez(es) este mês.`;
+    }
+  }
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return { ok: true, message: "Voluntário alocado com sucesso." + alertaMsg };
+}
+
+/** Desalocar voluntário de uma função */
+export async function desalocarVoluntario(
+  escalaId: number,
+  voluntarioId: number
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return auth;
+
+  const { data: escala } = await supabase
+    .from("escala_semanal")
+    .select("status")
+    .eq("id", escalaId)
+    .single();
+
+  if (!escala) return { ok: false, message: "Escala não encontrada." };
+  if (escala.status !== "rascunho") {
+    return { ok: false, message: "Só é possível desalocar em escalas em rascunho." };
+  }
+
+  const { error } = await supabase
+    .from("escala_alocacao")
+    .delete()
+    .eq("escala_id", escalaId)
+    .eq("voluntario_id", voluntarioId);
+
+  if (error) {
+    return { ok: false, message: "Erro ao desalocar voluntário." };
+  }
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return { ok: true, message: "Voluntário desalocado." };
+}
+
+/** Substituir um voluntário por outro (manual) */
+export async function substituirVoluntario(
+  escalaId: number,
+  antigoVoluntarioId: number,
+  novoVoluntarioId: number
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return auth;
+
+  const { data: escala } = await supabase
+    .from("escala_semanal")
+    .select("status")
+    .eq("id", escalaId)
+    .single();
+
+  if (!escala) return { ok: false, message: "Escala não encontrada." };
+  if (escala.status !== "rascunho") {
+    return { ok: false, message: "Só é possível substituir em escalas em rascunho." };
+  }
+
+  // Buscar alocação do voluntário antigo
+  const { data: alocacaoAntiga } = await supabase
+    .from("escala_alocacao")
+    .select("id, funcao")
+    .eq("escala_id", escalaId)
+    .eq("voluntario_id", antigoVoluntarioId)
+    .maybeSingle();
+
+  if (!alocacaoAntiga) {
+    return { ok: false, message: "Voluntário antigo não está alocado nesta escala." };
+  }
+
+  // Verificar se o novo voluntário já tem alocação
+  const { data: existenteNovo } = await supabase
+    .from("escala_alocacao")
+    .select("id")
+    .eq("escala_id", escalaId)
+    .eq("voluntario_id", novoVoluntarioId)
+    .maybeSingle();
+
+  if (existenteNovo) {
+    return { ok: false, message: "O novo voluntário já está alocado nesta escala." };
+  }
+
+  // Verificar se o novo voluntário está ausente
+  const { data: ausenciaNovo } = await supabase
+    .from("escala_ausencia")
+    .select("id")
+    .eq("escala_id", escalaId)
+    .eq("voluntario_id", novoVoluntarioId)
+    .maybeSingle();
+
+  if (ausenciaNovo) {
+    return { ok: false, message: "O novo voluntário está marcado como ausente." };
+  }
+
+  // Verificar restrições de função para o novo voluntário
+  const funcaoBase = alocacaoAntiga.funcao.replace(/ \d+$/, "");
+  if (funcaoBase === "Epicon") {
+    const { data: vol } = await supabase
+      .from("voluntarios")
+      .select("epicom")
+      .eq("id", novoVoluntarioId)
+      .single();
+    if (vol && !vol.epicom) {
+      return { ok: false, message: "A função Epicon requer que o voluntário tenha o cargo de Epicon." };
+    }
+  }
+
+  if (funcaoBase === "Energizador 1") {
+    const { data: atividade } = await supabase
+      .from("voluntario_atividades")
+      .select("id")
+      .eq("voluntario_id", novoVoluntarioId)
+      .eq("atividade", "docente_conscienciologia")
+      .maybeSingle();
+    if (!atividade) {
+      return { ok: false, message: "A função Energizador 1 requer a atividade 'docente_conscienciologia'." };
+    }
+  }
+
+  // Remover alocação do antigo e inserir o novo
+  const { error: deleteError } = await supabase
+    .from("escala_alocacao")
+    .delete()
+    .eq("id", alocacaoAntiga.id);
+
+  if (deleteError) {
+    return { ok: false, message: "Erro ao remover alocação antiga." };
+  }
+
+  const { error: insertError } = await supabase
+    .from("escala_alocacao")
+    .insert({
+      escala_id: escalaId,
+      funcao: alocacaoAntiga.funcao,
+      voluntario_id: novoVoluntarioId,
+      substituido_por: antigoVoluntarioId,
+    });
+
+  if (insertError) {
+    console.error("substituirVoluntario: insert failed", insertError);
+    return { ok: false, message: "Erro ao inserir novo voluntário." };
+  }
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return { ok: true, message: "Substituição realizada com sucesso." };
+}
+
+/** Marcar alocação como efetivada (quem realmente fez a função) */
+export async function efetivarAlocacao(
+  escalaId: number,
+  voluntarioId: number
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return auth;
+
+  const { error } = await supabase
+    .from("escala_alocacao")
+    .update({
+      efetivado: true,
+      efetivado_por: auth.user.id,
+      efetivado_em: new Date().toISOString(),
+    })
+    .eq("escala_id", escalaId)
+    .eq("voluntario_id", voluntarioId);
+
+  if (error) {
+    return { ok: false, message: "Erro ao marcar efetivação." };
+  }
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return { ok: true, message: "Alocação efetivada." };
+}
+
+/** Desmarcar efetivação de uma alocação */
+export async function desefetivarAlocacao(
+  escalaId: number,
+  voluntarioId: number
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return auth;
+
+  const { error } = await supabase
+    .from("escala_alocacao")
+    .update({
+      efetivado: false,
+      efetivado_por: null,
+      efetivado_em: null,
+    })
+    .eq("escala_id", escalaId)
+    .eq("voluntario_id", voluntarioId);
+
+  if (error) {
+    return { ok: false, message: "Erro ao desmarcar efetivação." };
+  }
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return { ok: true, message: "Efetivação removida." };
+}
+
+/** Buscar alertas de repetição no mês para uma escala */
+export async function buscarAlertasRepeticao(escalaId: number) {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("alertas_repeticao_mes", {
+    p_escala_id: escalaId,
+  });
+  return data ?? [];
+}
+
+/** Listar voluntários elegíveis para uma função (para alocação manual) */
+export async function listarVoluntariosElegiveis(
+  escalaId: number,
+  funcao: string
+) {
+  const supabase = await createClient();
+
+  const { data: escala } = await supabase
+    .from("escala_semanal")
+    .select("localidade")
+    .eq("id", escalaId)
+    .single();
+
+  if (!escala) return [];
+
+  // Voluntários ativos
+  const { data: voluntarios } = await supabase
+    .from("voluntarios")
+    .select("id, nome, epicom, unidade")
+    .eq("ativo", true)
+    .is("data_saida", null);
+
+  if (!voluntarios) return [];
+
+  // IDs já alocados nesta escala
+  const { data: alocados } = await supabase
+    .from("escala_alocacao")
+    .select("voluntario_id")
+    .eq("escala_id", escalaId);
+
+  const alocadosSet = new Set((alocados ?? []).map((a) => a.voluntario_id));
+
+  // IDs ausentes
+  const { data: ausentes } = await supabase
+    .from("escala_ausencia")
+    .select("voluntario_id")
+    .eq("escala_id", escalaId);
+
+  const ausentesSet = new Set((ausentes ?? []).map((a) => a.voluntario_id));
+
+  const funcaoBase = funcao.replace(/ \d+$/, "");
+
+  // Filtrar elegíveis
+  const elegiveis = voluntarios.filter((v) => {
+    // Não pode estar alocado ou ausente
+    if (alocadosSet.has(v.id) || ausentesSet.has(v.id)) return false;
+
+    // Filtrar por localidade se definida
+    if (escala.localidade && v.unidade !== escala.localidade) return false;
+
+    // Epicon requer epicom
+    if (funcaoBase === "Epicon" && !v.epicom) return false;
+
+    // Energizador 1 requer docente_conscienciologia (será verificado no client via buscarAtividadeVoluntario)
+    // Não-Epicon/Observador não podem ter epicom
+    if (funcaoBase !== "Epicon" && funcaoBase !== "Observador Parapsíquico" && v.epicom) return false;
+
+    return true;
+  });
+
+  // Buscar histórico de contagem do mês para cada um
+  const elegiveisComHistorico = await Promise.all(
+    elegiveis.map(async (v) => {
+      const { data: contagem } = await supabase.rpc("contar_funcoes_mes", {
+        p_voluntario_id: v.id,
+        p_mes: null,
+      });
+
+      const totalFuncaoMes = (contagem ?? []).find(
+        (c: { funcao: string; total: number }) => c.funcao === funcaoBase
+      )?.total ?? 0;
+
+      return {
+        id: v.id,
+        nome: v.nome,
+        unidade: v.unidade,
+        total_funcao_mes: totalFuncaoMes,
+      };
+    })
+  );
+
+  // Ordenar: menos vezes fez a função no mês primeiro
+  elegiveisComHistorico.sort((a, b) => a.total_funcao_mes - b.total_funcao_mes);
+
+  return elegiveisComHistorico;
 }
