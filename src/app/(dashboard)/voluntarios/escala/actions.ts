@@ -35,10 +35,9 @@ const FUNCOES: {
   { nome: "Energizador 1", vagas: 1, requerDocente: true },
   { nome: "Energizador 2", vagas: 1, apenasNaoEpicom: true },
   { nome: "Energizador 3", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Monitor 1", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Monitor 2", vagas: 1, apenasNaoEpicom: true },
+  { nome: "Monitoria", vagas: 2, apenasNaoEpicom: true },
   { nome: "Acoplador 1", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Acoplador 12", vagas: 1, apenasNaoEpicom: true },
+  { nome: "Acoplador 2", vagas: 1, apenasNaoEpicom: true },
 ];
 
 /** Verifica se um voluntário é elegível para uma função */

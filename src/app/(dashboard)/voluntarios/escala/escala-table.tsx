@@ -35,10 +35,9 @@ const FUNCOES_ORDEM = [
   "Energizador 1",
   "Energizador 2",
   "Energizador 3",
-  "Monitor 1",
-  "Monitor 2",
+  "Monitoria",
   "Acoplador 1",
-  "Acoplador 12",
+  "Acoplador 2",
 ];
 
 export default function EscalaTable({
