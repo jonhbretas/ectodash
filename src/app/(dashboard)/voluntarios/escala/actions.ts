@@ -176,33 +176,71 @@ export async function gerarAlocacao(
     .delete()
     .eq("escala_id", escalaId);
 
-  // Buscar voluntários ativos da localidade
-  // Inclui voluntários CUJA unidade bate com a localidade OU que não têm unidade definida (elegíveis a qualquer localidade)
-  let query = supabase
+  // Buscar voluntários ativos
+  const { data: voluntarios } = await supabase
     .from("voluntarios")
     .select("id, nome, epicom, unidade, situacao")
     .eq("ativo", true)
     .is("data_saida", null);
 
-  if (escala.localidade) {
-    query = query.or(`unidade.eq.${escala.localidade},unidade.is.null`);
+  if (!voluntarios || voluntarios.length === 0) {
+    return { ok: false, message: "Nenhum voluntário ativo encontrado." };
   }
 
-  const { data: voluntarios } = await query;
+  // Buscar vínculos de localidade (quais localidades cada voluntário frequenta)
+  const voluntarioIds = voluntarios.map((v) => v.id);
+  const { data: vinculos } = await supabase
+    .from("voluntario_localidades_vinculo")
+    .select("voluntario_id, localidade_id")
+    .in("voluntario_id", voluntarioIds);
 
-  if (!voluntarios || voluntarios.length === 0) {
-    return { ok: false, message: "Nenhum voluntário ativo encontrado para esta localidade." };
+  // Buscar mapeamento localidade_id -> nome
+  const { data: localidadesRows } = await supabase
+    .from("voluntario_localidades")
+    .select("id, nome");
+
+  const localidadeNomePorId = new Map(
+    (localidadesRows ?? []).map((l) => [l.id, l.nome])
+  );
+
+  // Conjunto de IDs de localidade que o voluntário frequenta
+  const localidadesPorVoluntario = new Map<number, Set<string>>();
+  for (const v of voluntarios) {
+    localidadesPorVoluntario.set(v.id, new Set());
+  }
+  for (const vinculo of vinculos ?? []) {
+    const nome = localidadeNomePorId.get(vinculo.localidade_id);
+    if (nome) {
+      localidadesPorVoluntario.get(vinculo.voluntario_id)?.add(nome);
+    }
+  }
+
+  // Filtrar voluntários elegíveis para a localidade da escala:
+  // - Se o voluntário NÃO tem vínculos, ele é elegível para QUALQUER localidade
+  // - Se o voluntário TEM vínculos, ele só é elegível para as localidades vinculadas
+  const voluntariosFiltrados = escala.localidade
+    ? voluntarios.filter((v) => {
+        const locs = localidadesPorVoluntario.get(v.id);
+        // Sem vínculos = disponível para qualquer localidade
+        if (!locs || locs.size === 0) return true;
+        // Com vínculos = só para as localidades vinculadas
+        return locs.has(escala.localidade);
+      })
+    : voluntarios;
+
+  if (voluntariosFiltrados.length === 0) {
+    return { ok: false, message: "Nenhum voluntário elegível encontrado para esta localidade." };
   }
 
   // Buscar atividades (docente_conscienciologia) para cada voluntário
-  const voluntarioIds = voluntarios.map((v) => v.id);
+  const idsFiltrados = voluntariosFiltrados.map((v) => v.id);
   const { data: atividades } = await supabase
     .from("voluntario_atividades")
     .select("voluntario_id, atividade")
-    .in("voluntario_id", voluntarioIds);
+    .in("voluntario_id", idsFiltrados);
 
   const atividadesPorVoluntario = new Map<number, string[]>();
-  for (const v of voluntarios) {
+  for (const v of voluntariosFiltrados) {
     atividadesPorVoluntario.set(v.id, []);
   }
   for (const a of atividades ?? []) {
@@ -231,8 +269,8 @@ export async function gerarAlocacao(
 
   const ausentesSet = new Set((ausencias ?? []).map((a) => a.voluntario_id));
 
-  // Montar volúntários elegíveis
-  const volComAtividades = voluntarios
+  // Montar voluntários elegíveis
+  const volComAtividades = voluntariosFiltrados
     .filter((v) => !ausentesSet.has(v.id))
     .map((v) => ({
       id: v.id,
