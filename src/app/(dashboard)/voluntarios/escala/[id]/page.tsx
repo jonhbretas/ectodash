@@ -8,6 +8,7 @@ import PageContainer from "../../../page-container";
 import EscalaStatusBadge from "../escala-status-badge";
 import EscalaTable from "../escala-table";
 import GerarEscalaButton from "../gerar-escala-button";
+import DisponibilidadePanel from "../disponibilidade-panel";
 
 type EscalaDetalhe = {
   id: number;
@@ -50,6 +51,15 @@ export default async function EscalaDetalhePage({
   const canManage =
     role === "coordenador_geral" || role === "voluntariado";
   const isCoordenadorGeral = role === "coordenador_geral";
+
+  // Buscar voluntario_id do perfil do usuário atual
+  const { data: profileCompleto } = await supabase
+    .from("profiles")
+    .select("voluntario_id")
+    .eq("id", user.id)
+    .single();
+
+  const voluntarioAtualId = profileCompleto?.voluntario_id;
 
   // Buscar escala
   const { data: escala } = await supabase
@@ -106,6 +116,29 @@ export default async function EscalaDetalhePage({
     is_ausente: ausentesSet.has(a.voluntario_id),
   }));
 
+  // Buscar disponibilidade
+  const { data: disponibilidadesRaw } = await supabase
+    .from("escala_disponibilidade")
+    .select("voluntario_id, disponivel, motivo, voluntarios(id, nome)")
+    .eq("escala_id", escala.id);
+
+  const disponibilidades = (disponibilidadesRaw ?? []).map((d) => {
+    const vol = Array.isArray(d.voluntarios) ? d.voluntarios[0] : d.voluntarios;
+    return {
+      voluntario_id: d.voluntario_id,
+      disponivel: d.disponivel,
+      motivo: d.motivo,
+      voluntario_nome: vol?.nome ?? "?",
+    };
+  });
+
+  // Total de voluntários ativos
+  const { count: totalVoluntarios } = await supabase
+    .from("voluntarios")
+    .select("id", { count: "exact", head: true })
+    .eq("ativo", true)
+    .is("data_saida", null);
+
   return (
     <PageContainer>
       <Link
@@ -142,6 +175,15 @@ export default async function EscalaDetalhePage({
         status={escala.status}
         canManage={canManage}
         isCoordenadorGeral={isCoordenadorGeral}
+      />
+
+      <DisponibilidadePanel
+        escalaId={escala.id}
+        disponibilidades={disponibilidades}
+        totalVoluntarios={totalVoluntarios ?? 0}
+        isCoordenador={canManage}
+        status={escala.status}
+        voluntarioAtualId={voluntarioAtualId}
       />
     </PageContainer>
   );
