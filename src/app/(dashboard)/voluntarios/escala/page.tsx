@@ -2,7 +2,7 @@
 // dinâmicas (toda sexta-feira). Mostra escalas por data/localidade, com
 // status (rascunho/publicada/cancelada) e botões de ação.
 import Link from "next/link";
-import { CalendarCheck, Plus, Eye, Trash2 } from "lucide-react";
+import { CalendarCheck, Plus, Eye, Trash2, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
 import EscalaStatusBadge from "./escala-status-badge";
@@ -86,15 +86,24 @@ export default async function EscalaPage() {
             Escala semanal das dinâmicas de sexta-feira — alocação e substituições.
           </p>
         </div>
-        {canManage && (
+        <div className="flex items-center gap-3">
           <Link
-            href="/voluntarios/escala/nova"
-            className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+            href="/voluntarios/escala/mensal"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
-            <Plus size={22} aria-hidden="true" />
-            Nova escala
+            <CalendarDays size={22} aria-hidden="true" />
+            Visão mensal
           </Link>
-        )}
+          {canManage && (
+            <Link
+              href="/voluntarios/escala/nova"
+              className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+            >
+              <Plus size={22} aria-hidden="true" />
+              Nova escala
+            </Link>
+          )}
+        </div>
       </header>
 
       {rows.length === 0 ? (

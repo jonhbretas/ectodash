@@ -565,3 +565,166 @@ export async function excluirEscala(
   revalidatePath("/voluntarios/escala");
   return { ok: true, message: "Escala excluída." };
 }
+
+// ── Disponibilidade ──────────────────────────────────────────────────
+
+/** Marcar disponibilidade do voluntário para uma escala */
+export async function marcarDisponibilidade(
+  escalaId: number,
+  voluntarioId: number,
+  disponivel: boolean,
+  motivo?: string
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  const { error } = await supabase
+    .from("escala_disponibilidade")
+    .upsert(
+      {
+        escala_id: escalaId,
+        voluntario_id: voluntarioId,
+        disponivel,
+        motivo: motivo || null,
+      },
+      { onConflict: "escala_id,voluntario_id" }
+    );
+
+  if (error) {
+    console.error("marcarDisponibilidade: failed", error);
+    return { ok: false, message: "Erro ao marcar disponibilidade." };
+  }
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return {
+    ok: true,
+    message: disponivel
+      ? "Marcado como disponível."
+      : "Marcado como indisponível.",
+  };
+}
+
+/** Marcar disponibilidade para todos os voluntários de uma escala (coordenador) */
+export async function marcarDisponibilidadeTodos(
+  escalaId: number,
+  disponivel: boolean
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Sessão expirada. Faça login novamente." };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "coordenador_geral" && profile?.role !== "voluntariado") {
+    return { ok: false, message: "Sem permissão." };
+  }
+
+  // Buscar todos os voluntários ativos
+  const { data: voluntarios } = await supabase
+    .from("voluntarios")
+    .select("id")
+    .eq("ativo", true)
+    .is("data_saida", null);
+
+  if (!voluntarios || voluntarios.length === 0) {
+    return { ok: false, message: "Nenhum voluntário ativo encontrado." };
+  }
+
+  // Inserir/Atualizar disponibilidade para todos
+  const registros = voluntarios.map((v) => ({
+    escala_id: escalaId,
+    voluntario_id: v.id,
+    disponivel,
+    motivo: null,
+  }));
+
+  const { error } = await supabase
+    .from("escala_disponibilidade")
+    .upsert(registros, { onConflict: "escala_id,voluntario_id" });
+
+  if (error) {
+    console.error("marcarDisponibilidadeTodos: failed", error);
+    return { ok: false, message: "Erro ao marcar disponibilidade em massa." };
+  }
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return {
+    ok: true,
+    message: `${voluntarios.length} voluntários marcados como ${disponivel ? "disponíveis" : "indisponíveis"}.`,
+  };
+}
+
+/** Buscar disponibilidade de uma escala (para exibir na tela) */
+export async function buscarDisponibilidade(escalaId: number) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("escala_disponibilidade")
+    .select("voluntario_id, disponivel, motivo, voluntarios(id, nome)")
+    .eq("escala_id", escalaId);
+
+  return data ?? [];
+}
+
+/** Buscar escalas do mês (para视图 mensal) */
+export async function buscarEscalasMes(ano: number, mes: number) {
+  const supabase = await createClient();
+
+  // Primeiro e último dia do mês
+  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+  const fimMes = new Date(ano, mes, 0).getDate();
+  const fim = `${ano}-${String(mes).padStart(2, "0")}-${fimMes}`;
+
+  const { data: escalas } = await supabase
+    .from("escala_semanal")
+    .select("id, data_semana, localidade, status")
+    .gte("data_semana", inicio)
+    .lte("data_semana", fim)
+    .order("data_semana");
+
+  if (!escalas || escalas.length === 0) return [];
+
+  // Buscar alocações de todas as escalas do mês
+  const escalaIds = escalas.map((e) => e.id);
+  const { data: alocacoes } = await supabase
+    .from("escala_alocacao")
+    .select("escala_id, funcao, voluntario_id, voluntarios(id, nome, unidade)")
+    .in("escala_id", escalaIds);
+
+  // Agrupar por escala
+  const porEscala = new Map<number, typeof alocacoes>();
+  for (const escala of escalas) {
+    porEscala.set(escala.id, []);
+  }
+  for (const a of alocacoes ?? []) {
+    porEscala.get(a.escala_id)?.push(a);
+  }
+
+  return escalas.map((escala) => ({
+    ...escala,
+    alocacoes: (porEscala.get(escala.id) ?? []).map((a) => {
+      const vol = Array.isArray(a.voluntarios) ? a.voluntarios[0] : a.voluntarios;
+      return {
+        funcao: a.funcao,
+        voluntario_nome: vol?.nome ?? "?",
+        voluntario_unidade: vol?.unidade ?? null,
+      };
+    }),
+  }));
+}
