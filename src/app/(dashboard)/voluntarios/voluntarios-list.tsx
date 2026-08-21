@@ -273,7 +273,7 @@ export default function VoluntariosListClient({
                   Alterar unidade
                 </button>
                 <button type="button" onClick={() => setBulkAcao("migrar_epicom")} className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_epicom" ? "bg-purple-700 text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}>
-                  Definir Epicom
+                   Definir Epicon
                 </button>
                 <button type="button" onClick={() => setBulkAcao("migrar_telefone")} className={`rounded-xl px-4 py-2 text-lg font-medium transition-colors ${bulkAcao === "migrar_telefone" ? "bg-[#2195B9] text-white" : "bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"}`}>
                   Alterar telefone
@@ -307,9 +307,9 @@ export default function VoluntariosListClient({
 
                   {bulkAcao === "migrar_epicom" && (
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor="novo_epicom_bulk" className="text-lg font-medium text-zinc-900">Epicom</label>
+                      <label htmlFor="novo_epicom_bulk" className="text-lg font-medium text-zinc-900">Epicon</label>
                       <select id="novo_epicom_bulk" name="novo_epicom" required className="min-h-12 min-w-[220px] rounded-xl border border-zinc-300 bg-white px-4 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]">
-                        <option value="true">Sim — pode ocupar função Epicom</option>
+                        <option value="true">Sim — pode ocupar função Epicon</option>
                         <option value="false">Não — voluntário comum</option>
                       </select>
                     </div>

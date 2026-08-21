@@ -437,7 +437,7 @@ export async function atualizarVoluntariosEmMassa(
     acao === "desativar" ? "desativado(s)" :
     acao === "migrar_area" ? `migrados para "${overrides.novaArea}"` :
     acao === "migrar_unidade" ? `unidade alterada para "${overrides.novaUnidade}"` :
-    acao === "migrar_epicom" ? `epicom definido como ${overrides.novoEpicom ? "sim" : "não"}` :
+    acao === "migrar_epicom" ? `epicon definido como ${overrides.novoEpicom ? "sim" : "não"}` :
     acao === "migrar_telefone" ? `telefone atualizado` : "";
   const negadosLabel =
     negados > 0

@@ -29,15 +29,16 @@ const FUNCOES: {
   requerDocente?: boolean;
   apenasNaoEpicom?: boolean;
 }[] = [
-  { nome: "Epicom", vagas: 1, requerEpicom: true },
+  { nome: "Epicon", vagas: 1, requerEpicom: true },
+  { nome: "Observador Parapsíquico", vagas: 1 },
+  { nome: "Cronometrista", vagas: 1, apenasNaoEpicom: true },
   { nome: "Energizador 1", vagas: 1, requerDocente: true },
   { nome: "Energizador 2", vagas: 1, apenasNaoEpicom: true },
   { nome: "Energizador 3", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Cronometrista", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Monitoria", vagas: 2, apenasNaoEpicom: true },
+  { nome: "Monitor 1", vagas: 1, apenasNaoEpicom: true },
+  { nome: "Monitor 2", vagas: 1, apenasNaoEpicom: true },
   { nome: "Acoplador 1", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Acoplador 2", vagas: 1, apenasNaoEpicom: true },
-  { nome: "Observador Psíquico", vagas: 1 },
+  { nome: "Acoplador 12", vagas: 1, apenasNaoEpicom: true },
 ];
 
 /** Verifica se um voluntário é elegível para uma função */
@@ -48,14 +49,14 @@ function isElegivel(
 ): boolean {
   if (alocados.has(vol.id)) return false;
 
-  // Restrição Epicom
+  // Restrição Epicon
   if (funcao.requerEpicom && !vol.epicom) return false;
 
   // Restrição Energizador 1 (docente_conscienciologia)
   if (funcao.requerDocente && !vol.atividades.includes("docente_conscienciologia"))
     return false;
 
-  // Funções exclusivas para não-epicom (exceto Observador Psíquico que aceita ambos)
+  // Funções exclusivas para não-epicom (exceto Observador Parapsíquico que aceita ambos)
   if (funcao.apenasNaoEpicom && vol.epicom) return false;
 
   return true;

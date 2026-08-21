@@ -261,9 +261,9 @@ BEGIN
         SELECT ea3.voluntario_id FROM public.escala_ausencia ea3
         WHERE ea3.escala_id = p_escala_id
       )
-      -- Restrição Epicom: só quem tem epicom=true pode ocupar Epicom
+      -- Restrição Epicon: só quem tem epicom=true pode ocupar Epicon
       AND (
-        v_funcao_alocada != 'Epicom'
+        v_funcao_alocada != 'Epicon'
         OR v.epicom = true
       )
       -- Restrição Energizador 1: precisa de docente_conscienciologia
@@ -275,9 +275,9 @@ BEGIN
             AND va.atividade = 'docente_conscienciologia'
         )
       )
-      -- Demais funções: não pode ser epicom (exceto Observador Psíquico)
+      -- Demais funções: não pode ser epicom (exceto Observador Parapsíquico)
       AND (
-        v_funcao_alocada IN ('Epicom', 'Observador Psíquico')
+        v_funcao_alocada IN ('Epicon', 'Observador Parapsíquico')
         OR v.epicom = false
       )
     ORDER BY COALESCE(hf.total, 0), hf.ultima_data NULLS FIRST, v.nome

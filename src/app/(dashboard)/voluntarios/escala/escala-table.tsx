@@ -29,15 +29,16 @@ type Ausencia = {
 };
 
 const FUNCOES_ORDEM = [
-  "Epicom",
+  "Epicon",
+  "Observador Parapsíquico",
+  "Cronometrista",
   "Energizador 1",
   "Energizador 2",
   "Energizador 3",
-  "Cronometrista",
-  "Monitoria",
+  "Monitor 1",
+  "Monitor 2",
   "Acoplador 1",
-  "Acoplador 2",
-  "Observador Psíquico",
+  "Acoplador 12",
 ];
 
 export default function EscalaTable({
