@@ -65,7 +65,7 @@ export default async function EscalaDetalhePage({
   // Buscar alocações com nomes dos voluntários
   const { data: alocacoesRaw } = await supabase
     .from("escala_alocacao")
-    .select("id, funcao, voluntario_id, voluntarios(id, nome)")
+    .select("id, funcao, voluntario_id, voluntarios(id, nome, unidade)")
     .eq("escala_id", escala.id);
 
   const alocacoes = (alocacoesRaw ?? []).map((a) => {
@@ -77,6 +77,7 @@ export default async function EscalaDetalhePage({
       funcao: a.funcao,
       voluntario_id: a.voluntario_id,
       voluntario_nome: vol?.nome ?? "Voluntário removido",
+      voluntario_unidade: vol?.unidade ?? null,
       is_ausente: false,
     };
   });
@@ -84,7 +85,7 @@ export default async function EscalaDetalhePage({
   // Buscar ausências com nomes
   const { data: ausenciasRaw } = await supabase
     .from("escala_ausencia")
-    .select("voluntario_id, motivo, voluntarios(id, nome)")
+    .select("voluntario_id, motivo, voluntarios(id, nome, unidade)")
     .eq("escala_id", escala.id);
 
   const ausencias = (ausenciasRaw ?? []).map((a) => {

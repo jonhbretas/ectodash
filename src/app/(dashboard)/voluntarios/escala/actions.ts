@@ -16,7 +16,7 @@ export type EscalaActionState = {
 
 const criarEscalaSchema = z.object({
   dataSemana: z.string().min(1, "Selecione a data da sexta-feira."),
-  localidade: z.string().optional(),
+  localidade: z.string().min(1, "Selecione a localidade da dinâmica."),
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ export async function criarEscala(
     .from("escala_semanal")
     .select("id")
     .eq("data_semana", parsed.data.dataSemana)
-    .eq("localidade", parsed.data.localidade || "")
+    .eq("localidade", parsed.data.localidade)
     .neq("status", "cancelada")
     .maybeSingle();
 
@@ -177,6 +177,7 @@ export async function gerarAlocacao(
     .eq("escala_id", escalaId);
 
   // Buscar voluntários ativos da localidade
+  // Inclui voluntários CUJA unidade bate com a localidade OU que não têm unidade definida (elegíveis a qualquer localidade)
   let query = supabase
     .from("voluntarios")
     .select("id, nome, epicom, unidade, situacao")
@@ -184,7 +185,7 @@ export async function gerarAlocacao(
     .is("data_saida", null);
 
   if (escala.localidade) {
-    query = query.eq("unidade", escala.localidade);
+    query = query.or(`unidade.eq.${escala.localidade},unidade.is.null`);
   }
 
   const { data: voluntarios } = await query;

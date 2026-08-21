@@ -18,6 +18,7 @@ type Alocacao = {
   funcao: string;
   voluntario_id: number;
   voluntario_nome: string;
+  voluntario_unidade: string | null;
   is_ausente: boolean;
 };
 
@@ -152,6 +153,11 @@ export default function EscalaTable({
                                 <UserX size={16} className="text-red-500" aria-hidden="true" />
                               )}
                               <span>{a.voluntario_nome}</span>
+                              {a.voluntario_unidade && (
+                                <span className="text-sm text-zinc-400 ml-1">
+                                  ({a.voluntario_unidade})
+                                </span>
+                              )}
                               {canManage && status === "rascunho" && (
                                 <div className="flex items-center gap-1 ml-2">
                                   {isAusente ? (

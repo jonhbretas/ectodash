@@ -27,11 +27,14 @@ export default function NovaEscalaForm({
       return;
     }
 
+    if (!localidade) {
+      setError("Selecione a localidade da dinâmica.");
+      return;
+    }
+
     const formData = new FormData();
     formData.set("dataSemana", dataSemana);
-    if (localidade) {
-      formData.set("localidade", localidade);
-    }
+    formData.set("localidade", localidade);
 
     startTransition(async () => {
       const result = await criarEscala(null as never, formData);
@@ -64,16 +67,16 @@ export default function NovaEscalaForm({
 
       <div className="flex flex-col gap-2">
         <Label className="text-lg font-medium text-zinc-700">
-          Localidade (opcional)
+          Localidade da dinâmica *
         </Label>
         <FormSelect
           value={localidade}
           onValueChange={setLocalidade}
-          placeholder="Todas as localidades"
+          placeholder="Selecione a localidade"
           options={localidadeOptions.map((l) => ({ value: l, label: l }))}
         />
         <p className="text-base text-zinc-500">
-          Deixe vazio para criar uma escala geral (todas as localidades).
+          Selecione a cidade onde a dinâmica será realizada. A escala será montada com voluntários dessa localidade.
         </p>
       </div>
 
