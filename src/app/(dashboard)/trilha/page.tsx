@@ -140,48 +140,6 @@ export default async function TrilhaPage({
   );
   const etapaIndex = etapaAtual === -1 ? trail.length - 1 : etapaAtual;
 
-  const voluntarioTabContent = (
-    <>
-      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
-          <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#2195B9] to-[#FDBA2F]" />
-          <div className="flex flex-col gap-1 p-5">
-            <span className="text-sm font-medium text-slate-500">Progresso Geral</span>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">{percentual}%</span>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
-          <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#16a34a] to-[#059669]" />
-          <div className="flex flex-col gap-1 p-5">
-            <span className="text-sm font-medium text-slate-500">Itens Concluídos</span>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">{concluidos}/{totalItens}</span>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
-          <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed]" />
-          <div className="flex flex-col gap-1 p-5">
-            <span className="text-sm font-medium text-slate-500">Etapa Atual</span>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
-              {etapaIndex + 1}/{trail.length}
-            </span>
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
-          <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#FDBA2F] to-[#e5a520]" />
-          <div className="flex flex-col gap-1 p-5">
-            <span className="text-sm font-medium text-slate-500">Próximo Marco</span>
-            <span className="text-lg font-bold tracking-tight text-slate-900">
-              {trail[etapaIndex]?.titulo ?? "Trilha Completa"}
-            </span>
-          </div>
-        </div>
-      </div>
-      <TrailFlowchart stages={trail} etapaAtual={etapaIndex} />
-    </>
-  );
-
-  const docenteTabContent = <TrailDocenteFlowchart />;
-
   return (
     <PageContainer>
       <header className="flex w-full flex-wrap items-start justify-between gap-6">
@@ -198,10 +156,49 @@ export default async function TrilhaPage({
 
       <TrailTabs
         tabs={[
-          { id: "voluntario", label: "Trilha Voluntário", icon: Users, content: voluntarioTabContent },
-          { id: "docente", label: "Trilha Docente", icon: GraduationCapIcon, content: docenteTabContent },
+          { id: "voluntario", label: "Trilha Voluntário", icon: Users },
+          { id: "docente", label: "Trilha Docente", icon: GraduationCapIcon },
         ]}
-      />
+      >
+        <div>
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
+              <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#2195B9] to-[#FDBA2F]" />
+              <div className="flex flex-col gap-1 p-5">
+                <span className="text-sm font-medium text-slate-500">Progresso Geral</span>
+                <span className="text-2xl font-bold tracking-tight text-slate-900">{percentual}%</span>
+              </div>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
+              <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#16a34a] to-[#059669]" />
+              <div className="flex flex-col gap-1 p-5">
+                <span className="text-sm font-medium text-slate-500">Itens Concluídos</span>
+                <span className="text-2xl font-bold tracking-tight text-slate-900">{concluidos}/{totalItens}</span>
+              </div>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
+              <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed]" />
+              <div className="flex flex-col gap-1 p-5">
+                <span className="text-sm font-medium text-slate-500">Etapa Atual</span>
+                <span className="text-2xl font-bold tracking-tight text-slate-900">
+                  {etapaIndex + 1}/{trail.length}
+                </span>
+              </div>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
+              <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#FDBA2F] to-[#e5a520]" />
+              <div className="flex flex-col gap-1 p-5">
+                <span className="text-sm font-medium text-slate-500">Próximo Marco</span>
+                <span className="text-lg font-bold tracking-tight text-slate-900">
+                  {trail[etapaIndex]?.titulo ?? "Trilha Completa"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <TrailFlowchart stages={trail} etapaAtual={etapaIndex} />
+        </div>
+        <TrailDocenteFlowchart />
+      </TrailTabs>
     </PageContainer>
   );
 }

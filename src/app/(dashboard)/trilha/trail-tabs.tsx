@@ -5,16 +5,22 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type TrailTab = {
+type TrailTab = {
   id: string;
   label: string;
   icon: LucideIcon;
-  content: ReactNode;
 };
 
-export default function TrailTabs({ tabs }: { tabs: TrailTab[] }) {
+export default function TrailTabs({
+  tabs,
+  children,
+}: {
+  tabs: TrailTab[];
+  children: ReactNode[];
+}) {
   const [activeId, setActiveId] = useState(tabs[0]?.id ?? "");
-  const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
+  const activeIndex = tabs.findIndex((t) => t.id === activeId);
+  const active = tabs[activeIndex] ?? tabs[0];
 
   if (!active) return null;
 
@@ -51,14 +57,20 @@ export default function TrailTabs({ tabs }: { tabs: TrailTab[] }) {
         })}
       </div>
 
-      <div
-        id={`trail-tab-panel-${active.id}`}
-        role="tabpanel"
-        aria-labelledby={`trail-tab-trigger-${active.id}`}
-        className="flex w-full flex-col gap-8"
-      >
-        {active.content}
-      </div>
+      {tabs.map((tab, i) => (
+        <div
+          key={tab.id}
+          id={`trail-tab-panel-${tab.id}`}
+          role="tabpanel"
+          aria-labelledby={`trail-tab-trigger-${tab.id}`}
+          className={cn(
+            "flex w-full flex-col gap-8",
+            tab.id !== active.id && "hidden"
+          )}
+        >
+          {children[i]}
+        </div>
+      ))}
     </div>
   );
 }
