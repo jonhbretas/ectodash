@@ -33,6 +33,11 @@ function nomeBaseFuncao(funcao: string): string {
   return funcao.replace(/ \d+$/, "");
 }
 
+function monitorLabel(funcao: string): string | null {
+  const m = funcao.match(/^Monitoria (\d+)$/);
+  return m ? `M${m[1]}` : null;
+}
+
 export default async function EscalaMensalPage({
   searchParams,
 }: {
@@ -66,14 +71,14 @@ export default async function EscalaMensalPage({
   });
 
   // Mapear alocações por data e função
-  // chave: "dataSemana:nomeBaseFuncao" -> nomes dos voluntários
-  const alocacoesMap = new Map<string, string[]>();
+  // chave: "dataSemana:nomeBaseFuncao" -> [{funcao, nome}]
+  const alocacoesMap = new Map<string, { funcao: string; nome: string }[]>();
   for (const escala of escalas) {
     for (const a of escala.alocacoes) {
       const base = nomeBaseFuncao(a.funcao);
       const key = `${escala.data_semana}:${base}`;
       const lista = alocacoesMap.get(key) ?? [];
-      lista.push(a.voluntario_nome);
+      lista.push({ funcao: a.funcao, nome: a.voluntario_nome });
       alocacoesMap.set(key, lista);
     }
   }
@@ -191,12 +196,17 @@ export default async function EscalaMensalPage({
                           <span className="text-sm text-zinc-300">—</span>
                         ) : (
                           <div className="flex flex-col items-center gap-0.5">
-                            {nomes.map((nome, idx) => (
+                            {nomes.map((item, idx) => (
                               <span
                                 key={idx}
                                 className="rounded-md bg-[#2195B9]/10 px-2 py-0.5 text-sm font-medium text-[#2195B9]"
                               >
-                                {nome}
+                                {monitorLabel(item.funcao) && (
+                                  <span className="font-semibold">
+                                    {monitorLabel(item.funcao)}{" "}
+                                  </span>
+                                )}
+                                {item.nome}
                               </span>
                             ))}
                           </div>
