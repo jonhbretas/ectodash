@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import { GraduationCap, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const TAB_ICONS = {
+  users: Users,
+  graduation: GraduationCap,
+} as const;
 
 type TrailTab = {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: keyof typeof TAB_ICONS;
 };
 
 export default function TrailTabs({
@@ -33,7 +38,7 @@ export default function TrailTabs({
       >
         {tabs.map((tab) => {
           const selected = tab.id === active.id;
-          const Icon = tab.icon;
+          const Icon = TAB_ICONS[tab.icon];
           return (
             <button
               key={tab.id}

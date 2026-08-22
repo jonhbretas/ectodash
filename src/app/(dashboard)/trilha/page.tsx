@@ -1,4 +1,4 @@
-import { Map, Users, GraduationCapIcon } from "lucide-react";
+import { Map } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import TrailFlowchart from "./trail-flowchart";
@@ -156,8 +156,8 @@ export default async function TrilhaPage({
 
       <TrailTabs
         tabs={[
-          { id: "voluntario", label: "Trilha Voluntário", icon: Users },
-          { id: "docente", label: "Trilha Docente", icon: GraduationCapIcon },
+          { id: "voluntario", label: "Trilha Voluntário", icon: "users" },
+          { id: "docente", label: "Trilha Docente", icon: "graduation" },
         ]}
       >
         <div>
