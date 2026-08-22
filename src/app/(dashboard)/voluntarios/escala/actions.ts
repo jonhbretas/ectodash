@@ -262,17 +262,6 @@ export async function gerarAlocacao(
     };
   }
 
-  // Só substitui o resultado anterior depois de confirmar que existe um pool
-  // ativo para gerar a nova escala.
-  const { error: limpezaError } = await supabase
-    .from("escala_alocacao")
-    .delete()
-    .eq("escala_id", escalaId);
-  if (limpezaError) {
-    console.error("gerarAlocacao: failed to clear allocations", limpezaError);
-    return { ok: false, message: "Não foi possível preparar o novo sorteio." };
-  }
-
   // Buscar histórico de funções (round-robin ponderado)
   const { data: historico } = await supabase.rpc("historico_funcoes_voluntario", {
     p_localidade: escala.localidade || null,
@@ -402,6 +391,16 @@ export async function gerarAlocacao(
 
   if (alocacoes.length === 0) {
     return { ok: false, message: "Não foi possível alocar nenhum voluntário." };
+  }
+
+  // Limpar alocações antigas só agora — evita deixar a escala vazia se a geração falhar.
+  const { error: limpezaError } = await supabase
+    .from("escala_alocacao")
+    .delete()
+    .eq("escala_id", escalaId);
+  if (limpezaError) {
+    console.error("gerarAlocacao: failed to clear allocations", limpezaError);
+    return { ok: false, message: "Não foi possível preparar o novo sorteio." };
   }
 
   // Inserir alocações
