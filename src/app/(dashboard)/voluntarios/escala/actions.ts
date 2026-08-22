@@ -1081,23 +1081,8 @@ export async function listarVoluntariosElegiveis(
 
   if (!escala) return [];
 
-  const { data: localidades } = escala.localidade
-    ? await supabase.from("voluntario_localidades").select("id, nome")
-    : { data: [] };
-  const localidadeId = resolverLocalidadeId(
-    escala.localidade,
-    localidades ?? []
-  );
-  const { data: vinculos } =
-    localidadeId !== null
-      ? await supabase
-          .from("voluntario_localidades_vinculo")
-          .select("voluntario_id")
-          .eq("localidade_id", localidadeId)
-      : { data: [] };
-  const vinculados = new Set((vinculos ?? []).map((v) => v.voluntario_id));
-
-  // Voluntários ativos
+  // Voluntários ativos — alocação manual é aberta por localidade para
+  // permitir flexibilidade (qualquer cidade pode cobrir a vaga).
   const { data: voluntarios } = await supabase
     .from("voluntarios")
     .select("id, nome, epicom, unidade, localidade_id")
@@ -1124,13 +1109,8 @@ export async function listarVoluntariosElegiveis(
 
   const funcaoBase = funcao.replace(/ \d+$/, "");
 
-  // Filtrar elegíveis
-  const elegiveis = filtrarVoluntariosPorLocalidade(
-    voluntarios,
-    escala.localidade,
-    localidades ?? [],
-    vinculados
-  ).filter((v) => {
+  // Filtrar elegíveis — sem filtro de localidade no manual (aberto)
+  const elegiveis = voluntarios.filter((v) => {
     // Não pode estar alocado ou ausente
     if (alocadosSet.has(v.id) || ausentesSet.has(v.id)) return false;
 
