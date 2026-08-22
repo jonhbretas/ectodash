@@ -1,7 +1,9 @@
-import { Map, BookOpen, GraduationCap, Lightbulb, Users, Trophy } from "lucide-react";
+import { Map, Users, GraduationCapIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import TrailFlowchart from "./trail-flowchart";
+import TrailDocenteFlowchart from "./trail-docente-flowchart";
+import TrailTabs from "./trail-tabs";
 
 type TrailStage = {
   id: string;
@@ -15,14 +17,6 @@ type TrailStage = {
     detalhe?: string;
   }[];
 };
-
-const STAGE_ICONS = {
-  book: BookOpen,
-  award: GraduationCap,
-  lightbulb: Lightbulb,
-  users: Users,
-  trophy: Trophy,
-} as const;
 
 function buildTrail(voluntarioId: number | null): TrailStage[] {
   return [
@@ -146,20 +140,8 @@ export default async function TrilhaPage({
   );
   const etapaIndex = etapaAtual === -1 ? trail.length - 1 : etapaAtual;
 
-  return (
-    <PageContainer>
-      <header className="flex w-full flex-wrap items-start justify-between gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
-            <Map size={30} aria-hidden="true" className="text-[#2195B9]" />
-            Trilha do Voluntário
-          </h1>
-          <p className="text-xl text-zinc-500">
-            Progressão de conhecimento de <span className="font-medium text-[#2195B9]">{nomeVoluntario}</span>
-          </p>
-        </div>
-      </header>
-
+  const voluntarioTabContent = (
+    <>
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
           <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#2195B9] to-[#FDBA2F]" />
@@ -194,8 +176,32 @@ export default async function TrilhaPage({
           </div>
         </div>
       </div>
-
       <TrailFlowchart stages={trail} etapaAtual={etapaIndex} />
+    </>
+  );
+
+  const docenteTabContent = <TrailDocenteFlowchart />;
+
+  return (
+    <PageContainer>
+      <header className="flex w-full flex-wrap items-start justify-between gap-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
+            <Map size={30} aria-hidden="true" className="text-[#2195B9]" />
+            Trilha do Voluntário
+          </h1>
+          <p className="text-xl text-zinc-500">
+            Progressão de conhecimento de <span className="font-medium text-[#2195B9]">{nomeVoluntario}</span>
+          </p>
+        </div>
+      </header>
+
+      <TrailTabs
+        tabs={[
+          { id: "voluntario", label: "Trilha Voluntário", icon: Users, content: voluntarioTabContent },
+          { id: "docente", label: "Trilha Docente", icon: GraduationCapIcon, content: docenteTabContent },
+        ]}
+      />
     </PageContainer>
   );
 }
