@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import {
+  filtrarVoluntariosPorLocalidade,
+  resolverLocalidadeId,
+} from "@/lib/escala-localidade";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -177,7 +181,7 @@ export async function gerarAlocacao(
   // Buscar voluntários ativos
   const { data: voluntarios } = await supabase
     .from("voluntarios")
-    .select("id, nome, epicom, unidade")
+    .select("id, nome, epicom, unidade, localidade_id")
     .eq("ativo", true)
     .is("data_saida", null);
 
@@ -185,32 +189,38 @@ export async function gerarAlocacao(
     return { ok: false, message: "Nenhum voluntário ativo encontrado." };
   }
 
-  // Buscar IDs dos voluntários vinculados à localidade da escala (via tabela pivô)
-  // Se não encontrar vínculos, usa todos os voluntários ativos (fallback)
-  let localidadeVoluntariosIds: number[] | null = null;
-  if (escala.localidade) {
-    const { data: localidadeRegistro } = await supabase
-      .from("voluntario_localidades")
-      .select("id")
-      .eq("nome", escala.localidade)
-      .maybeSingle();
+  // A localidade_id cobre cadastros normalizados; unidade cobre os legados;
+  // vínculos explícitos continuam permitindo que um voluntário frequente mais
+  // de uma localidade.
+  const { data: localidades } = escala.localidade
+    ? await supabase.from("voluntario_localidades").select("id, nome")
+    : { data: [] };
+  const localidadeId = resolverLocalidadeId(
+    escala.localidade,
+    localidades ?? []
+  );
+  const { data: vinculos } =
+    localidadeId !== null
+      ? await supabase
+          .from("voluntario_localidades_vinculo")
+          .select("voluntario_id")
+          .eq("localidade_id", localidadeId)
+      : { data: [] };
+  const vinculados = new Set((vinculos ?? []).map((v) => v.voluntario_id));
 
-    if (localidadeRegistro) {
-      const { data: vinculos } = await supabase
-        .from("voluntario_localidades_vinculo")
-        .select("voluntario_id")
-        .eq("localidade_id", localidadeRegistro.id);
+  const voluntariosFiltrados = filtrarVoluntariosPorLocalidade(
+    voluntarios,
+    escala.localidade,
+    localidades ?? [],
+    vinculados
+  );
 
-      // Só aplica o filtro se houver vínculos cadastrados
-      if (vinculos && vinculos.length > 0) {
-        localidadeVoluntariosIds = vinculos.map((v) => v.voluntario_id);
-      }
-    }
+  if (voluntariosFiltrados.length === 0) {
+    return {
+      ok: false,
+      message: "Nenhum voluntário ativo encontrado para esta localidade.",
+    };
   }
-
-  const voluntariosFiltrados = localidadeVoluntariosIds !== null
-    ? voluntarios.filter((v) => localidadeVoluntariosIds!.includes(v.id))
-    : voluntarios;
 
   // Buscar histórico de funções (round-robin ponderado)
   const { data: historico } = await supabase.rpc("historico_funcoes_voluntario", {
@@ -1071,33 +1081,26 @@ export async function listarVoluntariosElegiveis(
 
   if (!escala) return [];
 
-  // Buscar IDs dos voluntários vinculados à localidade da escala (via tabela pivô)
-  // Se não encontrar vínculos, usa todos os voluntários ativos (fallback)
-  let localidadeVoluntariosIds: number[] | null = null;
-  if (escala.localidade) {
-    const { data: localidadeRegistro } = await supabase
-      .from("voluntario_localidades")
-      .select("id")
-      .eq("nome", escala.localidade)
-      .maybeSingle();
-
-    if (localidadeRegistro) {
-      const { data: vinculos } = await supabase
-        .from("voluntario_localidades_vinculo")
-        .select("voluntario_id")
-        .eq("localidade_id", localidadeRegistro.id);
-
-      // Só aplica o filtro se houver vínculos cadastrados
-      if (vinculos && vinculos.length > 0) {
-        localidadeVoluntariosIds = vinculos.map((v) => v.voluntario_id);
-      }
-    }
-  }
+  const { data: localidades } = escala.localidade
+    ? await supabase.from("voluntario_localidades").select("id, nome")
+    : { data: [] };
+  const localidadeId = resolverLocalidadeId(
+    escala.localidade,
+    localidades ?? []
+  );
+  const { data: vinculos } =
+    localidadeId !== null
+      ? await supabase
+          .from("voluntario_localidades_vinculo")
+          .select("voluntario_id")
+          .eq("localidade_id", localidadeId)
+      : { data: [] };
+  const vinculados = new Set((vinculos ?? []).map((v) => v.voluntario_id));
 
   // Voluntários ativos
   const { data: voluntarios } = await supabase
     .from("voluntarios")
-    .select("id, nome, epicom, unidade")
+    .select("id, nome, epicom, unidade, localidade_id")
     .eq("ativo", true)
     .is("data_saida", null);
 
@@ -1122,14 +1125,14 @@ export async function listarVoluntariosElegiveis(
   const funcaoBase = funcao.replace(/ \d+$/, "");
 
   // Filtrar elegíveis
-  const elegiveis = voluntarios.filter((v) => {
+  const elegiveis = filtrarVoluntariosPorLocalidade(
+    voluntarios,
+    escala.localidade,
+    localidades ?? [],
+    vinculados
+  ).filter((v) => {
     // Não pode estar alocado ou ausente
     if (alocadosSet.has(v.id) || ausentesSet.has(v.id)) return false;
-
-    // Filtrar por localidade se definida — voluntário precisa estar vinculado à localidade da escala
-    if (localidadeVoluntariosIds !== null && !localidadeVoluntariosIds.includes(v.id)) {
-      return false;
-    }
 
     // Epicon requer epicom
     if (funcaoBase === "Epicon" && !v.epicom) return false;
