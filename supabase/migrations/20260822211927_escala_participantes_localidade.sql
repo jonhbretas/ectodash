@@ -1,0 +1,3 @@
+-- Migration marker for the participant-selection rollout.
+-- The Data API grant is in the following migration because this marker had
+-- already been applied remotely before the grant was finalized.

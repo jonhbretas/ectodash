@@ -8,6 +8,7 @@ import PageContainer from "../../../page-container";
 import EscalaStatusBadge from "../escala-status-badge";
 import EscalaTable from "../escala-table";
 import GerarEscalaButton from "../gerar-escala-button";
+import { EditarParticipantesButton } from "../participantes-localidade-dialog";
 import DisponibilidadePanel from "../disponibilidade-panel";
 import AlertasRepeticaoPanel from "../alertas-repeticao-panel";
 
@@ -167,7 +168,10 @@ export default async function EscalaDetalhePage({
         </div>
 
         {canManage && escala.status === "rascunho" && (
-          <GerarEscalaButton escalaId={escala.id} />
+          <div className="flex flex-wrap items-center gap-3">
+            <EditarParticipantesButton escalaId={escala.id} />
+            <GerarEscalaButton escalaId={escala.id} />
+          </div>
         )}
       </header>
 

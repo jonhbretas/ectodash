@@ -14,6 +14,25 @@ export type EscalaActionState = {
   ok: boolean;
   message: string;
   id?: number | null;
+  needsParticipants?: boolean;
+};
+
+export type ParticipanteLocalidade = {
+  id: number;
+  nome: string;
+  unidade: string | null;
+  ativo: boolean;
+  selecionado?: boolean;
+};
+
+export type ParticipantesLocalidadeState = {
+  ok: boolean;
+  message: string;
+  localidade: string | null;
+  participantes: ParticipanteLocalidade[];
+  selecionados: number[];
+  configurado: boolean;
+  novo?: ParticipanteLocalidade;
 };
 
 // ── Schemas ──────────────────────────────────────────────────────────
@@ -172,11 +191,51 @@ export async function gerarAlocacao(
     return { ok: false, message: "Só é possível gerar alocação em escalas em rascunho." };
   }
 
-  // Limpar alocações existentes
-  await supabase
-    .from("escala_alocacao")
-    .delete()
-    .eq("escala_id", escalaId);
+  // A lista de participantes é configurada uma vez por localidade. Sem ela,
+  // o primeiro sorteio precisa voltar para a tela para que o coordenador
+  // confirme quem realmente participa da DIP.
+  let participantesIds: Set<number> | null = null;
+  if (escala.localidade) {
+    const { data: localidades, error: localidadesError } = await supabase
+      .from("voluntario_localidades")
+      .select("id, nome");
+
+    if (localidadesError) {
+      console.error("gerarAlocacao: failed to load localidades", localidadesError);
+      return { ok: false, message: "Não foi possível carregar as localidades." };
+    }
+
+    const localidadeId = resolverLocalidadeId(escala.localidade, localidades ?? []);
+    if (localidadeId === null) {
+      return {
+        ok: false,
+        message: "A localidade desta escala não está cadastrada.",
+      };
+    }
+
+    const { data: vinculos, error: vinculosError } = await supabase
+      .from("voluntario_localidades_vinculo")
+      .select("voluntario_id")
+      .eq("localidade_id", localidadeId);
+
+    if (vinculosError) {
+      console.error("gerarAlocacao: failed to load participantes", vinculosError);
+      return {
+        ok: false,
+        message: "Não foi possível carregar os participantes da localidade.",
+      };
+    }
+
+    if (!vinculos || vinculos.length === 0) {
+      return {
+        ok: false,
+        message: "Selecione os participantes da DIP antes do primeiro sorteio.",
+        needsParticipants: true,
+      };
+    }
+
+    participantesIds = new Set(vinculos.map((v) => v.voluntario_id));
+  }
 
   // Buscar voluntários ativos
   const { data: voluntarios } = await supabase
@@ -189,37 +248,29 @@ export async function gerarAlocacao(
     return { ok: false, message: "Nenhum voluntário ativo encontrado." };
   }
 
-  // A localidade_id cobre cadastros normalizados; unidade cobre os legados;
-  // vínculos explícitos continuam permitindo que um voluntário frequente mais
-  // de uma localidade.
-  const { data: localidades } = escala.localidade
-    ? await supabase.from("voluntario_localidades").select("id, nome")
-    : { data: [] };
-  const localidadeId = resolverLocalidadeId(
-    escala.localidade,
-    localidades ?? []
-  );
-  const { data: vinculos } =
-    localidadeId !== null
-      ? await supabase
-          .from("voluntario_localidades_vinculo")
-          .select("voluntario_id")
-          .eq("localidade_id", localidadeId)
-      : { data: [] };
-  const vinculados = new Set((vinculos ?? []).map((v) => v.voluntario_id));
-
-  const voluntariosFiltrados = filtrarVoluntariosPorLocalidade(
-    voluntarios,
-    escala.localidade,
-    localidades ?? [],
-    vinculados
-  );
+  // Depois da confirmação inicial, somente os participantes salvos para a
+  // localidade podem entrar no sorteio. Escalas antigas sem localidade mantêm
+  // o comportamento anterior, usando todos os voluntários ativos.
+  const voluntariosFiltrados = participantesIds
+    ? voluntarios.filter((voluntario) => participantesIds!.has(voluntario.id))
+    : voluntarios;
 
   if (voluntariosFiltrados.length === 0) {
     return {
       ok: false,
       message: "Nenhum voluntário ativo encontrado para esta localidade.",
     };
+  }
+
+  // Só substitui o resultado anterior depois de confirmar que existe um pool
+  // ativo para gerar a nova escala.
+  const { error: limpezaError } = await supabase
+    .from("escala_alocacao")
+    .delete()
+    .eq("escala_id", escalaId);
+  if (limpezaError) {
+    console.error("gerarAlocacao: failed to clear allocations", limpezaError);
+    return { ok: false, message: "Não foi possível preparar o novo sorteio." };
   }
 
   // Buscar histórico de funções (round-robin ponderado)
@@ -738,6 +789,352 @@ async function verificarPermissaoEscala(supabase: Awaited<ReturnType<typeof crea
   }
 
   return { ok: true as const, user };
+}
+
+type ContextoParticipantes = {
+  localidade: string | null;
+  status: string;
+  localidadeId: number | null;
+  vinculados: Set<number>;
+  participantes: ParticipanteLocalidade[];
+};
+
+type ResultadoContextoParticipantes =
+  | { ok: true; contexto: ContextoParticipantes }
+  | { ok: false; message: string };
+
+const participantesInitial: ParticipantesLocalidadeState = {
+  ok: false,
+  message: "",
+  localidade: null,
+  participantes: [],
+  selecionados: [],
+  configurado: false,
+};
+
+const nomeParticipanteSchema = z
+  .string()
+  .trim()
+  .min(2, "Digite o nome do voluntário.")
+  .max(200, "O nome deve ter no máximo 200 caracteres.");
+
+function normalizarNomeParticipante(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function erroParticipantes(message: string): ParticipantesLocalidadeState {
+  return { ...participantesInitial, message };
+}
+
+async function carregarContextoParticipantes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  escalaId: number
+): Promise<ResultadoContextoParticipantes> {
+  const { data: escala, error: escalaError } = await supabase
+    .from("escala_semanal")
+    .select("localidade, status")
+    .eq("id", escalaId)
+    .maybeSingle();
+
+  if (escalaError || !escala) {
+    return { ok: false, message: "Escala não encontrada." };
+  }
+
+  const { data: localidades, error: localidadesError } = escala.localidade
+    ? await supabase.from("voluntario_localidades").select("id, nome")
+    : { data: [], error: null };
+
+  if (localidadesError) {
+    console.error("carregarContextoParticipantes: localidades failed", localidadesError);
+    return { ok: false, message: "Não foi possível carregar as localidades." };
+  }
+
+  const localidadeId = resolverLocalidadeId(
+    escala.localidade,
+    localidades ?? []
+  );
+
+  let vinculos: { voluntario_id: number }[] = [];
+  if (localidadeId !== null) {
+    const vinculosResult = await supabase
+      .from("voluntario_localidades_vinculo")
+      .select("voluntario_id")
+      .eq("localidade_id", localidadeId);
+
+    if (vinculosResult.error) {
+      console.error(
+        "carregarContextoParticipantes: participantes failed",
+        vinculosResult.error
+      );
+      return {
+        ok: false,
+        message: "Não foi possível carregar os participantes da localidade.",
+      };
+    }
+    vinculos = vinculosResult.data ?? [];
+  }
+
+  const { data: voluntarios, error: voluntariosError } = await supabase
+    .from("voluntarios")
+    .select("id, nome, unidade, localidade_id, ativo, data_saida")
+    .order("nome");
+
+  if (voluntariosError) {
+    console.error(
+      "carregarContextoParticipantes: voluntarios failed",
+      voluntariosError
+    );
+    return { ok: false, message: "Não foi possível carregar os voluntários." };
+  }
+
+  const vinculados = new Set(vinculos.map((v) => v.voluntario_id));
+  const candidatos = filtrarVoluntariosPorLocalidade(
+    voluntarios ?? [],
+    escala.localidade,
+    localidades ?? [],
+    vinculados
+  ).filter(
+    (voluntario) =>
+      (voluntario.ativo && !voluntario.data_saida) ||
+      vinculados.has(voluntario.id)
+  );
+
+  return {
+    ok: true,
+    contexto: {
+      localidade: escala.localidade,
+      status: escala.status,
+      localidadeId,
+      vinculados,
+      participantes: candidatos.map((voluntario) => ({
+        id: voluntario.id,
+        nome: voluntario.nome,
+        unidade: voluntario.unidade,
+        ativo: voluntario.ativo && !voluntario.data_saida,
+        selecionado: vinculados.has(voluntario.id),
+      })),
+    },
+  };
+}
+
+/** Listar participantes atuais e candidatos para a configuração da localidade. */
+export async function buscarParticipantesLocalidade(
+  escalaId: number
+): Promise<ParticipantesLocalidadeState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return erroParticipantes(auth.message);
+
+  const resultado = await carregarContextoParticipantes(supabase, escalaId);
+  if (!resultado.ok) return erroParticipantes(resultado.message);
+
+  const { contexto } = resultado;
+  return {
+    ok: true,
+    message: "",
+    localidade: contexto.localidade,
+    participantes: contexto.participantes,
+    selecionados: [...contexto.vinculados],
+    configurado: contexto.vinculados.size > 0,
+  };
+}
+
+/** Substituir os participantes da DIP de uma localidade. */
+export async function salvarParticipantesLocalidade(
+  escalaId: number,
+  voluntarioIds: number[]
+): Promise<ParticipantesLocalidadeState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return erroParticipantes(auth.message);
+
+  const ids = [
+    ...new Set(
+      (Array.isArray(voluntarioIds) ? voluntarioIds : []).filter(
+        (id) => Number.isInteger(id) && id > 0
+      )
+    ),
+  ];
+  if (ids.length === 0) {
+    return erroParticipantes("Selecione ao menos um participante da DIP.");
+  }
+
+  const resultado = await carregarContextoParticipantes(supabase, escalaId);
+  if (!resultado.ok) return erroParticipantes(resultado.message);
+
+  const { contexto } = resultado;
+  if (contexto.status !== "rascunho") {
+    return erroParticipantes(
+      "Os participantes só podem ser editados enquanto a escala está em rascunho."
+    );
+  }
+  if (contexto.localidadeId === null) {
+    return erroParticipantes("A localidade desta escala não está cadastrada.");
+  }
+
+  const candidatos = new Set(contexto.participantes.map((p) => p.id));
+  const idInvalido = ids.find((id) => !candidatos.has(id));
+  if (idInvalido !== undefined) {
+    return erroParticipantes(
+      "Um dos participantes selecionados não pertence à localidade. Atualize a lista e tente novamente."
+    );
+  }
+
+  if (!contexto.participantes.some(
+    (participante) => participante.ativo && ids.includes(participante.id)
+  )) {
+    return erroParticipantes("Selecione ao menos um participante ativo da DIP.");
+  }
+
+  const selecionados = new Set(ids);
+  const paraInserir = ids
+    .filter((id) => !contexto.vinculados.has(id))
+    .map((voluntario_id) => ({
+      voluntario_id,
+      localidade_id: contexto.localidadeId!,
+    }));
+
+  if (paraInserir.length > 0) {
+    const { error } = await supabase
+      .from("voluntario_localidades_vinculo")
+      .insert(paraInserir);
+    if (error) {
+      console.error("salvarParticipantesLocalidade: insert failed", error);
+      return erroParticipantes("Não foi possível salvar os participantes.");
+    }
+  }
+
+  const paraRemover = [...contexto.vinculados].filter(
+    (id) => !selecionados.has(id)
+  );
+  if (paraRemover.length > 0) {
+    const { error } = await supabase
+      .from("voluntario_localidades_vinculo")
+      .delete()
+      .eq("localidade_id", contexto.localidadeId)
+      .in("voluntario_id", paraRemover);
+    if (error) {
+      console.error("salvarParticipantesLocalidade: delete failed", error);
+      return erroParticipantes("Não foi possível remover os participantes antigos.");
+    }
+  }
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return {
+    ok: true,
+    message: `${ids.length} participante${ids.length === 1 ? "" : "s"} salvo${ids.length === 1 ? "" : "s"}.`,
+    localidade: contexto.localidade,
+    participantes: contexto.participantes.map((participante) => ({
+      ...participante,
+      selecionado: selecionados.has(participante.id),
+    })),
+    selecionados: ids,
+    configurado: true,
+  };
+}
+
+/** Criar um cadastro mínimo e incluí-lo na lista de participantes da DIP. */
+export async function adicionarNovoParticipanteLocalidade(
+  escalaId: number,
+  nome: string
+): Promise<ParticipantesLocalidadeState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return erroParticipantes(auth.message);
+
+  const parsedNome = nomeParticipanteSchema.safeParse(nome);
+  if (!parsedNome.success) {
+    return erroParticipantes(parsedNome.error.issues[0]?.message ?? "Nome inválido.");
+  }
+
+  const resultado = await carregarContextoParticipantes(supabase, escalaId);
+  if (!resultado.ok) return erroParticipantes(resultado.message);
+
+  const { contexto } = resultado;
+  if (contexto.status !== "rascunho") {
+    return erroParticipantes(
+      "Novos participantes só podem ser adicionados enquanto a escala está em rascunho."
+    );
+  }
+  if (contexto.localidadeId === null || !contexto.localidade) {
+    return erroParticipantes("A localidade desta escala não está cadastrada.");
+  }
+
+  const nomeNormalizado = normalizarNomeParticipante(parsedNome.data);
+  const existente = contexto.participantes.find(
+    (participante) => normalizarNomeParticipante(participante.nome) === nomeNormalizado
+  );
+
+  if (existente) {
+    if (!existente.ativo) {
+      return erroParticipantes("Já existe um cadastro inativo com esse nome.");
+    }
+    return {
+      ok: true,
+      message: "O voluntário já estava no sistema e foi incluído na seleção.",
+      localidade: contexto.localidade,
+      participantes: contexto.participantes.map((participante) => ({
+        ...participante,
+        selecionado: participante.id === existente.id || participante.selecionado,
+      })),
+      selecionados: [...new Set([...contexto.vinculados, existente.id])],
+      configurado: true,
+      novo: { ...existente, selecionado: true },
+    };
+  }
+
+  // O cadastro rápido não cria conta de acesso. Ele apenas cria a linha do
+  // roster, que depois pode ser completada na tela de voluntários.
+  const { data: novoId, error: cadastroError } = await supabase.rpc(
+    "criar_voluntario",
+    {
+      p_nome: parsedNome.data,
+      p_codigo_pf: null,
+      p_unidade: contexto.localidade,
+      p_org_depto: "ECTOLAB \\ Paratecnológico \\ DIP",
+      p_funcao: "Participante DIP",
+      p_data_inicio: null,
+      p_data_saida: null,
+      p_obs: "Cadastro rápido adicionado à lista de participantes da DIP.",
+      p_area_atuacao: "Paratecnológico - DIP",
+      p_papel: "voluntario_comum",
+      p_areas_lideradas: [],
+      p_telefone1: null,
+      p_telefone2: null,
+    }
+  );
+
+  const novoVoluntarioId = Number(novoId);
+  if (cadastroError || !Number.isInteger(novoVoluntarioId) || novoVoluntarioId <= 0) {
+    console.error("adicionarNovoParticipanteLocalidade: roster failed", cadastroError);
+    return erroParticipantes(
+      "Não foi possível cadastrar o novo participante. Verifique suas permissões."
+    );
+  }
+
+  const novo: ParticipanteLocalidade = {
+    id: novoVoluntarioId,
+    nome: parsedNome.data,
+    unidade: contexto.localidade,
+    ativo: true,
+    selecionado: true,
+  };
+  revalidatePath("/voluntarios");
+  return {
+    ok: true,
+    message: "Novo participante adicionado à seleção.",
+    localidade: contexto.localidade,
+    participantes: [...contexto.participantes, novo],
+    selecionados: [...new Set([...contexto.vinculados, novo.id])],
+    configurado: true,
+    novo,
+  };
 }
 
 /** Alocar voluntário manualmente em uma função */
