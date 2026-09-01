@@ -766,7 +766,7 @@ export async function buscarEscalasMes(ano: number, mes: number) {
   const escalaIds = escalas.map((e) => e.id);
   const { data: alocacoes } = await supabase
     .from("escala_alocacao")
-    .select("escala_id, funcao, voluntario_id, voluntarios(id, nome, unidade)")
+    .select("escala_id, funcao, voluntario_id, voluntarios!escala_alocacao_voluntario_id_fkey(id, nome, unidade)")
     .in("escala_id", escalaIds);
 
   // Agrupar por escala

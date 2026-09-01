@@ -74,10 +74,10 @@ export default async function EscalaDetalhePage({
     notFound();
   }
 
-  // Buscar alocações com nomes dos voluntários
+  // Buscar alocações com nomes dos voluntários (FK explícita: há 2 FKs para voluntarios)
   const { data: alocacoesRaw } = await supabase
     .from("escala_alocacao")
-    .select("id, funcao, voluntario_id, efetivado, substituido_por, voluntarios(id, nome, unidade)")
+    .select("id, funcao, voluntario_id, efetivado, substituido_por, voluntarios!escala_alocacao_voluntario_id_fkey(id, nome, unidade)")
     .eq("escala_id", escala.id);
 
   const alocacoes = (alocacoesRaw ?? []).map((a) => {
