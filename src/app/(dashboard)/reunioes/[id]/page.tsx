@@ -67,6 +67,8 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
     localidadesResult,
     pautasDiscutidasResult,
     pautasPendentesResult,
+    todasAtasResult,
+    pautasSolicitadasResult,
   ] = await Promise.all([
       supabase
         .from("reunioes")
@@ -96,6 +98,15 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
         .from("pautas")
         .select("id, titulo, contexto, criado_por, profiles(full_name, email)")
         .eq("status", "pendente")
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("reunioes")
+        .select("id, titulo, data_reuniao")
+        .order("data_reuniao", { ascending: false }),
+      supabase
+        .from("pautas")
+        .select("id, titulo, contexto, origem, status, criado_por, created_at, profiles(full_name, email)")
+        .eq("ata_id", id)
         .order("created_at", { ascending: true }),
     ]);
 
@@ -181,6 +192,23 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
     titulo: row.titulo,
     contexto: row.contexto,
     criadoPor: row.criado_por,
+    ...pautaAutor(row),
+  }));
+
+  const atasDisponiveis = (todasAtasResult.data ?? []).map((ata) => ({
+    id: ata.id,
+    titulo: ata.titulo,
+    data_reuniao: ata.data_reuniao,
+  }));
+
+  const pautasSolicitadas = (pautasSolicitadasResult.data ?? []).map((row) => ({
+    id: row.id,
+    titulo: row.titulo,
+    contexto: row.contexto,
+    origem: row.origem,
+    status: row.status,
+    criadoPor: row.criado_por,
+    createdAt: row.created_at,
     ...pautaAutor(row),
   }));
 
@@ -426,7 +454,11 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
                         )}
                         {(isCoordenadorGeral || pauta.criadoPor === user.id) && (
                           <div className="mt-1">
-                            <PautaDiscutirButton pautaId={pauta.id} ataId={id} />
+                            <PautaDiscutirButton
+                              pautaId={pauta.id}
+                              ataId={id}
+                              atasDisponiveis={atasDisponiveis}
+                            />
                           </div>
                         )}
                       </li>
@@ -437,6 +469,60 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
             </div>
           )}
         </section>
+
+        {/* Log de Pautas — pautas solicitadas para esta reunião */}
+        {pautasSolicitadas.length > 0 && (
+          <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            <div className="flex items-center gap-2">
+              <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
+                <FileText size={22} aria-hidden="true" />
+                Log de Pautas
+              </h2>
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-sm font-medium text-zinc-700">
+                {pautasSolicitadas.length} {pautasSolicitadas.length === 1 ? "pauta" : "pautas"}
+              </span>
+            </div>
+            <p className="text-base text-zinc-500">
+              Pautas que foram solicitadas para esta reunião (separado da ata completa).
+            </p>
+            <ul className="flex w-full flex-col gap-2">
+              {pautasSolicitadas.map((pauta) => (
+                <li
+                  key={pauta.id}
+                  className="flex flex-col gap-1 rounded-xl border border-zinc-200 p-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-lg font-semibold leading-snug text-zinc-900">
+                        {pauta.titulo}
+                      </span>
+                      <span className="text-sm text-zinc-500">
+                        por {pauta.autor} · {format(new Date(pauta.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        pauta.status === "discutida"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}>
+                        {pauta.status === "discutida" ? "Discutida" : "Pendente"}
+                      </span>
+                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                        {pauta.origem === "ata" ? "IA" : "Manual"}
+                      </span>
+                    </div>
+                  </div>
+                  {pauta.contexto && (
+                    <p className="whitespace-pre-wrap text-base leading-relaxed text-zinc-700">
+                      {pauta.contexto}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {ata.texto && (
           <details className="group w-full rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
