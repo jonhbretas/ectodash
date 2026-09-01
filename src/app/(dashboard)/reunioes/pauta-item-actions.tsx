@@ -34,6 +34,33 @@ function formatarDataBR(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+/** Gera as próximas N terças-feiras a partir de hoje (BRT). */
+function gerarProximasTerças(qtd: number): { data: string; label: string }[] {
+  const resultado: { data: string; label: string }[] = [];
+  const hoje = new Date();
+  // Ajustar para BRT
+  const hojeBRT = new Date(
+    hoje.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+  );
+  const dia = hojeBRT.getDay();
+  const terca = 2;
+  // Dias até a próxima terça
+  let diff = (terca - dia + 7) % 7;
+  if (diff === 0) diff = 7; // se é terça, pula pra próxima
+
+  for (let i = 0; i < qtd; i++) {
+    const data = new Date(hojeBRT);
+    data.setDate(data.getDate() + diff + i * 7);
+    const yyyy = data.getFullYear();
+    const mm = String(data.getMonth() + 1).padStart(2, "0");
+    const dd = String(data.getDate()).padStart(2, "0");
+    const iso = `${yyyy}-${mm}-${dd}`;
+    const label = `${dd}/${mm}/${yyyy}`;
+    resultado.push({ data: iso, label });
+  }
+  return resultado;
+}
+
 type PautaItemActionsProps = {
   pautaId: number;
   status: "pendente" | "discutida";
@@ -56,6 +83,29 @@ export default function PautaItemActions({
   const [showDiscutir, setShowDiscutir] = useState(false);
   const moverRef = useRef<HTMLDivElement>(null);
   const discutirRef = useRef<HTMLDivElement>(null);
+
+  // Gerar próximas terças para o dropdown
+  const proximasTerças = gerarProximasTerças(8);
+
+  // Combinar atas existentes com terças geradas (sem duplicar)
+  const datasExistentes = new Set(atasDisponiveis.map((a) => a.data_reuniao));
+  const tercasUnicas = proximasTerças.filter((t) => !datasExistentes.has(t.data));
+
+  // Juntar: atas existentes primeiro, depois terças sem ata
+  const opcoesDiscutir = [
+    ...atasDisponiveis.map((a) => ({
+      id: a.id,
+      data: a.data_reuniao,
+      label: `${formatarDataBR(a.data_reuniao)} — ${a.titulo}`,
+      hasAta: true,
+    })),
+    ...tercasUnicas.map((t) => ({
+      id: null,
+      data: t.data,
+      label: `${t.label} — Sem ata`,
+      hasAta: false,
+    })),
+  ];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -83,9 +133,9 @@ export default function PautaItemActions({
     run(() => moverPauta(pautaId, ataId));
   }
 
-  function handleDiscutir(ataId: number | null) {
+  function handleDiscutir(ataId: number | null, dataReuniao?: string) {
     setShowDiscutir(false);
-    run(() => marcarPautaDiscutida(pautaId, ataId ?? undefined));
+    run(() => marcarPautaDiscutida(pautaId, ataId ?? undefined, dataReuniao));
   }
 
   if (status === "pendente" && standBy) {
@@ -134,10 +184,10 @@ export default function PautaItemActions({
             Discutida
           </button>
           {showDiscutir && (
-            <div className="absolute left-0 top-full z-10 mt-1 w-72 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
+            <div className="absolute left-0 top-full z-10 mt-1 w-80 max-h-80 overflow-y-auto rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
               <div className="border-b border-zinc-100 px-3 py-2">
                 <span className="text-xs font-medium text-zinc-500">
-                  Marcar como discutida na reunião:
+                  Selecione a reunião em que deseja que essa pauta seja discutida:
                 </span>
               </div>
               <button
@@ -148,21 +198,21 @@ export default function PautaItemActions({
                 <span className="font-medium text-green-700">Padrão:</span>
                 Próxima reunião
               </button>
-              {atasDisponiveis.length > 0 && (
+              {opcoesDiscutir.length > 0 && (
                 <>
                   <div className="border-t border-zinc-100 px-3 py-1.5">
                     <span className="text-xs font-medium text-zinc-500">
-                      Ou selecione outra reunião:
+                      Reuniões:
                     </span>
                   </div>
-                  {atasDisponiveis.map((ata) => (
+                  {opcoesDiscutir.map((opcao, idx) => (
                     <button
-                      key={ata.id}
+                      key={`${opcao.data}-${idx}`}
                       type="button"
-                      onClick={() => handleDiscutir(ata.id)}
+                      onClick={() => handleDiscutir(opcao.id, opcao.id ? undefined : opcao.data)}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
                     >
-                      {formatarDataBR(ata.data_reuniao)} — {ata.titulo}
+                      {opcao.label}
                     </button>
                   ))}
                 </>

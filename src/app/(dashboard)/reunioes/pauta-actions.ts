@@ -118,7 +118,8 @@ export type PautaAcaoResult = { ok: boolean; message?: string };
 
 export async function marcarPautaDiscutida(
   pautaId: number,
-  ataId?: number
+  ataId?: number,
+  dataReuniao?: string
 ): Promise<PautaAcaoResult> {
   const supabase = await createClient();
   const {
@@ -132,6 +133,35 @@ export async function marcarPautaDiscutida(
   }
 
   let aId = Number(ataId);
+
+  // Se ataId não foi informado, mas dataReuniao foi, buscar ou criar a reuniao
+  if ((!Number.isInteger(aId) || aId <= 0) && dataReuniao) {
+    const { data: existente } = await supabase
+      .from("reunioes")
+      .select("id")
+      .eq("data_reuniao", dataReuniao)
+      .maybeSingle();
+
+    if (existente) {
+      aId = existente.id;
+    } else {
+      // Criar uma ata automática para esta data
+      const { data: novaAta, error: erroAta } = await supabase
+        .from("reunioes")
+        .insert({
+          titulo: `Reunião ${dataReuniao.split("-").reverse().join("/")}`,
+          data_reuniao: dataReuniao,
+        })
+        .select("id")
+        .single();
+
+      if (erroAta || !novaAta) {
+        console.error("marcarPautaDiscutida: auto-create ata failed", erroAta);
+        return { ok: false, message: "Não foi possível criar a ata para esta data." };
+      }
+      aId = novaAta.id;
+    }
+  }
 
   // Auto-resolve: find the ata for the next Tuesday's meeting (BRT).
   if (!Number.isInteger(aId) || aId <= 0) {
