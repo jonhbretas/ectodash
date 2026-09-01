@@ -209,7 +209,7 @@ export async function gerarAlocacao(
     if (localidadeId === null) {
       return {
         ok: false,
-        message: "A localidade desta escala não está cadastrada.",
+        message: `A localidade "${escala.localidade}" não está cadastrada. Cadastre-a em Voluntários > Localidades.`,
       };
     }
 
@@ -258,7 +258,9 @@ export async function gerarAlocacao(
   if (voluntariosFiltrados.length === 0) {
     return {
       ok: false,
-      message: "Nenhum voluntário ativo encontrado para esta localidade.",
+      message: participantesIds !== null
+        ? `Nenhum dos ${participantesIds.size} participante(s) configurado(s) para "${escala.localidade}" está ativo. Verifique os participantes em "Editar participantes".`
+        : "Nenhum voluntário ativo encontrado para esta localidade.",
     };
   }
 
@@ -390,8 +392,10 @@ export async function gerarAlocacao(
   }
 
   if (alocacoes.length === 0) {
-    return { ok: false, message: "Não foi possível alocar nenhum voluntário." };
+    return { ok: false, message: "Não foi possível alocar nenhum voluntário. Verifique se há voluntários elegíveis disponíveis." };
   }
+
+  console.log("[gerarAlocacao] alocações geradas:", alocacoes.length, JSON.stringify(alocacoes.map(a => `${a.funcao}=${a.voluntario_id}`)));
 
   // Limpar alocações antigas só agora — evita deixar a escala vazia se a geração falhar.
   const { error: limpezaError } = await supabase
@@ -858,6 +862,9 @@ async function carregarContextoParticipantes(
     localidades ?? []
   );
 
+  console.log("[carregarContextoParticipantes] localidade:", JSON.stringify(escala.localidade), "localidadeId:", localidadeId);
+  console.log("[carregarContextoParticipantes] localidades disponíveis:", JSON.stringify(localidades?.map(l => ({ id: l.id, nome: l.nome }))));
+
   let vinculos: { voluntario_id: number }[] = [];
   if (localidadeId !== null) {
     const vinculosResult = await supabase
@@ -867,7 +874,7 @@ async function carregarContextoParticipantes(
 
     if (vinculosResult.error) {
       console.error(
-        "carregarContextoParticipantes: participantes failed",
+        "[carregarContextoParticipantes] participantes failed",
         vinculosResult.error
       );
       return {
@@ -876,6 +883,7 @@ async function carregarContextoParticipantes(
       };
     }
     vinculos = vinculosResult.data ?? [];
+    console.log("[carregarContextoParticipantes] vinculos encontrados:", vinculos.length);
   }
 
   const { data: voluntarios, error: voluntariosError } = await supabase
@@ -885,7 +893,7 @@ async function carregarContextoParticipantes(
 
   if (voluntariosError) {
     console.error(
-      "carregarContextoParticipantes: voluntarios failed",
+      "[carregarContextoParticipantes] voluntarios failed",
       voluntariosError
     );
     return { ok: false, message: "Não foi possível carregar os voluntários." };
@@ -902,6 +910,11 @@ async function carregarContextoParticipantes(
       (voluntario.ativo && !voluntario.data_saida) ||
       vinculados.has(voluntario.id)
   );
+
+  console.log("[carregarContextoParticipantes] total voluntários:", voluntarios?.length ?? 0);
+  console.log("[carregarContextoParticipantes] candidatos após filtro:", candidatos.length);
+  console.log("[carregarContextoParticipantes] voluntários com localidade_id:", voluntarios?.filter(v => v.localidade_id !== null).length ?? 0);
+  console.log("[carregarContextoParticipantes] amostra de unidades:", JSON.stringify([...new Set(voluntarios?.slice(0, 20).map(v => v.unidade) ?? [])]));
 
   return {
     ok: true,
