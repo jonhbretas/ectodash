@@ -196,17 +196,24 @@ export async function gerarAlocacao(
   // confirme quem realmente participa da DIP.
   let participantesIds: Set<number> | null = null;
   if (escala.localidade) {
+    console.log("[gerarAlocacao] localidade da escala:", escala.localidade);
+
     const { data: localidades, error: localidadesError } = await supabase
       .from("voluntario_localidades")
       .select("id, nome");
 
     if (localidadesError) {
-      console.error("gerarAlocacao: failed to load localidades", localidadesError);
+      console.error("[gerarAlocacao] failed to load localidades", localidadesError);
       return { ok: false, message: "Não foi possível carregar as localidades." };
     }
 
+    console.log("[gerarAlocacao] localidades cadastradas:", JSON.stringify(localidades?.map(l => ({ id: l.id, nome: l.nome }))));
+
     const localidadeId = resolverLocalidadeId(escala.localidade, localidades ?? []);
+    console.log("[gerarAlocacao] localidadeId resolvido:", localidadeId);
+
     if (localidadeId === null) {
+      console.error("[gerarAlocacao] localidade não encontrada:", escala.localidade);
       return {
         ok: false,
         message: `A localidade "${escala.localidade}" não está cadastrada. Cadastre-a em Voluntários > Localidades.`,
@@ -219,12 +226,14 @@ export async function gerarAlocacao(
       .eq("localidade_id", localidadeId);
 
     if (vinculosError) {
-      console.error("gerarAlocacao: failed to load participantes", vinculosError);
+      console.error("[gerarAlocacao] failed to load participantes", vinculosError);
       return {
         ok: false,
         message: "Não foi possível carregar os participantes da localidade.",
       };
     }
+
+    console.log("[gerarAlocacao] vinculos encontrados:", vinculos?.length ?? 0, "ids:", JSON.stringify(vinculos?.map(v => v.voluntario_id)));
 
     if (!vinculos || vinculos.length === 0) {
       return {
@@ -248,6 +257,8 @@ export async function gerarAlocacao(
     return { ok: false, message: "Nenhum voluntário ativo encontrado." };
   }
 
+  console.log("[gerarAlocacao] total voluntários ativos:", voluntarios.length);
+
   // Depois da confirmação inicial, somente os participantes salvos para a
   // localidade podem entrar no sorteio. Escalas antigas sem localidade mantêm
   // o comportamento anterior, usando todos os voluntários ativos.
@@ -255,12 +266,18 @@ export async function gerarAlocacao(
     ? voluntarios.filter((voluntario) => participantesIds!.has(voluntario.id))
     : voluntarios;
 
+  console.log("[gerarAlocacao] voluntários após filtro de participantes:", voluntariosFiltrados.length);
+
   if (voluntariosFiltrados.length === 0) {
+    const detalhes = escala.localidade
+      ? ` localidade="${escala.localidade}" participantesConfigurados=${participantesIds !== null} totalAtivos=${voluntarios.length}`
+      : "";
+    console.error("[gerarAlocacao] nenhum voluntário elegível encontrado." + detalhes);
     return {
       ok: false,
       message: participantesIds !== null
         ? `Nenhum dos ${participantesIds.size} participante(s) configurado(s) para "${escala.localidade}" está ativo. Verifique os participantes em "Editar participantes".`
-        : "Nenhum voluntário ativo encontrado para esta localidade.",
+        : `Nenhum voluntário ativo encontrado para esta localidade.${detalhes}`,
     };
   }
 
