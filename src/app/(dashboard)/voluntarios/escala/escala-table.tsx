@@ -99,8 +99,11 @@ export default function EscalaTable({
     porFuncao.set(f, []);
   }
   for (const a of alocacoes) {
-    const base = a.funcao.replace(/ \d+$/, "");
-    const lista = porFuncao.get(base);
+    let lista = porFuncao.get(a.funcao);
+    if (!lista) {
+      const base = a.funcao.replace(/ \d+$/, "");
+      lista = porFuncao.get(base);
+    }
     if (lista) lista.push(a);
   }
 

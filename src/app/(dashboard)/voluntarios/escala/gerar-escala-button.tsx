@@ -12,9 +12,8 @@ export default function GerarEscalaButton({ escalaId }: { escalaId: number }) {
   const [error, setError] = useState<string | null>(null);
   const [participantesOpen, setParticipantesOpen] = useState(false);
 
-  function handleClick() {
-    setError(null);
-    startTransition(async () => {
+  async function runSort() {
+    try {
       const result = await gerarAlocacao(escalaId);
       if (result.needsParticipants) {
         setParticipantesOpen(true);
@@ -23,15 +22,28 @@ export default function GerarEscalaButton({ escalaId }: { escalaId: number }) {
       } else {
         router.refresh();
       }
-    });
+    } catch (err) {
+      console.error("Erro no sorteio:", err);
+      setError("Falha ao gerar o sorteio. Tente novamente.");
+    }
+  }
+
+  function handleClick() {
+    setError(null);
+    startTransition(runSort);
   }
 
   function handleParticipantsSaved() {
     setError(null);
     startTransition(async () => {
-      const result = await gerarAlocacao(escalaId);
-      if (!result.ok) setError(result.message);
-      else router.refresh();
+      try {
+        const result = await gerarAlocacao(escalaId);
+        if (!result.ok) setError(result.message);
+        else router.refresh();
+      } catch (err) {
+        console.error("Erro no sorteio:", err);
+        setError("Falha ao gerar o sorteio. Tente novamente.");
+      }
     });
   }
 
