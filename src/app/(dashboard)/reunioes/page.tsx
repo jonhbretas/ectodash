@@ -315,7 +315,7 @@ export default async function ReunioesPage() {
                           pautaId={pauta.id}
                           status={pauta.status}
                           standBy={pauta.standBy}
-                          atasDisponiveis={rows.slice(0, 8).map((r) => ({
+                          atasDisponiveis={rows.map((r) => ({
                             id: r.id,
                             titulo: r.titulo,
                             data_reuniao: r.data_reuniao,
@@ -372,7 +372,7 @@ export default async function ReunioesPage() {
                       pautaId={pauta.id}
                       status={pauta.status}
                       standBy={pauta.standBy}
-                      atasDisponiveis={rows.slice(0, 8).map((r) => ({
+                      atasDisponiveis={rows.map((r) => ({
                         id: r.id,
                         titulo: r.titulo,
                         data_reuniao: r.data_reuniao,
@@ -416,7 +416,7 @@ export default async function ReunioesPage() {
                     <PautaItemActions
                       pautaId={pauta.id}
                       status={pauta.status}
-                      atasDisponiveis={rows.slice(0, 8).map((r) => ({
+                      atasDisponiveis={rows.map((r) => ({
                         id: r.id,
                         titulo: r.titulo,
                         data_reuniao: r.data_reuniao,
@@ -429,6 +429,71 @@ export default async function ReunioesPage() {
           </details>
         )}
       </section>
+
+      {/* ── Log de Pautas por Reunião ── */}
+      {discutidas.length > 0 && (
+        <section className="flex w-full flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <span className="h-8 w-1.5 rounded-full bg-green-600" aria-hidden="true" />
+            <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
+              Log de Pautas
+            </h2>
+            <span className="rounded-full bg-green-100 px-3 py-1 text-base font-medium text-green-700">
+              {discutidas.length} {discutidas.length === 1 ? "pauta" : "pautas"} discutidas
+            </span>
+          </div>
+          <p className="text-base text-zinc-500">
+            Pautas que foram solicitadas e discutidas nas reuniões (separado das atas completas).
+          </p>
+          <div className="flex w-full flex-col gap-4">
+            {rows
+              .filter((ata) => discutidas.some((p) => p.ataDiscutidaId === ata.id))
+              .map((ata) => {
+                const pautasDaAta = discutidas.filter((p) => p.ataDiscutidaId === ata.id);
+                return (
+                  <div
+                    key={ata.id}
+                    className="flex w-full flex-col gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
+                  >
+                    <div className="flex items-center gap-3 border-b border-zinc-100 pb-3">
+                      <Link
+                        href={`/reunioes/${ata.id}`}
+                        className="flex items-center gap-2 text-lg font-semibold text-zinc-900 hover:text-[#2195B9]"
+                      >
+                        <FileText size={18} aria-hidden="true" />
+                        {ata.titulo}
+                      </Link>
+                      <span className="text-sm text-zinc-500">
+                        {format(new Date(`${ata.data_reuniao}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                        {pautasDaAta.length} {pautasDaAta.length === 1 ? "pauta" : "pautas"}
+                      </span>
+                    </div>
+                    <ul className="flex flex-col gap-1.5">
+                      {pautasDaAta.map((pauta) => (
+                        <li
+                          key={pauta.id}
+                          className="flex items-start gap-2 text-sm text-zinc-600"
+                        >
+                          <CheckCheck size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-green-600" />
+                          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span className="font-medium text-zinc-800">
+                              {pauta.titulo}
+                            </span>
+                            <span className="text-xs text-zinc-400">
+                              por {pauta.autor}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+          </div>
+        </section>
+      )}
 
       {/* ── Atas ── */}
       <section className="flex w-full flex-col gap-3">

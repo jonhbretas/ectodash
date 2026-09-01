@@ -29,6 +29,11 @@ type AtaOption = {
   data_reuniao: string;
 };
 
+function formatarDataBR(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 type PautaItemActionsProps = {
   pautaId: number;
   status: "pendente" | "discutida";
@@ -157,7 +162,7 @@ export default function PautaItemActions({
                       onClick={() => handleDiscutir(ata.id)}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
                     >
-                      {ata.data_reuniao} — {ata.titulo}
+                      {formatarDataBR(ata.data_reuniao)} — {ata.titulo}
                     </button>
                   ))}
                 </>
@@ -192,7 +197,7 @@ export default function PautaItemActions({
                     onClick={() => handleMover(ata.id)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
                   >
-                    {ata.data_reuniao} — {ata.titulo}
+                    {formatarDataBR(ata.data_reuniao)} — {ata.titulo}
                   </button>
                 ))}
               </div>
