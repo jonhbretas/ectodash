@@ -4,11 +4,9 @@
 // These call the pauta-actions server actions directly; the pautas RLS (0076)
 // is the real boundary — the caller only renders them when canManage is true
 // (creator or coordenador_geral).
-//
-// "Discutida" no longer needs a dropdown — the ata is auto-resolved to the
-// next Tuesday's meeting. Use "Em espera" to defer to a later meeting.
 import { useState, useTransition } from "react";
 import {
+  ArrowRight,
   CheckCheck,
   Clock,
   Loader2,
@@ -20,14 +18,22 @@ import {
   emEspera,
   excluirPauta,
   marcarPautaDiscutida,
+  moverPauta,
   reabrirPauta,
   retomarPauta,
 } from "./pauta-actions";
+
+type AtaOption = {
+  id: number;
+  titulo: string;
+  data_reuniao: string;
+};
 
 type PautaItemActionsProps = {
   pautaId: number;
   status: "pendente" | "discutida";
   standBy?: boolean;
+  atasDisponiveis?: AtaOption[];
 };
 
 const buttonClassName =
@@ -37,9 +43,11 @@ export default function PautaItemActions({
   pautaId,
   status,
   standBy = false,
+  atasDisponiveis = [],
 }: PautaItemActionsProps) {
   const [pending, startTransition] = useTransition();
   const [mensagem, setMensagem] = useState<string | null>(null);
+  const [showMover, setShowMover] = useState(false);
 
   function run(fn: () => Promise<{ ok: boolean; message?: string }>) {
     setMensagem(null);
@@ -47,6 +55,11 @@ export default function PautaItemActions({
       const result = await fn();
       if (!result.ok && result.message) setMensagem(result.message);
     });
+  }
+
+  function handleMover(ataId: number | null) {
+    setShowMover(false);
+    run(() => moverPauta(pautaId, ataId));
   }
 
   if (status === "pendente" && standBy) {
@@ -93,6 +106,40 @@ export default function PautaItemActions({
           )}
           Discutida
         </button>
+        {atasDisponiveis.length > 0 && (
+          <div className="relative">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setShowMover(!showMover)}
+              className={`${buttonClassName} border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50`}
+            >
+              <ArrowRight size={14} aria-hidden="true" />
+              Mover
+            </button>
+            {showMover && (
+              <div className="absolute left-0 top-full z-10 mt-1 w-64 rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => handleMover(null)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+                >
+                  Próxima reunião (padrão)
+                </button>
+                {atasDisponiveis.map((ata) => (
+                  <button
+                    key={ata.id}
+                    type="button"
+                    onClick={() => handleMover(ata.id)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+                  >
+                    {ata.data_reuniao} — {ata.titulo}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <button
           type="button"
           disabled={pending}

@@ -23,6 +23,7 @@ export type CriarPautaState = {
 const criarPautaSchema = z.object({
   titulo: z.string().trim().min(1, "Descreva o assunto da pauta.").max(200),
   contexto: z.string().trim().max(3000).optional().or(z.literal("")),
+  ata_id: z.number().int().positive().optional(),
 });
 
 export async function criarPauta(
@@ -41,6 +42,7 @@ export async function criarPauta(
   const parsed = criarPautaSchema.safeParse({
     titulo: formData.get("titulo"),
     contexto: formData.get("contexto"),
+    ata_id: formData.get("ata_id") ? Number(formData.get("ata_id")) : undefined,
   });
 
   if (!parsed.success) {
@@ -54,6 +56,7 @@ export async function criarPauta(
     contexto: parsed.data.contexto || null,
     origem: "manual",
     status: "pendente",
+    ata_id: parsed.data.ata_id ?? null,
   });
 
   if (error) {
@@ -87,10 +90,16 @@ export async function marcarPautaDiscutida(
 
   let aId = Number(ataId);
 
-  // Auto-resolve: find the ata for the next Tuesday's meeting.
+  // Auto-resolve: find the ata for the next Tuesday's meeting (BRT).
   if (!Number.isInteger(aId) || aId <= 0) {
     const proxima = proximaTerca();
-    const dataStr = proxima.toISOString().slice(0, 10);
+    // Formata em BRT para evitar bug de UTC
+    const dataStr = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(proxima);
     const { data: reuniao } = await supabase
       .from("reunioes")
       .select("id")
@@ -194,6 +203,36 @@ export async function retomarPauta(pautaId: number): Promise<PautaAcaoResult> {
   if (error) {
     console.error("retomarPauta: update failed", error);
     return { ok: false, message: "Não foi possível retomar a pauta." };
+  }
+
+  revalidatePath("/reunioes");
+  return { ok: true };
+}
+
+/** Mover uma pauta para outra ata (reunião). */
+export async function moverPauta(
+  pautaId: number,
+  ataId: number | null
+): Promise<PautaAcaoResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
+
+  const id = Number(pautaId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { ok: false, message: "Pauta inválida." };
+  }
+
+  const { error } = await supabase
+    .from("pautas")
+    .update({ ata_id: ataId || null })
+    .eq("id", id);
+
+  if (error) {
+    console.error("moverPauta: update failed", error);
+    return { ok: false, message: "Não foi possível mover a pauta." };
   }
 
   revalidatePath("/reunioes");

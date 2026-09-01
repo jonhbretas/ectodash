@@ -173,7 +173,11 @@ export default async function ReunioesPage() {
   const discutidas = pautas.filter((p) => p.status === "discutida");
 
   const proxima = proximaTerca();
+  const proximaDataStr = format(proxima, "yyyy-MM-dd");
   const proximaLabel = `${format(proxima, "EEEE, dd 'de' MMMM", { locale: ptBR })} · ${HORARIO_REUNIAO}`;
+
+  // Encontrar a ata da próxima reunião (se existir)
+  const ataProxima = rows.find((r) => r.data_reuniao === proximaDataStr) ?? null;
 
   const meses = groupByMonth(rows);
 
@@ -222,6 +226,21 @@ export default async function ReunioesPage() {
             {pendentes.length === 1 ? "pauta pendente" : "pautas pendentes"}
           </span>
         </div>
+
+        {ataProxima ? (
+          <Link
+            href={`/reunioes/${ataProxima.id}`}
+            className="flex items-center gap-3 rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 px-4 py-3 text-base text-[#2195B9] transition-colors hover:bg-[#2195B9]/10"
+          >
+            <FileText size={18} aria-hidden="true" />
+            <span className="font-medium">{ataProxima.titulo}</span>
+            <span className="text-sm text-zinc-500">· Ver ata</span>
+          </Link>
+        ) : (
+          <p className="text-sm text-zinc-500">
+            Nenhuma ata registrada para esta reunião ainda.
+          </p>
+        )}
 
         <div className="grid w-full grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
           {/* Pendentes */}
@@ -272,6 +291,11 @@ export default async function ReunioesPage() {
                           pautaId={pauta.id}
                           status={pauta.status}
                           standBy={pauta.standBy}
+                          atasDisponiveis={rows.slice(0, 8).map((r) => ({
+                            id: r.id,
+                            titulo: r.titulo,
+                            data_reuniao: r.data_reuniao,
+                          }))}
                         />
                       </div>
                     )}
@@ -324,6 +348,11 @@ export default async function ReunioesPage() {
                       pautaId={pauta.id}
                       status={pauta.status}
                       standBy={pauta.standBy}
+                      atasDisponiveis={rows.slice(0, 8).map((r) => ({
+                        id: r.id,
+                        titulo: r.titulo,
+                        data_reuniao: r.data_reuniao,
+                      }))}
                     />
                   )}
                 </li>
@@ -363,6 +392,11 @@ export default async function ReunioesPage() {
                     <PautaItemActions
                       pautaId={pauta.id}
                       status={pauta.status}
+                      atasDisponiveis={rows.slice(0, 8).map((r) => ({
+                        id: r.id,
+                        titulo: r.titulo,
+                        data_reuniao: r.data_reuniao,
+                      }))}
                     />
                   )}
                 </li>
