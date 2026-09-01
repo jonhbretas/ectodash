@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   FilterX,
   ClipboardList,
@@ -15,7 +15,7 @@ import {
 import DemandaCard from "./demanda-card";
 import DemandaTable from "./demanda-table";
 import { DemandaAgruparFilter } from "./demanda-quick-filters";
-import { excluirDemandas } from "./actions";
+import { excluirDemandas, updateDemandaStatus } from "./actions";
 import EdicaoEmMassaDialog, {
   type BulkEditEvento,
   type BulkEditEtiqueta,
@@ -87,6 +87,7 @@ export default function DemandaList({
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [editing, setEditing] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   const sorted = [...demandas].sort(compareDemandas);
   const count = demandas.length;
@@ -170,6 +171,13 @@ export default function DemandaList({
     exitSelection();
     setMessage({ ok: true, text: mensagem });
     router.refresh();
+  };
+
+  const handleConclude = (id: number) => {
+    startTransition(async () => {
+      await updateDemandaStatus(id, "concluida");
+      router.refresh();
+    });
   };
 
   return (
@@ -357,6 +365,7 @@ export default function DemandaList({
                       key={demanda.id}
                       {...demanda}
                       {...selectionProps}
+                      onConclude={handleConclude}
                     />
                   ))}
                 </ul>
@@ -364,6 +373,7 @@ export default function DemandaList({
                   <DemandaTable
                     demandas={group.items}
                     {...selectionProps}
+                    onConclude={handleConclude}
                   />
                 </div>
               </div>
@@ -374,11 +384,11 @@ export default function DemandaList({
         <>
           <ul className="flex flex-col gap-3 lg:hidden">
             {sorted.map((demanda) => (
-              <DemandaCard key={demanda.id} {...demanda} {...selectionProps} />
+              <DemandaCard key={demanda.id} {...demanda} {...selectionProps} onConclude={handleConclude} />
             ))}
           </ul>
           <div className="hidden lg:block">
-            <DemandaTable demandas={sorted} {...selectionProps} />
+            <DemandaTable demandas={sorted} {...selectionProps} onConclude={handleConclude} />
           </div>
         </>
       )}

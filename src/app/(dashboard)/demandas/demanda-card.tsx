@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, User, CheckSquare, Square } from "lucide-react";
+import { Calendar, Check, User, CheckSquare, Square } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import StatusBadge, { type DemandaStatus } from "./status-badge";
@@ -26,6 +26,7 @@ export type DemandaCardProps = {
   selectionActive?: boolean;
   selectedIds?: Set<number>;
   onToggle?: (id: number, shiftKey?: boolean) => void;
+  onConclude?: (id: number) => void;
 };
 
 export default function DemandaCard({
@@ -44,6 +45,7 @@ export default function DemandaCard({
   selectionActive = false,
   selectedIds,
   onToggle,
+  onConclude,
 }: DemandaCardProps) {
   const prazoFormatada = format(new Date(`${prazo}T00:00:00`), "dd/MM/yyyy", {
     locale: ptBR,
@@ -130,6 +132,16 @@ export default function DemandaCard({
           )}
         </div>
       </Link>
+      {status !== "concluida" && onConclude && (
+        <button
+          type="button"
+          onClick={() => onConclude(id)}
+          aria-label={`Marcar "${titulo}" como concluída`}
+          className="mt-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-green-500 transition-all duration-150 hover:bg-green-100 hover:text-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+        >
+          <Check size={18} strokeWidth={2.5} aria-hidden="true" />
+        </button>
+      )}
     </li>
   );
 }

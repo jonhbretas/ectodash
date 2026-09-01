@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckSquare, Square } from "lucide-react";
+import { Check, CheckSquare, Square } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -39,6 +39,7 @@ export type DemandaTableProps = {
   selectionActive?: boolean;
   selectedIds?: Set<number>;
   onToggle?: (id: number, shiftKey?: boolean) => void;
+  onConclude?: (id: number) => void;
 };
 
 export default function DemandaTable({
@@ -46,6 +47,7 @@ export default function DemandaTable({
   selectionActive = false,
   selectedIds,
   onToggle,
+  onConclude,
 }: DemandaTableProps) {
   const router = useRouter();
 
@@ -76,6 +78,9 @@ export default function DemandaTable({
           </TableHead>
           <TableHead className="h-auto w-[14%] px-5 py-3.5 text-left font-semibold text-zinc-600">
             Área/Projeto
+          </TableHead>
+          <TableHead className="h-auto w-[3.5rem] px-3 py-3.5">
+            <span className="sr-only">Concluir</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -185,6 +190,21 @@ export default function DemandaTable({
                     </span>
                   )}
                 </div>
+              </TableCell>
+              <TableCell className="px-3 py-3.5">
+                {demanda.status !== "concluida" && onConclude && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onConclude(demanda.id);
+                    }}
+                    aria-label={`Marcar "${demanda.titulo}" como concluída`}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-green-500 transition-all duration-150 hover:bg-green-100 hover:text-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+                  >
+                    <Check size={18} strokeWidth={2.5} aria-hidden="true" />
+                  </button>
+                )}
               </TableCell>
             </TableRow>
           );
