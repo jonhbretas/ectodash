@@ -48,12 +48,14 @@ type PautaRow = {
   ataTitulo: string | null;
   ataDiscutidaId: number | null;
   ataDiscutidaTitulo: string | null;
+  ataDiscutidaData: string | null;
   dataSolicitada: string | null;
   horarioSolicitado: string | null;
   reuniaoSelecionadaId: number | null;
   reuniaoSelecionadaTitulo: string | null;
   criadoPor: string;
   autor: string;
+  createdAt: string;
 };
 
 const WEEKDAY_ABBR = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -153,6 +155,9 @@ export default async function ReunioesPage() {
 
   const pautas: PautaRow[] = (pautasResult.data ?? []).map((row) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const ataDiscutidaData = row.ata_discutida_id
+      ? (ataById.get(row.ata_discutida_id)?.data_reuniao ?? null)
+      : null;
     return {
       id: row.id,
       titulo: row.titulo,
@@ -164,6 +169,7 @@ export default async function ReunioesPage() {
       ataTitulo: ataTitulo(row.ata_id),
       ataDiscutidaId: row.ata_discutida_id,
       ataDiscutidaTitulo: ataTitulo(row.ata_discutida_id),
+      ataDiscutidaData,
       dataSolicitada: row.data_solicitada,
       horarioSolicitado: row.horario_solicitado,
       reuniaoSelecionadaId: row.reuniao_selecionada_id,
@@ -173,6 +179,7 @@ export default async function ReunioesPage() {
         full_name: profile?.full_name ?? null,
         email: profile?.email ?? null,
       }),
+      createdAt: row.created_at,
     };
   });
 
@@ -411,6 +418,16 @@ export default async function ReunioesPage() {
                         ? ` · discutida na reunião "${pauta.ataDiscutidaTitulo}"`
                         : ""}
                     </span>
+                    <span className="flex flex-wrap gap-3 text-xs text-zinc-400">
+                      <span>
+                        Criada em {format(new Date(pauta.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                      {pauta.ataDiscutidaData && (
+                        <span>
+                          Discutida em {format(new Date(`${pauta.ataDiscutidaData}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   {(canManagePauta || pauta.criadoPor === user.id) && (
                     <PautaItemActions
@@ -482,7 +499,7 @@ export default async function ReunioesPage() {
                               {pauta.titulo}
                             </span>
                             <span className="text-xs text-zinc-400">
-                              por {pauta.autor}
+                              por {pauta.autor} · criada em {format(new Date(pauta.createdAt), "dd/MM/yyyy", { locale: ptBR })}
                             </span>
                           </div>
                         </li>
