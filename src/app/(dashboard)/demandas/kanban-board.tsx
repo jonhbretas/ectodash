@@ -28,6 +28,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
+  Check,
   CheckSquare,
   ChevronDown,
   ChevronLeft,
@@ -204,6 +205,17 @@ function KanbanCard({
             >
               <ChevronRight size={18} aria-hidden="true" />
             </button>
+            {demanda.status !== "concluida" && (
+              <button
+                type="button"
+                onClick={() => onMove(demanda.id, "concluida")}
+                disabled={pending}
+                aria-label={`Marcar "${demanda.titulo}" como concluída`}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-green-500 transition-all duration-150 hover:bg-green-100 hover:text-green-600 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+              >
+                <Check size={18} strokeWidth={2.5} aria-hidden="true" />
+              </button>
+            )}
             {pending && <span className="text-base text-zinc-400">Movendo...</span>}
           </span>
         </div>
