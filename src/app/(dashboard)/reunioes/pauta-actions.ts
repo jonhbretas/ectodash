@@ -20,10 +20,50 @@ export type CriarPautaState = {
   message: string;
 };
 
+export type ReuniaoDisponivel = {
+  id: number;
+  titulo: string;
+  data_reuniao: string;
+  horario: string | null;
+};
+
+/**
+ * Retorna as próximas reuniões (atas já criadas) disponíveis para vincular
+ * uma pauta. Mostra apenas reuniões futuras (ou de hoje) com data >= hoje em BRT.
+ */
+export async function listarReunioesDisponiveis(): Promise<ReuniaoDisponivel[]> {
+  const supabase = await createClient();
+
+  // Data de hoje em BRT (YYYY-MM-DD)
+  const hojeStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
+  const { data, error } = await supabase
+    .from("reunioes")
+    .select("id, titulo, data_reuniao, horario")
+    .gte("data_reuniao", hojeStr)
+    .order("data_reuniao", { ascending: true })
+    .limit(12);
+
+  if (error) {
+    console.error("listarReunioesDisponiveis: query failed", error);
+    return [];
+  }
+
+  return data ?? [];
+}
+
 const criarPautaSchema = z.object({
   titulo: z.string().trim().min(1, "Descreva o assunto da pauta.").max(200),
   contexto: z.string().trim().max(3000).optional().or(z.literal("")),
   ata_id: z.number().int().positive().optional(),
+  data_solicitada: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
+  horario_solicitado: z.string().trim().max(5).optional().or(z.literal("")),
+  reuniao_selecionada_id: z.number().int().positive().optional(),
 });
 
 export async function criarPauta(
@@ -57,6 +97,9 @@ export async function criarPauta(
     origem: "manual",
     status: "pendente",
     ata_id: parsed.data.ata_id ?? null,
+    data_solicitada: parsed.data.data_solicitada || null,
+    horario_solicitado: parsed.data.horario_solicitado || null,
+    reuniao_selecionada_id: parsed.data.reuniao_selecionada_id ?? null,
   });
 
   if (error) {

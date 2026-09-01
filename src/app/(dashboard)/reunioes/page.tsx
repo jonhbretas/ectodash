@@ -48,6 +48,10 @@ type PautaRow = {
   ataTitulo: string | null;
   ataDiscutidaId: number | null;
   ataDiscutidaTitulo: string | null;
+  dataSolicitada: string | null;
+  horarioSolicitado: string | null;
+  reuniaoSelecionadaId: number | null;
+  reuniaoSelecionadaTitulo: string | null;
   criadoPor: string;
   autor: string;
 };
@@ -112,7 +116,7 @@ export default async function ReunioesPage() {
     supabase
       .from("pautas")
       .select(
-        "id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, criado_por, created_at, updated_at, profiles(full_name, email)"
+        "id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, data_solicitada, horario_solicitado, reuniao_selecionada_id, criado_por, created_at, updated_at, profiles(full_name, email)"
       )
       .order("created_at", { ascending: true }),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
@@ -160,6 +164,10 @@ export default async function ReunioesPage() {
       ataTitulo: ataTitulo(row.ata_id),
       ataDiscutidaId: row.ata_discutida_id,
       ataDiscutidaTitulo: ataTitulo(row.ata_discutida_id),
+      dataSolicitada: row.data_solicitada,
+      horarioSolicitado: row.horario_solicitado,
+      reuniaoSelecionadaId: row.reuniao_selecionada_id,
+      reuniaoSelecionadaTitulo: ataTitulo(row.reuniao_selecionada_id),
       criadoPor: row.criado_por,
       autor: displayName({
         full_name: profile?.full_name ?? null,
@@ -278,6 +286,22 @@ export default async function ReunioesPage() {
                             ? ` · da reunião "${pauta.ataTitulo}"`
                             : ""}
                         </span>
+                        {(pauta.dataSolicitada || pauta.reuniaoSelecionadaTitulo) && (
+                          <span className="flex flex-wrap items-center gap-2 text-sm text-[#2195B9]">
+                            {pauta.dataSolicitada && (
+                              <span className="flex items-center gap-1">
+                                <CalendarClock size={13} aria-hidden="true" />
+                                {format(new Date(`${pauta.dataSolicitada}T00:00:00`), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                                {pauta.horarioSolicitado && ` às ${pauta.horarioSolicitado.slice(0, 5)}`}
+                              </span>
+                            )}
+                            {pauta.reuniaoSelecionadaTitulo && (
+                              <span className="rounded-full bg-[#2195B9]/10 px-2 py-0.5 text-xs font-medium text-[#28627B]">
+                                {pauta.reuniaoSelecionadaTitulo}
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </div>
                     </div>
                     {pauta.contexto && (
