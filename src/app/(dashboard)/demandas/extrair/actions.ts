@@ -42,12 +42,11 @@ const pasteSchema = z.object({
 // opening/decisions).
 const MEETING_TEXT_MAX = 60000;
 
-// Provider decision (2026-08-04, user): extraction runs on DeepSeek V4
-// Flash through the OpenCode API (the OpenCode Go subscription's model
-// gateway) — the same model powering the development workflow — instead of
-// Google's Gemini. The shared client lives in src/lib/ai/ai-client.ts.
+// Provider decision (2026-08-04, user): extraction runs on Muse Spark 1.2
+// through the OpenCode Zen gateway (https://opencode.ai/zen/v1/responses).
+// The shared client lives in src/lib/ai/ai-client.ts.
 
-// DeepSeek/Zen json mode requires a top-level JSON OBJECT (never a bare
+// Muse Spark / Zen json mode requires a top-level JSON OBJECT (never a bare
 // array), so the prompt asks for the array wrapped under a "demandas" key
 // and this schema re-validates the envelope. The inner array validation is
 // extractionResponseSchema unchanged — the same untrusted-output boundary

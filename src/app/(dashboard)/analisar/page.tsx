@@ -242,7 +242,7 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
           <code className="rounded bg-slate-100 px-1 py-0.5 text-xs font-mono">
             AI_MODEL
           </code>{" "}
-          no .env (atualmente: mimo-v2.5, gateway OpenCode Go).
+          no .env (atualmente: muse-spark-1.2, gateway OpenCode Zen).
         </p>
       </div>
     </main>

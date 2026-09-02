@@ -152,9 +152,8 @@ export type AnalisarState = {
 };
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
-// MiMo-V2.5 (mimo-v2.5) no gateway Go tem contexto grande e ~150 mil
-// requisições/mês inclusas na assinatura — o teto aqui só protege o tempo
-// de resposta, não o custo.
+// Muse Spark 1.2 (muse-spark-1.2) no gateway Zen — teto só protege o
+// tempo de resposta, não o custo.
 const MAX_TEXT_CHARS = 120000;
 const EMPTY_INPUT = "Cole um texto ou envie um arquivo antes de analisar.";
 

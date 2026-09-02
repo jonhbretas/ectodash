@@ -1,14 +1,17 @@
 // src/lib/ai/ai-client.ts
-// Shared AI chat-completions client — the OpenCode API (OpenCode Go
-// subscription's model gateway) powering BOTH the meeting-demandas
-// extraction (extrair) and the financial dashboard's didactic summary.
-// OpenAI-compatible endpoint, plain fetch, no SDK. The endpoint and model
-// are env-overridable (AI_API_URL / AI_MODEL); defaults are the Go
-// gateway's documented values. SERVER-ONLY: never imported from client
+// Shared AI client — OpenCode Zen gateway powering BOTH the meeting-
+// demandas extraction (extrair/analisar) and the financial dashboard's
+// didactic summary. Works with BOTH gateway shapes:
+//  - Chat Completions: https://opencode.ai/zen/go/v1/chat/completions
+//    (legacy Go gateway, models like deepseek-v4-flash, mimo-v2.5)
+//  - Responses API:    https://opencode.ai/zen/v1/responses
+//    (current Zen gateway, models like Muse Spark, GPT, Claude)
+// Plain fetch, no SDK. Endpoint and model are env-overridable
+// (AI_API_URL / AI_MODEL). SERVER-ONLY: never imported from client
 // components.
 
-const DEFAULT_AI_API_URL = "https://opencode.ai/zen/go/v1/chat/completions";
-const DEFAULT_AI_MODEL = "deepseek-v4-flash";
+const DEFAULT_AI_API_URL = "https://opencode.ai/zen/v1/responses";
+const DEFAULT_AI_MODEL = "muse-spark-1.2";
 
 // V-008: Delimiters to mitigate prompt injection from user-supplied content.
 const USER_CONTENT_START = "--- CONTEÚDO DO USUÁRIO (não edite) INÍCIO ---";
@@ -35,17 +38,37 @@ export function aiConfig() {
   };
 }
 
-// Single server-side chat completion. Returns the raw content string;
-// every failure mode (missing key, non-2xx status, empty response) throws
-// a message-able error that callers turn into user-facing friendly errors.
-// jsonMode (DeepSeek/Zen JSON mode) requires the word "json" to appear in
-// the messages — callers must include it in their prompts.
+// Single server-side completion. Handles BOTH gateway shapes:
+//  - Chat Completions (…/chat/completions) → { choices[0].message.content }
+//  - Responses API   (…/responses)        → { output_text } or { output[0].content[0].text }
+// Every failure mode throws a message-able error callers surface as friendly text.
+// jsonMode requires the word "json" in the messages — callers must include it.
 export async function chatCompletion(
   system: string,
   user: string,
   options: { jsonMode?: boolean } = {}
 ): Promise<string> {
   const { apiKey, url, model } = aiConfig();
+  const isResponsesApi = url.includes("/responses");
+
+  const body = isResponsesApi
+    ? JSON.stringify({
+        model,
+        temperature: 0,
+        ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
+        // Responses API uses `input` / `instructions` instead of `messages`
+        instructions: system,
+        input: user,
+      })
+    : JSON.stringify({
+        model,
+        temperature: 0,
+        ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      });
 
   const response = await fetch(url, {
     method: "POST",
@@ -53,21 +76,10 @@ export async function chatCompletion(
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    }),
+    body,
   });
 
   if (!response.ok) {
-    // Include the gateway's own error body when present (e.g. 429 quota,
-    // 504 upstream timeout) so server logs pin down the real failure
-    // instead of a bare status code.
     let detail = "";
     try {
       const text = (await response.text()).slice(0, 400);
@@ -75,17 +87,32 @@ export async function chatCompletion(
     } catch {
       // body already consumed or unreadable; keep the status-only message
     }
-    throw new Error(
-      `API de IA retornou status ${response.status}${detail}`
-    );
+    throw new Error(`API de IA retornou status ${response.status}${detail}`);
   }
 
   const data = (await response.json()) as {
     choices?: Array<{ message?: { content?: unknown } }>;
+    output_text?: unknown;
+    output?: Array<{
+      content?: Array<{ text?: unknown; type?: string }>;
+      type?: string;
+    }>;
   };
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || content.length === 0) {
-    throw new Error("API de IA retornou resposta vazia");
+
+  // Chat Completions shape
+  const chatContent = data?.choices?.[0]?.message?.content;
+  if (typeof chatContent === "string" && chatContent.length > 0) return chatContent;
+
+  // Responses API shapes
+  if (typeof data?.output_text === "string" && data.output_text.length > 0) {
+    return data.output_text;
   }
-  return content;
+  const outputText = data?.output
+    ?.flatMap((o) => o.content ?? [])
+    .map((c) => (typeof c.text === "string" ? c.text : ""))
+    .join("")
+    .trim();
+  if (outputText && outputText.length > 0) return outputText;
+
+  throw new Error("API de IA retornou resposta vazia");
 }

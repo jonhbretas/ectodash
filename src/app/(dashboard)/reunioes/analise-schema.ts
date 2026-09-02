@@ -118,7 +118,7 @@ export type AtaAnaliseAtualizacao = AtaAnalise["atualizacoes"][number];
 export type AtaAnaliseDip = AtaAnalise["dips"][number];
 export type AtaAnalisePauta = AtaAnalise["pautas"][number];
 
-// Envelope for JSON-mode (DeepSeek/Zen requires a top-level object).
+// Envelope for JSON-mode (Muse Spark/Zen requires a top-level object).
 export const ataAnaliseEnvelopeSchema = z.object({
   analise: ataAnaliseSchema,
 });
