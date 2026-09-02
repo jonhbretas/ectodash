@@ -24,10 +24,16 @@ export function normalizeGlossaryText(value: string): string {
     .toLocaleLowerCase("pt-BR");
 }
 
-// Substitui cada termo cadastrado pelo seu significado. Faz fronteira de
-// palavra (não troca dentro de outra palavra), ignora maiúsculas/acentos
-// no texto de entrada e considera o termo mais longo primeiro para não
-// conflitar com termos que são prefixos uns dos outros.
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Substitui cada termo cadastrado pelo seu significado. Suporta tanto
+// palavras únicas quanto frases multi-palavra ("dar o van brum" →
+// "Dalvan Brum", "D e P" → "DIP"). Faz fronteira de palavra (não troca
+// dentro de outra palavra), ignora maiúsculas/acentos no texto de
+// entrada e considera o termo mais longo primeiro para não conflitar com
+// termos que são prefixos uns dos outros.
 export function applyGlossary(
   text: string,
   terms: Pick<GlossaryTerm, "term" | "replacement">[]
@@ -37,17 +43,43 @@ export function applyGlossary(
   if (!active.length) return text;
 
   const sorted = [...active].sort((a, b) => b.term.length - a.term.length);
-  const normalized = new Map<string, string>();
-  for (const item of sorted) {
-    normalized.set(normalizeGlossaryText(item.term), item.replacement);
+
+  // Separa termos de frase (contém espaço) dos de palavra única.
+  const phraseTerms = sorted.filter((t) => t.term.trim().includes(" "));
+  const wordTerms = sorted.filter((t) => !t.term.trim().includes(" "));
+
+  let result = text;
+
+  // 1) Frases: substituição global com fronteira de palavra Unicode.
+  // Ex.: "dar o van brum" casa "Dar o Van Brum" mas não "xdar o van brumy".
+  for (const { term, replacement } of phraseTerms) {
+    const escaped = escapeRegExp(term.trim());
+    // (?<![\p{L}\p{N}]) = antes não é letra/número; (?![\p{L}\p{N}]) = depois não é letra/número
+    try {
+      const re = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "giu");
+      result = result.replace(re, replacement);
+    } catch {
+      // Fallback para engines sem lookbehind (não deve ocorrer no Node 20)
+      const re2 = new RegExp(`(^|\\W)${escaped}(?=\\W|$)`, "giu");
+      result = result.replace(re2, (m, p1) => `${p1}${replacement}`);
+    }
   }
 
-  return text.replace(/[\p{L}\p{N}]+/gu, (word) => {
-    const replacement = normalized.get(normalizeGlossaryText(word));
-    if (!replacement) return word;
-    const isAllUpper = word === word.toLocaleUpperCase("pt-BR");
-    return isAllUpper ? replacement.toLocaleUpperCase("pt-BR") : replacement;
-  });
+  // 2) Palavras únicas: mapa normalizado (acentos + caixa ignorados), preserva TODO-CAIXA.
+  if (wordTerms.length) {
+    const normalized = new Map<string, string>();
+    for (const item of wordTerms) {
+      normalized.set(normalizeGlossaryText(item.term), item.replacement);
+    }
+    result = result.replace(/[\p{L}\p{N}]+/gu, (word) => {
+      const replacement = normalized.get(normalizeGlossaryText(word));
+      if (!replacement) return word;
+      const isAllUpper = word === word.toLocaleUpperCase("pt-BR");
+      return isAllUpper ? replacement.toLocaleUpperCase("pt-BR") : replacement;
+    });
+  }
+
+  return result;
 }
 
 export function countGlossaryMatches(

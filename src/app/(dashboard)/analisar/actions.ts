@@ -1034,6 +1034,26 @@ async function salvarDemandas(
             );
           }
         }
+
+        // Alias + dicionário learning também no caminho incrementar
+        if (d.responsavelTexto) {
+          const texto = normalizeTexto(d.responsavelTexto);
+          if (texto) {
+            const vid = Number(d.responsavelId);
+            await supabase.from("alias_responsaveis").insert({ termo: texto, voluntario_id: vid });
+            try {
+              const { data: vol } = await supabase.from("voluntarios").select("nome").eq("id", vid).maybeSingle();
+              const canonico = vol?.nome?.trim();
+              if (canonico && normalizeTexto(canonico) !== texto) {
+                await supabase.rpc("registrar_aprendizado_glossario", {
+                  p_term: d.responsavelTexto.trim(),
+                  p_replacement: canonico,
+                  p_description: `Aprendido automaticamente: alias de responsável corrigido na análise (incremento ${d.titulo.slice(0, 60)})`,
+                });
+              }
+            } catch {}
+          }
+        }
       }
 
       // Attach update comment
@@ -1101,16 +1121,42 @@ async function salvarDemandas(
       }
     }
 
-    // Alias learning: when the AI extracted a name and the user confirmed
-    // (or changed) the assignment, save the mapping so the system learns
-    // it for future analyses ("paratecnologico ectolab → paulobattistela").
+    // Alias + dicionário learning: quando a IA extraiu um nome com erro de
+    // transcrição ("dar o van brum") e o operador corrigiu manualmente para
+    // o voluntário correto ("Dalvan Brum"), salvamos o mapeamento para que
+    // próximas análises já resolvam sozinhas — tanto o alias (pós-IA, para
+    // o matcher de responsável) quanto o termo do dicionário (pré-IA, para
+    // corrigir o texto antes da IA). Ex.: "DEEEP" → "DIP", "D e P" → "DIP".
     if (d.responsavelTexto && d.responsavelId) {
       const texto = normalizeTexto(d.responsavelTexto);
       if (texto) {
+        const vid = Number(d.responsavelId);
+        // 1) Alias responsável (lookup pós-IA)
         await supabase.from("alias_responsaveis").insert({
           termo: texto,
-          voluntario_id: Number(d.responsavelId),
+          voluntario_id: vid,
         });
+        // 2) Termo do dicionário (correção pré-IA) — busca o nome canônico
+        // para usar como replacement; SECURITY DEFINER contorna a RLS de
+        // glossary_terms para coordenadores de área.
+        try {
+          const { data: vol } = await supabase
+            .from("voluntarios")
+            .select("nome")
+            .eq("id", vid)
+            .maybeSingle();
+          const canonico = vol?.nome?.trim();
+          const jaIgual = canonico && normalizeTexto(canonico) === texto;
+          if (canonico && !jaIgual) {
+            await supabase.rpc("registrar_aprendizado_glossario", {
+              p_term: d.responsavelTexto.trim(),
+              p_replacement: canonico,
+              p_description: `Aprendido automaticamente: alias de responsável corrigido na análise (${d.titulo.slice(0, 60)})`,
+            });
+          }
+        } catch {
+          // aprendizado é best-effort — nunca falha o salvamento da demanda
+        }
       }
     }
 
