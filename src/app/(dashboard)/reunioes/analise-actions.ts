@@ -79,11 +79,32 @@ const AI_SYSTEM_PROMPT =
   "pautas = assuntos que ficaram PARA A PRÓXIMA reunião (ex.: 'vamos falar disso na semana que vem', 'isso fica para a próxima reunião', 'deixamos de fora e voltamos depois'). titulo = o assunto adiado; contexto = resumo do porquê/o que discutir. Não inclua assuntos já deliberados nesta reunião. " +
   "Se uma seção não tiver itens, use o array vazio. Não escreva nada fora do JSON.";
 
+function hojeBRTISO(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(new Date())
+    .reduce(
+      (acc, p) => {
+        if (p.type === "year") acc.year = p.value;
+        if (p.type === "month") acc.month = p.value;
+        if (p.type === "day") acc.day = p.value;
+        return acc;
+      },
+      { year: "", month: "", day: "" } as Record<string, string>
+    );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 async function extractWithAi(texto: string): Promise<AtaAnalise> {
+  const hoje = hojeBRTISO();
   const rawJson = JSON.parse(
     await chatCompletion(
       AI_SYSTEM_PROMPT,
-      `Hoje é ${new Date().toISOString().slice(0, 10)}. Analise a transcrição a seguir:\n\n${wrapUserContent(texto)}`,
+      `Hoje é ${hoje} (America/Sao_Paulo). Analise a transcrição a seguir:\n\n${wrapUserContent(texto)}\n\nREGRA DIP (CRÍTICA): DIPs acontecem sempre às sextas-feiras. Reuniões acontecem às terças-feiras e sempre discutem a DIP da sexta-feira imediatamente anterior à terça da reunião. Quando a transcrição mencionar a DIP sem data explícita (ex.: "DIP de sexta", "última DIP", "como foi a DIP"), calcule a data como a sexta-feira anterior à data da reunião (campo ata.data quando disponível). Exemplo: reunião em 2026-09-01 (terça) → DIP em 2026-08-28. Se a data da reunião não estiver mencionada, use a sexta-feira anterior a Hoje (${hoje}). Exemplo: Hoje é 2026-09-01 e o texto fala "a DIP de sexta" sem data → DIP = 2026-08-28. Nunca use a sexta de duas semanas atrás (ex.: 2026-08-21 quando o correto é 2026-08-28) a menos que o texto diga explicitamente "retrasada" ou "há duas semanas".`,
       { jsonMode: true }
     )
   );

@@ -210,8 +210,28 @@ async function extrairTextoDoArquivo(file: File): Promise<string> {
   );
 }
 
+function hojeBRTISO(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(new Date())
+    .reduce(
+      (acc, p) => {
+        if (p.type === "year") acc.year = p.value;
+        if (p.type === "month") acc.month = p.value;
+        if (p.type === "day") acc.day = p.value;
+        return acc;
+      },
+      { year: "", month: "", day: "" } as Record<string, string>
+    );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 async function chamarIA(texto: string) {
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeBRTISO();
 
   return chatCompletion(
     `Você analisa documentos em português e extrai dados estruturados.
@@ -234,6 +254,7 @@ GLOSSÁRIO: se detectar no texto siglas/jargões escritos de forma errada ou com
 Os dados financeiros NÃO são extraídos neste fluxo: valores, entradas, saídas ou movimentações monetárias mencionadas no texto NÃO devem virar lançamentos — o financeiro é alimentado exclusivamente pela planilha no módulo Financeiro.
 Quando o conteúdo for uma transcrição ou ata de reunião, inclua "ata" completo, "demandas" (deliberações NOVAS com responsável e prazo claros), "dips" (menções à Dinâmica DIP, um registro por menção), "atualizacoes" (menções a demandas que já existiam, ex.: "atualizar demanda X"), "pautas" (assuntos que ficaram PARA A PRÓXIMA reunião, ex.: "vamos falar disso semana que vem", "isso fica para a próxima reunião" — NÃO inclua assuntos já deliberados nesta reunião) e "eventos" (toda menção a um acontecimento futuro com data, como reuniões, cursos, encontros, congressos, qualificações, viradas de consciência — extraia do texto mesmo que a data seja relativa, usando ${hoje} como referência). Se uma seção não tiver itens, use o array vazio.
 DATAS: sempre AAAA-MM-DD. Para prazos relativos ("sexta", "amanhã", "fim do mês"), calcule a data concreta a partir de hoje (${hoje}).
+REGRA DIP (CRÍTICA): DIPs acontecem sempre às sextas-feiras. Reuniões acontecem às terças-feiras e sempre discutem a DIP da sexta-feira imediatamente anterior à terça da reunião. Quando a transcrição mencionar a DIP sem data explícita (ex.: "DIP de sexta", "última DIP", "como foi a DIP", "DIP dessa semana"), calcule a data como a sexta-feira anterior à data da reunião (campo ata.data quando disponível). Exemplo: reunião em 2026-09-01 (terça) → DIP em 2026-08-28. Se a data da reunião não estiver mencionada, use a sexta-feira anterior a Hoje (${hoje}). Exemplo: Hoje é 2026-09-01 (terça) e o texto fala "a DIP de sexta" sem data → DIP = 2026-08-28. Nunca use a sexta de duas semanas atrás (ex.: 2026-08-21 quando o correto é 2026-08-28) a menos que o texto diga explicitamente "retrasada" ou "há duas semanas".
 Se o conteúdo não se encaixar em nenhuma categoria, use tipo "outro" e forneça apenas titulo e resumo.`,
     `Hoje é ${hoje}. Analise o conteúdo abaixo e extraia os dados estruturados:\n\n${wrapUserContent(texto.slice(0, MAX_TEXT_CHARS))}`,
     { jsonMode: true }
