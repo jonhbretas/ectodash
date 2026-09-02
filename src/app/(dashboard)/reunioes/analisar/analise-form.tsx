@@ -365,6 +365,14 @@ function ReviewScreen({
     analise.ata.deliberacoes.join("\n")
   );
   const [resumo, setResumo] = useState(analise.ata.resumo);
+  const [duracao, setDuracao] = useState((analise.ata as any).duracao || "");
+  const [formato, setFormato] = useState((analise.ata as any).formato || "");
+  const [conducao, setConducao] = useState((analise.ata as any).conducao || "");
+  const [proximaReuniao, setProximaReuniao] = useState((analise.ata as any).proxima_reuniao || "");
+  const [saidasTexto, setSaidasTexto] = useState(() => (((analise.ata as any).saidas_antecipadas as any[] | undefined) || []).map((s: any) => `${s.nome}${s.horario ? ` — ${s.horario}` : ""}${s.motivo ? ` (${s.motivo})` : ""}`).join("\n"));
+  const [decisoesTexto, setDecisoesTexto] = useState(() => (((analise.ata as any).decisoes as string[] | undefined) || []).join("\n"));
+  const [calendarioTexto, setCalendarioTexto] = useState(() => (((analise.ata as any).calendario as any[] | undefined) || []).map((c: any) => `${c.data} | ${c.compromisso}`).join("\n"));
+  const [observacoes, setObservacoes] = useState((analise.ata as any).observacoes || "");
   const [demandas, setDemandas] = useState<DemandaReview[]>(() => {
     // Eventos desta análise que serão criados de fato — mesmo filtro do
     // save (titulo+data), na mesma ordem — usado para resolver evento_texto
@@ -510,6 +518,14 @@ function ReviewScreen({
     formData.set("participantes", participantes);
     formData.set("pontos_principais", pontos);
     formData.set("deliberacoes", deliberacoes);
+    formData.set("duracao", duracao);
+    formData.set("formato", formato);
+    formData.set("conducao", conducao);
+    formData.set("proxima_reuniao", proximaReuniao);
+    formData.set("saidas_antecipadas", JSON.stringify(saidasTexto.split("\n").map((l) => l.trim()).filter(Boolean).map((linha) => { const m = linha.match(/^(.+?)\s*[—-]\s*(.+?)(?:\s*\((.+)\))?$/); if (m) return { nome: m[1].trim(), horario: (m[2]||"").trim(), motivo: (m[3]||"").trim() }; return { nome: linha, horario: "", motivo: "" }; })));
+    formData.set("decisoes", JSON.stringify(decisoesTexto.split("\n").map((l) => l.trim()).filter(Boolean)));
+    formData.set("calendario", JSON.stringify(calendarioTexto.split("\n").map((l) => l.trim()).filter(Boolean).map((linha) => { const parts = linha.split("|"); if (parts.length >= 2) return { data: parts[0].trim(), compromisso: parts.slice(1).join("|").trim() }; return { data: linha, compromisso: "" }; })));
+    formData.set("observacoes", observacoes);
     formData.set("texto", texto);
     formData.set("arquivo_nome", arquivoNome ?? "");
     formData.set("demandas", JSON.stringify(salvarDemandas));
@@ -664,6 +680,45 @@ function ReviewScreen({
               rows={5}
               className={`${fieldClassName} min-h-32`}
             />
+          </div>
+
+          <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="duracao" className={labelClassName}>Duração</label>
+              <input id="duracao" value={duracao} onChange={(e) => setDuracao(e.target.value)} placeholder="118 min" className={fieldClassName} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="formato" className={labelClassName}>Formato</label>
+              <input id="formato" value={formato} onChange={(e) => setFormato(e.target.value)} placeholder="online" className={fieldClassName} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="conducao" className={labelClassName}>Condução</label>
+              <input id="conducao" value={conducao} onChange={(e) => setConducao(e.target.value)} placeholder="Jonathan Brêtas" className={fieldClassName} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="proxima_reuniao" className={labelClassName}>Próxima reunião</label>
+              <DateInput id="proxima_reuniao" value={proximaReuniao} onChange={(e) => setProximaReuniao(e.target.value)} className={fieldClassName} />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="saidas" className={labelClassName}>Saídas antecipadas (uma por linha: Nome — horário (motivo))</label>
+            <textarea id="saidas" value={saidasTexto} onChange={(e) => setSaidasTexto(e.target.value)} rows={3} placeholder="Eliane — 43 min (compromisso)" className={`${fieldClassName} min-h-20`} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="decisoes" className={labelClassName}>Decisões formais (uma por linha — vai para tabela numerada)</label>
+            <textarea id="decisoes" value={decisoesTexto} onChange={(e) => setDecisoesTexto(e.target.value)} rows={4} placeholder="Rinaldo e Eliane representarão o Ectolab no workshop UNICIN 27/09" className={`${fieldClassName} min-h-24`} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="calendario" className={labelClassName}>Calendário (uma por linha: Data | Compromisso)</label>
+            <textarea id="calendario" value={calendarioTexto} onChange={(e) => setCalendarioTexto(e.target.value)} rows={4} placeholder="02/09 · 17h30 | Reunião CEAEC (Jonathan, Myriam, Giuliano)" className={`${fieldClassName} min-h-24`} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="observacoes" className={labelClassName}>Observações de fechamento</label>
+            <textarea id="observacoes" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} placeholder="Todos os pontos atendidos. Nomes/valores com [a confirmar] quando ilegível." className={`${fieldClassName} min-h-20`} />
           </div>
         </section>
 

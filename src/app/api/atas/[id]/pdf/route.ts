@@ -54,7 +54,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     supabase
       .from("reunioes")
       .select(
-        "titulo, data_reuniao, horario, resumo, participantes, pontos_principais, deliberacoes"
+        "titulo, data_reuniao, horario, duracao, formato, conducao, proxima_reuniao, saidas_antecipadas, decisoes, calendario, observacoes, resumo, participantes, pontos_principais, deliberacoes"
       )
       .eq("id", id)
       .single(),
@@ -318,6 +318,45 @@ export async function GET(_request: Request, { params }: RouteContext) {
   if (deliberacoes.length > 0) {
     sectionHeader("Deliberações");
     bulletList(deliberacoes);
+  }
+
+  const decisoes = Array.isArray((ata as any).decisoes) ? ((ata as any).decisoes as string[]).filter(Boolean) : [];
+  if (decisoes.length > 0) {
+    sectionHeader("Decisões");
+    bulletList(decisoes.map((d, i) => `${i + 1}. ${d}`));
+  }
+
+  const calendario = Array.isArray((ata as any).calendario) ? ((ata as any).calendario as { data: string; compromisso: string }[]).filter((c) => c.data || c.compromisso) : [];
+  if (calendario.length > 0) {
+    sectionHeader("Calendário");
+    bulletList(calendario.map((c) => `${c.data} — ${c.compromisso}`));
+  }
+
+  const saidas = Array.isArray((ata as any).saidas_antecipadas) ? ((ata as any).saidas_antecipadas as { nome: string; horario: string; motivo: string }[]).filter((s) => s.nome) : [];
+  if (saidas.length > 0) {
+    sectionHeader("Saídas antecipadas");
+    bulletList(saidas.map((s) => `${s.nome}${s.horario ? ` — ${s.horario}` : ""}${s.motivo ? ` (${s.motivo})` : ""}`));
+  }
+
+  if ((ata as any).observacoes) {
+    sectionHeader("Observações");
+    paragraph((ata as any).observacoes as string);
+  }
+
+  // Header meta extra (duracao/formato/conducao/proxima)
+  const metaExtras: string[] = [];
+  if ((ata as any).duracao) metaExtras.push(`Duração: ${(ata as any).duracao}`);
+  if ((ata as any).formato) metaExtras.push(`Formato: ${(ata as any).formato}`);
+  if ((ata as any).conducao) metaExtras.push(`Condução: ${(ata as any).conducao}`);
+  if ((ata as any).proxima_reuniao) {
+    try {
+      const pr = format(new Date(`${(ata as any).proxima_reuniao}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
+      metaExtras.push(`Próxima: ${pr}`);
+    } catch { metaExtras.push(`Próxima: ${(ata as any).proxima_reuniao}`); }
+  }
+  if (metaExtras.length > 0) {
+    sectionHeader("Informações gerais");
+    bulletList(metaExtras);
   }
 
   if (dips.length > 0) {

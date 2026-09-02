@@ -73,7 +73,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
       supabase
         .from("reunioes")
         .select(
-          "titulo, data_reuniao, horario, resumo, participantes, pontos_principais, deliberacoes, texto, arquivo_nome, criado_por"
+          "titulo, data_reuniao, horario, duracao, formato, conducao, proxima_reuniao, saidas_antecipadas, decisoes, calendario, observacoes, resumo, participantes, pontos_principais, deliberacoes, texto, arquivo_nome, criado_por"
         )
         .eq("id", id)
         .single(),
