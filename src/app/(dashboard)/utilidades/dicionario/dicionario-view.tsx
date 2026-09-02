@@ -109,6 +109,7 @@ export default function DicionarioView({
           </CardHeader>
           <CardContent>
             <form
+              key={editandoId ?? "novo"}
               action={editandoId !== null ? editarAction : criarAction}
               className="flex flex-col gap-4"
             >

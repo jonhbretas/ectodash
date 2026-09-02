@@ -164,7 +164,7 @@ export type AnalisarState = {
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 // Muse Spark 1.2 Contributor (muse-spark-1.2-contributor-free) no gateway
 // Go — teto só protege o tempo de resposta, não o custo.
-const MAX_TEXT_CHARS = 120000;
+const MAX_TEXT_CHARS = 60000;
 const EMPTY_INPUT = "Cole um texto ou envie um arquivo antes de analisar.";
 
 function erroState(message: string): AnalisarState {
@@ -379,27 +379,11 @@ export async function analisarComIA(
 
     const data = parsed.data;
 
-    // Aprendizado contínuo do dicionário: a cada upload a IA pode sugerir
-    // novas variações (ex: "DEEEP" → "DIP"). Gravamos best-effort para que
-    // próximas análises já venham corrigidas, sem depender só de correção
-    // manual. Falha aqui nunca reprova a análise.
-    if (data.glossario_sugerido?.length) {
-      for (const g of data.glossario_sugerido) {
-        const termo = g.termo?.trim();
-        const significado = g.significado?.trim();
-        if (!termo || !significado) continue;
-        if (normalizeTexto(termo) === normalizeTexto(significado)) continue;
-        try {
-          await supabase.rpc("registrar_aprendizado_glossario", {
-            p_term: termo,
-            p_replacement: significado,
-            p_description: `Sugerido automaticamente pela IA na análise "${data.titulo.slice(0, 60)}"`,
-          });
-        } catch (err) {
-          console.warn("analisarComIA: glossario_sugerido learn failed", err);
-        }
-      }
-    }
+    // IA pode sugerir glossario_sugerido, mas NÃO gravamos automaticamente
+    // como ativo — evita que a IA invente significados aleatórios (reclamação
+    // do usuário). Sugestões ficam apenas no payload para futura tela de
+    // revisão humana; o aprendizado real vem só de correção manual explícita
+    // (alias_responsaveis + aprenderCorrecaoDicionario).
 
     // Possible duplicates are keyed by the SAME crypto.randomUUID() keys the
     // mapping below generates, so the review screen can look them up per item.
