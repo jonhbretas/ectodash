@@ -8,6 +8,7 @@ import NotificacoesResolvidas, {
   type NotificacaoRow,
 } from "@/components/notificacoes/notificacoes-resolvidas";
 import { FeedbackAlertaBanner } from "@/components/notificacoes/feedback-alerta";
+import AtalhosAjuda from "@/components/atalhos/atalhos-ajuda";
 import Sidebar from "./sidebar";
 
 export default async function DashboardLayout({
@@ -26,7 +27,7 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, ativo, vincular_pendente")
+    .select("role, ativo, vincular_pendente, voluntario_id")
     .eq("id", user.id)
     .single();
 
@@ -98,6 +99,7 @@ export default async function DashboardLayout({
         />
         {children}
       </div>
+      <AtalhosAjuda voluntarioId={profile?.voluntario_id ?? null} />
       <FeedbackButton />
       <NotificacoesResolvidas itens={notificacoes} />
     </div>

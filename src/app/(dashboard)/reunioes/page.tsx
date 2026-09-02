@@ -337,7 +337,7 @@ export default async function ReunioesPage() {
           </div>
 
           {/* Pedir pauta */}
-          <div className="flex w-full flex-col gap-2">
+          <div id="pedir-pauta" className="flex w-full scroll-mt-6 flex-col gap-2">
             <h3 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
               <PlusCircle size={20} aria-hidden="true" />
               Pedir pauta
@@ -513,7 +513,7 @@ export default async function ReunioesPage() {
       )}
 
       {/* ── Atas ── */}
-      <section className="flex w-full flex-col gap-3">
+      <section id="atas" className="flex w-full scroll-mt-6 flex-col gap-3">
         <div className="flex items-center gap-3">
           <span className="h-8 w-1.5 rounded-full bg-[#2195B9]" aria-hidden="true" />
           <h2 className="text-2xl font-semibold text-zinc-900 sm:text-3xl">
