@@ -462,7 +462,16 @@ export default function DemandaInlineEditor({
     if (r.ok) refresh();
   }
 
-  const prazoFormatado = format(new Date(`${localPrazo}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
+  const prazoFormatado = (() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(localPrazo)) return localPrazo ? localPrazo : "—";
+    const d = new Date(`${localPrazo}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return localPrazo;
+    try {
+      return format(d, "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return localPrazo;
+    }
+  })();
   const eventoAtual = eventos.find((e) => e.id === localEventoId);
   const etiquetaAtual = localEtiquetas.find((e) => e.id === localEtiquetaId);
 
@@ -516,13 +525,14 @@ export default function DemandaInlineEditor({
         {/* Prazo */}
         {editingPill === "prazo" ? (
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
-            <Calendar size={18} className="text-zinc-400" aria-hidden="true" />
-            <DateInput
-              ref={editingRef as any}
-              value={localPrazo}
-              onChange={(e) => setLocalPrazo(e.target.value)}
-              className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#2195B9]"
-            />
+            <div className="w-44">
+              <DateInput
+                ref={editingRef as any}
+                value={localPrazo}
+                onChange={(e) => setLocalPrazo(e.target.value)}
+                className="min-h-10 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-lg text-zinc-900 outline-none focus:ring-2 focus:ring-[#2195B9]"
+              />
+            </div>
             <button
               type="button"
               onClick={async () => { const ok = await savePrazo(localPrazo); if (ok) setEditingPill(null); }}

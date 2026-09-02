@@ -146,7 +146,7 @@ describe("SuggestionReviewList", () => {
     await user.type(tituloInput, "Título editado pelo humano");
 
     const prazoInput = screen.getByLabelText("Prazo *") as HTMLInputElement;
-    await user.type(prazoInput, "2026-09-01");
+    await user.type(prazoInput, "01092026");
 
     const confirmarButton = screen.getByRole("button", { name: "Confirmar" });
     await user.click(confirmarButton);
@@ -177,7 +177,7 @@ describe("SuggestionReviewList", () => {
     render(<SuggestionReviewList suggestions={suggestions} voluntarios={voluntarios} />);
 
     const prazoInput = screen.getByLabelText("Prazo *");
-    await user.type(prazoInput, "2026-09-01");
+    await user.type(prazoInput, "01092026");
     await user.click(screen.getByRole("button", { name: "Confirmar" }));
 
     expect(

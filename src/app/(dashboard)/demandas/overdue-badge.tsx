@@ -11,9 +11,16 @@ export type OverdueBadgeProps = {
 };
 
 export default function OverdueBadge({ prazo }: OverdueBadgeProps) {
-  const formatted = format(new Date(`${prazo}T00:00:00`), "dd/MM/yyyy", {
-    locale: ptBR,
-  });
+  const formatted = (() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(prazo)) return prazo;
+    const d = new Date(`${prazo}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return prazo;
+    try {
+      return format(d, "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return prazo;
+    }
+  })();
 
   return (
     <span
