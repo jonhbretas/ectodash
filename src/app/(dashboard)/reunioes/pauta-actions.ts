@@ -62,7 +62,7 @@ const criarPautaSchema = z.object({
   contexto: z.string().trim().max(3000).optional().or(z.literal("")),
   ata_id: z.number().int().positive().optional(),
   data_solicitada: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
-  horario_solicitado: z.string().trim().max(5).optional().or(z.literal("")),
+  horario_solicitado: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
   reuniao_selecionada_id: z.number().int().positive().optional(),
 });
 
@@ -79,10 +79,16 @@ export async function criarPauta(
     return { ok: false, message: "Sessão expirada. Faça login novamente." };
   }
 
+  const rawReuniao = formData.get("reuniao_selecionada_id");
+  const isEspera = String(rawReuniao ?? "").trim() === "espera";
+  const reuniaoIdNum = !isEspera && rawReuniao && String(rawReuniao).trim() !== "" ? Number(rawReuniao) : undefined;
   const parsed = criarPautaSchema.safeParse({
     titulo: formData.get("titulo"),
     contexto: formData.get("contexto"),
     ata_id: formData.get("ata_id") ? Number(formData.get("ata_id")) : undefined,
+    data_solicitada: formData.get("data_solicitada") ?? "",
+    horario_solicitado: formData.get("horario_solicitado") ?? "",
+    reuniao_selecionada_id: reuniaoIdNum,
   });
 
   if (!parsed.success) {
@@ -96,6 +102,7 @@ export async function criarPauta(
     contexto: parsed.data.contexto || null,
     origem: "manual",
     status: "pendente",
+    stand_by: isEspera,
     ata_id: parsed.data.ata_id ?? null,
     data_solicitada: parsed.data.data_solicitada || null,
     horario_solicitado: parsed.data.horario_solicitado || null,
@@ -111,6 +118,11 @@ export async function criarPauta(
   }
 
   revalidatePath("/reunioes");
+  revalidatePath("/reunioes/pautas");
+  revalidatePath("/reunioes/atas");
+  if (isEspera) {
+    return { ok: true, message: "Pauta enviada. Ela aparece em \"Em espera\" até o coordenador incluí-la." };
+  }
   return { ok: true, message: "Pauta adicionada para a próxima reunião." };
 }
 
