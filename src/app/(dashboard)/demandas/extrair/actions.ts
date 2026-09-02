@@ -43,10 +43,11 @@ const pasteSchema = z.object({
 const MEETING_TEXT_MAX = 60000;
 
 // Provider decision (2026-08-04, user): extraction runs on Muse Spark 1.2
-// through the OpenCode Zen gateway (https://opencode.ai/zen/v1/responses).
-// The shared client lives in src/lib/ai/ai-client.ts.
+// Contributor (muse-spark-1.2-contributor-free) via OpenCode Go
+// (https://opencode.ai/zen/go/v1/chat/completions). Shared client in
+// src/lib/ai/ai-client.ts.
 
-// Muse Spark / Zen json mode requires a top-level JSON OBJECT (never a bare
+// Muse Spark / Go json mode requires a top-level JSON OBJECT (never a bare
 // array), so the prompt asks for the array wrapped under a "demandas" key
 // and this schema re-validates the envelope. The inner array validation is
 // extractionResponseSchema unchanged — the same untrusted-output boundary

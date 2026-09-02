@@ -1,17 +1,13 @@
 // src/lib/ai/ai-client.ts
-// Shared AI client — OpenCode Zen gateway powering BOTH the meeting-
-// demandas extraction (extrair/analisar) and the financial dashboard's
-// didactic summary. Works with BOTH gateway shapes:
-//  - Chat Completions: https://opencode.ai/zen/go/v1/chat/completions
-//    (legacy Go gateway, models like deepseek-v4-flash, mimo-v2.5)
-//  - Responses API:    https://opencode.ai/zen/v1/responses
-//    (current Zen gateway, models like Muse Spark, GPT, Claude)
-// Plain fetch, no SDK. Endpoint and model are env-overridable
-// (AI_API_URL / AI_MODEL). SERVER-ONLY: never imported from client
-// components.
+// Shared AI client — OpenCode Go gateway powering the demandas
+// extraction (extrair/analisar) and the financial dashboard's didactic
+// summary. Model: Muse Spark 1.2 Contributor via Go's OpenAI-compatible
+// chat/completions endpoint. Plain fetch, no SDK. Endpoint and model are
+// env-overridable (AI_API_URL / AI_MODEL). SERVER-ONLY: never imported
+// from client components.
 
-const DEFAULT_AI_API_URL = "https://opencode.ai/zen/v1/responses";
-const DEFAULT_AI_MODEL = "muse-spark-1.2";
+const DEFAULT_AI_API_URL = "https://opencode.ai/zen/go/v1/chat/completions";
+const DEFAULT_AI_MODEL = "muse-spark-1.2-contributor-free";
 
 // V-008: Delimiters to mitigate prompt injection from user-supplied content.
 const USER_CONTENT_START = "--- CONTEÚDO DO USUÁRIO (não edite) INÍCIO ---";
@@ -38,9 +34,9 @@ export function aiConfig() {
   };
 }
 
-// Single server-side completion. Handles BOTH gateway shapes:
-//  - Chat Completions (…/chat/completions) → { choices[0].message.content }
-//  - Responses API   (…/responses)        → { output_text } or { output[0].content[0].text }
+// Single server-side chat completion (OpenAI-compatible). Kept on the
+// Go gateway shape (…/chat/completions) for Muse Spark 1.2 Contributor.
+// Also tolerates a Zen /responses URL if overridden via env (dual parse).
 // Every failure mode throws a message-able error callers surface as friendly text.
 // jsonMode requires the word "json" in the messages — callers must include it.
 export async function chatCompletion(
@@ -56,7 +52,6 @@ export async function chatCompletion(
         model,
         temperature: 0,
         ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
-        // Responses API uses `input` / `instructions` instead of `messages`
         instructions: system,
         input: user,
       })

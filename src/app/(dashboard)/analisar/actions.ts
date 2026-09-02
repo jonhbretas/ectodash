@@ -152,8 +152,8 @@ export type AnalisarState = {
 };
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
-// Muse Spark 1.2 (muse-spark-1.2) no gateway Zen — teto só protege o
-// tempo de resposta, não o custo.
+// Muse Spark 1.2 Contributor (muse-spark-1.2-contributor-free) no gateway
+// Go — teto só protege o tempo de resposta, não o custo.
 const MAX_TEXT_CHARS = 120000;
 const EMPTY_INPUT = "Cole um texto ou envie um arquivo antes de analisar.";
 
