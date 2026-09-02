@@ -132,9 +132,38 @@ async function extractWithAi(
       { jsonMode: true }
     )
   );
-  const validated = ataAnaliseEnvelopeSchema.safeParse(rawJson);
+  let validated = ataAnaliseEnvelopeSchema.safeParse(rawJson);
   if (!validated.success) {
+    console.error("analise validation failed", validated.error.issues.slice(0, 5));
     throw new Error("análise em formato inesperado");
+  }
+  // Auto-expansão: se ainda saiu porquinho (<10 pontos ou <8 deliberações), força segunda passada com foco nos faltantes
+  if (validated.data.analise.ata.pontos_principais.length < 10 || validated.data.analise.ata.deliberacoes.length < 8) {
+    console.warn("ata curta detectada, forçando expansão", {
+      pontos: validated.data.analise.ata.pontos_principais.length,
+      delibs: validated.data.analise.ata.deliberacoes.length,
+    });
+    try {
+      const expandJson = JSON.parse(
+        await chatCompletion(
+          AI_SYSTEM_PROMPT,
+          `Hoje é ${hoje} (America/Sao_Paulo). Sua primeira tentativa ficou CURTA (pontos=${validated.data.analise.ata.pontos_principais.length}, delibs=${validated.data.analise.ata.deliberacoes.length}) e omitiu números obrigatórios. EXPANDA AGORA. Adicione em pontos_principais/deliberacoes os itens faltantes com VALORES/NÚMEROS exatos da transcrição abaixo. Mantenha todo JSON anterior e APENAS acrescente os faltantes.\n\nTranscrição completa:\n${wrapUserContent(texto.slice(0, 55000))}\n\nItens que FALTARAM e devem aparecer (um por linha em pontos_principais ou deliberacoes):\n- Orçamento DIP Curitiba: patrocínio R$ 5.900, doação crédito Foz, total ~R$ 6.400, aportes ~R$ 7.800 vs custo R$ 7.743, hotel já pago, poltronas de empresa hospitalar, passagem Myriam ~R$600+15% pendente, patrocinador gráfica, custos em vermelho\n- Hospedagem/jantar: Hotel Deville simples R$345 duplo R$395 +15%, jantar R$90-120 por pessoa 22h, contatos Margrit/Luciano, negociar com Fernanda, Airbnb 215-250 Ibis 300, voluntários informarem hospedagem\n- Inscrições DIP Curitiba: equipe 01/09→30/09 Margrit, alunos fase1 reencontristas Marcos Ulaf próximas semanas, fase2 metade setembro, 72 vagas abertas 100 Sympla privado só por link, link+PDF hoje, QR Code Daniel, confirmação/lista espera\n- Encontro SP: 9 presenciais/2 online (Janete/Gorete), duplicidade ICNET 2 vs 11 alunos, PIX não entra (Celeste/Giuliano), só Daniel entregou modelo prazo 30/08 vencido, Regina reenvia 03/09, drive voluntariado pasta Apresentações/Coordenações/Checklist, atividade 1h30 Celeste/Giuliano/Paulo sobre autopesquisa e DIP à distância\n- Sistema DIP: 406 presenciais/60 à distância/176 usuários/512 pedidos agosto/37 relatórios, Excel com gráficos, teste Claude vs ChatGPT\n- UNICIN: comissão 31/08 3h, workshop 27/09 presencial 1-2 por IC, agenda até 12/09 próxima comissão 07/09, pauta alunos repetidos e financeiro ICs negativas, Ectolab positiva, reativar colegiado João Couto, Ana Paula curva descendente, 36 ICs, representantes Rinaldo+Eliane\n- Virada: 30 pessoas primeira vez 5 sem inscrição Sympla Paulista, rateio R$1.382,95/10= R$138,20 para POLICONS via Rinaldo, 2 eventos 2027 março/abril gratuito e Jornada 2º sem com prática\n- CEAEC: Felipe/Fausto nunca entraram no laboratório, visita sábado, parceria divulgação, reunião 02/09 17h30 Jonathan/Myriam/Giuliano, alerta delicado alinhar interno, sem resposta financeiro, Rinaldo cobrar\n- Escola Paraambulatório: 15/11 4 módulos lote1 até 30/09 R$400/300 meta 30+12 lote2 R$600/400 meta 30+20 total ~R$56mil custo só Zoom R$500, Myriam aprovado, Jonathan acha barato, Ana link Imersão, Lídia combo casadinho livro ectoplasma, parcelamento 10x não funciona, Celeste monitora, primeiras 20 na pesquisa\n\nResponda APENAS com JSON no mesmo formato, mas agora com ≥12 pontos, ≥10 deliberações e ≥12 demandas.`,
+          { jsonMode: true }
+        )
+      );
+      const validated2 = ataAnaliseEnvelopeSchema.safeParse(expandJson);
+      if (validated2.success) {
+        // Se a segunda tentativa é mais densa, usa ela
+        if (
+          validated2.data.analise.ata.pontos_principais.length > validated.data.analise.ata.pontos_principais.length ||
+          validated2.data.analise.ata.deliberacoes.length > validated.data.analise.ata.deliberacoes.length
+        ) {
+          return validated2.data.analise;
+        }
+      }
+    } catch (e) {
+      console.error("expansão falhou, mantendo primeira tentativa", e);
+    }
   }
   return validated.data.analise;
 }
