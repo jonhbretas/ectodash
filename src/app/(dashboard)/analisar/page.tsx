@@ -30,6 +30,7 @@ import { DateInput } from "@/components/ui/date-input";
 import {
   analisarComIA,
   salvarTudoDaAnalise,
+  aprenderCorrecaoDicionario,
   type AnalisarState,
   type SaveState,
 } from "./actions";
@@ -370,6 +371,36 @@ function ResultsScreen({
 
   async function salvarTudo() {
     setSaving(true);
+    // Aprendizado contínuo: se o operador corrigiu manualmente um campo
+    // que a IA extraiu errado (ex: DIP "DEEEP" → "DIP", localidade com
+    // acento/erro), gravamos no dicionário para a próxima transcrição já
+    // vir corrigida pré-IA. Fire-and-forget para não bloquear o salvamento.
+    const dipsOriginais = new Map((state.dips ?? []).map((d) => [d.key, d]));
+    for (const edited of dipEdits) {
+      const orig = dipsOriginais.get(edited.key);
+      if (!orig) continue;
+      const pares: Array<[string, string]> = [];
+      if (orig.localidade.trim() && edited.localidade.trim() && orig.localidade !== edited.localidade) {
+        pares.push([orig.localidade, edited.localidade]);
+      }
+      if (orig.pais.trim() && edited.pais.trim() && orig.pais !== edited.pais) {
+        pares.push([orig.pais, edited.pais]);
+      }
+      // Observações curtas com correção pontual (ex: "DEEEP" → "DIP") também viram termo
+      if (
+        orig.observacoes.trim() &&
+        edited.observacoes.trim() &&
+        orig.observacoes !== edited.observacoes &&
+        orig.observacoes.length < 120 &&
+        edited.observacoes.length < 120
+      ) {
+        pares.push([orig.observacoes, edited.observacoes]);
+      }
+      for (const [termo, sig] of pares) {
+        aprenderCorrecaoDicionario(termo, sig).catch(() => {});
+      }
+    }
+
     const result = await salvarTudoDaAnalise({
       eventos: state.eventos?.map((e) => {
         const acao = eventoAcoes[e.key] ?? "criar";

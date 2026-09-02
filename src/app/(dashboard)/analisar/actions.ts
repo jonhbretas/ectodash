@@ -72,6 +72,11 @@ const pautaEntrySchema = z.object({
   contexto: z.string().trim().max(3000).optional().or(z.literal("")),
 });
 
+const glossarioSugeridoEntrySchema = z.object({
+  termo: z.string().trim().min(1).max(100),
+  significado: z.string().trim().min(1).max(200),
+});
+
 const responseSchema = z.object({
   tipo: z.enum([
     "eventos",
@@ -87,6 +92,11 @@ const responseSchema = z.object({
   dips: z.array(dipEntrySchema).max(100).optional(),
   atualizacoes: z.array(atualizacaoEntrySchema).max(50).optional(),
   pautas: z.array(pautaEntrySchema).max(50).optional(),
+  // IA pode sugerir novos termos para o dicionário quando detecta
+  // variações na transcrição (ex: "DEEEP" → "DIP", "dar o van brum" →
+  // "Dalvan Brum"). É aprendizado contínuo: a cada upload a IA avalia
+  // se há jargão novo relevante.
+  glossario_sugerido: z.array(glossarioSugeridoEntrySchema).max(20).optional(),
 });
 
 export type AnalisarState = {
@@ -216,9 +226,11 @@ Responda APENAS com JSON. O JSON deve ter este formato:
   "ata": {"titulo": "título da ata", "data": "AAAA-MM-DD ("" se não mencionada)", "horario": "HH:mm ("" se não mencionado)", "participantes": ["nomes"], "pontos_principais": ["pontos"], "deliberacoes": ["deliberações"], "resumo": "resumo da reunião"},
   "dips": [{"localidade": "cidade/região", "pais": "país", "data": "AAAA-MM-DD ("" se não mencionada)", "participantes": 123 (número, "" quando não mencionado), "observacoes": "detalhes"}],
   "atualizacoes": [{"titulo": "título da demanda JÁ EXISTENTE mencionada", "comentario": "o que mudou"}],
-  "pautas": [{"titulo": "assunto adiado para a PRÓXIMA reunião", "contexto": "resumo do porquê/o que discutir"}]
+  "pautas": [{"titulo": "assunto adiado para a PRÓXIMA reunião", "contexto": "resumo do porquê/o que discutir"}],
+  "glossario_sugerido": [{"termo": "como aparece errado na transcrição", "significado": "termo correto"}]
 }
 Inclua SOMENTE os campos relevantes ao tipo detectado (ex: se for uma ata de reunião, inclua "ata" e os demais arrays de conteúdo; nunca crie campos de dados financeiros).
+GLOSSÁRIO: se detectar no texto siglas/jargões escritos de forma errada ou com variação (ex: "DEEEP", "D e P" quando o correto é "DIP"; "dar o van brum" quando o correto é "Dalvan Brum"; "SIAEC" quando o correto é "CEAEC"), liste cada variação em "glossario_sugerido" com o termo exato como aparece e o significado correto canônico. Isso alimenta o aprendizado contínuo do dicionário — a cada upload a IA ajuda a capturar novas variações. Se não houver variação relevante, use [] ou omita.
 Os dados financeiros NÃO são extraídos neste fluxo: valores, entradas, saídas ou movimentações monetárias mencionadas no texto NÃO devem virar lançamentos — o financeiro é alimentado exclusivamente pela planilha no módulo Financeiro.
 Quando o conteúdo for uma transcrição ou ata de reunião, inclua "ata" completo, "demandas" (deliberações NOVAS com responsável e prazo claros), "dips" (menções à Dinâmica DIP, um registro por menção), "atualizacoes" (menções a demandas que já existiam, ex.: "atualizar demanda X"), "pautas" (assuntos que ficaram PARA A PRÓXIMA reunião, ex.: "vamos falar disso semana que vem", "isso fica para a próxima reunião" — NÃO inclua assuntos já deliberados nesta reunião) e "eventos" (toda menção a um acontecimento futuro com data, como reuniões, cursos, encontros, congressos, qualificações, viradas de consciência — extraia do texto mesmo que a data seja relativa, usando ${hoje} como referência). Se uma seção não tiver itens, use o array vazio.
 DATAS: sempre AAAA-MM-DD. Para prazos relativos ("sexta", "amanhã", "fim do mês"), calcule a data concreta a partir de hoje (${hoje}).
@@ -366,6 +378,28 @@ export async function analisarComIA(
     }
 
     const data = parsed.data;
+
+    // Aprendizado contínuo do dicionário: a cada upload a IA pode sugerir
+    // novas variações (ex: "DEEEP" → "DIP"). Gravamos best-effort para que
+    // próximas análises já venham corrigidas, sem depender só de correção
+    // manual. Falha aqui nunca reprova a análise.
+    if (data.glossario_sugerido?.length) {
+      for (const g of data.glossario_sugerido) {
+        const termo = g.termo?.trim();
+        const significado = g.significado?.trim();
+        if (!termo || !significado) continue;
+        if (normalizeTexto(termo) === normalizeTexto(significado)) continue;
+        try {
+          await supabase.rpc("registrar_aprendizado_glossario", {
+            p_term: termo,
+            p_replacement: significado,
+            p_description: `Sugerido automaticamente pela IA na análise "${data.titulo.slice(0, 60)}"`,
+          });
+        } catch (err) {
+          console.warn("analisarComIA: glossario_sugerido learn failed", err);
+        }
+      }
+    }
 
     // Possible duplicates are keyed by the SAME crypto.randomUUID() keys the
     // mapping below generates, so the review screen can look them up per item.
@@ -1310,4 +1344,35 @@ export async function salvarTudoDaAnalise(
     message: erros.length > 0 ? `${base} Falhas: ${erros.join(", ")}.` : base,
     ataId: ata.erro ? null : ata.ataId,
   };
+}
+
+// Aprendizado manual de termo: quando o operador corrige um campo na
+// revisão (ex: dip "DEEEP" → "DIP", evento "qualificacão" → "Qualificação"),
+// chamamos esta action para registrar no dicionário. É o segundo pilar do
+// "sempre aprenda" — o primeiro é o glossario_sugerido da IA, este é a
+// correção humana explícita.
+export async function aprenderCorrecaoDicionario(
+  termo: string,
+  significado: string
+): Promise<{ ok: boolean }> {
+  const t = termo?.trim();
+  const s = significado?.trim();
+  if (!t || !s || normalizeTexto(t) === normalizeTexto(s)) return { ok: false };
+  if (t.length > 200 || s.length > 200) return { ok: false };
+  let gate;
+  try {
+    gate = await requireAnaliseComIA();
+  } catch {
+    return { ok: false };
+  }
+  try {
+    await gate.supabase.rpc("registrar_aprendizado_glossario", {
+      p_term: t,
+      p_replacement: s,
+      p_description: "Aprendido automaticamente: correção manual na revisão da análise",
+    });
+  } catch {
+    // best-effort
+  }
+  return { ok: true };
 }
