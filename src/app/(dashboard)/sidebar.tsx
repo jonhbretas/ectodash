@@ -20,6 +20,7 @@ import QuickSearch from "./quick-search";
 
 export type SidebarProps = {
   acesso?: Acesso | null;
+  feedbackNovos?: number;
 };
 
 const COLLAPSED_KEY = "ectodash:sidebar-colapsada";
@@ -29,11 +30,15 @@ function SidebarLinks({
   pathname,
   collapsed,
   onNavigate,
+  feedbackNovos,
+  isCoordenador,
 }: {
   acesso: Acesso | null;
   pathname: string;
   collapsed: boolean;
   onNavigate?: () => void;
+  feedbackNovos?: number;
+  isCoordenador?: boolean;
 }) {
   const visibilidade = (modulo: ModuloAcesso) =>
     acesso ? podeAcessar(acesso, modulo) : false;
@@ -127,18 +132,39 @@ function SidebarLinks({
     onNavigate?.();
   }
 
-  const renderLink = (item: NavItem) => (
-    <a
-      key={item.href}
-      href={item.href}
-      onClick={(e) => handleNavClick(e, item.href)}
-      className={linkClassName(item.href)}
-      title={collapsed ? item.label : undefined}
-    >
-      <item.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
-      {!collapsed && <span className="truncate">{item.label}</span>}
-    </a>
-  );
+  const renderLink = (item: NavItem) => {
+    const isFeedback = item.href === "/feedback";
+    const showBadge = isFeedback && isCoordenador && (feedbackNovos ?? 0) > 0;
+    const badgeCount = feedbackNovos ?? 0;
+    return (
+      <a
+        key={item.href}
+        href={item.href}
+        onClick={(e) => handleNavClick(e, item.href)}
+        className={linkClassName(item.href)}
+        title={collapsed ? item.label : undefined}
+      >
+        <span className="relative flex items-center">
+          <item.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
+          {collapsed && showBadge && (
+            <span
+              aria-hidden="true"
+              className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white"
+            />
+          )}
+        </span>
+        {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+        {!collapsed && showBadge && (
+          <span
+            aria-label={`${badgeCount} novos relatos`}
+            className="ml-auto flex min-h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold leading-none text-white"
+          >
+            {badgeCount > 99 ? "99+" : badgeCount}
+          </span>
+        )}
+      </a>
+    );
+  };
 
   const renderGroup = (group: NavGroup) => {
     const open = expanded.has(group.label);
@@ -252,7 +278,7 @@ function SidebarBrand({
   );
 }
 
-export default function Sidebar({ acesso = null }: SidebarProps) {
+export default function Sidebar({ acesso = null, feedbackNovos = 0 }: SidebarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -261,6 +287,37 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
   const collapsed = collapsedRaw === "1";
 
   const visuallyCollapsed = collapsed && !hovered;
+  const isCoordenador = acesso?.role === "coordenador_geral";
+
+  // Polling simples para badge da sidebar (coordenador_geral apenas).
+  // Atualiza o contador de "novos" a cada 60s sem realtime.
+  const [feedbackCount, setFeedbackCount] = useState(feedbackNovos);
+  useEffect(() => {
+    setFeedbackCount(feedbackNovos);
+  }, [feedbackNovos]);
+  useEffect(() => {
+    if (!isCoordenador) return;
+    let cancelled = false;
+    async function poll() {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { count } = await supabase
+          .from("feedback")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "novo");
+        if (!cancelled) setFeedbackCount(count ?? 0);
+      } catch {}
+    }
+    const id = window.setInterval(poll, 60_000);
+    const onFocus = () => poll();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [isCoordenador]);
 
   function toggleCollapsed() {
     setCollapsedRaw(collapsed ? "0" : "1");
@@ -302,6 +359,8 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
           pathname={pathname}
           collapsed={false}
           onNavigate={() => setOpen(false)}
+          feedbackNovos={feedbackCount}
+          isCoordenador={isCoordenador}
         />
         <div className="mt-auto space-y-2">
           <SignOutButton />
@@ -329,6 +388,8 @@ export default function Sidebar({ acesso = null }: SidebarProps) {
             acesso={acesso}
             pathname={pathname}
             collapsed={visuallyCollapsed}
+            feedbackNovos={feedbackCount}
+            isCoordenador={isCoordenador}
           />
         </div>
 

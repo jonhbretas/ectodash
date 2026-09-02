@@ -1,7 +1,8 @@
 import { MessageSquareWarning } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
-import FeedbackView, { type RelatoRow } from "./feedback-view";
+import { type RelatoRow } from "./feedback-view";
+import FeedbackTabs from "./feedback-tabs";
 
 // src/app/(dashboard)/feedback/page.tsx
 // Tela de relatos de bugs e melhorias enviados pelo botão flutuante.
@@ -80,7 +81,7 @@ export default async function FeedbackPage() {
         </div>
       </header>
 
-      <FeedbackView relatos={relatos} isCoordenador={isCoordenador} />
+      <FeedbackTabs relatos={relatos} isCoordenador={isCoordenador} />
     </PageContainer>
   );
 }

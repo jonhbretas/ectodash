@@ -56,10 +56,42 @@ export const ataAnaliseSchema = z.object({
       .regex(horaRegex, "horario deve ser HH:mm")
       .optional()
       .or(z.literal("")),
+    // Novos campos do modelo 02_ATA (errando por excesso) — todos opcionais para retrocompat
+    duracao: z.string().trim().max(100).optional().or(z.literal("")),
+    formato: z.string().trim().max(100).optional().or(z.literal("")),
+    conducao: z.string().trim().max(200).optional().or(z.literal("")),
+    proxima_reuniao: z
+      .string()
+      .regex(dataRegex, "proxima_reuniao deve ser yyyy-MM-dd")
+      .optional()
+      .or(z.literal("")),
+    saidas_antecipadas: z
+      .array(
+        z.object({
+          nome: z.string().trim().min(1).max(200),
+          horario: z.string().trim().max(50).optional().or(z.literal("")),
+          motivo: z.string().trim().max(200).optional().or(z.literal("")),
+        })
+      )
+      .max(100)
+      .optional()
+      .or(z.array(z.object({ nome: z.string(), horario: z.string().optional(), motivo: z.string().optional() })).length(0)),
+    decisoes: z.array(z.string().trim().min(1).max(2000)).max(50).optional().or(z.array(z.string()).length(0)),
+    calendario: z
+      .array(
+        z.object({
+          data: z.string().trim().min(1).max(100),
+          compromisso: z.string().trim().min(1).max(500),
+        })
+      )
+      .max(100)
+      .optional()
+      .or(z.array(z.object({ data: z.string(), compromisso: z.string() })).length(0)),
+    observacoes: z.string().trim().max(10000).optional().or(z.literal("")),
     participantes: z.array(z.string().trim().min(1).max(200)).max(200),
-    pontos_principais: z.array(z.string().trim().min(1).max(2000)).max(50),
-    deliberacoes: z.array(z.string().trim().min(1).max(2000)).max(100),
-    resumo: z.string().trim().min(1).max(10000),
+    pontos_principais: z.array(z.string().trim().min(1).max(3000)).max(100),
+    deliberacoes: z.array(z.string().trim().min(1).max(3000)).max(100),
+    resumo: z.string().trim().min(1).max(15000),
   }),
   demandas: z.array(ataDemandaSchema).max(50),
   eventos: z

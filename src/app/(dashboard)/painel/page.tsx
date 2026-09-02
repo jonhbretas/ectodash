@@ -13,6 +13,9 @@ import SheetSyncPanel, { type SheetSyncRunRow } from "./sheet-sync-panel";
 import AreasConfig from "./areas-config";
 import PainelTabs from "./painel-tabs";
 import LogAcoesPanel, { type LogAcoesRow } from "./log-acoes-panel";
+import VoluntarioAtividadePanel, {
+  type VoluntarioAtividadeRow,
+} from "./voluntario-atividade-panel";
 import {
   LOG_ACOES_POR_PAGINA,
   parseLogAcoesFilters,
@@ -212,6 +215,47 @@ async function PainelContent({ rows, supabase, logAcoesFilters }: { rows: Painel
     Math.ceil((logTotal ?? 0) / LOG_ACOES_POR_PAGINA)
   );
 
+  // Atividade de voluntários: últimas ações em voluntarios/profiles
+  const { data: volAtividadeRaw } = await supabase
+    .from("audit_log")
+    .select(
+      "id, acao, entidade, entidade_id, created_at, profiles(email, full_name), after_data, before_data"
+    )
+    .in("entidade", ["voluntarios", "voluntario_areas", "profiles"])
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(30);
+
+  type VolRaw = {
+    id: number;
+    acao: VoluntarioAtividadeRow["acao"];
+    entidade: string;
+    entidade_id: string | null;
+    created_at: string;
+    profiles: { email: string; full_name: string | null } | null;
+    after_data: Record<string, unknown> | null;
+    before_data: Record<string, unknown> | null;
+  };
+
+  const volAtividade: VoluntarioAtividadeRow[] = (
+    (volAtividadeRaw ?? []) as unknown as VolRaw[]
+  ).map((r) => {
+    const nome =
+      (r.after_data?.nome as string) ||
+      (r.before_data?.nome as string) ||
+      (r.after_data?.full_name as string) ||
+      null;
+    return {
+      id: r.id,
+      acao: r.acao,
+      entidade: r.entidade,
+      entidadeId: r.entidade_id,
+      createdAt: r.created_at,
+      usuario: r.profiles?.full_name?.trim() || r.profiles?.email || null,
+      detalhe: nome ? `"${String(nome).slice(0, 80)}"` : null,
+    };
+  });
+
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -260,6 +304,19 @@ async function PainelContent({ rows, supabase, logAcoesFilters }: { rows: Painel
             id: "planilha",
             label: "Planilha",
             content: <SheetSyncPanel runs={sheetSyncRuns} />,
+          },
+          {
+            id: "voluntarios-atividade",
+            label: "Voluntários",
+            content: (
+              <VoluntarioAtividadePanel
+                resumo={{
+                  total: totalVoluntarios,
+                  ativos: voluntariosAreas,
+                  recentes: volAtividade,
+                }}
+              />
+            ),
           },
           {
             id: "log-acoes",

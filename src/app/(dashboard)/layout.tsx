@@ -7,6 +7,7 @@ import FeedbackButton from "@/components/feedback/feedback-button";
 import NotificacoesResolvidas, {
   type NotificacaoRow,
 } from "@/components/notificacoes/notificacoes-resolvidas";
+import { FeedbackAlertaBanner } from "@/components/notificacoes/feedback-alerta";
 import Sidebar from "./sidebar";
 
 export default async function DashboardLayout({
@@ -76,10 +77,25 @@ export default async function DashboardLayout({
     createdAt: String(n.created_at),
   }));
 
+  // Contagem inicial de feedbacks novos para o banner + badge (só coordenador)
+  const isCoordenadorGeral = profile?.role === "coordenador_geral";
+  let feedbackNovos = 0;
+  if (isCoordenadorGeral) {
+    const { count } = await supabase
+      .from("feedback")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "novo");
+    feedbackNovos = count ?? 0;
+  }
+
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20 lg:flex-row">
-      <Sidebar acesso={acesso} />
+      <Sidebar acesso={acesso} feedbackNovos={feedbackNovos} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <FeedbackAlertaBanner
+          initialCount={feedbackNovos}
+          isCoordenador={isCoordenadorGeral}
+        />
         {children}
       </div>
       <FeedbackButton />

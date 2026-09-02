@@ -70,7 +70,7 @@ const pasteSchema = z.object({
 
 const AI_SYSTEM_PROMPT =
   "Você analisa transcrições de reunião do Ectolab e responde APENAS com JSON. " +
-  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string, "etiqueta_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number | "", "observacoes": string}], "pautas": [{"titulo": string, "contexto": string}]}}. ' +
+  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "duracao": string (ex "118 min", "" se não mencionado), "formato": string (ex "online", "" se não mencionado), "conducao": string, "proxima_reuniao": string (yyyy-MM-dd), "saidas_antecipadas": [{"nome": string, "horario": string, "motivo": string}], "decisoes": string[], "calendario": [{"data": string, "compromisso": string}], "observacoes": string, "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string, "etiqueta_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number | "", "observacoes": string}], "pautas": [{"titulo": string, "contexto": string}]}}. ' +
   "MODO DE TRABALHO — DUAS PASSADAS OBRIGATÓRIAS (interno): " +
   "PASSADA 1 — EXTRAÇÃO (sem resumir): varra a transcrição do início ao fim e extraia, com timestamp mental, TODO item que contenha: (a) data, (b) valor em reais, (c) número/quantidade, (d) nome próprio + associação, (e) verbo indicando compromisso futuro ('vou','vamos','preciso','tem que','fica com','até dia','semana que vem','me manda'), (f) pergunta sem resposta, (g) problema relatado mesmo que ninguém tenha assumido (ex.: evento duplicado no ICNET, PIX que não entra, parcelamento que não funciona), (h) aprovação/reprovação explícita ('aprovado','fechado','para mim tá ok'), (i) tarefa concluída na reunião ('já enviei','concluída'), (j) assunto cortado/adiado ('tratamos offline','fica para a próxima'). " +
   "PASSADA 2 — REDAÇÃO: organize por pauta na ordem em que ocorreu, com o nome do responsável no título da seção. CADA item da Passada 1 deve aparecer em algum lugar da ata. Se não couber em nenhuma seção, vai para pontos_principais ou deliberacoes como 'Outros registros' — NUNCA descartar. Só conversa social (clima, saudação, brincadeira) pode ser descartada. " +
@@ -284,10 +284,18 @@ const salvarAtaSchema = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Horário inválido.")
     .optional()
     .or(z.literal("")),
-  resumo: z.string().trim().max(10000).optional().or(z.literal("")),
+  resumo: z.string().trim().max(15000).optional().or(z.literal("")),
   participantes: z.string().trim().max(20000).optional().or(z.literal("")),
-  pontos_principais: z.string().trim().max(20000).optional().or(z.literal("")),
+  pontos_principais: z.string().trim().max(30000).optional().or(z.literal("")),
   deliberacoes: z.string().trim().max(30000).optional().or(z.literal("")),
+  duracao: z.string().trim().max(100).optional().or(z.literal("")),
+  formato: z.string().trim().max(100).optional().or(z.literal("")),
+  conducao: z.string().trim().max(200).optional().or(z.literal("")),
+  proxima_reuniao: z.string().regex(dataRegex).optional().or(z.literal("")),
+  saidas_antecipadas: z.string().trim().max(20000).optional().or(z.literal("")),
+  decisoes: z.string().trim().max(30000).optional().or(z.literal("")),
+  calendario: z.string().trim().max(30000).optional().or(z.literal("")),
+  observacoes: z.string().trim().max(20000).optional().or(z.literal("")),
   texto: z.string().trim().max(200000).optional().or(z.literal("")),
   arquivo_nome: z.string().trim().max(300).optional().or(z.literal("")),
 });
@@ -385,6 +393,14 @@ export async function salvarAtaAnalise(
     participantes: formData.get("participantes"),
     pontos_principais: formData.get("pontos_principais"),
     deliberacoes: formData.get("deliberacoes"),
+    duracao: formData.get("duracao"),
+    formato: formData.get("formato"),
+    conducao: formData.get("conducao"),
+    proxima_reuniao: formData.get("proxima_reuniao"),
+    saidas_antecipadas: formData.get("saidas_antecipadas"),
+    decisoes: formData.get("decisoes"),
+    calendario: formData.get("calendario"),
+    observacoes: formData.get("observacoes"),
     texto: formData.get("texto"),
     arquivo_nome: formData.get("arquivo_nome"),
   });
@@ -412,6 +428,16 @@ export async function salvarAtaAnalise(
     };
   }
 
+  function parseJsonbField(value: string): unknown | null {
+    if (!value || !value.trim()) return null;
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed) && parsed.length === 0) return [];
+      return parsed;
+    } catch {
+      return value;
+    }
+  }
   const { data: novaAta, error: ataError } = await supabase
     .from("reunioes")
     .insert({
@@ -422,6 +448,14 @@ export async function salvarAtaAnalise(
       participantes: ata.data.participantes || null,
       pontos_principais: ata.data.pontos_principais || null,
       deliberacoes: ata.data.deliberacoes || null,
+      duracao: ata.data.duracao || null,
+      formato: ata.data.formato || null,
+      conducao: ata.data.conducao || null,
+      proxima_reuniao: ata.data.proxima_reuniao || null,
+      saidas_antecipadas: parseJsonbField(ata.data.saidas_antecipadas ?? "") ?? [],
+      decisoes: parseJsonbField(ata.data.decisoes ?? "") ?? [],
+      calendario: parseJsonbField(ata.data.calendario ?? "") ?? [],
+      observacoes: ata.data.observacoes || null,
       texto: ata.data.texto || null,
       arquivo_nome: ata.data.arquivo_nome || null,
     })
