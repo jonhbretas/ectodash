@@ -336,28 +336,30 @@ function ResultsScreen({
   );
 
   // Per-item decision for possible duplicates detected server-side:
-  // demandas → "pular" (same task), "comentar" (add comment only),
-  // "incrementar" (update details + add comment) or "criar" (new task);
-  // eventos/dips → "pular" or "criar". Defaults to "pular" so re-uploading
-  // the same transcript never duplicates anything without an explicit user choice.
+  // demandas → "pular" | "comentar" | "incrementar" | "criar"
+  // eventos/dips → "pular" | "incrementar" | "criar"
+  // Incrementar = atualiza o registro existente com as novas informações
+  // da transcrição (nada se perde, sem duplicar). Defaults to "incrementar"
+  // para duplicados — o usuário pediu que nada se perca por padrão — e
+  // "criar" para novos.
   const [demandaAcoes, setDemandaAcoes] = useState<Record<string, "pular" | "comentar" | "incrementar" | "criar">>(() => {
     const map: Record<string, "pular" | "comentar" | "incrementar" | "criar"> = {};
     for (const d of state.demandas ?? []) {
-      map[d.key] = state.duplicados.demandas[d.key] ? "pular" : "criar";
+      map[d.key] = state.duplicados.demandas[d.key] ? "incrementar" : "criar";
     }
     return map;
   });
-  const [eventoAcoes, setEventoAcoes] = useState<Record<string, "pular" | "criar">>(() => {
-    const map: Record<string, "pular" | "criar"> = {};
+  const [eventoAcoes, setEventoAcoes] = useState<Record<string, "pular" | "incrementar" | "criar">>(() => {
+    const map: Record<string, "pular" | "incrementar" | "criar"> = {};
     for (const e of state.eventos ?? []) {
-      map[e.key] = state.duplicados.eventos[e.key] ? "pular" : "criar";
+      map[e.key] = state.duplicados.eventos[e.key] ? "incrementar" : "criar";
     }
     return map;
   });
-  const [dipAcoes, setDipAcoes] = useState<Record<string, "pular" | "criar">>(() => {
-    const map: Record<string, "pular" | "criar"> = {};
+  const [dipAcoes, setDipAcoes] = useState<Record<string, "pular" | "incrementar" | "criar">>(() => {
+    const map: Record<string, "pular" | "incrementar" | "criar"> = {};
     for (const d of state.dips ?? []) {
-      map[d.key] = state.duplicados.dips[d.key] ? "pular" : "criar";
+      map[d.key] = state.duplicados.dips[d.key] ? "incrementar" : "criar";
     }
     return map;
   });
@@ -596,26 +598,36 @@ function ResultsScreen({
                           </div>
                         </div>
                         {dup && (
-                          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-amber-200 pt-2">
-                            <span className="text-xs font-medium text-amber-800">
-                              Possivel duplicado: &quot;{dup.titulo}&quot; ja cadastrado.
-                            </span>
-                            <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                              Acao
-                              <select
-                                value={eventoAcoes[e.key] ?? "pular"}
-                                onChange={(ev) =>
-                                  setEventoAcoes((prev) => ({
-                                    ...prev,
-                                    [e.key]: ev.target.value as "pular" | "criar",
-                                  }))
-                                }
-                                className="min-h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"
-                              >
-                                <option value="pular">Pular (ja existe)</option>
-                                <option value="criar">Criar mesmo assim</option>
-                              </select>
-                            </label>
+                          <div className="mt-2 flex flex-col gap-1 border-t border-amber-200 pt-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-medium text-amber-800">
+                                Possivel duplicado: &quot;{dup.titulo}&quot; ja cadastrado.
+                              </span>
+                              <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                                Acao
+                                <select
+                                  value={eventoAcoes[e.key] ?? "incrementar"}
+                                  onChange={(ev) =>
+                                    setEventoAcoes((prev) => ({
+                                      ...prev,
+                                      [e.key]: ev.target.value as "pular" | "incrementar" | "criar",
+                                    }))
+                                  }
+                                  className="min-h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"
+                                >
+                                  <option value="incrementar">Atualizar evento — acrescentar novas infos</option>
+                                  <option value="pular">Pular (ja existe)</option>
+                                  <option value="criar">Criar mesmo assim (duplicar)</option>
+                                </select>
+                              </label>
+                            </div>
+                            <p className="text-xs text-zinc-600">
+                              {eventoAcoes[e.key] === "incrementar"
+                                ? "O evento existente será atualizado com local/descrição/data vindos da transcrição. Nada se perde e não duplica."
+                                : eventoAcoes[e.key] === "pular"
+                                  ? "O evento existente não será alterado."
+                                  : "Um novo evento será criado mesmo havendo um registro parecido."}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -882,27 +894,37 @@ function ResultsScreen({
                       />
                     </div>
                     {dup && (
-                      <div className="flex flex-wrap items-center gap-2 border-t border-amber-200 pt-2">
-                        <span className="text-sm font-medium text-amber-800">
-                          Possível duplicado: &quot;{dup.localidade}&quot; já cadastrado
-                          {dup.data ? ` em ${dup.data}` : ""}.
-                        </span>
-                        <label className="flex items-center gap-1.5 text-sm text-zinc-700">
-                          Ação
-                          <select
-                            value={dipAcoes[dip.key] ?? "pular"}
-                            onChange={(ev) =>
-                              setDipAcoes((prev) => ({
-                                ...prev,
-                                [dip.key]: ev.target.value as "pular" | "criar",
-                              }))
-                            }
-                            className="min-h-9 rounded-lg border border-zinc-300 bg-white px-2 text-sm text-zinc-900"
-                          >
-                            <option value="pular">Pular (já existe)</option>
-                            <option value="criar">Criar mesmo assim</option>
-                          </select>
-                        </label>
+                      <div className="flex flex-col gap-1 border-t border-amber-200 pt-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium text-amber-800">
+                            Possível duplicado: &quot;{dup.localidade}&quot; já cadastrado
+                            {dup.data ? ` em ${dup.data}` : ""}.
+                          </span>
+                          <label className="flex items-center gap-1.5 text-sm text-zinc-700">
+                            Ação
+                            <select
+                              value={dipAcoes[dip.key] ?? "incrementar"}
+                              onChange={(ev) =>
+                                setDipAcoes((prev) => ({
+                                  ...prev,
+                                  [dip.key]: ev.target.value as "pular" | "incrementar" | "criar",
+                                }))
+                              }
+                              className="min-h-9 rounded-lg border border-zinc-300 bg-white px-2 text-sm text-zinc-900"
+                            >
+                              <option value="incrementar">Atualizar DIP — acrescentar novas infos</option>
+                              <option value="pular">Pular (já existe)</option>
+                              <option value="criar">Criar mesmo assim (duplicar)</option>
+                            </select>
+                          </label>
+                        </div>
+                        <p className="w-full text-xs text-zinc-600">
+                          {dipAcoes[dip.key] === "incrementar"
+                            ? "O DIP existente será atualizado com participantes/observações vindos da transcrição. Nada se perde."
+                            : dipAcoes[dip.key] === "pular"
+                              ? "O DIP existente não será alterado."
+                              : "Um novo registro DIP será criado mesmo havendo um parecido."}
+                        </p>
                       </div>
                     )}
                   </div>

@@ -552,9 +552,11 @@ export type SalvarTudoInput = {
     data: string;
     local: string | null;
     descricao: string | null;
-    // "criar" (default) creates a new event; "pular" skips a possible
-    // duplicate the user confirmed as the same event.
-    acao?: "criar" | "pular";
+    // "criar" (default) creates a new event;
+    // "pular" skips a possible duplicate;
+    // "incrementar" atualiza o evento existente com as novas informações
+    // (local/descrição/data) — sem perder o histórico, sem duplicar.
+    acao?: "criar" | "pular" | "incrementar";
     eventoId?: number | null;
   }>;
   demandas?: Array<{
@@ -587,9 +589,11 @@ export type SalvarTudoInput = {
     data: string | null;
     participantes: number | null;
     observacoes: string;
-    // "criar" (default) creates a new DIP record; "pular" skips a possible
-    // duplicate the user confirmed as the same DIP meeting.
-    acao?: "criar" | "pular";
+    // "criar" (default) creates a new DIP record;
+    // "pular" skips a possible duplicate;
+    // "incrementar" atualiza o DIP existente (participantes/observações)
+    // com as novas informações da transcrição.
+    acao?: "criar" | "pular" | "incrementar";
     dipId?: number | null;
   }>;
   atualizacoes?: Array<{ titulo: string; comentario: string }>;
@@ -744,39 +748,65 @@ async function salvarDips(
   supabase: SupabaseClient,
   ataId: number,
   dips: SalvarTudoInput["dips"]
-): Promise<{ salvos: number; ignorados: number; erros: string[] }> {
+): Promise<{ salvos: number; ignorados: number; atualizados: number; erros: string[] }> {
   if (!dips || dips.length === 0 || ataId === null) {
-    return { salvos: 0, ignorados: 0, erros: [] };
+    return { salvos: 0, ignorados: 0, atualizados: 0, erros: [] };
   }
 
   const parsed = salvarDipsSchema.safeParse(dips);
   if (!parsed.success) {
-    return { salvos: 0, ignorados: 0, erros: ["dips (dados inválidos)"] };
+    return { salvos: 0, ignorados: 0, atualizados: 0, erros: ["dips (dados inválidos)"] };
   }
 
-  const aCriar = dips.filter((dip) => dip.acao !== "pular");
-  const ignorados = dips.length - aCriar.length;
+  const ignorados = dips.filter((d) => d.acao === "pular").length;
+  const aCriar = dips.filter((d) => d.acao !== "pular" && d.acao !== "incrementar");
+  const aIncrementar = dips.filter((d) => d.acao === "incrementar" && d.dipId);
 
-  if (aCriar.length === 0) {
-    return { salvos: 0, ignorados, erros: [] };
+  let salvos = 0;
+  let atualizados = 0;
+  const erros: string[] = [];
+
+  if (aCriar.length > 0) {
+    const rows = aCriar.map((dip) => ({
+      ata_id: ataId,
+      localidade: dip.localidade,
+      pais: dip.pais,
+      data_dip: dip.data,
+      participantes: dip.participantes,
+      observacoes: dip.observacoes || null,
+    }));
+    const { error } = await supabase.from("dips").insert(rows);
+    if (error) {
+      console.error("salvarTudoDaAnalise: dips insert failed", error);
+      erros.push("dips");
+    } else {
+      salvos = rows.length;
+    }
   }
 
-  const rows = aCriar.map((dip) => ({
-    ata_id: ataId,
-    localidade: dip.localidade,
-    pais: dip.pais,
-    data_dip: dip.data,
-    participantes: dip.participantes,
-    observacoes: dip.observacoes || null,
-  }));
-
-  const { error } = await supabase.from("dips").insert(rows);
-  if (error) {
-    console.error("salvarTudoDaAnalise: dips insert failed", error);
-    return { salvos: 0, ignorados, erros: ["dips"] };
+  for (const dip of aIncrementar) {
+    // Incrementa o DIP existente com as novas informações da transcrição:
+    // mantém o vínculo com a ata anterior, mas atualiza participantes/
+    // observações (e corrige localidade/país/data se editados na revisão).
+    const { error } = await supabase
+      .from("dips")
+      .update({
+        localidade: dip.localidade,
+        pais: dip.pais,
+        data_dip: dip.data,
+        participantes: dip.participantes,
+        observacoes: dip.observacoes || null,
+      })
+      .eq("id", dip.dipId!);
+    if (error) {
+      console.error("salvarTudoDaAnalise: dips increment update failed", error);
+      erros.push(`${dip.localidade} (${dip.pais})`);
+    } else {
+      atualizados++;
+    }
   }
 
-  return { salvos: rows.length, ignorados, erros: [] };
+  return { salvos, ignorados, atualizados, erros };
 }
 
 // Updates land as comments on the matching EXISTING demanda (same rule as
@@ -868,29 +898,56 @@ async function salvarPautas(
 async function salvarEventos(
   supabase: SupabaseClient,
   events: SalvarTudoInput["eventos"]
-): Promise<{ salvos: number; ignorados: number; erros: string[] }> {
-  if (!events || events.length === 0) return { salvos: 0, ignorados: 0, erros: [] };
+): Promise<{ salvos: number; ignorados: number; atualizados: number; erros: string[] }> {
+  if (!events || events.length === 0) return { salvos: 0, ignorados: 0, atualizados: 0, erros: [] };
 
-  const aCriar = events.filter((e) => e.acao !== "pular");
-  const ignorados = events.length - aCriar.length;
+  const ignorados = events.filter((e) => e.acao === "pular").length;
+  const aCriar = events.filter((e) => e.acao !== "pular" && e.acao !== "incrementar");
+  const aIncrementar = events.filter((e) => e.acao === "incrementar" && e.eventoId);
 
-  if (aCriar.length === 0) return { salvos: 0, ignorados, erros: [] };
+  let salvos = 0;
+  let atualizados = 0;
+  const erros: string[] = [];
 
-  const { error } = await supabase.from("eventos").insert(
-    aCriar.map((e) => ({
-      titulo: e.titulo,
-      data_evento: e.data,
-      local: e.local ?? null,
-      descricao: e.descricao ?? null,
-    }))
-  );
-
-  if (error) {
-    console.error("salvarTudoDaAnalise: eventos failed", error);
-    return { salvos: 0, ignorados, erros: [`eventos (${error.message})`] };
+  if (aCriar.length > 0) {
+    const { error } = await supabase.from("eventos").insert(
+      aCriar.map((e) => ({
+        titulo: e.titulo,
+        data_evento: e.data,
+        local: e.local ?? null,
+        descricao: e.descricao ?? null,
+      }))
+    );
+    if (error) {
+      console.error("salvarTudoDaAnalise: eventos failed", error);
+      erros.push(`eventos (${error.message})`);
+    } else {
+      salvos = aCriar.length;
+    }
   }
 
-  return { salvos: aCriar.length, ignorados, erros: [] };
+  for (const e of aIncrementar) {
+    // Incrementa o evento existente: atualiza local/descrição/data e
+    // título com as novas informações da transcrição. O evento mantém
+    // seu id e vínculos com demandas; nada se perde.
+    const { error } = await supabase
+      .from("eventos")
+      .update({
+        titulo: e.titulo,
+        data_evento: e.data,
+        local: e.local ?? null,
+        descricao: e.descricao ?? null,
+      })
+      .eq("id", e.eventoId!);
+    if (error) {
+      console.error("salvarTudoDaAnalise: evento increment update failed", error);
+      erros.push(`${e.titulo} (${e.data})`);
+    } else {
+      atualizados++;
+    }
+  }
+
+  return { salvos, ignorados, atualizados, erros };
 }
 
 async function salvarDemandas(
@@ -1102,7 +1159,7 @@ export async function salvarTudoDaAnalise(
       salvarEventos(supabase, input.eventos),
       salvarDemandas(supabase, input.demandas),
       ata.ataId === null
-        ? Promise.resolve({ salvos: 0, ignorados: 0, erros: [] as string[] })
+        ? Promise.resolve({ salvos: 0, ignorados: 0, atualizados: 0, erros: [] as string[] })
         : salvarDips(supabase, ata.ataId, input.dips),
       ata.ataId === null
         ? Promise.resolve({ salvos: 0, erros: [] as string[] })
@@ -1123,6 +1180,11 @@ export async function salvarTudoDaAnalise(
   if (eventos.salvos > 0) {
     partes.push(`${eventos.salvos} ${eventos.salvos === 1 ? "evento" : "eventos"}`);
   }
+  if (eventos.atualizados > 0) {
+    partes.push(
+      `${eventos.atualizados} ${eventos.atualizados === 1 ? "evento atualizado" : "eventos atualizados"}`
+    );
+  }
   if (demandas.salvos > 0) {
     partes.push(`${demandas.salvos} ${demandas.salvos === 1 ? "demanda" : "demandas"}`);
   }
@@ -1133,6 +1195,11 @@ export async function salvarTudoDaAnalise(
   }
   if (dips.salvos > 0) {
     partes.push(`${dips.salvos} ${dips.salvos === 1 ? "registro DIP" : "registros DIP"}`);
+  }
+  if (dips.atualizados > 0) {
+    partes.push(
+      `${dips.atualizados} ${dips.atualizados === 1 ? "DIP atualizado" : "DIPs atualizados"}`
+    );
   }
   if (atualizacoes.salvos > 0) {
     partes.push(
@@ -1168,10 +1235,12 @@ export async function salvarTudoDaAnalise(
 
   const totalSalvo =
     eventos.salvos +
+    eventos.atualizados +
     demandas.salvos +
     demandas.comentados +
     (ata.ataId !== null && !ata.erro ? 1 : 0) +
     dips.salvos +
+    dips.atualizados +
     atualizacoes.salvos +
     pautas.salvos;
 
