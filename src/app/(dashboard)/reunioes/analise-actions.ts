@@ -69,15 +69,22 @@ const pasteSchema = z.object({
 });
 
 const AI_SYSTEM_PROMPT =
-  "Você analisa transcrições de reunião e responde APENAS com JSON. " +
-  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string, "etiqueta_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number, "" quando não mencionado, "observacoes": string}], "pautas": [{"titulo": string, "contexto": string ("" se não houver) }]}}. ' +
-  "Regras: demandas = deliberações NOVAS com responsável e prazo claros. " +
-  "Para CADA demanda, identifique SEMPRE também: area_texto = a área institucional relacionada à demanda (ex.: Paratecnológico, Comunicação, Financeiro), projeto_texto = o projeto relacionado quando mencionado, evento_texto = o evento relacionado quando mencionado (use o MESMO título do evento da seção eventos quando aplicável), etiqueta_texto = a etiqueta relacionada quando mencionada. Use \"\" quando não houver menção. " +
-  "eventos = eventos institucionais mencionados (ex.: qualificações, encontros, DIPs comemorativas, cursos, workshops, lives). Extraia titulo, data, local e descricao quando disponíveis. " +
-  "atualizacoes = menções a demandas JÁ EXISTENTES (ex.: 'atualizar demanda X', 'a demanda Y avançou'); titulo deve ser o título da demanda existente; comentario descreve o que mudou. " +
-  "dips = menções à Dinâmica DIP (localidades, países, datas, quantos participantes). " +
-  "pautas = assuntos que ficaram PARA A PRÓXIMA reunião (ex.: 'vamos falar disso na semana que vem', 'isso fica para a próxima reunião', 'deixamos de fora e voltamos depois'). titulo = o assunto adiado; contexto = resumo do porquê/o que discutir. Não inclua assuntos já deliberados nesta reunião. " +
-  "Se uma seção não tiver itens, use o array vazio. Não escreva nada fora do JSON.";
+  "Você analisa transcrições de reunião do Ectolab e responde APENAS com JSON. " +
+  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string, "etiqueta_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number | "", "observacoes": string}], "pautas": [{"titulo": string, "contexto": string}]}}. ' +
+  "MODO DE TRABALHO — DUAS PASSADAS OBRIGATÓRIAS (interno): " +
+  "PASSADA 1 — EXTRAÇÃO (sem resumir): varra a transcrição do início ao fim e extraia, com timestamp mental, TODO item que contenha: (a) data, (b) valor em reais, (c) número/quantidade, (d) nome próprio + associação, (e) verbo indicando compromisso futuro ('vou','vamos','preciso','tem que','fica com','até dia','semana que vem','me manda'), (f) pergunta sem resposta, (g) problema relatado mesmo que ninguém tenha assumido (ex.: evento duplicado no ICNET, PIX que não entra, parcelamento que não funciona), (h) aprovação/reprovação explícita ('aprovado','fechado','para mim tá ok'), (i) tarefa concluída na reunião ('já enviei','concluída'), (j) assunto cortado/adiado ('tratamos offline','fica para a próxima'). " +
+  "PASSADA 2 — REDAÇÃO: organize por pauta na ordem em que ocorreu, com o nome do responsável no título da seção. CADA item da Passada 1 deve aparecer em algum lugar da ata. Se não couber em nenhuma seção, vai para pontos_principais ou deliberacoes como 'Outros registros' — NUNCA descartar. Só conversa social (clima, saudação, brincadeira) pode ser descartada. " +
+  "REGRA DE OURO: Nada que tenha número, data, nome próprio, valor em reais ou verbo no futuro pode ser descartado — mesmo que dito em meia frase, no meio de outro assunto, por alguém que falou só uma vez. " +
+  "CLASSIFICAÇÃO DAS FALAS (aplique antes de escrever): Decisão ('fechado','aprovado','vamos fazer','fica você') → deliberacoes + tabela de decisões; Demanda ('vou','preciso','tem que','me manda','fica de') → demandas; Informe (relato do já feito) → pontos_principais; Número/indicador → tabela dentro de pontos_principais ou observacoes; Alerta/ressalva ('cuidado','só lembrando','não esquece','ao virar o lote, mudar valor na loja','relação com CEAEC é delicada') → deliberacoes em bloco de alerta; Problema em aberto ('não funciona','não entrou','tem dois eventos') → demandas com responsável 'a definir' se ninguém assumiu; Assunto adiado ('tratamos offline','depois converso','tratar em particular') → pautas com contexto + registrar destino; Conversa social → descartar. " +
+  "ARMADILHAS: (1) Fala cruzada — transcrição intercala assuntos; reconstrua o fio por assunto, não por ordem de linha. (2) Decisão vem depois de debate longo — em blocos de 20+ falas, a conclusão está nas 3 últimas; não resuma o debate e esqueça a conclusão. (3) Quem fala pouco fala coisa importante — Lídia Bolfe (4 falas) trouxe o combo; Marcos Ulaf (3 falas) achou o duplicado — não filtre por volume. (4) Contas ditas em voz alta saem confusas — se sequência não fecha, registre os valores ditos e acrescente '[conferir planilha]' na observacao. (5) Contas institucionais ('DIP Ectolab','Parapedagógico') não são pessoas — identifique a pessoa quando o contexto permitir (Parapedagógico = Paulo Battistela). (6) Cobrança de prazo é conteúdo de ata — 'essa tarefa venceu ontem/31/08' vira demanda com prazo vencido. (7) Decisões escondidas em conversa informal — 'Rinaldo e Eliane vão ao workshop' decidido em 6 falas curtas deve virar deliberacao. " +
+  "REGRAS ESPECÍFICAS: demandas = deliberações NOVAS com responsável e prazo (inclua também demandas vencidas/críticas cobradas na reunião e problemas operacionais sem dono → responsável_texto='a definir', prazo_texto com data vencida quando citada). Para CADA demanda, identifique SEMPRE também: area_texto, projeto_texto, evento_texto (use o MESMO título do evento da seção eventos quando aplicável), etiqueta_texto. Use \"\" quando não houver menção. Não invente prazo/valor/responsável — se não houver, use \"\". Trecho ilegível: registre nome/valor como '[a confirmar]' em vez de omitir. " +
+  "eventos = todos os eventos institucionais mencionados com titulo/data/local/descricao; inclua datas futuras ditas de passagem (ex.: 25/06/2027, 05/09 DIP RJ, 02/09 17h30, 03/09). " +
+  "atualizacoes = menções a demandas JÁ EXISTENTES; titulo = título da demanda existente; comentario descreve o que mudou. " +
+  "dips = menções à Dinâmica DIP (localidade, país, data, participantes, observacoes) — preserve números exatos (ex.: 25 Foz 21/08, 21 Curitiba, 22 Florianópolis, 406 registros presenciais, 60 à distância, 176 usuários, 512 pedidos, 37 relatórios). " +
+  "pautas = assuntos que ficaram PARA A PRÓXIMA reunião; não inclua já deliberados; registre também assuntos cortados com destino offline. " +
+  "participantes = TODOS que falaram ou foram citados como presentes, incluindo saídas antecipadas com horário/motivo entre parênteses (ex.: 'Margrit Stüpp (saída 1h14)'). Normalize nomes pelo glossário: Margrit/Rinaldo/Giuliano/Myriam/Miryan/Dalvan/Ara/Goretti/Marcos Ulaf/Celeste/Hernandes/Jonathan etc. ATENÇÃO: 'Miriam' pode ser Myriam Sanchez (coordenação/financeiro) ou Miryan Akemi Ishikawa (Virada/POLICONS) — desambigue pelo assunto. " +
+  "pontos_principais/deliberacoes: preserve TODO número/valor/prazo em negrito implícito (ex.: R$ 7.743, R$ 138,20, 9 presenciais/2 online) e contexto que explica a decisão (por que gratuita, por que privado no Sympla, por que hotel caro). Alertas e ressalvas entram em deliberacoes. " +
+  "Se uma seção não tiver itens, use array vazio. Não escreva nada fora do JSON. Nunca invente prazo, valor ou nome para preencher lacuna.";
 
 function hojeBRTISO(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -99,12 +106,18 @@ function hojeBRTISO(): string {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-async function extractWithAi(texto: string): Promise<AtaAnalise> {
+async function extractWithAi(
+  texto: string,
+  contextoAtaAnterior?: string | null
+): Promise<AtaAnalise> {
   const hoje = hojeBRTISO();
+  const contextoBloco = contextoAtaAnterior
+    ? `\n\nATA ANTERIOR (para continuidade de demandas em aberto e progresso):\n${wrapUserContent(contextoAtaAnterior.slice(0, 4000))}\nUse-a apenas para dar continuidade — registre o que foi concluído desde então e não duplique demandas já concluídas.\n`
+    : "";
   const rawJson = JSON.parse(
     await chatCompletion(
       AI_SYSTEM_PROMPT,
-      `Hoje é ${hoje} (America/Sao_Paulo). Analise a transcrição a seguir:\n\n${wrapUserContent(texto)}\n\nREGRA DIP (CRÍTICA): DIPs acontecem sempre às sextas-feiras. Reuniões acontecem às terças-feiras e sempre discutem a DIP da sexta-feira imediatamente anterior à terça da reunião. Quando a transcrição mencionar a DIP sem data explícita (ex.: "DIP de sexta", "última DIP", "como foi a DIP"), calcule a data como a sexta-feira anterior à data da reunião (campo ata.data quando disponível). Exemplo: reunião em 2026-09-01 (terça) → DIP em 2026-08-28. Se a data da reunião não estiver mencionada, use a sexta-feira anterior a Hoje (${hoje}). Exemplo: Hoje é 2026-09-01 e o texto fala "a DIP de sexta" sem data → DIP = 2026-08-28. Nunca use a sexta de duas semanas atrás (ex.: 2026-08-21 quando o correto é 2026-08-28) a menos que o texto diga explicitamente "retrasada" ou "há duas semanas".`,
+      `Hoje é ${hoje} (America/Sao_Paulo).${contextoBloco}\nTranscrição a analisar (PASSADA 1 = extração bruta, PASSADA 2 = redação — cada item da Passada 1 deve aparecer):\n\n${wrapUserContent(texto)}\n\nREGRAS ADICIONAIS DE CONTEXTO:\n- Vocabulário fixo: Ectolab, DIP, Sympla, UNICIN, CEAEC, POLICONS, Epicon, paracirurgia, ectoplasmólogo, conscienciologia, verbete, tenepes — já normalizado via glossário mas confirme.\n- Números ditos em voz alta ("mil e quinhentos", "sete mil setecentos e quarenta e três") normalize para R$ 0.000,00; se sequência não fecha, marque [conferir planilha] na observacao.\n- REGRA DIP (CRÍTICA): DIPs sempre às sextas; reuniões às terças discutem a DIP da sexta imediatamente anterior. Sem data explícita → calcule como sexta anterior à data da reunião (ata.data). Sem data da reunião → sexta anterior a Hoje (${hoje}). Ex.: reunião 2026-09-01 (terça) → DIP 2026-08-28. Nunca use duas semanas atrás salvo "retrasada"/"há duas semanas".\n- Não invente prazo/valor/nome; prazo desconhecido = ""; trecho ilegível = "[a confirmar]" no campo texto correspondente.\n- Aplique checklist de validação antes de responder: toda data futura no calendário? todo valor? toda frase com vou/preciso tem demanda? todo problema operacional tem demanda? todo assunto cortado tem destino?`,
       { jsonMode: true }
     )
   );
@@ -207,7 +220,30 @@ async function analisarTranscricaoImpl(
     if (termosGlossario.length > 0) {
       texto = applyGlossary(texto, termosGlossario);
     }
-    const analise = await extractWithAi(texto);
+    // Orientação §10.4: alimentar gerador com a ata anterior para continuidade
+    let contextoAtaAnterior: string | null = null;
+    try {
+      const { data: ultimaAta } = await supabase
+        .from("reunioes")
+        .select("titulo, data_reuniao, resumo, pontos_principais, deliberacoes")
+        .order("data_reuniao", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (ultimaAta) {
+        contextoAtaAnterior = [
+          `Título: ${ultimaAta.titulo}`,
+          `Data: ${ultimaAta.data_reuniao}`,
+          ultimaAta.resumo ? `Resumo: ${ultimaAta.resumo.slice(0, 800)}` : "",
+          ultimaAta.pontos_principais ? `Pontos: ${ultimaAta.pontos_principais.slice(0, 1000)}` : "",
+          ultimaAta.deliberacoes ? `Deliberações: ${ultimaAta.deliberacoes.slice(0, 1000)}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
+    } catch {
+      // continuidade é best-effort — falha não bloqueia a análise
+    }
+    const analise = await extractWithAi(texto, contextoAtaAnterior);
     if (!analise.ata.resumo && analise.ata.titulo.trim().length === 0) {
       return {
         ...initialState,

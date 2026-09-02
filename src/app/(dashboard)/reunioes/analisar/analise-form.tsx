@@ -16,7 +16,9 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
+  CheckCircle2,
   FileUp,
+  Info,
   Loader2,
   ListChecks,
   MessageSquareText,
@@ -219,6 +221,19 @@ export default function AnaliseForm({
             placeholder="Cole aqui o texto da transcrição da reunião..."
             className="min-h-40 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           />
+        </div>
+
+        <div className="flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+          <Info size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-sky-700" />
+          <div className="flex flex-col gap-1 text-sm leading-relaxed text-sky-900">
+            <span className="font-semibold">Dicas para melhorar a fonte (reduz o problema na origem):</span>
+            <ul className="list-disc pl-4">
+              <li>Cadastre o vocabulário no transcritor (Tactiq → lista personalizada): Ectolab, DIP, Sympla, UNICIN, CEAEC, POLICONS, Epicon, paracirurgia, ectoplasmólogo, conscienciologia — elimina a maior parte dos erros de ASR.</li>
+              <li>Peça a quem apresenta números para escrevê-los no chat da reunião — orçamento/estatística ditos em voz alta são o item que mais se degrada.</li>
+              <li>Anuncie decisões em voz alta de forma explícita (“registrando: fica decidido que…” ) — cria âncora limpa na transcrição.</li>
+              <li>A ata anterior é injetada automaticamente como contexto — a nova ata registra o que foi concluído desde então.</li>
+            </ul>
+          </div>
         </div>
       </section>
 
@@ -1253,6 +1268,21 @@ function ReviewScreen({
           )}
         </section>
 
+        {/* Checklist de validação — Orientação §8 */}
+        <ChecklistValidacao
+          analise={analise}
+          textoFonte={texto}
+          participantesTexto={participantes}
+          pontosTexto={pontos}
+          deliberacoesTexto={deliberacoes}
+          demandas={salvarDemandas}
+          demandasBrutas={demandas}
+          eventos={salvarEventos}
+          eventosBrutos={eventos}
+          dips={salvarDips}
+          pautas={salvarPautas}
+        />
+
         {salvarState.message && (
           <p
             role="alert"
@@ -1274,6 +1304,134 @@ function ReviewScreen({
         <SaveSubmitButton />
       </form>
     </div>
+  );
+}
+
+function ChecklistValidacao({
+  analise,
+  textoFonte,
+  participantesTexto,
+  pontosTexto,
+  deliberacoesTexto,
+  demandas,
+  demandasBrutas,
+  eventos,
+  eventosBrutos,
+  dips,
+  pautas,
+}: {
+  analise: { atualizacoes: { titulo: string }[] };
+  textoFonte: string;
+  participantesTexto: string;
+  pontosTexto: string;
+  deliberacoesTexto: string;
+  demandas: { titulo: string; responsavelId: string | null; prazo: string | null }[];
+  demandasBrutas: { incluida: boolean }[];
+  eventos: { titulo: string; data: string | null }[];
+  eventosBrutos: { incluido: boolean; titulo: string; data: string }[];
+  dips: { localidade: string }[];
+  pautas: { titulo: string }[];
+}) {
+  const checks: { label: string; ok: boolean; hint?: string }[] = [];
+
+  // 1. Responsável em toda demanda
+  const semResponsavel = demandas.filter((d) => !d.responsavelId).length;
+  checks.push({
+    label: `Toda demanda tem responsável nominal`,
+    ok: semResponsavel === 0,
+    hint: semResponsavel > 0 ? `${semResponsavel} demanda(s) sem responsável (evite "a equipe")` : undefined,
+  });
+
+  // 2. Datas futuras — eventos com data
+  const eventosSemData = eventosBrutos.filter((e) => e.incluido && !e.data.trim()).length;
+  checks.push({
+    label: `Eventos com data preenchida`,
+    ok: eventosSemData === 0,
+    hint: eventosSemData > 0 ? `${eventosSemData} evento(s) sem data — calendário incompleto (P9)` : `${eventos.length} evento(s) no calendário`,
+  });
+
+  // 3. Valores em reais preservados (heurística: fonte contém R$)
+  const fonteTemValor = /R\$\s*[\d.]+/.test(textoFonte);
+  const ataTemValor = /R\$\s*[\d.]+/.test(`${pontosTexto} ${deliberacoesTexto}`);
+  checks.push({
+    label: `Valores em reais preservados (P1)`,
+    ok: !fonteTemValor || ataTemValor,
+    hint: fonteTemValor && !ataTemValor ? "Fonte cita R$ mas ata não — verifique P1" : fonteTemValor ? "Fonte contém R$ e ata preservou" : "Nenhum valor na fonte",
+  });
+
+  // 4. Participantes que falaram aparecem
+  const qtdParticipantes = participantesTexto.split("\n").filter(Boolean).length;
+  checks.push({
+    label: `Participantes listados`,
+    ok: qtdParticipantes > 0,
+    hint: `${qtdParticipantes} participante(s) na ata`,
+  });
+
+  // 5. Demandas vencidas destacadas — heurística: demandasBrutas incluídas
+  checks.push({
+    label: `Demandas / prazos mapeados`,
+    ok: demandas.length > 0 || analise.atualizacoes.length === 0,
+    hint: `${demandas.length} nova(s) demanda(s), ${analise.atualizacoes.length} atualização(ões)`,
+  });
+
+  // 6. Problemas operacionais viraram demanda? (se fonte menciona ICNET/PIX/parcelamento)
+  const mencionaProblema = /ICNET|PIX|parcelamento|duplicad/i.test(textoFonte);
+  checks.push({
+    label: `Problemas operacionais mapeados (P3)`,
+    ok: !mencionaProblema || demandas.length > 0,
+    hint: mencionaProblema ? "Fonte menciona problema operacional — confira se virou demanda" : "Nenhum problema operacional óbvio na fonte",
+  });
+
+  // 7. Assuntos adiados → pautas
+  const mencionaAdiado = /próxima reunião|semana que vem|offline|adiad/i.test(textoFonte);
+  checks.push({
+    label: `Assuntos adiados → pautas (P6)`,
+    ok: !mencionaAdiado || pautas.length > 0,
+    hint: pautas.length > 0 ? `${pautas.length} pauta(s) para próxima reunião` : mencionaAdiado ? "Fonte menciona adiamento mas nenhuma pauta" : "Nenhum adiamento óbvio",
+  });
+
+  // 8. DIPs extraídos
+  checks.push({
+    label: `DIPs extraídas`,
+    ok: dips.length > 0 || !/DIP|dinâmica/i.test(textoFonte),
+    hint: `${dips.length} registro(s) DIP`,
+  });
+
+  // 9. Trechos ilegíveis marcados como [a confirmar] ao invés de omitidos — sempre ok manual
+  checks.push({
+    label: `Trechos ilegíveis marcados [a confirmar] (não omitidos)`,
+    ok: true,
+    hint: "Conferir nomes/valores com '?' — nunca omitir",
+  });
+
+  const allOk = checks.every((c) => c.ok);
+
+  return (
+    <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+      <h2 className="flex items-center gap-2 text-xl font-semibold text-zinc-900">
+        <CheckCircle2 size={22} aria-hidden="true" className={allOk ? "text-green-600" : "text-amber-600"} />
+        Checklist de validação — conferir antes de publicar (§8)
+      </h2>
+      <ul className="flex flex-col gap-1.5">
+        {checks.map((check, index) => (
+          <li key={index} className="flex items-start gap-2 text-sm leading-relaxed">
+            <span
+              aria-hidden="true"
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${check.ok ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}
+            >
+              {check.ok ? "✓" : "!"}
+            </span>
+            <span className={check.ok ? "text-zinc-700" : "font-medium text-amber-800"}>
+              {check.label}
+              {check.hint ? <span className="font-normal text-zinc-500"> — {check.hint}</span> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs leading-relaxed text-zinc-500">
+        Regra de ouro: nada com número, data, nome, valor ou verbo no futuro pode sair. Prazo desconhecido = “—”. Trecho ilegível = “[a confirmar]”. Nunca inventar prazo/valor/responsável.
+      </p>
+    </section>
   );
 }
 
