@@ -10,7 +10,7 @@ export default function ExcluirAtaButton({ ataId, ataTitulo }: { ataId: number; 
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     const confirmado = window.confirm(
-      `Excluir a ata "${ataTitulo}"?\n\nOs registros de DIP vinculados a ela também serão removidos. Esta ação não pode ser desfeita.`
+      `Excluir a ata "${ataTitulo}"?\n\nTudo que foi adicionado por ela será removido: DIPs, demandas, eventos, pautas e comentários de atualização vinculados à ata. Esta ação não pode ser desfeita e deixa o sistema zerado para re-subir a transcrição.`
     );
     if (!confirmado) {
       event.preventDefault();

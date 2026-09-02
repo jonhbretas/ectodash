@@ -545,6 +545,7 @@ export async function salvarAtaAnalise(
         data_evento: evento.data,
         local: evento.local || null,
         descricao: evento.descricao || null,
+        origem_ata_id: ataId,
       })
       .select("id")
       .single();
@@ -582,6 +583,7 @@ export async function salvarAtaAnalise(
         projeto: demanda.projeto || null,
         evento_id: resolverEventoId(demanda.eventoRef),
         etiqueta_id: demanda.etiquetaId || null,
+        origem_ata_id: ataId,
       })
       .select("id")
       .single();
@@ -631,6 +633,7 @@ export async function salvarAtaAnalise(
       .insert({
         demanda_id: alvo.id,
         conteudo: `Atualização da reunião "${tituloReferencia}": ${atualizacao.comentario}`,
+        origem_ata_id: ataId,
       });
     if (comentarioError) {
       console.error("salvarAtaAnalise: comentario insert failed", comentarioError);
