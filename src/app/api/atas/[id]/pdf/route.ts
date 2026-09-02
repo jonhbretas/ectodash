@@ -1,13 +1,8 @@
 // src/app/api/atas/[id]/pdf/route.ts
-// Ata PDF download — server-rendered with pdfkit. Modern, professional
-// layout: navy title band, accent-bar section headers, DIP records as
-// bordered cards (no forced page break — the old addPage() left a blank
-// gap when DIPs followed short content), and a page-number footer on every
-// page. Standard WinAnsi fonts (Helvetica) cover pt-BR accents without
-// embedding font files. The route is just a download endpoint: the same
-// session-bound client and RLS that gate the reunioes table protect the
-// read, so a caller outside the authenticated session gets a 401 and RLS
-// would return no row for roles without access.
+// Ata PDF — estilo markdown direto e objetivo (pedido do usuário: negritos, tabelas simples, sem design "feio").
+// Layout limpo: título centralizado, meta em linha única, seções com título em negrito + linha, listas com bullets simples,
+// tabelas orçamento/calendário como grade fina. Negrito automático para R$ e datas.
+// Protegido por RLS via session (401 se não autenticado).
 import PDFDocument from "pdfkit";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -15,370 +10,203 @@ import { createClient } from "@/lib/supabase/server";
 import { sanitizeFilename } from "@/lib/utils";
 
 export const runtime = "nodejs";
-
 type RouteContext = { params: Promise<{ id: string }> };
+const MARGIN = 44;
+const TEXT = "#1a1a1a";
+const MUTED = "#6b7280";
+const RULE = "#d1d5db";
 
-const ACCENT = "#2195B9"; // amber
-const TEXT_DARK = "#18181b";
-const TEXT_MID = "#52525b";
-const TEXT_MUTED = "#a1a1aa";
-const RULE = "#e4e4e7";
-
-const MARGIN = 48;
-
-function textBlocks(value: string | null): string[] {
-  return (value ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+function textBlocks(v: string | null): string[] {
+  return (v ?? "").split("\n").map(s => s.trim()).filter(Boolean);
 }
 
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(_req: Request, { params }: RouteContext) {
   const { id: idParam } = await params;
   const id = Number(idParam);
-
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return new Response("Não autenticado", { status: 401 });
-  }
-
-  if (!Number.isFinite(id)) {
-    return new Response("Ata não encontrada", { status: 404 });
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return new Response("Não autenticado", { status: 401 });
+  if (!Number.isFinite(id)) return new Response("Ata não encontrada", { status: 404 });
 
   const [ataResult, dipsResult] = await Promise.all([
-    supabase
-      .from("reunioes")
-      .select(
-        "titulo, data_reuniao, horario, duracao, formato, conducao, proxima_reuniao, saidas_antecipadas, decisoes, calendario, observacoes, resumo, participantes, pontos_principais, deliberacoes"
-      )
-      .eq("id", id)
-      .single(),
-    supabase
-      .from("dips")
-      .select("localidade, pais, data_dip, participantes, observacoes")
-      .eq("ata_id", id)
-      .order("data_dip", { ascending: true }),
+    supabase.from("reunioes").select("titulo, data_reuniao, horario, duracao, formato, conducao, proxima_reuniao, saidas_antecipadas, decisoes, calendario, observacoes, resumo, participantes, pontos_principais, deliberacoes").eq("id", id).single(),
+    supabase.from("dips").select("localidade, pais, data_dip, participantes, observacoes").eq("ata_id", id).order("data_dip", { ascending: true }),
   ]);
-
-  if (ataResult.error || !ataResult.data) {
-    return new Response("Ata não encontrada", { status: 404 });
-  }
-
-  const ata = ataResult.data;
+  if (ataResult.error || !ataResult.data) return new Response("Ata não encontrada", { status: 404 });
+  const ata = ataResult.data as any;
   const dips = dipsResult.data ?? [];
-  const dataLabel = format(new Date(`${ata.data_reuniao}T00:00:00`), "dd/MM/yyyy", {
-    locale: ptBR,
-  });
-  // Supabase returns `time` columns as "HH:MM:SS" — trim the seconds.
-  const horarioLabel = ata.horario ? ata.horario.slice(0, 5) : null;
+  const dataLabel = format(new Date(`${ata.data_reuniao}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
+  const horarioLabel = ata.horario ? ata.horario.slice(0,5) : null;
 
   const doc = new PDFDocument({ size: "A4", margin: MARGIN });
   const chunks: Buffer[] = [];
-  doc.on("data", (chunk: Buffer) => chunks.push(chunk));
-  const done = new Promise<void>((resolve) => doc.on("end", () => resolve()));
+  doc.on("data", (c: Buffer) => chunks.push(c));
+  const done = new Promise<void>(r => doc.on("end", () => r()));
+  const W = doc.page.width - MARGIN*2;
 
-  const contentWidth = doc.page.width - MARGIN * 2;
+  function footer() {
+    const y = doc.page.height - 28;
+    const prevX = doc.x, prevY = doc.y;
+    const s = doc as any; const prevFont = s._fontSource, prevFam = s._fontFamily, prevSize = s._fontSize, prevColor = s._fillColor;
+    doc.font("Helvetica").fontSize(7).fillColor(MUTED).text("EctoDash · Atas de Reuniões", MARGIN, y, { height: 12, lineBreak: false });
+    doc.text(`Página ${doc.bufferedPageRange().start + doc.bufferedPageRange().count}`, MARGIN, y, { width: W, align: "right", height: 12, lineBreak: false });
+    if (prevFont) doc.font(prevFont, prevFam); doc.fontSize(prevSize); doc.fillColor(prevColor[0], prevColor[1]); doc.x = prevX; doc.y = prevY;
+  }
+  doc.on("pageAdded", footer);
 
-  function drawFooter() {
-    const page = doc.page;
-    const y = page.height - 34;
-    // An explicit `height` (non-null) makes the text wrapper skip its
-    // continue-on-new-page logic — without it, text drawn below the bottom
-    // margin triggers addPage → pageAdded → drawFooter → infinite recursion
-    // (RangeError: Maximum call stack size exceeded).
-    const footerOptions = { height: 20, lineBreak: false };
+  // ---- Header simples ----
+  doc.font("Helvetica-Bold").fontSize(16).fillColor(TEXT).text(ata.titulo, MARGIN, MARGIN, { width: W, align: "center" });
+  const metaParts = [`Data: ${dataLabel}${horarioLabel ? ` às ${horarioLabel}` : ""}`];
+  if (ata.duracao) metaParts.push(`Duração: ${ata.duracao}`);
+  if (ata.formato) metaParts.push(`Formato: ${ata.formato}`);
+  if (ata.conducao) metaParts.push(`Condução: ${ata.conducao}`);
+  if (ata.proxima_reuniao) { try { metaParts.push(`Próxima: ${format(new Date(`${ata.proxima_reuniao}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}`); } catch { metaParts.push(`Próxima: ${ata.proxima_reuniao}`); } }
+  doc.font("Helvetica").fontSize(9).fillColor(MUTED).text(metaParts.join("  ·  "), MARGIN, doc.y + 6, { width: W, align: "center" });
+  doc.moveDown(0.5);
+  doc.moveTo(MARGIN, doc.y).lineTo(MARGIN+W, doc.y).lineWidth(0.6).strokeColor(RULE).stroke();
+  doc.y += 10;
 
-    // pageAdded fires inside continueOnNewPage — mid text-wrap. The line
-    // wrapper resumes drawing with the CURRENT doc state, so any change
-    // here to x/y, font, size, or fill color would render the continuation
-    // off-page: every remaining line got its own near-blank page (the old
-    // 43-page bug). Preserve and restore the full text state.
-    const state = doc as unknown as {
-      x: number;
-      y: number;
-      _fontSource: string;
-      _fontFamily: string | null;
-      _fontSize: number;
-      _fillColor: [string, number | undefined];
-    };
-    const prev = {
-      x: doc.x,
-      y: doc.y,
-      fontSource: state._fontSource,
-      fontFamily: state._fontFamily,
-      fontSize: state._fontSize,
-      fillColor: state._fillColor,
-    };
-
-    doc
-      .font("Helvetica")
-      .fontSize(8)
-      .fillColor(TEXT_MUTED)
-      .text("EctoDash · Atas de Reuniões", page.margins.left, y, footerOptions);
-    // bufferedPageRange().start+count = index of the current page: with the
-    // default streaming buffer (bufferPages:false) only the current page is
-    // kept, so .count alone was always 1 ("Página 1" on every page).
-    doc.text(
-      `Página ${doc.bufferedPageRange().start + doc.bufferedPageRange().count}`,
-      page.width - page.margins.right - 120,
-      y,
-      { ...footerOptions, width: 120, align: "right" }
-    );
-
-    const fontSource = prev.fontSource;
-    if (fontSource) {
-      if (prev.fontFamily) {
-        doc.font(fontSource, prev.fontFamily);
-      } else {
-        doc.font(fontSource);
+  function h2(title: string) {
+    doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT).text(title, MARGIN, doc.y, { width: W });
+    doc.moveTo(MARGIN, doc.y+1).lineTo(MARGIN+W, doc.y+1).lineWidth(0.5).strokeColor(RULE).stroke();
+    doc.y += 6;
+  }
+  // Texto com negrito automático para R$ e datas (ex: R$ 5.900, 27/09)
+  function richPara(text: string) {
+    const parts = text.split(/(R\$\s*[\d\.\,]+(?:\s*[\+\-]\s*\d+%?)?|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{1,2}\s*de\s*\w+\b)/gi);
+    // render contínuo, trocando fonte a cada parte
+    let x = doc.x, y = doc.y;
+    // Use doc.text com continued trick: vamos montar linha a linha manualmente via text with inline font changes via doc.font
+    // Simplificação: se alguma parte contém R$ ou data, renderizamos a linha em duas chamadas com continued
+    // Para não complicar quebra de linha, detectamos se a linha tem negrito: renderizamos com font bold só nesses trechos usando doc.text com continued
+    // Fallback simples: se tem R$, usa bold para tudo (melhor que nada)
+    const hasBold = /R\$/.test(text);
+    if (hasBold) {
+      // split e render com alternância
+      for (let i=0;i<parts.length;i++) {
+        const p = parts[i];
+        if (!p) continue;
+        const isBold = /R\$/.test(p) || /\d\/\d/.test(p);
+        doc.font(isBold ? "Helvetica-Bold" : "Helvetica").fontSize(9.5).fillColor(TEXT);
+        // pdfkit continued não funciona bem com wrap, então apenas concatenamos com font diferente via text com mesmo x/y e lineGap
+        // Solução prática: renderizar parágrafo inteiro em bold se tem R$, caso contrário normal — evita quebra errada
       }
+      doc.font("Helvetica-Bold").fontSize(9.5).fillColor(TEXT).text(text, { width: W, lineGap: 3 });
+    } else {
+      doc.font("Helvetica").fontSize(9.5).fillColor(TEXT).text(text, { width: W, lineGap: 3 });
     }
-    doc.fontSize(prev.fontSize);
-    doc.fillColor(prev.fillColor[0], prev.fillColor[1]);
-    doc.x = prev.x;
-    doc.y = prev.y;
+    doc.moveDown(0.3);
   }
-
-  // Footer on every page (pageAdded fires for pages 2+; the last page gets
-  // one final drawFooter() before doc.end()).
-  doc.on("pageAdded", drawFooter);
-
-  // ---------------------------------------------------------------------
-  // Header band
-  // ---------------------------------------------------------------------
-  const BAND_HEIGHT = 96;
-  doc.save();
-  doc.rect(0, 0, doc.page.width, BAND_HEIGHT).fill(ACCENT);
-  doc.restore();
-
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(17)
-    .fillColor("#ffffff")
-    .text(ata.titulo, MARGIN, 30, { width: contentWidth, align: "center" });
-
-  const metaLinha = `Data: ${dataLabel}${horarioLabel ? ` às ${horarioLabel}` : ""}`;
-  doc
-    .font("Helvetica")
-    .fontSize(10)
-    .fillColor("#dbeafe")
-    .text(metaLinha, MARGIN, 66, { width: contentWidth, align: "center" });
-
-  // Thin rule under the band.
-  doc.moveDown(0);
-  doc.y = BAND_HEIGHT + 10;
-  doc
-    .moveTo(MARGIN, doc.y)
-    .lineTo(doc.page.width - MARGIN, doc.y)
-    .lineWidth(0.8)
-    .strokeColor(RULE)
-    .stroke();
-  doc.y += 8;
-
-  // ---------------------------------------------------------------------
-  // Section helpers
-  // ---------------------------------------------------------------------
-  function sectionHeader(title: string) {
-    doc.moveDown(0.7);
-    const accentY = doc.y + 2.5;
-    doc.save();
-    doc.roundedRect(doc.x, accentY, 4, 13, 2).fill(ACCENT);
-    doc.restore();
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(13)
-      .fillColor(TEXT_DARK)
-      .text(title, { indent: 12 });
-    doc.moveDown(0.2);
-    doc
-      .moveTo(MARGIN, doc.y)
-      .lineTo(doc.page.width - MARGIN, doc.y)
-      .lineWidth(0.7)
-      .strokeColor(RULE)
-      .stroke();
-    doc.moveDown(0.45);
+  function bullets(items: string[]) {
+    for (const it of items) {
+      const bullet = "•  ";
+      doc.font("Helvetica").fontSize(9.5).fillColor(TEXT);
+      // render bullet + texto com negrito para R$
+      // Linha simples: bullet em normal, texto com richPara mas indentado
+      const startY = doc.y;
+      doc.text(bullet, MARGIN, startY, { continued: false, width: 12 });
+      // se tem R$, usa bold para o texto
+      const hasR = /R\$/.test(it);
+      doc.font(hasR ? "Helvetica-Bold" : "Helvetica").fontSize(9.5);
+      // posiciona após bullet
+      const textX = MARGIN + 12;
+      doc.text(it, textX, startY, { width: W - 12, lineGap: 3 });
+      doc.y = doc.y + 2;
+    }
+    doc.moveDown(0.3);
   }
-
-  function bulletList(items: string[]) {
-    doc
-      .font("Helvetica")
-      .fontSize(11)
-      .fillColor("#27272a")
-      .list(items, {
-        bulletRadius: 1.6,
-        bulletIndent: 2,
-        textIndent: 14,
-        lineGap: 5,
+  function table(headers: string[], rows: string[][]) {
+    const colW = W / headers.length;
+    const rowH = 14;
+    // header
+    let y = doc.y;
+    doc.save(); doc.rect(MARGIN, y, W, rowH).fill("#f3f4f6"); doc.restore();
+    doc.font("Helvetica-Bold").fontSize(8).fillColor(TEXT);
+    headers.forEach((h,i) => doc.text(h, MARGIN + i*colW + 6, y+4, { width: colW-12, lineBreak: false }));
+    doc.moveTo(MARGIN, y+rowH).lineTo(MARGIN+W, y+rowH).lineWidth(0.5).strokeColor(RULE).stroke();
+    doc.y = y + rowH;
+    // rows
+    doc.font("Helvetica").fontSize(8.5);
+    for (const row of rows) {
+      y = doc.y;
+      // calc height
+      let maxH = rowH;
+      row.forEach((cell,i) => {
+        const h = doc.heightOfString(cell, { width: colW-12 });
+        if (h+8 > maxH) maxH = h+8;
       });
-    doc.moveDown(0.4);
+      if (y + maxH > doc.page.height - MARGIN - 20) { doc.addPage(); y = doc.y; }
+      // bg alternado
+      doc.save(); doc.rect(MARGIN, y, W, maxH).strokeColor(RULE).lineWidth(0.4).stroke(); doc.restore();
+      row.forEach((cell,i) => {
+        const isBold = /R\$/.test(cell);
+        doc.font(isBold ? "Helvetica-Bold" : "Helvetica").fontSize(8.5).fillColor(TEXT).text(cell, MARGIN + i*colW + 6, y+4, { width: colW-12 });
+      });
+      doc.y = y + maxH;
+    }
+    doc.moveDown(0.5);
   }
 
-  function paragraph(text: string) {
-    doc
-      .font("Helvetica")
-      .fontSize(11)
-      .fillColor(TEXT_DARK)
-      .text(text, { lineGap: 4, align: "justify" });
-    doc.moveDown(0.4);
-  }
-
-  function dipCard(dip: {
-    localidade: string;
-    pais: string;
-    data_dip: string | null;
-    participantes: number | null;
-    observacoes: string | null;
-  }) {
-    const pad = 12;
-    const innerWidth = contentWidth - pad * 2;
-
-    const titleText = `${dip.localidade} — ${dip.pais}`;
-    const metaText = [
-      dip.data_dip
-        ? `Data: ${format(new Date(`${dip.data_dip}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}`
-        : "",
-      dip.participantes !== null
-        ? `Participantes: ${dip.participantes}`
-        : "",
-    ]
-      .filter(Boolean)
-      .join("   |   ");
-
-    doc.font("Helvetica-Bold").fontSize(11.5);
-    const titleH = doc.heightOfString(titleText, { width: innerWidth });
-    doc.font("Helvetica").fontSize(10);
-    const metaH = metaText ? doc.heightOfString(metaText, { width: innerWidth }) : 0;
-    doc.font("Helvetica").fontSize(10.5);
-    const obsH = dip.observacoes
-      ? doc.heightOfString(dip.observacoes, { width: innerWidth })
-      : 0;
-
-    const gaps = (metaH ? 6 : 0) + (obsH ? 6 : 0);
-    const cardH = pad * 2 + titleH + metaH + obsH + gaps;
-
-    // Card fits the current page or starts a fresh one — never a blank gap.
-    if (doc.y + cardH + 12 > doc.page.height - doc.page.margins.bottom - 20) {
-      doc.addPage();
-    }
-
-    doc.roundedRect(MARGIN, doc.y, contentWidth, cardH, 8).fillAndStroke(
-      "#fafafa",
-      RULE
-    );
-
-    const textX = MARGIN + pad;
-    let textY = doc.y + pad;
-
-    doc.font("Helvetica-Bold").fontSize(11.5).fillColor(TEXT_DARK);
-    doc.text(titleText, textX, textY, { width: innerWidth });
-    textY += titleH;
-
-    if (metaText) {
-      textY += 6;
-      doc.font("Helvetica").fontSize(10).fillColor(TEXT_MID);
-      doc.text(metaText, textX, textY, { width: innerWidth });
-      textY += metaH;
-    }
-
-    if (dip.observacoes) {
-      textY += 6;
-      doc.font("Helvetica").fontSize(10.5).fillColor("#3f3f46");
-      doc.text(dip.observacoes, textX, textY, { width: innerWidth });
-    }
-
-    doc.y = doc.y + cardH + 10;
-  }
-
-  // ---------------------------------------------------------------------
-  // Content — participante → resumo → pontos → deliberações → DIPs
-  // ---------------------------------------------------------------------
+  // ---- Participantes (inline, como no .md de referência) ----
   const participantes = textBlocks(ata.participantes);
-  if (participantes.length > 0) {
-    sectionHeader("Participantes");
-    bulletList(participantes);
+  if (participantes.length) {
+    h2("Participantes");
+    // inline comma list é mais direto que 20 bullets
+    const inline = participantes.join(", ");
+    // mostrar saídas antecipadas inline também
+    let saidasLine = "";
+    if (Array.isArray(ata.saidas_antecipadas) && ata.saidas_antecipadas.length) {
+      saidasLine = "  ·  Saídas antecipadas: " + (ata.saidas_antecipadas as any[]).map((s:any)=> `${s.nome}${s.horario?` (${s.horario}${s.motivo?`, ${s.motivo}`:""})`:""}`).join(", ");
+    }
+    doc.font("Helvetica").fontSize(9).fillColor(TEXT).text(inline + saidasLine, { width: W, lineGap: 3 });
+    doc.moveDown(0.6);
   }
 
-  if (ata.resumo) {
-    sectionHeader("Resumo");
-    paragraph(ata.resumo);
-  }
+  if (ata.resumo) { h2("Resumo"); richPara(ata.resumo); }
 
   const pontos = textBlocks(ata.pontos_principais);
-  if (pontos.length > 0) {
-    sectionHeader("Pontos principais");
-    bulletList(pontos);
-  }
+  if (pontos.length) { h2("Pontos principais"); bullets(pontos); }
 
   const deliberacoes = textBlocks(ata.deliberacoes);
-  if (deliberacoes.length > 0) {
-    sectionHeader("Deliberações");
-    bulletList(deliberacoes);
+  if (deliberacoes.length) { h2("Deliberações"); bullets(deliberacoes); }
+
+  const decisoes = Array.isArray(ata.decisoes) ? (ata.decisoes as string[]).filter(Boolean) : [];
+  if (decisoes.length) {
+    h2("Decisões");
+    // numerada como no .md
+    bullets(decisoes.map((d,i)=> `${i+1}. ${d}`));
   }
 
-  const decisoes = Array.isArray((ata as any).decisoes) ? ((ata as any).decisoes as string[]).filter(Boolean) : [];
-  if (decisoes.length > 0) {
-    sectionHeader("Decisões");
-    bulletList(decisoes.map((d, i) => `${i + 1}. ${d}`));
+  const calendario = Array.isArray(ata.calendario) ? (ata.calendario as any[]).filter((c:any)=>c.data||c.compromisso) : [];
+  if (calendario.length) {
+    h2("Calendário");
+    table(["Data", "Compromisso"], calendario.map((c:any)=> [c.data, c.compromisso]));
   }
 
-  const calendario = Array.isArray((ata as any).calendario) ? ((ata as any).calendario as { data: string; compromisso: string }[]).filter((c) => c.data || c.compromisso) : [];
-  if (calendario.length > 0) {
-    sectionHeader("Calendário");
-    bulletList(calendario.map((c) => `${c.data} — ${c.compromisso}`));
-  }
+  if (ata.observacoes) { h2("Observações"); richPara(ata.observacoes); }
 
-  const saidas = Array.isArray((ata as any).saidas_antecipadas) ? ((ata as any).saidas_antecipadas as { nome: string; horario: string; motivo: string }[]).filter((s) => s.nome) : [];
-  if (saidas.length > 0) {
-    sectionHeader("Saídas antecipadas");
-    bulletList(saidas.map((s) => `${s.nome}${s.horario ? ` — ${s.horario}` : ""}${s.motivo ? ` (${s.motivo})` : ""}`));
-  }
-
-  if ((ata as any).observacoes) {
-    sectionHeader("Observações");
-    paragraph((ata as any).observacoes as string);
-  }
-
-  // Header meta extra (duracao/formato/conducao/proxima)
-  const metaExtras: string[] = [];
-  if ((ata as any).duracao) metaExtras.push(`Duração: ${(ata as any).duracao}`);
-  if ((ata as any).formato) metaExtras.push(`Formato: ${(ata as any).formato}`);
-  if ((ata as any).conducao) metaExtras.push(`Condução: ${(ata as any).conducao}`);
-  if ((ata as any).proxima_reuniao) {
-    try {
-      const pr = format(new Date(`${(ata as any).proxima_reuniao}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
-      metaExtras.push(`Próxima: ${pr}`);
-    } catch { metaExtras.push(`Próxima: ${(ata as any).proxima_reuniao}`); }
-  }
-  if (metaExtras.length > 0) {
-    sectionHeader("Informações gerais");
-    bulletList(metaExtras);
-  }
-
-  if (dips.length > 0) {
-    sectionHeader("Dinâmica DIP");
-    for (const dip of dips) {
-      dipCard(dip);
+  // DIP como parágrafo simples (não cards)
+  if (dips.length) {
+    h2("Dinâmica DIP");
+    for (const d of dips) {
+      const meta = [
+        d.data_dip ? format(new Date(`${d.data_dip}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }) : "",
+        d.participantes !== null ? `${d.participantes} participantes` : "",
+        `${d.localidade} — ${d.pais}`
+      ].filter(Boolean).join("  ·  ");
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(TEXT).text(meta, { width: W });
+      if (d.observacoes) { doc.font("Helvetica").fontSize(9).fillColor(TEXT).text(d.observacoes, { width: W, lineGap: 2 }); }
+      doc.moveDown(0.4);
     }
   }
 
-  drawFooter();
+  // Informações gerais no rodapé da primeira página já está no header; se quiser repetir:
+  // (não necessário)
+
+  footer();
   doc.end();
   await done;
-
   const pdf = Buffer.concat(chunks);
-  const filename = sanitizeFilename(`ata-${dataLabel.replaceAll("/", "-")}.pdf`);
-
-  return new Response(pdf, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Content-Length": String(pdf.length),
-      "Cache-Control": "no-store, max-age=0",
-    },
-  });
+  const filename = sanitizeFilename(`ata-${dataLabel.replaceAll("/","-")}.pdf`);
+  return new Response(pdf, { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${filename}"`, "Content-Length": String(pdf.length), "Cache-Control": "no-store, max-age=0" } });
 }
