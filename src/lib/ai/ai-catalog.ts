@@ -3,8 +3,6 @@ export type AiProvider = "opencode-go" | "anthropic" | "openai";
 
 export const PROVIDERS = [
   { id: "opencode-go" as const, label: "OpenCode Go", desc: "OPENCODE_API_KEY — mimo/muse/deepseek" },
-  { id: "anthropic" as const, label: "Claude (Anthropic)", desc: "ANTHROPIC_API_KEY — sonnet/opus" },
-  { id: "openai" as const, label: "Codex / OpenAI", desc: "OPENAI_API_KEY — gpt-5/codex" },
 ] as const;
 
 export const AI_CATALOG = [
@@ -18,14 +16,6 @@ export const AI_CATALOG = [
   { id: "gpt-5.6-luna", label: "GPT 5.6 Luna", provider: "opencode-go" as const, desc: "10k req/mês" },
   { id: "grok-4.6", label: "Grok 4.6", provider: "opencode-go" as const, desc: "845 req/mês" },
   { id: "qwen3.8-flash", label: "Qwen3.8 Flash", provider: "opencode-go" as const, desc: "27k req/mês" },
-  // Claude direto
-  { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5", provider: "anthropic" as const, desc: "Anthropic direto" },
-  { id: "claude-opus-4-6", label: "Claude Opus 4.6", provider: "anthropic" as const, desc: "Mais capaz" },
-  { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", provider: "anthropic" as const, desc: "Mais barato" },
-  // OpenAI / Codex direto
-  { id: "gpt-5", label: "GPT-5", provider: "openai" as const, desc: "OpenAI direto" },
-  { id: "gpt-5-codex", label: "GPT-5 Codex", provider: "openai" as const, desc: "Codex" },
-  { id: "gpt-4.1", label: "GPT-4.1", provider: "openai" as const, desc: "Rápido" },
 ] as const;
 
 export const MODEL_LIMITS: Record<string, { h5: number; week: number; month: number }> = {
