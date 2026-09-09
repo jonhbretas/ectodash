@@ -123,7 +123,10 @@ export function filtrarResultado(
   opts: { maxDemandas?: number } = {},
 ): { resultado: Record<string, any>; descartados: Descartado[] } {
   const maxDemandas = opts.maxDemandas ?? 7;
-  const fonteNorm = normalizeTexto(transcricaoFonte);
+  if (!json || typeof json !== "object" || Array.isArray(json)) {
+    return { resultado: {}, descartados: [{ lista: "resposta", item: {}, motivo: "resposta da IA não é um objeto" }] };
+  }
+  const fonteNorm = normalizeTexto(String(transcricaoFonte ?? ""));
   const descartados: Descartado[] = [];
   const out: Record<string, any> = { ...json };
 

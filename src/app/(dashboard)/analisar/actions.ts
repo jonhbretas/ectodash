@@ -304,6 +304,10 @@ export async function analisarComIA(
   }
   const supabase = gate.supabase;
 
+  // Outer guard: qualquer throw abaixo (supabase, preprocess, filtro,
+  // mapeamento) vira erro inline em vez de estourar no global-error
+  // boundary ("Ops, algo deu errado").
+  try {
   const arquivo = formData.get("arquivo");
   const textoPaste = formData.get("texto");
 
@@ -595,6 +599,12 @@ export async function analisarComIA(
     console.error("analisarComIA: erro", err);
     return erroState(
       "Algo deu errado ao processar com a IA. Verifique sua internet e tente novamente."
+    );
+  }
+  } catch (err) {
+    console.error("analisarComIA: outer erro", err);
+    return erroState(
+      "Algo deu errado ao analisar. Tente novamente — se persistir, recarregue a página."
     );
   }
 }
