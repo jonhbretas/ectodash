@@ -239,9 +239,16 @@ export async function chatCompletion(
     content?: Array<{ text?: unknown; type?: string }>;
   };
 
-  // Chat Completions shape
+  // Chat Completions shape (content pode ser string ou array de blocos)
   const chatContent = data?.choices?.[0]?.message?.content;
   if (typeof chatContent === "string" && chatContent.length > 0) return chatContent;
+  if (Array.isArray(chatContent)) {
+    const joined = chatContent
+      .map((b) => (b && typeof b === "object" && typeof (b as { text?: unknown }).text === "string" ? ((b as { text: string }).text) : typeof b === "string" ? b : ""))
+      .join("")
+      .trim();
+    if (joined.length > 0) return joined;
+  }
 
   // Responses API shapes
   if (typeof data?.output_text === "string" && data.output_text.length > 0) {
@@ -261,5 +268,38 @@ export async function chatCompletion(
     .trim();
   if (anthropicText && anthropicText.length > 0) return anthropicText;
 
-  throw new Error("API de IA retornou resposta vazia");
+  // Último recurso: coleta recursiva de qualquer campo "text" (variantes de
+  // shape do gateway). Ignora blobs criptografados (reasoning).
+  const fallbackTexts: string[] = [];
+  const seenTexts = new Set<string>();
+  (function walk(node: unknown, depth: number): void {
+    if (depth > 6 || node == null) return;
+    if (Array.isArray(node)) {
+      for (const v of node) walk(v, depth + 1);
+      return;
+    }
+    if (typeof node === "object") {
+      for (const [k, v] of Object.entries(node)) {
+        if (k === "text" && typeof v === "string" && v.trim().length > 0 && !seenTexts.has(v)) {
+          seenTexts.add(v);
+          fallbackTexts.push(v);
+        } else {
+          walk(v, depth + 1);
+        }
+      }
+    }
+  })(data, 0);
+  const fallback = fallbackTexts.join("").trim();
+  if (fallback.length > 0) return fallback;
+
+  // Fingerprint para diagnóstico (vai para o detalhe do erro + logs Vercel).
+  const anyData = data as unknown as Record<string, unknown>;
+  const outTypes = Array.isArray(data?.output)
+    ? data.output.map((o) => String((o as { type?: unknown })?.type ?? "?")).join(",")
+    : "-";
+  const fingerprint = `status=${String(anyData?.status ?? "?")} keys=${Object.keys(anyData ?? {}).join(",")} output=[${outTypes}] incomplete=${String((anyData?.incomplete_details as Record<string, unknown> | undefined)?.reason ?? "-")}`;
+  try {
+    console.error("ai-client: parse vazio", fingerprint, JSON.stringify(data).slice(0, 2000));
+  } catch {}
+  throw new Error(`API de IA retornou resposta vazia (${fingerprint})`);
 }
