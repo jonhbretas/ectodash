@@ -31,28 +31,68 @@ export function wrapUserContent(content: string): string {
   return `${USER_CONTENT_START}\n${content}\n${USER_CONTENT_END}`;
 }
 
-export function aiConfig() {
+// Curated catalog shown in the selector (subset of Go)
+export const AI_CATALOG = [
+  { id: "mimo-v2.5", label: "MiMo-V2.5", desc: "Mais barato · 150k req/mês" },
+  { id: "mimo-v2.5-pro", label: "MiMo-V2.5 Pro", desc: "Qualidade maior" },
+  { id: "muse-spark-1.2-contributor", label: "Muse Spark 1.2", desc: "226k req/mês" },
+  { id: "muse-spark-1.3-contributor", label: "Muse Spark 1.3", desc: "Mais recente" },
+  { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", desc: "Rápido e barato" },
+  { id: "glm-5.3-flash", label: "GLM-5.3 Flash", desc: "Intermediário" },
+] as const;
+
+export type AiModelId = (typeof AI_CATALOG)[number]["id"] | string;
+
+function normalizeModel(model: string): string {
+  if (model.endsWith("-free")) return model.slice(0, -5);
+  return model;
+}
+
+function resolveUrl(model: string, explicitUrl?: string): string {
+  if (explicitUrl) return explicitUrl;
+  const needsResponses = RESPONSES_MODELS.has(model);
+  let url = DEFAULT_AI_API_URL;
+  const isResponsesUrl = url.includes("/responses");
+  if (needsResponses && !isResponsesUrl) url = "https://opencode.ai/zen/go/v1/responses";
+  else if (!needsResponses && isResponsesUrl) url = "https://opencode.ai/zen/go/v1/chat/completions";
+  return url;
+}
+
+export function aiConfig(overrideModel?: string): { apiKey: string; url: string; model: string } {
   const apiKey = process.env.OPENCODE_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENCODE_API_KEY não configurada no servidor");
-  }
-  let model = process.env.AI_MODEL ?? DEFAULT_AI_MODEL;
-  // Normalize legacy "-free" suffix that some envs still carry — the Go
-  // catalog id is without it (e.g. muse-spark-1.2-contributor).
-  if (model.endsWith("-free")) model = model.slice(0, -5);
-  let url = process.env.AI_API_URL ?? DEFAULT_AI_API_URL;
-  // Auto-route to the correct Go endpoint when AI_API_URL was not
-  // explicitly overridden: Responses models must hit /responses.
-  if (!process.env.AI_API_URL) {
-    const needsResponses = RESPONSES_MODELS.has(model);
-    const isResponsesUrl = url.includes("/responses");
-    if (needsResponses && !isResponsesUrl) {
-      url = "https://opencode.ai/zen/go/v1/responses";
-    } else if (!needsResponses && isResponsesUrl) {
-      url = "https://opencode.ai/zen/go/v1/chat/completions";
-    }
-  }
+  if (!apiKey) throw new Error("OPENCODE_API_KEY não configurada no servidor");
+  const raw = overrideModel ?? process.env.AI_MODEL ?? DEFAULT_AI_MODEL;
+  const model = normalizeModel(raw);
+  const url = resolveUrl(model, process.env.AI_API_URL);
   return { apiKey, url, model };
+}
+
+export async function getEffectiveAIConfig(supabase?: import("@supabase/supabase-js").SupabaseClient): Promise<{ apiKey: string; url: string; model: string; source: "db" | "env" }> {
+  const fallback = aiConfig();
+  if (!supabase) return { ...fallback, source: "env" };
+  try {
+    const { data } = await supabase.from("ai_config").select("modelo").eq("id", 1).maybeSingle();
+    const dbModel = data?.modelo?.trim();
+    if (dbModel) {
+      const model = normalizeModel(dbModel);
+      const url = resolveUrl(model, process.env.AI_API_URL);
+      return { apiKey: fallback.apiKey, url, model, source: "db" };
+    }
+  } catch {}
+  return { ...fallback, source: "env" };
+}
+
+async function resolveEffectiveConfig(): Promise<{ apiKey: string; url: string; model: string }> {
+  const fallback = aiConfig();
+  // Try DB override — best-effort, never fails the request.
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const effective = await getEffectiveAIConfig(supabase);
+    return effective;
+  } catch {
+    return fallback;
+  }
 }
 
 // Single server-side completion handling all three Go endpoint shapes:
@@ -66,7 +106,7 @@ export async function chatCompletion(
   user: string,
   options: { jsonMode?: boolean } = {}
 ): Promise<string> {
-  const { apiKey, url, model } = aiConfig();
+  const { apiKey, url, model } = await resolveEffectiveConfig();
   const isResponsesApi = url.includes("/responses");
   const isMessagesApi = url.includes("/messages");
 

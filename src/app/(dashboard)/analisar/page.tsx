@@ -27,6 +27,7 @@ import {
   MessageSquareText,
 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
+import { AIModelSelector } from "@/components/ai-model-selector";
 import {
   analisarComIA,
   salvarTudoDaAnalise,
@@ -234,16 +235,15 @@ function AnalyseFlow({ onRestart }: { onRestart: () => void }) {
         </div>
       </form>
 
+      <div className="w-full max-w-lg">
+        <AIModelSelector />
+      </div>
+
       <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-xs text-slate-500">
         <p>
           A IA classifica e extrai automaticamente eventos, tarefas de
           reunioes, atas e registros DIP. Os dados financeiros nao sao
           extraidos aqui: entram apenas pela planilha no modulo Financeiro.
-          O modelo em uso e o configurado na variavel{" "}
-          <code className="rounded bg-slate-100 px-1 py-0.5 text-xs font-mono">
-            AI_MODEL
-          </code>{" "}
-          no .env (atualmente: mimo-v2.5, gateway OpenCode Go).
         </p>
       </div>
     </main>
