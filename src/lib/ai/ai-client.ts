@@ -7,7 +7,7 @@
 // Muse Spark / GPT Luna / Grok via /responses, Qwen/MiniMax via /messages.
 // Docs: https://opencode.ai/docs/go/#endpoints
 
-const DEFAULT_AI_MODEL = "mimo-v2.5";
+const DEFAULT_AI_MODEL = "muse-spark-1.3-contributor";
 const DEFAULT_AI_API_URL = "https://opencode.ai/zen/go/v1/chat/completions";
 
 // Models that MUST use the Responses API (OpenAI-style)
