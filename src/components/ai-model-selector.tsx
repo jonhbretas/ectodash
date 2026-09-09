@@ -73,6 +73,7 @@ export function AIModelSelector() {
   const [test, setTest] = useState<{ ok: boolean; latencyMs: number; message: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [selected, setSelected] = useState<string>("");
+  const [providerSel, setProviderSel] = useState<string>("");
   const [pending, startTransition] = useTransition();
 
   const [saveState, saveAction] = useActionState(async (_: unknown, fd: FormData) => {
@@ -81,6 +82,11 @@ export function AIModelSelector() {
       const s = await getAIStatus();
       setStatus(s);
       setSelected(s.modelo);
+      const u = await getAIUsage();
+      if (u.ok && u.usage) {
+        setUsage(u.usage);
+        setUsageError(null);
+      } else setUsageError(u.error ?? "Uso indisponível");
     }
     return r;
   }, null as unknown as { ok: boolean; message: string } | null);
@@ -90,10 +96,11 @@ export function AIModelSelector() {
       const s = await getAIStatus();
       setStatus(s);
       setSelected(s.modelo);
+      setProviderSel(s.provider);
       const u = await getAIUsage();
       if (u.ok && u.usage) setUsage(u.usage);
       else setUsageError(u.error ?? "Uso indisponível");
-      const t = await testAIModel(s.modelo);
+      const t = await testAIModel(s.modelo, s.provider);
       setTest(t);
     })();
   }, []);
@@ -102,7 +109,9 @@ export function AIModelSelector() {
     if (!status) return;
     setTesting(true);
     const target = selected || status.modelo;
-    const t = await testAIModel(target);
+    const hit = status.catalog.find((m) => m.id === target);
+    const provider = hit?.provider ?? providerSel ?? status.provider;
+    const t = await testAIModel(target, provider);
     setTest(t);
     setTesting(false);
   }
@@ -142,7 +151,7 @@ export function AIModelSelector() {
             </span>
           </h3>
           <p className="truncate text-xs text-slate-500">
-            {status.modelo} <span className="text-slate-400">· {status.source === "db" ? "config do banco" : "variável de ambiente"} · {status.url.includes("/responses") ? "/responses" : status.url.includes("/messages") ? "/messages" : "/chat/completions"}</span>
+            {status.provider} · {status.modelo} <span className="text-slate-400">· {status.source === "db" ? "banco" : "env"} · {status.url.includes("anthropic") ? "anthropic" : status.url.includes("api.openai") ? "openai" : status.url.includes("/responses") ? "/responses" : status.url.includes("/messages") ? "/messages" : "/chat/completions"}</span>
           </p>
         </div>
         <button
@@ -159,13 +168,34 @@ export function AIModelSelector() {
       {test && (
         <p className={`rounded-lg px-3 py-2 text-xs ${test.ok ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-red-50 text-red-700 ring-1 ring-red-200"}`}>
           {test.message}
-          {!test.ok && <span className="ml-2 text-red-500">Verifique OPENCODE_API_KEY e o modelo.</span>}
+          {!test.ok && <span className="ml-2 text-red-500">Verifique a chave do provedor ({status.provider}) e o modelo.</span>}
         </p>
       )}
 
       <form action={saveAction} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-slate-700">Seletor de modelo</span>
+          <span className="text-xs font-medium text-slate-700">Provedor</span>
+          <select
+            name="provider"
+            value={providerSel || status.provider}
+            onChange={(e) => {
+              const prov = e.target.value;
+              setProviderSel(prov);
+              const firstOfProvider = status.catalog.find((m) => m.provider === prov);
+              if (firstOfProvider) setSelected(firstOfProvider.id);
+            }}
+            disabled={!status.canEdit}
+            className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+          >
+            {status.providers.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label} — {p.desc}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-slate-700">Modelo</span>
           <select
             name="modelo"
             value={selected}
@@ -173,14 +203,19 @@ export function AIModelSelector() {
             disabled={!status.canEdit}
             className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:bg-slate-50 disabled:text-slate-400"
           >
-            {status.catalog.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label} — {m.desc}
-              </option>
-            ))}
+            {status.catalog
+              .filter((m) => m.provider === (providerSel || status.provider))
+              .map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label} — {m.desc}
+                </option>
+              ))}
           </select>
           {!status.canEdit && <span className="flex items-center gap-1 text-xs text-amber-600"><ShieldCheck size={12} /> Apenas coordenador geral pode alterar.</span>}
         </label>
+        <p className="text-xs text-slate-400">
+          Chaves: Go → <code className="rounded bg-slate-100 px-1">OPENCODE_API_KEY</code> · Claude → <code className="rounded bg-slate-100 px-1">ANTHROPIC_API_KEY</code> · Codex/OpenAI → <code className="rounded bg-slate-100 px-1">OPENAI_API_KEY</code> no <code className="rounded bg-slate-100 px-1">.env.local</code> e Vercel.
+        </p>
 
         {status.canEdit && (
           <button

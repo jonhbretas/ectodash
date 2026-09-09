@@ -31,8 +31,8 @@ export function wrapUserContent(content: string): string {
   return `${USER_CONTENT_START}\n${content}\n${USER_CONTENT_END}`;
 }
 
-import { AI_CATALOG } from "./ai-catalog";
-export { AI_CATALOG } from "./ai-catalog";
+import { AI_CATALOG, type AiProvider } from "./ai-catalog";
+export { AI_CATALOG, PROVIDERS } from "./ai-catalog";
 export { MODEL_LIMITS } from "./ai-catalog";
 
 export type AiModelId = (typeof AI_CATALOG)[number]["id"] | string;
@@ -42,8 +42,20 @@ function normalizeModel(model: string): string {
   return model;
 }
 
-function resolveUrl(model: string, explicitUrl?: string): string {
+function getProviderForModel(model: string): AiProvider {
+  const hit = AI_CATALOG.find((m) => m.id === model);
+  if (hit) return hit.provider;
+  // Heurística: claude-* → anthropic, gpt-*/o1/* → openai, resto → Go
+  if (model.startsWith("claude-")) return "anthropic";
+  if (model.startsWith("gpt-") || model.startsWith("o1") || model.startsWith("o3")) return "openai";
+  return "opencode-go";
+}
+
+function resolveUrl(model: string, provider: AiProvider, explicitUrl?: string): string {
   if (explicitUrl) return explicitUrl;
+  if (provider === "anthropic") return "https://api.anthropic.com/v1/messages";
+  if (provider === "openai") return "https://api.openai.com/v1/chat/completions";
+  // opencode-go
   const needsResponses = RESPONSES_MODELS.has(model);
   let url = DEFAULT_AI_API_URL;
   const isResponsesUrl = url.includes("/responses");
@@ -52,41 +64,79 @@ function resolveUrl(model: string, explicitUrl?: string): string {
   return url;
 }
 
-export function aiConfig(overrideModel?: string): { apiKey: string; url: string; model: string } {
-  const apiKey = process.env.OPENCODE_API_KEY;
-  if (!apiKey) throw new Error("OPENCODE_API_KEY não configurada no servidor");
-  const raw = overrideModel ?? process.env.AI_MODEL ?? DEFAULT_AI_MODEL;
-  const model = normalizeModel(raw);
-  const url = resolveUrl(model, process.env.AI_API_URL);
-  return { apiKey, url, model };
+function apiKeyForProvider(provider: AiProvider): string {
+  if (provider === "anthropic") {
+    const k = process.env.ANTHROPIC_API_KEY;
+    if (!k) throw new Error("ANTHROPIC_API_KEY não configurada no servidor");
+    return k;
+  }
+  if (provider === "openai") {
+    const k = process.env.OPENAI_API_KEY;
+    if (!k) throw new Error("OPENAI_API_KEY não configurada no servidor");
+    return k;
+  }
+  const k = process.env.OPENCODE_API_KEY;
+  if (!k) throw new Error("OPENCODE_API_KEY não configurada no servidor");
+  return k;
 }
 
-export async function getEffectiveAIConfig(supabase?: import("@supabase/supabase-js").SupabaseClient): Promise<{ apiKey: string; url: string; model: string; source: "db" | "env" }> {
-  const fallback = aiConfig();
+export function aiConfig(overrideModel?: string, overrideProvider?: AiProvider): { apiKey: string; url: string; model: string; provider: AiProvider } {
+  const rawModel = overrideModel ?? process.env.AI_MODEL ?? DEFAULT_AI_MODEL;
+  const model = normalizeModel(rawModel);
+  const provider = overrideProvider ?? (process.env.AI_PROVIDER as AiProvider | undefined) ?? getProviderForModel(model);
+  const url = resolveUrl(model, provider, process.env.AI_API_URL);
+  const apiKey = apiKeyForProvider(provider);
+  return { apiKey, url, model, provider };
+}
+
+export async function getEffectiveAIConfig(supabase?: import("@supabase/supabase-js").SupabaseClient): Promise<{ apiKey: string; url: string; model: string; provider: AiProvider; source: "db" | "env" }> {
+  // fallback env
+  let fallback: { apiKey: string; url: string; model: string; provider: AiProvider };
+  try {
+    fallback = aiConfig();
+  } catch {
+    // se chave faltando, ainda tenta ler DB para mostrar status
+    fallback = { apiKey: "", url: DEFAULT_AI_API_URL, model: DEFAULT_AI_MODEL, provider: "opencode-go" as const };
+  }
   if (!supabase) return { ...fallback, source: "env" };
   try {
-    const { data } = await supabase.from("ai_config").select("modelo").eq("id", 1).maybeSingle();
+    const { data } = await supabase.from("ai_config").select("modelo, provider").eq("id", 1).maybeSingle();
     const dbModel = data?.modelo?.trim();
+    const dbProvider = (data?.provider as AiProvider | undefined) ?? getProviderForModel(dbModel ?? fallback.model);
     if (dbModel) {
       const model = normalizeModel(dbModel);
-      const url = resolveUrl(model, process.env.AI_API_URL);
-      return { apiKey: fallback.apiKey, url, model, source: "db" };
+      const provider: AiProvider = dbProvider;
+      const url = resolveUrl(model, provider, process.env.AI_API_URL);
+      // Se env força provider/modelo diferente, respeita env? Para chaves próprias o DB deve vencer — só respeita se AI_PROVIDER/AI_MODEL estiver setado e for diferente do DB, env vence (segurança Vercel).
+      const envModel = process.env.AI_MODEL ? normalizeModel(process.env.AI_MODEL) : null;
+      const envProvider = process.env.AI_PROVIDER as AiProvider | undefined;
+      if (envModel && envModel !== model) {
+        return { ...fallback, source: "env" };
+      }
+      if (envProvider && envProvider !== provider) {
+        return { ...fallback, source: "env" };
+      }
+      // tenta pegar chave do provider do DB — se faltar, cai no fallback para exibir erro claro
+      try {
+        const apiKey = apiKeyForProvider(provider);
+        return { apiKey, url, model, provider, source: "db" };
+      } catch {
+        return { ...fallback, source: "db" };
+      }
     }
   } catch {}
   return { ...fallback, source: "env" };
 }
 
-async function resolveEffectiveConfig(): Promise<{ apiKey: string; url: string; model: string }> {
-  const fallback = aiConfig();
-  // Try DB override — best-effort, never fails the request.
+async function resolveEffectiveConfig(): Promise<{ apiKey: string; url: string; model: string; provider: AiProvider }> {
+  // tenta DB primeiro
   try {
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
     const effective = await getEffectiveAIConfig(supabase);
-    return effective;
-  } catch {
-    return fallback;
-  }
+    if (effective.apiKey) return effective;
+  } catch {}
+  return aiConfig();
 }
 
 // Single server-side completion handling all three Go endpoint shapes:
@@ -100,13 +150,10 @@ export async function chatCompletion(
   user: string,
   options: { jsonMode?: boolean } = {}
 ): Promise<string> {
-  const { apiKey, url, model } = await resolveEffectiveConfig();
+  const { apiKey, url, model, provider } = await resolveEffectiveConfig();
   const isResponsesApi = url.includes("/responses");
-  const isMessagesApi = url.includes("/messages");
+  const isMessagesApi = url.includes("/messages") || provider === "anthropic";
 
-  // Go enforces x-opencode-session for routing + prompt-cache (2026-09).
-  // Use a stable per-process id so consecutive calls in the same analysis
-  // benefit from caching without extra config.
   const sessionId =
     (globalThis as unknown as { __ectodashSessionId?: string }).__ectodashSessionId ??
     (() => {
@@ -116,7 +163,35 @@ export async function chatCompletion(
     })();
 
   let body: string;
-  if (isResponsesApi) {
+  let headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "User-Agent": "ectodash/1.0",
+  };
+
+  if (provider === "anthropic") {
+    // Anthropic Messages API
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+    body = JSON.stringify({
+      model,
+      max_tokens: 4096,
+      system,
+      messages: [{ role: "user", content: user }],
+    });
+  } else if (provider === "openai") {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+    body = JSON.stringify({
+      model,
+      temperature: 0,
+      ...(options.jsonMode ? { response_format: { type: "json_object" } } : {}),
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    });
+  } else if (isResponsesApi) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+    headers["x-opencode-session"] = sessionId;
     body = JSON.stringify({
       model,
       temperature: 0,
@@ -125,6 +200,8 @@ export async function chatCompletion(
       input: user,
     });
   } else if (isMessagesApi) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+    headers["x-opencode-session"] = sessionId;
     body = JSON.stringify({
       model,
       max_tokens: 4096,
@@ -132,6 +209,8 @@ export async function chatCompletion(
       messages: [{ role: "user", content: user }],
     });
   } else {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+    headers["x-opencode-session"] = sessionId;
     body = JSON.stringify({
       model,
       temperature: 0,
@@ -145,12 +224,7 @@ export async function chatCompletion(
 
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "x-opencode-session": sessionId,
-      "User-Agent": "ectodash/1.0",
-    },
+    headers,
     body,
   });
 
