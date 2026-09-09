@@ -13,6 +13,14 @@ function Dot({ state }: { state: "ok" | "warn" | "error" | "idle" }) {
   return <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} aria-hidden />;
 }
 
+function intensidade(pct: number): { label: string; color: string; badge: string } {
+  if (pct >= 90) return { label: "Crítico", color: "bg-red-600", badge: "bg-red-50 text-red-700 ring-red-200" };
+  if (pct >= 70) return { label: "Alto", color: "bg-amber-500", badge: "bg-amber-50 text-amber-700 ring-amber-200" };
+  if (pct >= 40) return { label: "Médio", color: "bg-yellow-500", badge: "bg-yellow-50 text-yellow-700 ring-yellow-200" };
+  if (pct >= 10) return { label: "Baixo", color: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 ring-emerald-200" };
+  return { label: "Baixo", color: "bg-emerald-400", badge: "bg-emerald-50 text-emerald-600 ring-emerald-200" };
+}
+
 function UsageBar({
   label,
   percent,
@@ -25,7 +33,7 @@ function UsageBar({
   modelLimit?: number;
 }) {
   const pct = Math.min(100, Math.max(0, Math.round(percent)));
-  const color = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500";
+  const { label: nivel, color, badge } = intensidade(pct);
   const reset = (() => {
     try {
       const d = new Date(resetsAt);
@@ -44,9 +52,10 @@ function UsageBar({
     : "";
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center justify-between gap-2 text-xs">
         <span className="font-medium text-slate-700">{label}</span>
-        <span className="text-slate-500">
+        <span className="flex items-center gap-1.5 text-slate-500">
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${badge}`}>{nivel}</span>
           {pct}%{modelHint} · reseta em {reset}
         </span>
       </div>
