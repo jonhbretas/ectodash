@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { Cpu, Circle, RefreshCw, Save, ShieldCheck, Loader2 } from "lucide-react";
 import { getAIStatus, getAIUsage, setAIModel, testAIModel, type AIUsage } from "@/lib/ai/ai-config-actions";
+import { MODEL_LIMITS } from "@/lib/ai/ai-catalog";
 
 type Status = Awaited<ReturnType<typeof getAIStatus>>;
 
@@ -12,7 +13,17 @@ function Dot({ state }: { state: "ok" | "warn" | "error" | "idle" }) {
   return <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} aria-hidden />;
 }
 
-function UsageBar({ label, percent, resetsAt }: { label: string; percent: number; resetsAt: string }) {
+function UsageBar({
+  label,
+  percent,
+  resetsAt,
+  modelLimit,
+}: {
+  label: string;
+  percent: number;
+  resetsAt: string;
+  modelLimit?: number;
+}) {
   const pct = Math.min(100, Math.max(0, Math.round(percent)));
   const color = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500";
   const reset = (() => {
@@ -28,11 +39,16 @@ function UsageBar({ label, percent, resetsAt }: { label: string; percent: number
       return "";
     }
   })();
+  const modelHint = modelLimit
+    ? ` · ~${Math.round((modelLimit * pct) / 100).toLocaleString("pt-BR")} / ${modelLimit.toLocaleString("pt-BR")} req`
+    : "";
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-slate-700">{label}</span>
-        <span className="text-slate-500">{pct}% · reseta em {reset}</span>
+        <span className="text-slate-500">
+          {pct}%{modelHint} · reseta em {reset}
+        </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200/60">
         <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
@@ -180,16 +196,29 @@ export function AIModelSelector() {
             <RefreshCw size={12} className={pending ? "animate-spin" : ""} /> Atualizar
           </button>
         </div>
-        {usage ? (
-          <div className="flex flex-col gap-3">
-            <UsageBar label="Janela 5h" percent={usage.rolling.percent} resetsAt={usage.rolling.resetsAt} />
-            <UsageBar label="Semanal" percent={usage.weekly.percent} resetsAt={usage.weekly.resetsAt} />
-            <UsageBar label="Mensal" percent={usage.monthly.percent} resetsAt={usage.monthly.resetsAt} />
-            <p className="text-xs text-slate-400">Fonte: GET /zen/go/v1/usage · Limites Go: $12/5h · $30/semana · $60/mês (varia por modelo)</p>
-          </div>
-        ) : (
-          <p className="text-xs text-amber-600">{usageError ?? "Carregando uso..."}</p>
-        )}
+        {(() => {
+          const activeId = selected || status.modelo;
+          const limits = MODEL_LIMITS[activeId] ?? MODEL_LIMITS["mimo-v2.5"];
+          const preview = selected && selected !== status.modelo ? MODEL_LIMITS[selected] : null;
+          return usage ? (
+            <div className="flex flex-col gap-3">
+              <UsageBar label="Janela 5h" percent={usage.rolling.percent} resetsAt={usage.rolling.resetsAt} modelLimit={limits.h5} />
+              <UsageBar label="Semanal" percent={usage.weekly.percent} resetsAt={usage.weekly.resetsAt} modelLimit={limits.week} />
+              <UsageBar label="Mensal" percent={usage.monthly.percent} resetsAt={usage.monthly.resetsAt} modelLimit={limits.month} />
+              <p className="text-xs text-slate-400">
+                Fonte: GET /zen/go/v1/usage · Este modelo: {limits.h5.toLocaleString("pt-BR")}/5h · {limits.week.toLocaleString("pt-BR")}/sem · {limits.month.toLocaleString("pt-BR")}/mês
+                {preview && preview !== limits && (
+                  <span className="ml-1 text-slate-500">· Prévia {selected}: {preview.h5.toLocaleString("pt-BR")}/5h · {preview.month.toLocaleString("pt-BR")}/mês</span>
+                )}
+              </p>
+              <p className="text-xs text-slate-400">
+                Uso em $ é global Go (mesmo % para todo modelo); req efetivos variam por modelo (Muse Spark é ~7× mais eficiente em $ que Grok, por ex.).
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-amber-600">{usageError ?? "Carregando uso..."}</p>
+          );
+        })()}
       </div>
     </div>
   );

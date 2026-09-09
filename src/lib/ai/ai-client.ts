@@ -31,15 +31,9 @@ export function wrapUserContent(content: string): string {
   return `${USER_CONTENT_START}\n${content}\n${USER_CONTENT_END}`;
 }
 
-// Curated catalog shown in the selector (subset of Go)
-export const AI_CATALOG = [
-  { id: "mimo-v2.5", label: "MiMo-V2.5", desc: "Mais barato · 150k req/mês" },
-  { id: "mimo-v2.5-pro", label: "MiMo-V2.5 Pro", desc: "Qualidade maior" },
-  { id: "muse-spark-1.2-contributor", label: "Muse Spark 1.2", desc: "226k req/mês" },
-  { id: "muse-spark-1.3-contributor", label: "Muse Spark 1.3", desc: "Mais recente" },
-  { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", desc: "Rápido e barato" },
-  { id: "glm-5.3-flash", label: "GLM-5.3 Flash", desc: "Intermediário" },
-] as const;
+import { AI_CATALOG } from "./ai-catalog";
+export { AI_CATALOG } from "./ai-catalog";
+export { MODEL_LIMITS } from "./ai-catalog";
 
 export type AiModelId = (typeof AI_CATALOG)[number]["id"] | string;
 
