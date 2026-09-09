@@ -12,12 +12,17 @@ export function normalizeTexto(s: string): string {
     .trim();
 }
 
+/** Aceites curtos: nunca remover — são a condição (c) das demandas. */
+const ACEITE =
+  /^(sim|ok|okay|t[aá] bom|combinado|fechado|pode deixar|perfeito|entendi|beleza|t[aá] joia|isso|certo|obrigad[oa])[\s.!?]*$/i;
+
 export function preprocessarTranscricao(bruto: string): string {
   const linhas = bruto.split('\n');
   const saida: string[] = [];
   let dentroDeHighlights = false;
+  // Só saudação/despedida/aviso de áudio — "sim/ok/combinado" são aceite e ficam.
   const RUIDO =
-    /^(boa noite|bom dia|boa tarde|oi+|ol[aá]|tchau|obrigad[oa]|valeu|beleza|t[aá] joia|ok|sim|n[aã]o|é|isso|certo|pode ir|vamos|t[aá]|a[ií]|show de bola|perfeito|combinado|entendi)[\s.!?]*$/i;
+    /^(boa noite|bom dia|boa tarde|oi+|ol[aá]|tchau|valeu|pode ir|vamos|show de bola)[\s.!?]*$/i;
   for (const linha of linhas) {
     const t = linha.trim();
     if (/^#{1,3}\s*Highlights/i.test(t)) {
@@ -42,7 +47,8 @@ export function preprocessarTranscricao(bruto: string): string {
     const [, ts, falante, falaBruta] = m;
     const fala = colapsarRepeticoes(falaBruta);
     if (!fala || RUIDO.test(fala)) continue;
-    if (normalizeTexto(fala).split(' ').length < 3) continue;
+    // Aceite curto de 1-2 palavras fica; fragmento sem conteúdo sai.
+    if (!ACEITE.test(fala) && normalizeTexto(fala).split(' ').length < 3) continue;
     saida.push(ts + ' ' + falante + ': ' + fala);
   }
   return saida.join('\n');
@@ -82,15 +88,24 @@ const RESPONSAVEL_INVALIDO =
 const VERBO_ACAO =
   /\b(enviar|envie|mandar|atualizar|criar|excluir|remover|preparar|passar|divulgar|marcar|revisar|fechar|montar|corrigir|ajustar|publicar|agendar|verificar|entrar em contato)\b/i;
 
-function evidenciaSustentada(evidencia: string | undefined, fonteNorm: string): boolean {
+function evidenciaSustentada(evidencia: string | string[] | undefined, fonteNorm: string): boolean {
+  const partes = Array.isArray(evidencia) ? evidencia : [evidencia];
+  return partes.some((ev) => parteSustentada(ev, fonteNorm));
+}
+
+/** Evidência juntada com " [...] " tem cada parte validada separadamente. */
+function parteSustentada(evidencia: string | undefined, fonteNorm: string): boolean {
   if (!evidencia || evidencia.trim().length < 20) return false;
-  const alvo = normalizeTexto(evidencia);
-  if (alvo.length < 15) return false;
-  if (fonteNorm.includes(alvo)) return true;
-  const palavras = alvo.split(' ').filter((w) => w.length > 3);
-  if (palavras.length < 4) return false;
-  const encontradas = palavras.filter((w) => fonteNorm.includes(w)).length;
-  return encontradas / palavras.length >= 0.85;
+  const segmentos = String(evidencia).split(/\[\.\.\.\]|\.\.\./).map((s) => s.trim()).filter(Boolean);
+  const alvos = (segmentos.length > 1 ? segmentos : [String(evidencia)]).map(normalizeTexto).filter((s) => s.length >= 15);
+  if (alvos.length === 0) return false;
+  return alvos.every((alvo) => {
+    if (fonteNorm.includes(alvo)) return true;
+    const palavras = alvo.split(' ').filter((w) => w.length > 3);
+    if (palavras.length < 4) return false;
+    const encontradas = palavras.filter((w) => fonteNorm.includes(w)).length;
+    return encontradas / palavras.length >= 0.85;
+  });
 }
 
 function forcaDemanda(d: ItemBase): number {
@@ -116,12 +131,26 @@ export function filtrarResultado(
   const ataDeliberacoes = Array.isArray((out.ata as any)?.deliberacoes) ? (out.ata as any).deliberacoes : null;
   const ataPontos = Array.isArray((out.ata as any)?.pontos_principais) ? (out.ata as any).pontos_principais : null;
 
-  const LISTAS = ['demandas', 'eventos', 'dips', 'atualizacoes', 'pautas'];
+  const LISTAS = ['demandas', 'eventos', 'dips', 'atualizacoes', 'pautas', 'incertos'];
 
   for (const lista of LISTAS) {
     if (!Array.isArray(out[lista])) continue;
     out[lista] = (out[lista] as ItemBase[]).filter((item) => {
-      if (evidenciaSustentada(item.evidencia, fonteNorm)) return true;
+      const ev = (item as any).evidencia ?? (item as any).evidencias;
+      if (evidenciaSustentada(ev, fonteNorm)) return true;
+      // Demanda com responsável mas evidência fraca → incertos, não lixo.
+      if (lista === 'demandas' && (item as any).responsavel) {
+        out.incertos = Array.isArray(out.incertos) ? out.incertos : [];
+        (out.incertos as any[]).push({
+          titulo: (item as any).titulo,
+          motivo_duvida: 'evidência não localizada literal — confirmar no texto',
+          responsavel_sugerido: (item as any).responsavel,
+          prazo_sugerido: (item as any).prazo ?? null,
+          evidencia: (item as any).evidencia,
+          timestamp: (item as any).timestamp,
+        });
+        return false;
+      }
       descartados.push({ lista, item, motivo: 'evidência não encontrada na transcrição' });
       return false;
     });
@@ -151,7 +180,16 @@ export function filtrarResultado(
     for (const d of out.demandas as ItemBase[]) {
       const semResp = !d.responsavel || RESPONSAVEL_INVALIDO.test(String(d.responsavel).trim());
       if (semResp) {
-        descartados.push({ lista: 'demandas', item: d, motivo: 'sem responsável nomeado' });
+        // Rede de segurança: vira incerto para confirmação em vez de sumir.
+        out.incertos = Array.isArray(out.incertos) ? out.incertos : [];
+        (out.incertos as any[]).push({
+          titulo: d.titulo,
+          motivo_duvida: 'responsável não nomeado — confirmar quem executa',
+          responsavel_sugerido: (d as any).responsavel ?? null,
+          prazo_sugerido: (d as any).prazo ?? null,
+          evidencia: d.evidencia,
+          timestamp: d.timestamp,
+        });
         continue;
       }
       if (HEDGE.test(String(d.titulo ?? '') + ' ' + String(d.descricao ?? '')) && !d.prazo) {
@@ -173,6 +211,14 @@ export function filtrarResultado(
       }
     }
     out.demandas = mantidas.slice(0, maxDemandas);
+  }
+
+  // Cap de incertos (rede de segurança não pode virar poluição).
+  if (Array.isArray(out.incertos) && out.incertos.length > 10) {
+    for (const excedente of (out.incertos as ItemBase[]).slice(10)) {
+      descartados.push({ lista: 'incertos', item: excedente, motivo: 'excedeu o limite de 10' });
+    }
+    out.incertos = (out.incertos as ItemBase[]).slice(0, 10);
   }
 
   const dedupListas = [...LISTAS, 'deliberacoes'];

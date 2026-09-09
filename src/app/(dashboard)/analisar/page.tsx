@@ -26,6 +26,8 @@ import {
   Users,
   MessageSquareText,
   Trash2,
+  HelpCircle,
+  Check,
 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { AIModelSelector } from "@/components/ai-model-selector";
@@ -49,6 +51,7 @@ const initialState: AnalisarState = {
   dips: null,
   atualizacoes: null,
   pautas: null,
+  incertos: null,
   duplicados: { demandas: {}, eventos: {}, dips: {} },
   voluntarios: [],
 };
@@ -307,13 +310,15 @@ function ResultsScreen({
     state.atualizacoes && state.atualizacoes.length > 0
   );
   const temPautas = Boolean(state.pautas && state.pautas.length > 0);
+  const temIncertos = Boolean(state.incertos && state.incertos.length > 0);
   const temAlgo =
     temEventos ||
     temDemandas ||
     temAta ||
     temDips ||
     temAtualizacoes ||
-    temPautas;
+    temPautas ||
+    temIncertos;
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<
@@ -354,6 +359,29 @@ function ResultsScreen({
   const [dipEdits, setDipEdits] = useState<DipEdit[]>(() =>
     (state.dips ?? []).map((d) => ({ ...d }))
   );
+
+  // Itens incertos: rede de segurança — a IA marcou como dúvida em vez de
+  // descartar. Confirmar promove para demandas (editável), descartar remove.
+  const [incertos, setIncertos] = useState(() => [...(state.incertos ?? [])]);
+
+  function confirmarIncerto(key: string) {
+    const item = incertos.find((it) => it.key === key);
+    if (!item) return;
+    const prazoValido = /^\d{4}-\d{2}-\d{2}$/.test(item.prazoTexto) ? item.prazoTexto : prazoFallback();
+    setDemandaEdits((prev) => [
+      ...prev,
+      {
+        key: item.key,
+        titulo: item.titulo,
+        responsavelId: "",
+        prazo: prazoValido,
+        responsavelTexto: item.responsavelTexto,
+        responsavelEncontrado: false,
+      },
+    ]);
+    setDemandaAcoes((prev) => ({ ...prev, [item.key]: "criar" }));
+    setIncertos((prev) => prev.filter((it) => it.key !== key));
+  }
 
   // Per-item decision for possible duplicates detected server-side:
   // demandas → "pular" | "comentar" | "incrementar" | "criar"
@@ -1051,6 +1079,62 @@ function ResultsScreen({
                   </div>
                   );
                 })}
+              </div>
+            </section>
+          )}
+
+          {/* Para confirmar — rede de segurança: a IA marcou como dúvida em vez de descartar */}
+          {incertos.length > 0 && (
+            <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-amber-200/70">
+              <header className="flex items-center gap-2 border-b border-amber-100 pb-3">
+                <HelpCircle size={20} className="text-amber-600" aria-hidden="true" strokeWidth={1.75} />
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Para confirmar
+                </h3>
+                <span className="ml-auto rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200/60">
+                  {incertos.length} {incertos.length === 1 ? "item" : "itens"}
+                </span>
+              </header>
+              <p className="text-xs text-slate-500">
+                A IA ficou em dúvida nestes itens e preferiu não decidir sozinha. Confirme para virar demanda (editável na coluna Demandas) ou descarte.
+              </p>
+              <div className="flex w-full flex-col gap-3">
+                {incertos.map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-4"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">
+                      {item.titulo}
+                    </span>
+                    <span className="text-xs leading-relaxed text-amber-800">
+                      Dúvida: {item.motivo}
+                    </span>
+                    {(item.responsavelTexto || item.prazoTexto) && (
+                      <span className="text-xs text-slate-600">
+                        {item.responsavelTexto && <>Sugerido: <span className="font-medium">{item.responsavelTexto}</span></>}
+                        {item.responsavelTexto && item.prazoTexto && " · "}
+                        {item.prazoTexto && <>Prazo no texto: <span className="font-medium">{item.prazoTexto}</span></>}
+                      </span>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => confirmarIncerto(item.key)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700"
+                      >
+                        <Check size={14} /> Confirmar como demanda
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIncertos((prev) => prev.filter((it) => it.key !== item.key))}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        <X size={14} /> Descartar
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
           )}

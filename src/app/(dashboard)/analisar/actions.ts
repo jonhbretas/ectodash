@@ -80,6 +80,19 @@ const pautaEntrySchema = z.object({
   timestamp: z.string().optional(),
 }).passthrough();
 
+const incertoEntrySchema = z.object({
+  titulo: z.string().trim().min(1).max(300),
+  motivo_duvida: z.string().trim().max(1000).optional().nullable(),
+  motivo: z.string().trim().max(1000).optional().nullable(),
+  responsavel_sugerido: z.string().nullable().optional(),
+  responsavel: z.string().nullable().optional(),
+  prazo_sugerido: z.string().nullable().optional(),
+  prazo: z.string().nullable().optional(),
+  evidencia: z.string().optional(),
+  evidencias: z.array(z.string()).optional(),
+  timestamp: z.string().optional(),
+}).passthrough();
+
 const glossarioSugeridoEntrySchema = z.object({
   termo: z.string().trim().min(1).max(100),
   significado: z.string().trim().min(1).max(200).optional().nullable(),
@@ -98,6 +111,7 @@ const responseSchema = z.object({
   dips: z.array(dipEntrySchema).max(100).optional(),
   atualizacoes: z.array(atualizacaoEntrySchema).max(50).optional(),
   pautas: z.array(pautaEntrySchema).max(50).optional(),
+  incertos: z.array(incertoEntrySchema).max(10).optional(),
   glossario_sugerido: z.array(glossarioSugeridoEntrySchema).max(20).optional(),
 }).passthrough();
 
@@ -144,6 +158,13 @@ export type AnalisarState = {
   }> | null;
   atualizacoes: Array<{ titulo: string; comentario: string }> | null;
   pautas: Array<{ key: string; titulo: string; contexto: string }> | null;
+  incertos: Array<{
+    key: string;
+    titulo: string;
+    motivo: string;
+    responsavelTexto: string;
+    prazoTexto: string;
+  }> | null;
   // Possible duplicates against existing records, keyed by the item's
   // client key (demandas/eventos/dips). The review screen asks the user
   // what to do with each one (pular / mesclar / criar mesmo assim).
@@ -164,7 +185,7 @@ export type AnalisarState = {
 };
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
-// Go gateway (mimo-v2.5 por padrão) — teto só protege o tempo de resposta, não o custo.
+// Go gateway (modelo via ai_config, default muse-spark-1.3) — teto só protege o tempo de resposta, não o custo.
 const MAX_TEXT_CHARS = 60000;
 const EMPTY_INPUT = "Cole um texto ou envie um arquivo antes de analisar.";
 
@@ -181,6 +202,7 @@ function erroState(message: string): AnalisarState {
     dips: null,
     atualizacoes: null,
     pautas: null,
+    incertos: null,
     duplicados: { demandas: {}, eventos: {}, dips: {} },
     voluntarios: [],
   };
@@ -420,6 +442,7 @@ export async function analisarComIA(
       dips?: Array<Record<string, unknown>>;
       atualizacoes?: Array<Record<string, unknown>>;
       pautas?: Array<Record<string, unknown>>;
+      incertos?: Array<Record<string, unknown>>;
     };
 
     // IA pode sugerir glossario_sugerido, mas NÃO gravamos automaticamente
@@ -554,6 +577,15 @@ export async function analisarComIA(
             key: crypto.randomUUID(),
             titulo: String(p.titulo ?? ""),
             contexto: String(p.contexto ?? p.motivo ?? p.descricao ?? ""),
+          }))
+        : null,
+      incertos: (data.incertos as any[])
+        ? (data.incertos as any[]).map((it: any) => ({
+            key: crypto.randomUUID(),
+            titulo: String(it.titulo ?? ""),
+            motivo: String(it.motivo_duvida ?? it.motivo ?? "confirmar"),
+            responsavelTexto: String(it.responsavel_sugerido ?? it.responsavel ?? "").trim(),
+            prazoTexto: String(it.prazo_sugerido ?? it.prazo ?? "").trim(),
           }))
         : null,
       duplicados,
