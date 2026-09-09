@@ -107,16 +107,6 @@ export async function getEffectiveAIConfig(supabase?: import("@supabase/supabase
       const model = normalizeModel(dbModel);
       const provider: AiProvider = dbProvider;
       const url = resolveUrl(model, provider, process.env.AI_API_URL);
-      // Se env força provider/modelo diferente, respeita env? Para chaves próprias o DB deve vencer — só respeita se AI_PROVIDER/AI_MODEL estiver setado e for diferente do DB, env vence (segurança Vercel).
-      const envModel = process.env.AI_MODEL ? normalizeModel(process.env.AI_MODEL) : null;
-      const envProvider = process.env.AI_PROVIDER as AiProvider | undefined;
-      if (envModel && envModel !== model) {
-        return { ...fallback, source: "env" };
-      }
-      if (envProvider && envProvider !== provider) {
-        return { ...fallback, source: "env" };
-      }
-      // tenta pegar chave do provider do DB — se faltar, cai no fallback para exibir erro claro
       try {
         const apiKey = apiKeyForProvider(provider);
         return { apiKey, url, model, provider, source: "db" };
