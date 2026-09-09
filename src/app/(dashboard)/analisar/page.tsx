@@ -25,6 +25,7 @@ import {
   NotebookPen,
   Users,
   MessageSquareText,
+  Trash2,
 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { AIModelSelector } from "@/components/ai-model-selector";
@@ -271,6 +272,14 @@ type DemandaEdit = {
   responsavelEncontrado: boolean;
 };
 
+type EventoEdit = {
+  key: string;
+  titulo: string;
+  data: string;
+  local: string;
+  descricao: string;
+};
+
 type DipEdit = {
   key: string;
   localidade: string;
@@ -329,6 +338,16 @@ function ResultsScreen({
       prazo: d.prazoSugerido ?? prazoFallback(),
       responsavelTexto: d.responsavelTexto,
       responsavelEncontrado: d.responsavelEncontrado,
+    }))
+  );
+
+  const [eventoEdits, setEventoEdits] = useState<EventoEdit[]>(() =>
+    (state.eventos ?? []).map((e) => ({
+      key: e.key,
+      titulo: e.titulo,
+      data: e.data,
+      local: e.local ?? "",
+      descricao: e.descricao ?? "",
     }))
   );
 
@@ -402,17 +421,19 @@ function ResultsScreen({
     }
 
     const result = await salvarTudoDaAnalise({
-      eventos: state.eventos?.map((e) => {
-        const acao = eventoAcoes[e.key] ?? "criar";
-        return {
-          titulo: e.titulo,
-          data: e.data,
-          local: e.local,
-          descricao: e.descricao,
-          acao,
-          eventoId: state.duplicados.eventos[e.key]?.id ?? null,
-        };
-      }),
+      eventos: eventoEdits
+        .filter((e) => e.titulo.trim().length > 0)
+        .map((e) => {
+          const acao = eventoAcoes[e.key] ?? "criar";
+          return {
+            titulo: e.titulo.trim(),
+            data: e.data,
+            local: e.local.trim() || null,
+            descricao: e.descricao.trim() || null,
+            acao,
+            eventoId: state.duplicados.eventos[e.key]?.id ?? null,
+          };
+        }),
       demandas: demandaEdits
         .filter((d) => d.titulo.trim().length > 0)
         .map((d) => {
@@ -595,41 +616,80 @@ function ResultsScreen({
               )}
             </ResultColumn>
 
-            {/* Eventos */}
+            {/* Eventos — titulo/data/local/descricao editaveis + excluir */}
             <ResultColumn
               titulo="Eventos"
               Icon={CalendarDays}
-              count={state.eventos?.length ?? 0}
+              count={eventoEdits.length}
             >
-              {temEventos ? (
+              {eventoEdits.length > 0 ? (
                 <div className="flex flex-col gap-3">
-                  {state.eventos!.map((e) => {
+                  {eventoEdits.map((e) => {
                     const dup = state.duplicados.eventos[e.key];
                     return (
                       <div
                         key={e.key}
-                        className={`rounded-xl border p-4 ${
-                          dup ? "border-amber-200 bg-amber-50/60" : "border-slate-200 bg-slate-50"
+                        className={`flex flex-col gap-2 rounded-xl border p-4 ${
+                          dup ? "border-amber-200 bg-amber-50/60" : "border-slate-200 bg-white"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="break-words text-sm font-semibold text-slate-900">
-                              {e.titulo}
-                            </p>
-                            {e.descricao && (
-                              <p className="mt-1 text-xs text-slate-600">
-                                {e.descricao}
-                              </p>
-                            )}
-                          </div>
-                          <div className="shrink-0 text-right text-xs text-slate-600">
-                            <p className="font-medium">{e.data}</p>
-                            {e.local && <p className="mt-0.5">{e.local}</p>}
-                          </div>
+                        <div className="flex items-start justify-between gap-2">
+                          <label className="flex flex-1 flex-col gap-1">
+                            <span className="text-xs font-medium text-slate-700">Título</span>
+                            <input
+                              value={e.titulo}
+                              onChange={(ev) =>
+                                setEventoEdits((prev) => prev.map((it) => (it.key === e.key ? { ...it, titulo: ev.target.value } : it)))
+                              }
+                              placeholder="Nome do evento"
+                              className={fieldClassName}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setEventoEdits((prev) => prev.filter((it) => it.key !== e.key))}
+                            className="mt-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                            aria-label="Excluir evento"
+                            title="Excluir evento"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <label className="flex flex-col gap-1">
+                            <span className="text-xs font-medium text-slate-700">Data</span>
+                            <DateInput
+                              value={e.data}
+                              onChange={(ev) => setEventoEdits((prev) => prev.map((it) => (it.key === e.key ? { ...it, data: ev.target.value } : it)))}
+                              className={fieldClassName}
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1">
+                            <span className="text-xs font-medium text-slate-700">Local</span>
+                            <input
+                              value={e.local}
+                              onChange={(ev) =>
+                                setEventoEdits((prev) => prev.map((it) => (it.key === e.key ? { ...it, local: ev.target.value } : it)))
+                              }
+                              placeholder="Foz, online..."
+                              className={fieldClassName}
+                            />
+                          </label>
+                        </div>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-slate-700">Descrição</span>
+                          <textarea
+                            value={e.descricao}
+                            onChange={(ev) =>
+                              setEventoEdits((prev) => prev.map((it) => (it.key === e.key ? { ...it, descricao: ev.target.value } : it)))
+                            }
+                            rows={2}
+                            placeholder="Detalhes do evento"
+                            className={`${fieldClassName} min-h-16 resize-y`}
+                          />
+                        </label>
                         {dup && (
-                          <div className="mt-2 flex flex-col gap-1 border-t border-amber-200 pt-2">
+                          <div className="flex flex-col gap-1 border-t border-amber-200 pt-2">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-xs font-medium text-amber-800">
                                 Possivel duplicado: &quot;{dup.titulo}&quot; ja cadastrado.
@@ -666,17 +726,17 @@ function ResultsScreen({
                   })}
                 </div>
               ) : (
-                <EmptyColumn text="Nenhum evento identificado." />
+                <EmptyColumn text="Nenhum evento identificado. Todos foram removidos." />
               )}
             </ResultColumn>
 
-            {/* Demandas — responsável e prazo editáveis */}
+            {/* Demandas — titulo editavel + responsavel/prazo + excluir */}
             <ResultColumn
               titulo="Demandas"
               Icon={ClipboardList}
-              count={state.demandas?.length ?? 0}
+              count={demandaEdits.length}
             >
-              {temDemandas ? (
+              {demandaEdits.length > 0 ? (
                 <div className="flex flex-col gap-3">
                   {demandaEdits.map((d) => {
                     const dup = state.duplicados.demandas[d.key];
@@ -684,12 +744,31 @@ function ResultsScreen({
                       <div
                         key={d.key}
                         className={`flex flex-col gap-2 rounded-xl border p-4 ${
-                          dup ? "border-amber-200 bg-amber-50/60" : "border-zinc-200 bg-zinc-50"
+                          dup ? "border-amber-200 bg-amber-50/60" : "border-zinc-200 bg-white"
                         }`}
                       >
-                      <p className="text-sm font-semibold text-slate-900">
-                        {d.titulo}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        <label className="flex flex-1 flex-col gap-1">
+                          <span className="text-xs font-medium text-slate-700">Título da demanda</span>
+                          <input
+                            value={d.titulo}
+                            onChange={(e) =>
+                              setDemandaEdits((prev) => prev.map((it) => (it.key === d.key ? { ...it, titulo: e.target.value } : it)))
+                            }
+                            placeholder="O que precisa ser feito"
+                            className={fieldClassName}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setDemandaEdits((prev) => prev.filter((it) => it.key !== d.key))}
+                          className="mt-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                          aria-label="Excluir demanda"
+                          title="Excluir demanda"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                       {d.responsavelTexto && (
                         <p className="text-xs text-slate-600">
                           No texto:{" "}
@@ -806,7 +885,7 @@ function ResultsScreen({
           </div>
 
           {/* Dinâmica DIP */}
-          {temDips && (
+          {dipEdits.length > 0 && (
             <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
               <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <Users size={20} className="text-[#2195B9]" aria-hidden="true" strokeWidth={1.75} />
@@ -905,13 +984,14 @@ function ResultsScreen({
                         />
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor={`dip-obs-${dip.key}`} className="text-xs font-medium text-slate-700">
-                        Observações
-                      </label>
-                      <input
-                        id={`dip-obs-${dip.key}`}
-                        value={dip.observacoes}
+                    <div className="flex items-end gap-2">
+                      <div className="flex flex-1 flex-col gap-1.5">
+                        <label htmlFor={`dip-obs-${dip.key}`} className="text-xs font-medium text-slate-700">
+                          Observações
+                        </label>
+                        <input
+                          id={`dip-obs-${dip.key}`}
+                          value={dip.observacoes}
                         onChange={(e) =>
                           setDipEdits((prev) =>
                             prev.map((item) =>
@@ -923,6 +1003,16 @@ function ResultsScreen({
                         }
                         className={fieldClassName}
                       />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDipEdits((prev) => prev.filter((it) => it.key !== dip.key))}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                        aria-label="Excluir DIP"
+                        title="Excluir DIP"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                     {dup && (
                       <div className="flex flex-col gap-1 border-t border-amber-200 pt-2">
