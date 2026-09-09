@@ -597,14 +597,16 @@ export async function analisarComIA(
     };
   } catch (err) {
     console.error("analisarComIA: erro", err);
+    const detalhe = err instanceof Error ? err.message.slice(0, 300) : String(err).slice(0, 300);
     return erroState(
-      "Algo deu errado ao processar com a IA. Verifique sua internet e tente novamente."
+      `Algo deu errado ao processar com a IA. Verifique sua internet e tente novamente. (detalhe: ${detalhe})`
     );
   }
   } catch (err) {
     console.error("analisarComIA: outer erro", err);
+    const detalhe = err instanceof Error ? err.message.slice(0, 300) : String(err).slice(0, 300);
     return erroState(
-      "Algo deu errado ao analisar. Tente novamente — se persistir, recarregue a página."
+      `Algo deu errado ao analisar. Tente novamente — se persistir, recarregue a página. (detalhe: ${detalhe})`
     );
   }
 }
