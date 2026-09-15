@@ -54,3 +54,33 @@ export function countLines(value: string | null): number {
 
 export const WEEKDAY_ABBR_LIST = WEEKDAY_ABBR;
 export const MONTH_ABBR_LIST = MONTH_ABBR;
+
+// Ciclo de vida da reunião (migration 0096): a reunião existe antes da ata.
+// "agendada" = criada ao pedir pauta, ainda sem ata; demais estados cobrem
+// "não houve reunião, foi adiado/remarcado" com motivo em observacoes.
+export const STATUS_REUNIAO = [
+  "agendada",
+  "realizada",
+  "adiada",
+  "remarcada",
+  "nao_houve",
+] as const;
+
+export type StatusReuniao = (typeof STATUS_REUNIAO)[number];
+
+export const STATUS_REUNIAO_LABEL: Record<StatusReuniao, string> = {
+  agendada: "Agendada",
+  realizada: "Realizada",
+  adiada: "Adiada",
+  remarcada: "Remarcada",
+  nao_houve: "Não houve",
+};
+
+export function rotuloStatusReuniao(status: string | null): string {
+  if (status === "agendada") return STATUS_REUNIAO_LABEL.agendada;
+  if (status === "realizada") return STATUS_REUNIAO_LABEL.realizada;
+  if (status === "adiada") return STATUS_REUNIAO_LABEL.adiada;
+  if (status === "remarcada") return STATUS_REUNIAO_LABEL.remarcada;
+  if (status === "nao_houve") return STATUS_REUNIAO_LABEL.nao_houve;
+  return STATUS_REUNIAO_LABEL.realizada;
+}

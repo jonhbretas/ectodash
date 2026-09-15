@@ -25,6 +25,7 @@ export type ReuniaoDisponivel = {
   titulo: string;
   data_reuniao: string;
   horario: string | null;
+  status: string | null;
 };
 
 /**
@@ -44,7 +45,7 @@ export async function listarReunioesDisponiveis(): Promise<ReuniaoDisponivel[]> 
 
   const { data, error } = await supabase
     .from("reunioes")
-    .select("id, titulo, data_reuniao, horario")
+    .select("id, titulo, data_reuniao, horario, status")
     .gte("data_reuniao", hojeStr)
     .order("data_reuniao", { ascending: true })
     .limit(12);
@@ -96,11 +97,11 @@ export async function criarPauta(
   }
 
   // Reunião-alvo: terça 19h. Pedidos até 19h de terça valem para hoje;
-  // após 19h, proximaTerca() já rola para a terça seguinte. Quando o usuário
-  // deixou "Próxima reunião (padrão)", vinculamos automaticamente ao registro
-  // da reunião-alvo (se a ata já existir) para a pauta aparecer vinculada.
-  // Sem ata ainda, reuniao_selecionada_id fica null = "próxima" (o hub sempre
-  // mostra todas as pendentes em "Pauta confirmada").
+  // após 19h, proximaTerca() já rola para a terça seguinte. A REUNIÃO existe
+  // antes da ata: quando o usuário deixou "Próxima reunião (padrão)",
+  // garantimos a linha da reunião-alvo — vincula se já existir, senão cria
+  // como "agendada" (sem ata; a ata é preenchida depois que ela acontece).
+  // A pauta nunca fica sem vínculo por falta de ata.
   const proxima = proximaTerca();
   const alvoStr = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -114,8 +115,24 @@ export async function criarPauta(
       .from("reunioes")
       .select("id")
       .eq("data_reuniao", alvoStr)
+      .limit(1)
       .maybeSingle();
-    if (reuniaoAlvo) reuniaoAlvoId = reuniaoAlvo.id;
+    if (reuniaoAlvo) {
+      reuniaoAlvoId = reuniaoAlvo.id;
+    } else {
+      const { data: novaReuniao } = await supabase
+        .from("reunioes")
+        .insert({
+          titulo: `Reunião ${alvoStr.split("-").reverse().join("/")}`,
+          data_reuniao: alvoStr,
+          horario: HORARIO_REUNIAO,
+          status: "agendada",
+        })
+        .select("id")
+        .single();
+      if (novaReuniao) reuniaoAlvoId = novaReuniao.id;
+      // Se a criação falhar (RLS/erro), segue com null = "próxima".
+    }
   }
 
   // criado_por is never set from client input — the column default derives

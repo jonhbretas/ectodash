@@ -476,40 +476,70 @@ export async function salvarAtaAnalise(
       return value;
     }
   }
-  const { data: novaAta, error: ataError } = await supabase
+  const ataCampos = {
+    titulo: ata.data.titulo,
+    data_reuniao: ata.data.data_reuniao,
+    horario: ata.data.horario || null,
+    resumo: ata.data.resumo || null,
+    participantes: ata.data.participantes || null,
+    pontos_principais: ata.data.pontos_principais || null,
+    deliberacoes: ata.data.deliberacoes || null,
+    duracao: ata.data.duracao || null,
+    formato: ata.data.formato || null,
+    conducao: ata.data.conducao || null,
+    proxima_reuniao: ata.data.proxima_reuniao || null,
+    saidas_antecipadas: parseJsonbField(ata.data.saidas_antecipadas ?? "") ?? [],
+    decisoes: parseJsonbField(ata.data.decisoes ?? "") ?? [],
+    calendario: parseJsonbField(ata.data.calendario ?? "") ?? [],
+    observacoes: ata.data.observacoes || null,
+    texto: ata.data.texto || null,
+    arquivo_nome: ata.data.arquivo_nome || null,
+    status: "realizada",
+  };
+
+  // A reunião existe antes da ata: se já houver uma reunião "agendada" para
+  // esta data (criada ao pedir pauta), a análise preenche essa linha em vez
+  // de duplicar — as pautas vinculadas aparecem no Log da reunião.
+  const { data: agendada } = await supabase
     .from("reunioes")
-    .insert({
-      titulo: ata.data.titulo,
-      data_reuniao: ata.data.data_reuniao,
-      horario: ata.data.horario || null,
-      resumo: ata.data.resumo || null,
-      participantes: ata.data.participantes || null,
-      pontos_principais: ata.data.pontos_principais || null,
-      deliberacoes: ata.data.deliberacoes || null,
-      duracao: ata.data.duracao || null,
-      formato: ata.data.formato || null,
-      conducao: ata.data.conducao || null,
-      proxima_reuniao: ata.data.proxima_reuniao || null,
-      saidas_antecipadas: parseJsonbField(ata.data.saidas_antecipadas ?? "") ?? [],
-      decisoes: parseJsonbField(ata.data.decisoes ?? "") ?? [],
-      calendario: parseJsonbField(ata.data.calendario ?? "") ?? [],
-      observacoes: ata.data.observacoes || null,
-      texto: ata.data.texto || null,
-      arquivo_nome: ata.data.arquivo_nome || null,
-    })
     .select("id")
-    .single();
+    .eq("data_reuniao", ata.data.data_reuniao)
+    .eq("status", "agendada")
+    .limit(1)
+    .maybeSingle();
 
-  if (ataError || !novaAta) {
-    console.error("salvarAtaAnalise: reunioes insert failed", ataError);
-    return {
-      ok: false,
-      message: "Não foi possível salvar a ata agora. Tente novamente.",
-      ataId: null,
-    };
+  let ataId: number | null = null;
+  if (agendada) {
+    const { error: ataError } = await supabase
+      .from("reunioes")
+      .update(ataCampos)
+      .eq("id", agendada.id);
+    if (ataError) {
+      console.error("salvarAtaAnalise: agendada update failed", ataError);
+      return {
+        ok: false,
+        message: "Não foi possível salvar a ata agora. Tente novamente.",
+        ataId: null,
+      };
+    }
+    ataId = agendada.id;
+  } else {
+    const { data: novaAta, error: ataError } = await supabase
+      .from("reunioes")
+      .insert(ataCampos)
+      .select("id")
+      .single();
+
+    if (ataError || !novaAta) {
+      console.error("salvarAtaAnalise: reunioes insert failed", ataError);
+      return {
+        ok: false,
+        message: "Não foi possível salvar a ata agora. Tente novamente.",
+        ataId: null,
+      };
+    }
+    ataId = novaAta.id;
   }
-
-  const ataId = novaAta.id;
   const tituloReferencia = `${ata.data.titulo} (${ata.data.data_reuniao})`;
 
   // Auto-vínculo de participantes ao roster: cada nome em texto livre da

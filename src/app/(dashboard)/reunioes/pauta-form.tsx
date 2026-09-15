@@ -14,6 +14,7 @@ import {
   type CriarPautaState,
   type ReuniaoDisponivel,
 } from "./pauta-actions";
+import { rotuloStatusReuniao } from "./_lib/format-data";
 
 const initialState: CriarPautaState = { ok: false, message: "" };
 
@@ -29,7 +30,8 @@ function formatMeetingLabel(meeting: ReuniaoDisponivel): string {
   const day = date.getDate();
   const month = MONTH_ABBR[date.getMonth()];
   const time = meeting.horario ? meeting.horario.slice(0, 5) : "19:00";
-  return `${dayName}, ${day} ${month} · ${time} — ${meeting.titulo}`;
+  const base = `${dayName}, ${day} ${month} · ${time} — ${meeting.titulo}`;
+  return meeting.status !== null && meeting.status !== "realizada" ? `${base} (${rotuloStatusReuniao(meeting.status)})` : base;
 }
 
 function SubmitButton() {

@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { FileText, Users, MessageSquareText, Search, Sparkles } from "lucide-react";
-import { countLines, monthKey, monthLabel } from "../_lib/format-data";
+import { countLines, monthKey, monthLabel, rotuloStatusReuniao } from "../_lib/format-data";
 import type { AtaRow } from "../_lib/get-reunioes-data";
 
 const WEEKDAY_ABBR = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -84,16 +84,23 @@ export default function AtasTab({ atas }: { atas: AtaRow[] }) {
                       </div>
                       <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 sm:p-4">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <Link href={`/reunioes/${ata.id}`} className="text-base font-semibold text-zinc-900 hover:text-[#2195B9]">
-                            {ata.titulo}
-                          </Link>
+                          <span className="flex flex-wrap items-center gap-2">
+                            <Link href={`/reunioes/${ata.id}`} className="text-base font-semibold text-zinc-900 hover:text-[#2195B9]">
+                              {ata.titulo}
+                            </Link>
+                            {ata.status !== null && ata.status !== "realizada" && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                {rotuloStatusReuniao(ata.status)}
+                              </span>
+                            )}
+                          </span>
                           <span className="flex flex-wrap items-center gap-1.5">
                             {part > 0 && <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700"><Users size={12} /> {part} participantes</span>}
                             {delib > 0 && <span className="flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700"><MessageSquareText size={12} /> {delib} tarefas</span>}
                             {ata.dipCount > 0 && <span className="flex items-center gap-1 rounded-full bg-purple-50 px-2 py-0.5 text-xs text-purple-800 ring-1 ring-purple-200/60">{ata.dipCount} DIPs</span>}
                           </span>
                         </div>
-                        {ata.resumo ? <p className="line-clamp-2 text-sm leading-relaxed text-zinc-600">{ata.resumo}</p> : <p className="text-sm text-zinc-500">Sem resumo registrado.</p>}
+                        {ata.resumo ? <p className="line-clamp-2 text-sm leading-relaxed text-zinc-600">{ata.resumo}</p> : ata.status === "agendada" ? <p className="text-sm text-zinc-500">Reunião agendada — ata ainda não registrada.</p> : <p className="text-sm text-zinc-500">Sem resumo registrado.</p>}
                         <div className="flex flex-wrap gap-2 pt-1">
                           <Link href={`/reunioes/${ata.id}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2195B9] underline decoration-[#2195B9]/40 underline-offset-4">
                             <FileText size={14} /> Ver ata completa

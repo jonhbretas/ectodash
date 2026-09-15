@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { criarPauta, listarReunioesDisponiveis, type CriarPautaState, type ReuniaoDisponivel } from "./pauta-actions";
 import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
+import { rotuloStatusReuniao } from "./_lib/format-data";
 
 const initialState: CriarPautaState = { ok: false, message: "" };
 
@@ -15,7 +16,8 @@ const MONTH_ABBR = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set
 
 function formatMeetingLabel(m: ReuniaoDisponivel): string {
   const d = new Date(`${m.data_reuniao}T00:00:00`);
-  return `${WEEKDAY_ABBR[d.getDay()]}, ${d.getDate()} ${MONTH_ABBR[d.getMonth()]} · ${m.horario ? m.horario.slice(0, 5).replace(":", "h") : "19h00"} — ${m.titulo}`;
+  const base = `${WEEKDAY_ABBR[d.getDay()]}, ${d.getDate()} ${MONTH_ABBR[d.getMonth()]} · ${m.horario ? m.horario.slice(0, 5).replace(":", "h") : "19h00"} — ${m.titulo}`;
+  return m.status !== null && m.status !== "realizada" ? `${base} (${rotuloStatusReuniao(m.status)})` : base;
 }
 
 function proximaLabel(): string {

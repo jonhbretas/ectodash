@@ -43,6 +43,59 @@ export async function criarAta(
     return { ok: false, message: "Verifique os campos destacados." };
   }
 
+  // A reunião existe antes da ata: se já houver uma reunião "agendada" para
+  // esta data (criada automaticamente ao pedir pauta), a ata preenche essa
+  // linha em vez de duplicar — a pauta vinculada aparece no Log da reunião.
+  const { data: agendada } = await supabase
+    .from("reunioes")
+    .select("id")
+    .eq("data_reuniao", parsed.data.data_reuniao)
+    .eq("status", "agendada")
+    .limit(1)
+    .maybeSingle();
+
+  if (agendada) {
+    const { error: updateError } = await supabase
+      .from("reunioes")
+      .update({
+        titulo: parsed.data.titulo,
+        resumo: parsed.data.resumo || null,
+        status: "realizada",
+      })
+      .eq("id", agendada.id);
+
+    if (updateError) {
+      console.error("criarAta: fill agendada failed", updateError);
+      return {
+        ok: false,
+        message:
+          "Não foi possível salvar a ata agora. Verifique sua internet e tente de novo.",
+      };
+    }
+
+    const voluntarioIds = (formData.getAll("voluntarioIds") as string[])
+      .map((raw) => Number(raw))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    if (voluntarioIds.length > 0) {
+      const { error: linkError } = await supabase
+        .from("ata_participantes")
+        .insert(voluntarioIds.map((voluntario_id) => ({ ata_id: agendada.id, voluntario_id })));
+
+      if (linkError) {
+        console.error("criarAta: ata_participantes insert failed", linkError);
+        return {
+          ok: false,
+          message:
+            "A ata foi salva, mas não foi possível vincular os participantes. Tente editar depois.",
+        };
+      }
+    }
+
+    revalidatePath("/reunioes");
+    return { ok: true, message: "Ata registrada com sucesso." };
+  }
+
   // criado_por is never set from client input — the column default
   // derives it from the session, same anti-spoofing discipline as
   // createDemanda (RESEARCH.md Pitfall 4).
@@ -52,6 +105,7 @@ export async function criarAta(
       titulo: parsed.data.titulo,
       data_reuniao: parsed.data.data_reuniao,
       resumo: parsed.data.resumo || null,
+      status: "realizada",
     })
     .select("id")
     .single();
@@ -104,6 +158,8 @@ const editarAtaSchema = z.object({
   resumo: z.string().trim().max(20000).optional().or(z.literal("")),
   pontos_principais: z.string().trim().max(20000).optional().or(z.literal("")),
   deliberacoes: z.string().trim().max(20000).optional().or(z.literal("")),
+  status: z.enum(["agendada", "realizada", "adiada", "remarcada", "nao_houve"]).optional(),
+  observacoes: z.string().trim().max(20000).optional().or(z.literal("")),
 });
 
 // Edits an existing ata (any past one) — fields plus the roster-linked
@@ -132,6 +188,8 @@ export async function editarAta(formData: FormData): Promise<EditarAtaResult> {
     resumo: formData.get("resumo"),
     pontos_principais: formData.get("pontos_principais"),
     deliberacoes: formData.get("deliberacoes"),
+    status: formData.get("status") || undefined,
+    observacoes: formData.get("observacoes"),
   });
 
   if (!parsed.success) {
@@ -150,6 +208,8 @@ export async function editarAta(formData: FormData): Promise<EditarAtaResult> {
       resumo: parsed.data.resumo || null,
       pontos_principais: parsed.data.pontos_principais || null,
       deliberacoes: parsed.data.deliberacoes || null,
+      ...(parsed.data.status ? { status: parsed.data.status } : {}),
+      observacoes: parsed.data.observacoes || null,
     })
     .eq("id", id);
 

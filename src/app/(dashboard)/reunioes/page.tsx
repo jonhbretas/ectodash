@@ -24,7 +24,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
   if (!user) return null;
 
   const [atasResult, dipsResult, pautasResult, profileResult] = await Promise.all([
-    supabase.from("reunioes").select("id, titulo, data_reuniao, horario, resumo, participantes, deliberacoes").order("data_reuniao", { ascending: false }),
+    supabase.from("reunioes").select("id, titulo, data_reuniao, horario, status, resumo, participantes, deliberacoes").order("data_reuniao", { ascending: false }),
     supabase.from("dips").select("ata_id"),
     supabase.from("pautas").select("id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, data_solicitada, horario_solicitado, reuniao_selecionada_id, criado_por, created_at, updated_at, profiles(full_name, email)").order("created_at", { ascending: true }),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
@@ -36,7 +36,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
   for (const r of atasResult.data ?? []) ataById.set(r.id, { titulo: r.titulo, data_reuniao: r.data_reuniao });
   const ataTitulo = (id: number | null) => (id === null ? null : (ataById.get(id)?.titulo ?? null));
 
-  const rows = (atasResult.data ?? []).map((r) => ({ id: r.id, titulo: r.titulo, data_reuniao: r.data_reuniao, horario: r.horario, resumo: r.resumo, participantes: r.participantes, deliberacoes: r.deliberacoes, dipCount: dipCountByAta.get(r.id) ?? 0 }));
+  const rows = (atasResult.data ?? []).map((r) => ({ id: r.id, titulo: r.titulo, data_reuniao: r.data_reuniao, horario: r.horario, status: (r as { status?: string | null }).status ?? null, resumo: r.resumo, participantes: r.participantes, deliberacoes: r.deliberacoes, dipCount: dipCountByAta.get(r.id) ?? 0 }));
   const canManagePauta = profileResult.data?.role === "coordenador_geral";
   const pautas = (pautasResult.data ?? []).map((row: any) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;

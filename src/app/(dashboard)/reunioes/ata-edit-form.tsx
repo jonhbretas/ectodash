@@ -17,6 +17,7 @@ import {
 } from "@/components/voluntario-checklist";
 import type { VoluntarioOpcao } from "@/components/voluntario-picker";
 import { editarAta } from "./actions";
+import { STATUS_REUNIAO, STATUS_REUNIAO_LABEL, type StatusReuniao } from "./_lib/format-data";
 
 type AtaEditFormProps = {
   ataId: number;
@@ -27,6 +28,8 @@ type AtaEditFormProps = {
     resumo: string | null;
     pontos_principais: string | null;
     deliberacoes: string | null;
+    status: string | null;
+    observacoes: string | null;
   };
   voluntarios: VoluntarioOpcao[];
   participanteIds: string[];
@@ -49,6 +52,12 @@ export function AtaEditForm({
   const [pontos, setPontos] = useState(ata.pontos_principais ?? "");
   const [deliberacoes, setDeliberacoes] = useState(ata.deliberacoes ?? "");
   const [resumo, setResumo] = useState(ata.resumo ?? "");
+  const [status, setStatus] = useState<StatusReuniao>(
+    (STATUS_REUNIAO as readonly string[]).includes(ata.status ?? "")
+      ? (ata.status as StatusReuniao)
+      : "realizada"
+  );
+  const [observacoes, setObservacoes] = useState(ata.observacoes ?? "");
   const [participanteIds, setParticipanteIds] = useState<string[]>(
     participanteIdsIniciais
   );
@@ -63,6 +72,12 @@ export function AtaEditForm({
     setPontos(ata.pontos_principais ?? "");
     setDeliberacoes(ata.deliberacoes ?? "");
     setResumo(ata.resumo ?? "");
+    setStatus(
+      (STATUS_REUNIAO as readonly string[]).includes(ata.status ?? "")
+        ? (ata.status as StatusReuniao)
+        : "realizada"
+    );
+    setObservacoes(ata.observacoes ?? "");
     setParticipanteIds(participanteIdsIniciais);
     setError("");
     setEditing(true);
@@ -86,6 +101,8 @@ export function AtaEditForm({
     form.set("resumo", resumo);
     form.set("pontos_principais", pontos);
     form.set("deliberacoes", deliberacoes);
+    form.set("status", status);
+    form.set("observacoes", observacoes);
     for (const id of participanteIds) form.append("voluntarioIds", id);
 
     const result = await editarAta(form);
@@ -135,19 +152,54 @@ export function AtaEditForm({
             className={inputClass}
           />
         </label>
-        <label
-          htmlFor="ata-editar-data"
-          className="flex flex-col gap-1.5"
-        >
-          <span className="text-base font-medium text-zinc-700">Data</span>
-          <DateInput
-            id="ata-editar-data"
-            value={data}
-            onChange={(e) => setData(e.target.value)}
-            className={inputClass}
+        <div className="grid grid-cols-2 gap-4">
+          <label
+            htmlFor="ata-editar-data"
+            className="flex flex-col gap-1.5"
+          >
+            <span className="text-base font-medium text-zinc-700">Data</span>
+            <DateInput
+              id="ata-editar-data"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label
+            htmlFor="ata-editar-status"
+            className="flex flex-col gap-1.5"
+          >
+            <span className="text-base font-medium text-zinc-700">Situação</span>
+            <select
+              id="ata-editar-status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as StatusReuniao)}
+              className={inputClass}
+            >
+              {STATUS_REUNIAO.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_REUNIAO_LABEL[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {(status === "adiada" || status === "remarcada" || status === "nao_houve") && (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-base font-medium text-zinc-700">
+            Motivo / observação (visível no histórico)
+          </span>
+          <textarea
+            rows={3}
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            className={`${inputClass} min-h-20 resize-y py-2`}
+            placeholder="Ex.: sem quórum — remarcada para a próxima terça."
           />
         </label>
-      </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <span className="flex flex-wrap items-center gap-2 text-base font-medium text-zinc-700">

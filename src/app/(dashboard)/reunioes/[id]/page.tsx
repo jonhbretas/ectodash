@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
+import { rotuloStatusReuniao } from "../_lib/format-data";
 import PageContainer from "../../page-container";
 import ExcluirAtaButton from "../excluir-ata-button";
 import DipActions from "../../dips/dip-actions";
@@ -35,6 +36,22 @@ function textBlocks(value: string | null): string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function SituacaoReuniao({ status }: { status: string | null }) {
+  const label = rotuloStatusReuniao(status);
+  const destaque = status !== null && status !== "realizada";
+  return (
+    <span
+      className={`rounded-full px-2.5 py-0.5 text-base font-medium ${
+        destaque
+          ? "bg-amber-100 text-amber-800"
+          : "bg-zinc-100 text-zinc-600"
+      }`}
+    >
+      {label}
+    </span>
+  );
 }
 
 export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
@@ -73,7 +90,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
       supabase
         .from("reunioes")
         .select(
-          "titulo, data_reuniao, horario, duracao, formato, conducao, proxima_reuniao, saidas_antecipadas, decisoes, calendario, observacoes, resumo, participantes, pontos_principais, deliberacoes, texto, arquivo_nome, criado_por"
+          "titulo, data_reuniao, horario, status, duracao, formato, conducao, proxima_reuniao, saidas_antecipadas, decisoes, calendario, observacoes, resumo, participantes, pontos_principais, deliberacoes, texto, arquivo_nome, criado_por"
         )
         .eq("id", id)
         .single(),
@@ -101,7 +118,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
         .order("created_at", { ascending: true }),
       supabase
         .from("reunioes")
-        .select("id, titulo, data_reuniao")
+        .select("id, titulo, data_reuniao, status")
         .order("data_reuniao", { ascending: false }),
       supabase
         .from("pautas")
@@ -231,6 +248,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
                 {ata.horario.slice(0, 5)}
               </span>
             )}
+            <SituacaoReuniao status={(ata as { status?: string | null }).status ?? null} />
             {ata.arquivo_nome && (
               <span className="flex items-center gap-1.5 text-base">
                 <Paperclip size={16} aria-hidden="true" />
@@ -270,6 +288,8 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
             resumo: ata.resumo,
             pontos_principais: ata.pontos_principais,
             deliberacoes: ata.deliberacoes,
+            status: (ata as { status?: string | null }).status ?? null,
+            observacoes: ata.observacoes,
           }}
           voluntarios={voluntarios}
           participanteIds={vinculados.map((v) => v.id)}
@@ -322,6 +342,15 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
             <h2 className="text-2xl font-semibold text-zinc-900">Resumo</h2>
             <p className="whitespace-pre-wrap text-lg leading-relaxed text-zinc-700">
               {ata.resumo}
+            </p>
+          </section>
+        )}
+
+        {ata.observacoes && (
+          <section className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+            <h2 className="text-2xl font-semibold text-zinc-900">Observações</h2>
+            <p className="whitespace-pre-wrap text-lg leading-relaxed text-zinc-700">
+              {ata.observacoes}
             </p>
           </section>
         )}
