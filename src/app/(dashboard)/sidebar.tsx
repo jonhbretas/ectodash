@@ -156,7 +156,7 @@ function SidebarLinks({
         {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
         {!collapsed && showBadge && (
           <span
-            aria-label={`${badgeCount} novos relatos`}
+            aria-label={`${badgeCount} novas mensagens de ajuda`}
             className="ml-auto flex min-h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold leading-none text-white"
           >
             {badgeCount > 99 ? "99+" : badgeCount}

@@ -78,47 +78,34 @@ export const navEntries: SidebarEntry[] = [
     Icon: Users,
     children: [
       { href: "/voluntarios", label: "Voluntários", Icon: Users, modulo: "voluntarios" },
-      { href: "/eventos", label: "Eventos", Icon: CalendarDays, modulo: "eventos" },
-      { href: "/dips", label: "Dinâmica DIP", Icon: Globe2, modulo: "dips" },
-      { href: "/voluntarios/escala", label: "Escala de Voluntários", Icon: CalendarCheck, modulo: "voluntarios" },
       { href: "/trilha", label: "Trilha do Voluntário", Icon: Map, modulo: "voluntarios" },
     ],
   },
 
-  // ─── Projetos e Conhecimento ───
+  // ─── DIP (item exclusivo; a escala da DIP vive aqui) ───
   {
     type: "group",
-    label: "Conhecimento",
+    label: "DIP",
+    Icon: Globe2,
+    href: "/dips",
+    modulo: "dips",
+    children: [
+      { href: "/dips", label: "Dinâmica DIP", Icon: Globe2, modulo: "dips" },
+      { href: "/voluntarios/escala", label: "Escala da DIP", Icon: CalendarCheck, modulo: "dips" },
+    ],
+  },
+
+  // ─── Eventos (item exclusivo) ───
+  { href: "/eventos", label: "Eventos", Icon: CalendarDays, modulo: "eventos" },
+
+  // ─── Pedagógico ───
+  {
+    type: "group",
+    label: "Pedagógico",
     Icon: FolderKanban,
     children: [
       { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical, modulo: "pesquisas" },
       { href: "/proep", label: "PROEP", Icon: GraduationCap, modulo: "proep" },
-    ],
-  },
-
-  // ─── Inteligência ───
-  {
-    type: "group",
-    label: "Inteligência",
-    Icon: BarChart3,
-    children: [
-      { href: "/analise", label: "Análise", Icon: BarChart3, modulo: "analise" },
-      { href: "/analisar", label: "Analisar com IA", Icon: Sparkles, modulo: "analisar" },
-    ],
-  },
-
-  // ─── Loja Ectolab (módulo vendas: role ou cargo) ───
-  {
-    type: "group",
-    label: "Loja Ectolab",
-    Icon: ShoppingCart,
-    href: "/vendas",
-    modulo: "vendas",
-    children: [
-      { href: "/vendas", label: "Visão geral", Icon: ShoppingCart, modulo: "vendas" },
-      { href: "/vendas/produtos", label: "Produtos", Icon: Package, modulo: "vendas" },
-      { href: "/vendas/pedidos", label: "Pedidos", Icon: Receipt, modulo: "vendas" },
-      { href: "/vendas/alunos", label: "Alunos", Icon: Users, modulo: "vendas" },
     ],
   },
 
@@ -135,7 +122,7 @@ export const navEntries: SidebarEntry[] = [
     ],
   },
 
-  // ─── Utilidades (ferramentas: acervo, dicionário e contratos) ───
+  // ─── Utilidades (ferramentas: acervo e dicionário) ───
   {
     type: "group",
     label: "Utilidades",
@@ -145,14 +132,25 @@ export const navEntries: SidebarEntry[] = [
     children: [
       { href: "/utilidades", label: "Utilidades", Icon: Wrench, modulo: "utilidades" },
       { href: "/utilidades/dicionario", label: "Dicionário", Icon: BookOpen, modulo: "utilidades" },
-      // Contratos é módulo exclusivo do coordenador geral (acesso.ts).
+    ],
+  },
+
+  // ─── Contratos (item exclusivo; modelos vivem dentro) ───
+  // Módulo exclusivo do coordenador geral (acesso.ts).
+  {
+    type: "group",
+    label: "Contratos",
+    Icon: FileSignature,
+    href: "/utilidades/contratos",
+    modulo: "contratos",
+    children: [
       { href: "/utilidades/contratos", label: "Contratos", Icon: FileSignature, modulo: "contratos" },
       { href: "/utilidades/contratos/modelos", label: "Modelos", Icon: FileText, modulo: "contratos" },
     ],
   },
 
-  // ─── Relatos (todos veem os próprios; coordenador geral gerencia tudo) ───
-  { href: "/feedback", label: "Relatos e melhorias", Icon: MessageSquareWarning },
+  // ─── Ajuda (todos veem os próprios; coordenador geral gerencia tudo) ───
+  { href: "/feedback", label: "Ajuda e melhorias", Icon: MessageSquareWarning },
 
   // ─── Ouvidoria (escuta anônima; leitura só do colegiado gestor) ───
   { href: "/ouvidoria", label: "Ouvidoria", Icon: HeartHandshake },
@@ -166,6 +164,30 @@ export const navEntries: SidebarEntry[] = [
 export const coordinatorEntries: SidebarEntry[] = [
   { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard },
   { href: "/painel/acessos", label: "Acessos e cargos", Icon: ShieldCheck },
+  // ─── Inteligência (exclusiva do coordenador geral) ───
+  {
+    type: "group",
+    label: "Inteligência",
+    Icon: BarChart3,
+    children: [
+      { href: "/analise", label: "Análise", Icon: BarChart3, modulo: "analise" },
+      { href: "/analisar", label: "Analisar com IA", Icon: Sparkles, modulo: "analisar" },
+    ],
+  },
+  // ─── Loja Ectolab (oculta; só o coordenador geral vê — fora de operação) ───
+  {
+    type: "group",
+    label: "Loja Ectolab",
+    Icon: ShoppingCart,
+    href: "/vendas",
+    modulo: "vendas",
+    children: [
+      { href: "/vendas", label: "Visão geral", Icon: ShoppingCart, modulo: "vendas" },
+      { href: "/vendas/produtos", label: "Produtos", Icon: Package, modulo: "vendas" },
+      { href: "/vendas/pedidos", label: "Pedidos", Icon: Receipt, modulo: "vendas" },
+      { href: "/vendas/alunos", label: "Alunos", Icon: Users, modulo: "vendas" },
+    ],
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────

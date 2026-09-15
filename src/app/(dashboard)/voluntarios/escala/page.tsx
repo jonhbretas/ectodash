@@ -80,7 +80,7 @@ export default async function EscalaPage() {
         <div className="flex flex-col gap-1">
           <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
             <CalendarCheck size={30} aria-hidden="true" />
-            Escala de Voluntários
+            Escala da DIP
           </h1>
           <p className="text-xl text-zinc-500">
             Escala semanal das dinâmicas de sexta-feira — alocação e substituições.

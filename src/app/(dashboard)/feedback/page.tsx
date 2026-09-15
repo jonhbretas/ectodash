@@ -71,7 +71,7 @@ export default async function FeedbackPage() {
         <div className="flex flex-col gap-1">
           <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
             <MessageSquareWarning size={30} aria-hidden="true" />
-            Relatos de bugs e melhorias
+            Ajuda e melhorias
           </h1>
           <p className="max-w-2xl text-xl text-zinc-500">
             {isCoordenador

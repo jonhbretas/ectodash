@@ -104,15 +104,21 @@ export function podeAcessar(
   // geral (RLS 0042/0047 + gates de página). Cargo nenhum concede este módulo.
   if (modulo === "contratos") return false;
 
+  // Inteligência (análise + analisar com IA) é exclusiva do coordenador
+  // geral — fica na seção inferior da sidebar, só para ele.
+  if (modulo === "analise" || modulo === "analisar") return false;
+
+  // Loja Ectolab está fora de operação — só o coordenador geral vê.
+  if (modulo === "vendas") return false;
+
   if (role === "financeiro") {
     if (modulo === "financeiro") return "gerenciar";
-    if (modulo === "vendas") return false;
     return "ler";
   }
 
   if (role === "voluntariado") {
     if (modulo === "voluntarios") return "gerenciar";
-    if (modulo === "financeiro" || modulo === "vendas") return false;
+    if (modulo === "financeiro") return false;
     return "ler";
   }
 
@@ -123,11 +129,7 @@ export function podeAcessar(
   // para qualquer conta autenticada (como sempre foi). PROEP entrou na
   // lista na auditoria 0063: contém PII de alunos (nome/e-mail/telefone)
   // e a RLS do banco agora restringe leitura/escrita a coordenadores.
-  if (
-    modulo === "financeiro" ||
-    modulo === "vendas" ||
-    modulo === "proep"
-  ) {
+  if (modulo === "financeiro" || modulo === "proep") {
     return false;
   }
   return "ler";

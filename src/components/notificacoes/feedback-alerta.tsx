@@ -5,7 +5,7 @@
 // Mostra quantos relatos estão com status "novo" (não vistos).
 // - Banner no topo do dashboard, dismiss por sessão (fecha até recarregar
 //   ou até chegar um novo relato que aumenta a contagem).
-// - Badge numérico usado na sidebar no item "Relatos e melhorias".
+// - Badge numérico usado na sidebar no item "Ajuda e melhorias".
 // Polling simples a cada 60s via Supabase JS (sem realtime) — conforme
 // combinado com o usuário.
 import { useCallback, useEffect, useState } from "react";
