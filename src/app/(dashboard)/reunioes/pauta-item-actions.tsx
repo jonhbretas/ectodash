@@ -44,9 +44,14 @@ function gerarProximasTerças(qtd: number): { data: string; label: string }[] {
   );
   const dia = hojeBRT.getDay();
   const terca = 2;
-  // Dias até a próxima terça
+  // Dias até a próxima terça (regra: pedidos até terça 19h valem para hoje)
   let diff = (terca - dia + 7) % 7;
-  if (diff === 0) diff = 7; // se é terça, pula pra próxima
+  if (diff === 0) {
+    const agoraBRT = new Date(
+      hoje.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+    );
+    if (agoraBRT.getHours() * 60 + agoraBRT.getMinutes() >= 19 * 60) diff = 7;
+  }
 
   for (let i = 0; i < qtd; i++) {
     const data = new Date(hojeBRT);

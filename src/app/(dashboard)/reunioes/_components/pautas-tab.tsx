@@ -75,7 +75,7 @@ export default function PautasTab({ pautas }: Props) {
               <tr key={p.id} className="border-t border-zinc-100 hover:bg-zinc-50">
                 <td className="px-4 py-3 font-medium text-zinc-900"><button type="button" onClick={() => setDrawer(p)} className="text-left font-medium text-zinc-900 hover:text-[#2195B9] hover:underline">{p.titulo}</button></td>
                 <td className="px-4 py-3 text-zinc-600">{p.autor}</td>
-                <td className="px-4 py-3 text-zinc-600">{p.ataDiscutidaTitulo ?? p.reuniaoSelecionadaTitulo ?? "—"}</td>
+                <td className="px-4 py-3 text-zinc-600">{p.ataDiscutidaTitulo ?? p.reuniaoSelecionadaTitulo ?? (p.dataSolicitada ? `Pref: ${p.dataSolicitada.split("-").reverse().join("/")}${p.horarioSolicitado ? ` ${p.horarioSolicitado.slice(0, 5)}` : ""}` : "Próxima")}</td>
                 <td className="px-4 py-3">
                   {p.standBy ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"><Clock size={12} /> em espera</span> : p.status === "discutida" ? <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600"><CheckCheck size={12} /> discutida</span> : <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2 py-0.5 text-xs font-medium text-[#28627B]">na próxima</span>}
                 </td>

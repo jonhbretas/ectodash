@@ -89,8 +89,12 @@ export default function PautaModal({ open, onOpenChange }: PautaModalProps) {
         <DialogContent className="max-w-lg bg-white p-0 sm:max-w-[560px]">
           <DialogHeader className="px-6 pt-6 text-left">
             <DialogTitle className="text-xl font-semibold text-zinc-900">Pedir pauta</DialogTitle>
-            <DialogDescription className="text-base text-zinc-600">Sugira um assunto para a próxima reunião. Todos os voluntários podem pedir.</DialogDescription>
+            <DialogDescription className="text-base text-zinc-600">Sugira um assunto para a reunião de terça às 19h. Todos os voluntários podem pedir.</DialogDescription>
           </DialogHeader>
+
+          <div className="mx-6 rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 px-4 py-2.5 text-sm leading-relaxed text-[#28627B]">
+            Pedidos até <strong>terça 19h</strong> valem para a reunião de hoje; após 19h entram automaticamente na próxima terça.
+          </div>
 
           <form
             ref={formRef}
@@ -156,7 +160,7 @@ export default function PautaModal({ open, onOpenChange }: PautaModalProps) {
                   <ChevronDown size={18} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                 </div>
               )}
-              <p className="text-xs text-zinc-500">Pré-selecionada: próxima terça às 19h. Escolha “Sem preferência” para deixar em espera.</p>
+              <p className="text-xs text-zinc-500">Pré-selecionada: próxima terça às 19h (pedidos até 19h de terça valem para hoje; após 19h vão para a próxima terça). Escolha “Sem preferência” para deixar em espera.</p>
             </div>
 
             {!showHorario ? (

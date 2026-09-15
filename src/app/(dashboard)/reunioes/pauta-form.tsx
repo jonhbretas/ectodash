@@ -77,6 +77,9 @@ export default function PautaForm() {
       }}
       className="flex w-full flex-col gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
     >
+      <p className="rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 px-4 py-2.5 text-sm leading-relaxed text-[#28627B]">
+        Reunião toda <strong>terça às 19h</strong>. Pedidos até terça 19h valem para a reunião de hoje; após 19h entram automaticamente na próxima terça.
+      </p>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="pauta-titulo" className="text-base font-medium text-zinc-900">
           Assunto da pauta

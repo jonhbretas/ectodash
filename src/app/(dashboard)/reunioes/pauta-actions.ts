@@ -13,7 +13,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { proximaTerca } from "@/lib/proxima-reuniao";
+import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 
 export type CriarPautaState = {
   ok: boolean;
@@ -95,6 +95,29 @@ export async function criarPauta(
     return { ok: false, message: "Descreva o assunto da pauta." };
   }
 
+  // Reunião-alvo: terça 19h. Pedidos até 19h de terça valem para hoje;
+  // após 19h, proximaTerca() já rola para a terça seguinte. Quando o usuário
+  // deixou "Próxima reunião (padrão)", vinculamos automaticamente ao registro
+  // da reunião-alvo (se a ata já existir) para a pauta aparecer vinculada.
+  // Sem ata ainda, reuniao_selecionada_id fica null = "próxima" (o hub sempre
+  // mostra todas as pendentes em "Pauta confirmada").
+  const proxima = proximaTerca();
+  const alvoStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(proxima);
+  let reuniaoAlvoId: number | null = parsed.data.reuniao_selecionada_id ?? null;
+  if (!isEspera && reuniaoAlvoId === null) {
+    const { data: reuniaoAlvo } = await supabase
+      .from("reunioes")
+      .select("id")
+      .eq("data_reuniao", alvoStr)
+      .maybeSingle();
+    if (reuniaoAlvo) reuniaoAlvoId = reuniaoAlvo.id;
+  }
+
   // criado_por is never set from client input — the column default derives
   // it from the session (same anti-spoofing discipline as createDemanda).
   const { error } = await supabase.from("pautas").insert({
@@ -106,7 +129,7 @@ export async function criarPauta(
     ata_id: parsed.data.ata_id ?? null,
     data_solicitada: parsed.data.data_solicitada || null,
     horario_solicitado: parsed.data.horario_solicitado || null,
-    reuniao_selecionada_id: parsed.data.reuniao_selecionada_id ?? null,
+    reuniao_selecionada_id: reuniaoAlvoId,
   });
 
   if (error) {
@@ -123,7 +146,21 @@ export async function criarPauta(
   if (isEspera) {
     return { ok: true, message: "Pauta enviada. Ela aparece em \"Em espera\" até o coordenador incluí-la." };
   }
-  return { ok: true, message: "Pauta adicionada para a próxima reunião." };
+  const rotulo = formatarRotuloReuniao(proxima);
+  return { ok: true, message: `Pauta adicionada para a reunião de ${rotulo}. Pedidos até terça 19h valem para hoje; após 19h vão para a próxima terça.` };
+}
+
+const DIAS_ABBR = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const MESES_ABBR = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+];
+
+function formatarRotuloReuniao(date: Date): string {
+  const wd = DIAS_ABBR[date.getDay()];
+  const dia = String(date.getDate()).padStart(2, "0");
+  const mon = MESES_ABBR[date.getMonth()];
+  return `${wd}, ${dia} ${mon} · ${HORARIO_REUNIAO.replace(":", "h")}`;
 }
 
 export type PautaAcaoResult = { ok: boolean; message?: string };

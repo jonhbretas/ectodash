@@ -106,7 +106,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
       supabase
         .from("pautas")
         .select("id, titulo, contexto, origem, status, criado_por, created_at, profiles(full_name, email)")
-        .eq("ata_id", id)
+        .or(`ata_id.eq.${id},reuniao_selecionada_id.eq.${id}`)
         .order("created_at", { ascending: true }),
     ]);
 

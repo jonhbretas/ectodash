@@ -61,7 +61,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
         <header className="flex w-full flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900"><NotebookPen size={28} /> Reuniões</h1>
-            <p className="text-base text-zinc-600">Pauta da próxima reunião e histórico das atas.</p>
+            <p className="text-base text-zinc-600">Reunião geral toda terça às 19h. Pedidos até terça 19h valem para a reunião de hoje; após 19h entram na próxima terça.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <PedirPautaTrigger />
@@ -94,6 +94,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900"><ListChecks size={20} className="text-[#2195B9]" /> Pauta confirmada</h2>
                 <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-sm font-medium text-[#28627B]">{pendentes.length} {pendentes.length === 1 ? "pauta" : "pautas"}</span>
               </div>
+              <p className="mt-2 text-sm text-zinc-500">Todas as pautas pendentes aparecem aqui — inclusive as pedidas hoje antes das 19h. Pedidos após 19h de terça valem para a próxima reunião.</p>
 
               {ataProxima && (
                 <Link href={`/reunioes/${ataProxima.id}`} className="mt-3 flex items-center gap-3 rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 px-4 py-3 text-sm text-[#2195B9] hover:bg-[#2195B9]/10">

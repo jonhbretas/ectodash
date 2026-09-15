@@ -8,7 +8,7 @@ export default function FaixaProxima({ pendentes, emEspera }: Props) {
   const proxima = proximaTerca();
   const label = formatarProximaLabel(proxima, HORARIO_REUNIAO);
   return (
-    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 px-4 py-2.5 text-sm font-medium text-[#28627B] backdrop-blur">
+    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 px-4 py-2.5 text-sm font-medium text-[#28627B] backdrop-blur" title="Pedidos até terça 19h valem para a reunião de hoje; após 19h vão para a próxima terça.">
       <span className="flex items-center gap-2">
         <CalendarClock size={16} /> PRÓXIMA: {label}
       </span>
@@ -16,6 +16,7 @@ export default function FaixaProxima({ pendentes, emEspera }: Props) {
       <span>{pendentes} {pendentes === 1 ? "pauta" : "pautas"}</span>
       <span className="text-[#2195B9]/40">·</span>
       <span>{emEspera} em espera</span>
+      <span className="w-full text-xs font-normal text-[#28627B]/80">Pedidos até terça 19h valem para hoje; após 19h vão para a próxima terça.</span>
     </div>
   );
 }
