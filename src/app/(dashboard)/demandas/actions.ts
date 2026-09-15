@@ -462,12 +462,13 @@ export async function updateDemandaStatus(
     return { ok: false, message: "Status inválido." };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("demandas")
     .update({ status: parsed.data })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
-  if (error) {
+  if (error || !data || data.length === 0) {
     console.error("updateDemandaStatus: update failed", error);
     return { ok: false, message: "Não foi possível mover a demanda." };
   }
@@ -562,8 +563,10 @@ export async function updateDemandaTitulo(
   if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.string().trim().min(1, "Digite um título.").safeParse(titulo);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Título inválido." };
-  const { error } = await supabase.from("demandas").update({ titulo: parsed.data }).eq("id", id);
-  if (error) return inlineUpdateError;
+  // .select("id") + checagem de linhas: sem isso, um UPDATE bloqueado pelo
+  // RLS retorna sucesso com 0 linhas e o front acha que salvou.
+  const { data, error } = await supabase.from("demandas").update({ titulo: parsed.data }).eq("id", id).select("id");
+  if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
   return { ok: true, message: "" };
 }
@@ -577,8 +580,8 @@ export async function updateDemandaPrazo(
   if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.string().date("Data inválida.").safeParse(prazo);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Prazo inválido." };
-  const { error } = await supabase.from("demandas").update({ prazo: parsed.data }).eq("id", id);
-  if (error) return inlineUpdateError;
+  const { data, error } = await supabase.from("demandas").update({ prazo: parsed.data }).eq("id", id).select("id");
+  if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
   return { ok: true, message: "" };
 }
@@ -592,8 +595,8 @@ export async function updateDemandaArea(
   if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.string().trim().max(200).nullable().safeParse(area || null);
   if (!parsed.success) return { ok: false, message: "Área inválida." };
-  const { error } = await supabase.from("demandas").update({ area: parsed.data }).eq("id", id);
-  if (error) return inlineUpdateError;
+  const { data, error } = await supabase.from("demandas").update({ area: parsed.data }).eq("id", id).select("id");
+  if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
   return { ok: true, message: "" };
 }
@@ -607,8 +610,8 @@ export async function updateDemandaProjeto(
   if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = z.string().trim().max(200).nullable().safeParse(projeto || null);
   if (!parsed.success) return { ok: false, message: "Projeto inválido." };
-  const { error } = await supabase.from("demandas").update({ projeto: parsed.data }).eq("id", id);
-  if (error) return inlineUpdateError;
+  const { data, error } = await supabase.from("demandas").update({ projeto: parsed.data }).eq("id", id).select("id");
+  if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
   return { ok: true, message: "" };
 }
@@ -622,8 +625,8 @@ export async function updateDemandaEvento(
   if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = eventoIdSchema.safeParse(eventoId);
   if (!parsed.success) return { ok: false, message: "Evento inválido." };
-  const { error } = await supabase.from("demandas").update({ evento_id: parsed.data ?? null }).eq("id", id);
-  if (error) return inlineUpdateError;
+  const { data, error } = await supabase.from("demandas").update({ evento_id: parsed.data ?? null }).eq("id", id).select("id");
+  if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
   return { ok: true, message: "" };
 }
@@ -637,8 +640,8 @@ export async function updateDemandaEtiqueta(
   if (!user) return { ok: false, message: "Sessão expirada." };
   const parsed = etiquetaIdSchema.safeParse(etiquetaId);
   if (!parsed.success) return { ok: false, message: "Etiqueta inválida." };
-  const { error } = await supabase.from("demandas").update({ etiqueta_id: parsed.data ?? null }).eq("id", id);
-  if (error) return inlineUpdateError;
+  const { data, error } = await supabase.from("demandas").update({ etiqueta_id: parsed.data ?? null }).eq("id", id).select("id");
+  if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
   return { ok: true, message: "" };
 }

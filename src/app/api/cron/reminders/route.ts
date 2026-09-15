@@ -11,7 +11,7 @@
 import type { NextRequest } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Resend } from "resend";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { reminderTipoFor } from "@/lib/reminders/eligibility";
@@ -216,11 +216,13 @@ export async function GET(request: NextRequest) {
 
         // 5. Send — via the resend package directly, never through Supabase
         // Auth's SMTP relay (07-RESEARCH.md Pitfall 1).
+        // parseISO trata "YYYY-MM-DD" como data local — new Date("YYYY-MM-DD")
+        // interpreta como meia-noite UTC e em BRT formata o dia anterior.
         const { error: sendError } = await sendReminder({
           resend,
           to: profileRow.email,
           titulo: demanda.titulo,
-          prazoFormatado: format(new Date(demanda.prazo), "dd/MM/yyyy", {
+          prazoFormatado: format(parseISO(demanda.prazo), "dd/MM/yyyy", {
             locale: ptBR,
           }),
           tipo,

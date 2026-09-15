@@ -348,6 +348,7 @@ export default function DemandaInlineEditor({
 
   // Active editing pill — only one at a time.
   const [editingPill, setEditingPill] = useState<string | null>(null);
+  const [prazoError, setPrazoError] = useState<string | null>(null);
 
   // Shared ref for the currently-editing input/select (only one renders at
   // a time). Focus it via effect when the pill changes.
@@ -368,8 +369,13 @@ export default function DemandaInlineEditor({
   }
   async function savePrazo(val: string) {
     setLocalPrazo(val);
+    setPrazoError(null);
     const r = await updateDemandaPrazo(demanda.id, val);
-    if (r.ok) refresh(); else setLocalPrazo(demanda.prazo);
+    if (r.ok) refresh();
+    else {
+      setLocalPrazo(demanda.prazo);
+      setPrazoError(r.message || "Não foi possível salvar o prazo.");
+    }
     return r.ok;
   }
   async function saveArea(val: string) {
@@ -524,6 +530,7 @@ export default function DemandaInlineEditor({
       <div className="flex flex-wrap items-center gap-2">
         {/* Prazo */}
         {editingPill === "prazo" ? (
+          <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-zinc-200/60">
             <div className="w-44">
               <DateInput
@@ -541,17 +548,19 @@ export default function DemandaInlineEditor({
             >
               <Check size={16} aria-hidden="true" />
             </button>
-            <button type="button" onClick={() => { setLocalPrazo(demanda.prazo); setEditingPill(null); }}
+            <button type="button" onClick={() => { setLocalPrazo(demanda.prazo); setPrazoError(null); setEditingPill(null); }}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100"
               aria-label="Cancelar"
             >
               <X size={16} aria-hidden="true" />
             </button>
           </div>
+          {prazoError && <span className="px-1 text-sm text-red-600">{prazoError}</span>}
+          </div>
         ) : (
           <button
             type="button"
-            onClick={() => setEditingPill("prazo")}
+            onClick={() => { setPrazoError(null); setEditingPill("prazo"); }}
             className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-base transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             title="Editar prazo"
           >
