@@ -38,7 +38,7 @@ export default function AtalhosAjuda({ voluntarioId }: AtalhosAjudaProps) {
 
   const atalhos: Atalho[] = [
     {
-      href: voluntarioId ? `/?responsavel=${voluntarioId}` : "/",
+      href: voluntarioId ? `/demandas?responsavel=${voluntarioId}` : "/demandas",
       label: "Ver minhas demandas",
       descricao: "Veja suas tarefas, prazos e o que está com você",
       Icon: ClipboardList,

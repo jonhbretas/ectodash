@@ -1351,6 +1351,7 @@ export async function salvarTudoDaAnalise(
   revalidatePath("/reunioes");
   revalidatePath("/dips");
   revalidatePath("/");
+  revalidatePath("/demandas");
   revalidatePath("/analisar");
 
   const totalSalvo =

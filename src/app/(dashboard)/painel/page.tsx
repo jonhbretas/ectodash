@@ -45,7 +45,7 @@ export default async function PainelPage({
           <Lock size={48} className="text-slate-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-slate-900">Este painel e exclusivo do coordenador</h1>
           <p className="max-w-md text-lg text-slate-600">Voce nao tem acesso ao painel geral da instituicao. Toque abaixo para voltar as suas demandas.</p>
-          <Link href="/" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9]">
+          <Link href="/demandas" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9]">
             Ver minhas demandas
           </Link>
         </div>
@@ -74,7 +74,7 @@ export default async function PainelPage({
           <ClipboardList size={48} className="text-slate-300" aria-hidden="true" />
           <h2 className="text-2xl font-semibold text-slate-900">Nenhuma demanda cadastrada na instituicao ainda</h2>
           <p className="max-w-md text-sm text-slate-600">Quando as areas comecarem a cadastrar demandas, o resumo da instituicao vai aparecer aqui.</p>
-          <Link href="/" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9]">
+          <Link href="/demandas" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9]">
             Ver demandas
           </Link>
         </div>

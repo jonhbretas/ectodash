@@ -37,7 +37,7 @@ export default async function NovaDemandaPage() {
     <PageContainer>
       <div className="flex w-full flex-col gap-8">
         <Link
-          href="/"
+          href="/demandas"
           className="inline-flex w-fit items-center gap-1.5 text-base font-medium text-zinc-400 transition-colors hover:text-zinc-600"
         >
           <ArrowLeft size={16} aria-hidden="true" />

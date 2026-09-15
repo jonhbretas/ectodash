@@ -29,6 +29,7 @@ import {
   CalendarCheck,
   HeartHandshake,
   ShieldCheck,
+  House,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -59,13 +60,16 @@ export type SidebarEntry = NavItem | NavGroup;
 // ── Sidebar structure (grouped for clarity) ───────────────────────
 
 export const navEntries: SidebarEntry[] = [
+  // ─── Início (hub): sempre visível, resumo + cardzinhos ───
+  { href: "/", label: "Início", Icon: House },
+
   // ─── Gestão Operacional ───
   {
     type: "group",
     label: "Gestão Operacional",
     Icon: ClipboardList,
     children: [
-      { href: "/", label: "Demandas", Icon: ClipboardList, modulo: "demandas" },
+      { href: "/demandas", label: "Demandas", Icon: ClipboardList, modulo: "demandas" },
       { href: "/reunioes", label: "Reuniões", Icon: NotebookPen, modulo: "reunioes" },
       { href: "/projetos", label: "Projetos", Icon: FolderKanban, modulo: "projetos" },
     ],

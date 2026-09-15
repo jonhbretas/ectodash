@@ -140,6 +140,7 @@ export async function createDemanda(
   }
 
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "Demanda criada com sucesso.", id: demanda.id as number };
 }
 
@@ -400,6 +401,7 @@ export async function updateDemanda(
   }
 
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "Demanda atualizada." };
 }
 
@@ -435,6 +437,7 @@ export async function concludeDemanda(
   }
 
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "Demanda concluída." };
 }
 
@@ -474,6 +477,7 @@ export async function updateDemandaStatus(
   }
 
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "Demanda atualizada." };
 }
 
@@ -568,6 +572,7 @@ export async function updateDemandaTitulo(
   const { data, error } = await supabase.from("demandas").update({ titulo: parsed.data }).eq("id", id).select("id");
   if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -583,6 +588,7 @@ export async function updateDemandaPrazo(
   const { data, error } = await supabase.from("demandas").update({ prazo: parsed.data }).eq("id", id).select("id");
   if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -598,6 +604,7 @@ export async function updateDemandaArea(
   const { data, error } = await supabase.from("demandas").update({ area: parsed.data }).eq("id", id).select("id");
   if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -613,6 +620,7 @@ export async function updateDemandaProjeto(
   const { data, error } = await supabase.from("demandas").update({ projeto: parsed.data }).eq("id", id).select("id");
   if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -628,6 +636,7 @@ export async function updateDemandaEvento(
   const { data, error } = await supabase.from("demandas").update({ evento_id: parsed.data ?? null }).eq("id", id).select("id");
   if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -643,6 +652,7 @@ export async function updateDemandaEtiqueta(
   const { data, error } = await supabase.from("demandas").update({ etiqueta_id: parsed.data ?? null }).eq("id", id).select("id");
   if (error || !data || data.length === 0) return inlineUpdateError;
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -666,6 +676,7 @@ export async function addDemandaResponsavel(
     return inlineUpdateError;
   }
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -691,6 +702,7 @@ export async function removeDemandaResponsavel(
   const { error } = await query;
   if (error) return inlineUpdateError;
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -714,6 +726,7 @@ export async function addDemandaMembro(
     return inlineUpdateError;
   }
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -739,6 +752,7 @@ export async function removeDemandaMembro(
   const { error } = await query;
   if (error) return inlineUpdateError;
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -1114,6 +1128,7 @@ export async function editarDemandasEmMassa(
   }
 
   revalidatePath("/");
+  revalidatePath("/demandas");
   const count = idsValidos.length;
   return {
     ok: true,
@@ -1160,6 +1175,7 @@ export async function excluirDemandas(
   }
 
   revalidatePath("/");
+  revalidatePath("/demandas");
   const count = deletadas?.length ?? 0;
   return {
     ok: true,
@@ -1215,6 +1231,7 @@ export async function excluirDemanda(
   }
 
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "Demanda excluída." };
 }
 
@@ -1281,6 +1298,7 @@ export async function mesclarDemandas(
   }
 
   revalidatePath("/");
+  revalidatePath("/demandas");
   const count = removerValidos.length;
   return {
     ok: true,

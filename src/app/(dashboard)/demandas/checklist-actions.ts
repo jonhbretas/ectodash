@@ -89,6 +89,7 @@ export async function alternarItemChecklist(
 
   revalidatePath(`/demandas/${item.demanda_id}/editar`);
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 
@@ -126,6 +127,7 @@ export async function removerItemChecklist(
 
   revalidatePath(`/demandas/${item.demanda_id}/editar`);
   revalidatePath("/");
+  revalidatePath("/demandas");
   return { ok: true, message: "" };
 }
 

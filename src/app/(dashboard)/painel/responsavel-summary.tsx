@@ -66,7 +66,7 @@ export default function ResponsavelSummary({
                   {countLabel}
                 </span>
                 <Link
-                  href={`/?responsavel=${encodeURIComponent(row.profileId)}`}
+                  href={`/demandas?responsavel=${encodeURIComponent(row.profileId)}`}
                   className="flex min-h-14 items-center px-2 text-base text-[#2195B9] underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
                 >
                   Ver demandas

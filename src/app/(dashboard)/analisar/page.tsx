@@ -1243,7 +1243,7 @@ function ResultsScreen({
                     </Link>
                   )}
                   {temDemandas && (
-                    <Link href="/" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50">
+                    <Link href="/demandas" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50">
                       <ClipboardList size={16} aria-hidden="true" strokeWidth={1.5} /> Ver demandas
                     </Link>
                   )}

@@ -37,7 +37,7 @@ export default async function EditarDemandaPage({
       <PageContainer>
         <div className="flex w-full flex-col items-center gap-4 py-16 text-center">
           <p className="text-xl text-zinc-500">Demanda não encontrada.</p>
-          <Link href="/" className="text-xl font-medium text-[#2195B9] transition-colors hover:text-[#2195B9]">
+          <Link href="/demandas" className="text-xl font-medium text-[#2195B9] transition-colors hover:text-[#2195B9]">
             Voltar para a lista
           </Link>
         </div>
@@ -56,7 +56,7 @@ export default async function EditarDemandaPage({
       <PageContainer>
         <div className="flex w-full flex-col items-center gap-4 py-16 text-center">
           <p className="text-xl text-zinc-500">Demanda não encontrada.</p>
-          <Link href="/" className="text-xl font-medium text-[#2195B9] transition-colors hover:text-[#2195B9]">
+          <Link href="/demandas" className="text-xl font-medium text-[#2195B9] transition-colors hover:text-[#2195B9]">
             Voltar para a lista
           </Link>
         </div>
@@ -164,7 +164,7 @@ export default async function EditarDemandaPage({
     <PageContainer>
       <div className="flex w-full flex-col gap-8">
         <Link
-          href="/"
+          href="/demandas"
           className="inline-flex w-fit items-center gap-1.5 text-base font-medium text-zinc-400 transition-colors hover:text-zinc-600"
         >
           <ArrowLeft size={16} aria-hidden="true" />

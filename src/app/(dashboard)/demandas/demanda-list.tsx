@@ -319,7 +319,7 @@ export default function DemandaList({
             &quot;Limpar filtros&quot; para ver todas as demandas.
           </p>
           <Link
-            href="/"
+            href="/demandas"
             className="flex min-h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Limpar filtros

@@ -602,7 +602,7 @@ export default function DemandaForm({
         <div className={cardClass}>
           <SubmitButton mode={mode} />
           <Link
-            href="/"
+            href="/demandas"
             className="flex min-h-14 items-center justify-center rounded-xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Cancelar
@@ -857,7 +857,7 @@ export default function DemandaForm({
       <SubmitButton mode={mode} />
 
       <Link
-        href="/"
+        href="/demandas"
         className="flex min-h-14 items-center justify-center rounded-xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 transition-all duration-200 hover:bg-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         Cancelar

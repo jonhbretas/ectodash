@@ -68,7 +68,7 @@ export default function AreaSummary({ rows }: AreaSummaryProps) {
                   {countLabel}
                 </span>
                 <Link
-                  href={`/?area=${encodeURIComponent(row.area)}`}
+                  href={`/demandas?area=${encodeURIComponent(row.area)}`}
                   className="flex min-h-14 items-center px-2 text-base text-[#2195B9] underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
                 >
                   Ver demandas
