@@ -67,7 +67,7 @@ const VOLUNTEERS: Voluntario[] = [
   { nome: "Ana Prado", codigo_pf: "137062", unidade: "ECTOLAB", org_depto: ORG_PARAPEDAGOGICO, funcao: "Coordenação Parapedagogia", data_inicio: "2025-04-15", obs: null, area: AREA_PARAPEDAGOGICO, role: "coordenador_area", areas_lideradas: [AREA_PARAPEDAGOGICO], email: "anaacup20@gmail.com", telefone1: "+5541998852257", telefone2: "(45) 99106-5051" },
   { nome: "Ana Yogan", codigo_pf: "131351", unidade: "ECTOLAB", org_depto: ORG_INTERNACIONAL, funcao: "Voluntária Internacional", data_inicio: "2024-03-24", obs: null, area: AREA_INTERNACIONAL, role: null, areas_lideradas: [], email: "amabrao@gmail.com", telefone1: "+1 (561) 414-0229", telefone2: null },
   { nome: "Andre Pedretti", codigo_pf: "503589", unidade: "ECTOLAB", org_depto: ORG_FINANCEIRO, funcao: "Financeiro e DIP Foz", data_inicio: "2025-01-13", obs: null, area: AREA_FINANCEIRO, role: "financeiro", areas_lideradas: [], email: "andre.pedretti@gmail.com", telefone1: "+55 41995382020", telefone2: "+55 41995382020" },
-  { nome: "Angela Mattia", codigo_pf: "508397", unidade: "ECTOLAB", org_depto: ORG_INTERNACIONAL, funcao: "Internacional - DIP", data_inicio: "2025-12-19", obs: null, area: AREA_INTERNACIONAL, role: null, areas_lideradas: [], email: "ange_mattia@hotmail.com", telefone1: "(00) 00000-0000", telefone2: null },
+  { nome: "Angela Mattia", codigo_pf: "508397", unidade: "ECTOLAB", org_depto: ORG_INTERNACIONAL, funcao: "Internacional - DIP", data_inicio: "2025-12-19", obs: null, area: AREA_INTERNACIONAL, role: null, areas_lideradas: [], email: "ange_mattia@hotmail.com", telefone1: null, telefone2: null },
   { nome: "Antonio Magalhães", codigo_pf: "131632", unidade: "ECTOLAB", org_depto: ORG_VOLUNTARIADO, funcao: "Infraestrutura - 2025 Projeto", data_inicio: "2022-12-19", obs: null, area: AREA_VOLUNTARIADO, role: null, areas_lideradas: [], email: "apintoleitemagalhaes@gmail.com", telefone1: "(45) 99112-2800", telefone2: "(45) 99112-2882" },
   { nome: "Aparecida Polastre Fonseca", codigo_pf: "128959", unidade: "ECTOLAB", org_depto: ORG_DIP, funcao: "Monitoria DIP", data_inicio: "2024-07-01", obs: null, area: AREA_DIP, role: null, areas_lideradas: [], email: "polastre026@gmail.com", telefone1: "(45) 99942-9233", telefone2: "(45) 99122-9592" },
   { nome: "Bruno Rafael Gris", codigo_pf: "138028", unidade: "ECTOLAB", org_depto: ORG_FINANCEIRO, funcao: null, data_inicio: "2023-02-20", obs: "Em 03/08/2024 solicitou afastamento por 3 meses", area: AREA_FINANCEIRO, role: null, areas_lideradas: [], email: "brunorgris@gmail.com", telefone1: "(45) 99933-1478", telefone2: "(45) 99119-4148" },
@@ -128,7 +128,7 @@ const VOLUNTEERS: Voluntario[] = [
   { nome: "Mariana Cabral", codigo_pf: "134141", unidade: "São Paulo", org_depto: ORG_PARATECNOLOGICO, funcao: "Pesquisa", data_inicio: "2015-05-01", obs: null, area: AREA_PESQUISA, role: null, areas_lideradas: [], email: "marycabral101@gmail.com", telefone1: "(11) 98219-8674", telefone2: "(11) 98722-2183" },
   { nome: "Maricy Teixeira", codigo_pf: "506995", unidade: "São Paulo", org_depto: ORG_VOLUNTARIADO, funcao: "Voluntariado", data_inicio: "2025-10-13", obs: null, area: AREA_VOLUNTARIADO, role: null, areas_lideradas: [], email: "maricy.teix@gmail.com", telefone1: "+55 11976263362", telefone2: "+55 11976263362" },
   { nome: "Máris Polo Paz", codigo_pf: "129880", unidade: "ECTOLAB", org_depto: ORG_DIP, funcao: "Coordenadora DIP", data_inicio: "2025-04-15", obs: null, area: AREA_DIP, role: "coordenador_area", areas_lideradas: [AREA_DIP], email: "marispolopaz@gmail.com", telefone1: "(11) 99627-9518", telefone2: "(11) 99711-4573" },
-  { nome: "Marlise Royer", codigo_pf: "130978", unidade: "ECTOLAB", org_depto: ORG_DIP, funcao: "Monitoria DIP", data_inicio: "2024-07-08", obs: null, area: AREA_DIP, role: null, areas_lideradas: [], email: "marlise_royer@yahoo.com.br", telefone1: "(61) 98148-0095", telefone2: "(45) -9993" },
+  { nome: "Marlise Royer", codigo_pf: "130978", unidade: "ECTOLAB", org_depto: ORG_DIP, funcao: "Monitoria DIP", data_inicio: "2024-07-08", obs: null, area: AREA_DIP, role: null, areas_lideradas: [], email: "marlise_royer@yahoo.com.br", telefone1: "(61) 98148-0095", telefone2: null },
   { nome: "Mauro Buerger", codigo_pf: "139480", unidade: "Curitiba", org_depto: ORG_DIP, funcao: "Monitor DIP", data_inicio: "2019-06-01", obs: null, area: AREA_DIP, role: null, areas_lideradas: [], email: "maurobuerger@gmail.com", telefone1: "(47) 99136-1616", telefone2: "(47) 99196-7778" },
   { nome: "Mauro Ferreira", codigo_pf: "506055", unidade: "São Paulo", org_depto: ORG_DIP, funcao: "Monitoria DIP", data_inicio: "2024-07-15", obs: null, area: AREA_DIP, role: null, areas_lideradas: [], email: "mauroftorres13@gmail.com", telefone1: "(11) 99512-2966", telefone2: "(11) 99664-2195" },
   { nome: "Mauro Oliveira", codigo_pf: "509587", unidade: "São Paulo", org_depto: ORG_DIP, funcao: "Monitoria DIP", data_inicio: "2025-07-01", obs: null, area: AREA_DIP, role: null, areas_lideradas: [], email: "mauro.oliveirajr3@gmail.com", telefone1: "11985223414", telefone2: "(11) 98522-3414" },
@@ -168,6 +168,35 @@ async function main() {
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+  // FKs resolvidas uma vez (o backfill 0073/re-backfill 0100 cobrem o
+  // histórico; aqui garantimos que re-runs do seed não recriem NULLs).
+  const { data: areasReg } = await supabase
+    .from("areas_institucionais")
+    .select("id, nome");
+  const { data: locsReg } = await supabase
+    .from("voluntario_localidades")
+    .select("id, nome");
+  const norm = (s: string) => s.toLowerCase().trim();
+  function resolveAreaId(area: string | null): number | null {
+    if (!area?.trim()) return null;
+    const t = norm(area);
+    const exato = (areasReg ?? []).find((a) => norm(a.nome) === t);
+    if (exato) return exato.id;
+    if (area.includes(" - ")) {
+      const sufixo = norm(area.split(" - ")[1] ?? "");
+      const porSufixo = (areasReg ?? []).find((a) => norm(a.nome) === sufixo);
+      if (porSufixo) return porSufixo.id;
+    }
+    if (t === "comunicação e eventos") {
+      return (areasReg ?? []).find((a) => norm(a.nome) === "comunicação")?.id ?? null;
+    }
+    return null;
+  }
+  function resolveLocalidadeId(unidade: string | null): number | null {
+    if (!unidade?.trim()) return null;
+    return (locsReg ?? []).find((l) => norm(l.nome) === norm(unidade))?.id ?? null;
+  }
+
   let created = 0;
   let updated = 0;
   let failed = 0;
@@ -189,6 +218,8 @@ async function main() {
       data_saida: null,
       obs: volunteer.obs,
       area_atuacao: volunteer.area,
+      area_id: resolveAreaId(volunteer.area),
+      localidade_id: resolveLocalidadeId(volunteer.unidade),
       role: volunteer.role,
       areas_lideradas: volunteer.areas_lideradas,
       ativo: true,

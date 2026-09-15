@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import {
   checkRateLimit,
@@ -19,6 +20,21 @@ const loginSchema = z.object({
   email: z.string().email("Digite um e-mail válido."),
   password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres."),
 });
+
+// V-015: contexto de rede para o login_audit (detecção de brute-force por
+// IP). try/catch de propósito: headers() pode não existir em testes/unit e
+// a auditoria nunca pode quebrar o fluxo de login.
+async function contextoRede(): Promise<{ ip: string | null; userAgent: string | null }> {
+  try {
+    const h = await headers();
+    const forwarded = h.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() || h.get("x-real-ip")?.trim() || null;
+    const userAgent = h.get("user-agent")?.slice(0, 500) || null;
+    return { ip: ip?.slice(0, 100) ?? null, userAgent };
+  } catch {
+    return { ip: null, userAgent: null };
+  }
+}
 
 // V-003: Rate-limit login attempts — 5 per minute per IP.
 const LOGIN_WINDOW_MS = 60_000;
@@ -75,8 +91,11 @@ export async function signIn(
 
     // V-015: Record failed login attempt in audit log.
     try {
+      const rede = await contextoRede();
       await supabase.rpc("record_login_attempt", {
         p_email: parsed.data.email,
+        p_ip: rede.ip,
+        p_user_agent: rede.userAgent,
         p_success: false,
         p_error_code: error.message?.substring(0, 50) ?? null,
       });
@@ -109,8 +128,11 @@ export async function signIn(
 
   // V-015: Record successful login in audit log.
   try {
+    const rede = await contextoRede();
     await supabase.rpc("record_login_attempt", {
       p_email: parsed.data.email,
+      p_ip: rede.ip,
+      p_user_agent: rede.userAgent,
       p_success: true,
     });
   } catch {

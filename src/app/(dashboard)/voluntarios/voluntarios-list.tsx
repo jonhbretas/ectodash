@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { roleLabel } from "@/lib/role-labels";
 import { exibirUnidade } from "@/lib/unidade-label";
+import { formatarTelefone, linkWhatsApp } from "@/lib/telefone";
 import { atualizarVoluntariosEmMassa, type BulkState } from "./actions";
 import VoluntarioTable, { type VoluntarioTableRow } from "./voluntario-table";
 
@@ -36,17 +37,7 @@ function formatData(iso: string | null): string | null {
   return format(new Date(`${iso}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
 }
 
-function phoneToDigits(phone: string): string {
-  return phone.replace(/\D/g, "");
-}
-
-function formatPhoneDisplay(phone: string): string {
-  const digits = phoneToDigits(phone);
-  if (digits.length <= 2) return phone;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return phone;
-}
+const formatPhoneDisplay = formatarTelefone;
 
 export default function VoluntariosListClient({
   areas,
@@ -508,9 +499,9 @@ function VoluntarioCard({
           </Link>
           {(row.telefone1 || row.telefone2) && (
             <span className="flex flex-wrap items-center gap-2 text-base">
-              {row.telefone1 && (
+              {row.telefone1 && linkWhatsApp(row.telefone1) && (
                 <a
-                  href={`https://wa.me/${phoneToDigits(row.telefone1).startsWith("55") ? phoneToDigits(row.telefone1) : "55" + phoneToDigits(row.telefone1)}`}
+                  href={linkWhatsApp(row.telefone1)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 whitespace-nowrap text-[#2195B9] hover:text-[#28627B] hover:underline"
@@ -519,9 +510,9 @@ function VoluntarioCard({
                   {formatPhoneDisplay(row.telefone1)}
                 </a>
               )}
-              {row.telefone2 && (
+              {row.telefone2 && linkWhatsApp(row.telefone2) && (
                 <a
-                  href={`https://wa.me/${phoneToDigits(row.telefone2).startsWith("55") ? phoneToDigits(row.telefone2) : "55" + phoneToDigits(row.telefone2)}`}
+                  href={linkWhatsApp(row.telefone2)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 whitespace-nowrap text-[#2195B9] hover:text-[#28627B] hover:underline"

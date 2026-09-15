@@ -3,6 +3,7 @@ import { ptBR } from "date-fns/locale";
 import { Phone, Mail } from "lucide-react";
 import { roleLabel } from "@/lib/role-labels";
 import { exibirUnidade } from "@/lib/unidade-label";
+import { linkWhatsApp } from "@/lib/telefone";
 import PageContainer from "../page-container";
 
 type VoluntarioRow = {
@@ -26,16 +27,12 @@ type VoluntarioRow = {
     | null;
 };
 
-function phoneToWhatsApp(phone: string): string {
-  return phone.replace(/\D/g, "");
-}
-
 function PhoneLink({ phone, label }: { phone: string; label: string }) {
-  const digits = phoneToWhatsApp(phone);
-  if (!digits || digits.length < 8) return null;
+  const href = linkWhatsApp(phone);
+  if (!href) return null;
   return (
     <a
-      href={`https://wa.me/${digits}`}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="flex items-center gap-1.5 text-lg text-[#2195B9] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"

@@ -86,6 +86,25 @@ const campoTexto = (max: number) =>
     .transform((value) => (value === "" ? null : value))
     .optional();
 
+// Telefone opcional, mas quando preenchido precisa ser um número plausível:
+// rejeita placeholders do tipo "(00) 00000-0000" e dígitos insuficientes
+// (a limpeza 0100 trocou os fantasmas do seed por NULL).
+const telefoneSchema = z
+  .string()
+  .trim()
+  .max(30)
+  .transform((value) => (value === "" ? null : value))
+  .refine(
+    (value) => {
+      if (value === null || value === undefined) return true;
+      const digitos = value.replace(/\D/g, "");
+      if (digitos.length < 8) return false;
+      return !/^(\d)\1*$/.test(digitos);
+    },
+    "Telefone inválido."
+  )
+  .nullish();
+
 // Shared field set for create and edit — every field optional except nome.
 // Empty strings become null before reaching the RPC (the functions store
 // nulls, never empty strings).
@@ -101,8 +120,8 @@ const voluntarioDadosSchema = z.object({
   area_atuacao: campoTexto(200),
   papel: papelSchema.optional(),
   areas_lideradas: campoTexto(2000),
-  telefone1: campoTexto(30),
-  telefone2: campoTexto(30),
+  telefone1: telefoneSchema,
+  telefone2: telefoneSchema,
 });
 
 type VoluntarioDados = z.infer<typeof voluntarioDadosSchema>;
@@ -247,6 +266,14 @@ export async function atualizarVoluntario(
 
   const ativo = formData.get("ativo") === "true";
 
+  // Preserva o epicom atual: a RPC trata p_epicom NULL como "manter", mas
+  // passar o valor explícito evita qualquer reset acidental (ver 0098).
+  const { data: atual } = await supabase
+    .from("voluntarios")
+    .select("epicom")
+    .eq("id", id)
+    .maybeSingle();
+
   const { data: ok, error } = await supabase.rpc("atualizar_voluntario", {
     p_cadastro_id: id,
     p_nome: dados.nome,
@@ -263,6 +290,7 @@ export async function atualizarVoluntario(
     p_ativo: ativo,
     p_telefone1: dados.telefone1 ?? null,
     p_telefone2: dados.telefone2 ?? null,
+    p_epicom: (atual as { epicom: boolean | null } | null)?.epicom ?? null,
   });
 
   if (error || !ok) {

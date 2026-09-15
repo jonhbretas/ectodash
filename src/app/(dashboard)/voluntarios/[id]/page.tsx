@@ -22,6 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { roleLabel } from "@/lib/role-labels";
 import { exibirUnidade } from "@/lib/unidade-label";
+import { linkWhatsApp } from "@/lib/telefone";
 import PageContainer from "../../page-container";
 import StatusBadge from "../../demandas/status-badge";
 import OverdueBadge from "../../demandas/overdue-badge";
@@ -39,32 +40,12 @@ function formatData(iso: string | null | undefined): string | null {
   return format(new Date(`${iso}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
 }
 
-// Format phone number to only digits for WhatsApp link
-function phoneToDigits(phone: string): string {
-  return phone.replace(/\D/g, "");
-}
-
-// Format phone for display
-function formatPhoneDisplay(phone: string): string {
-  const digits = phoneToDigits(phone);
-  if (digits.length <= 2) return phone;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  // International or long numbers
-  return phone;
-}
-
-function normalizePhoneForWhatsApp(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("55")) return digits;
-  return "55" + digits;
-}
-
 function WhatsAppLink({ phone, label }: { phone: string; label: string }) {
-  const normalized = normalizePhoneForWhatsApp(phone);
+  const href = linkWhatsApp(phone);
+  if (!href) return null;
   return (
     <a
-      href={`https://wa.me/${normalized}`}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="text-xl text-[#2195B9] underline decoration-[#2195B9]/30 transition-colors hover:text-[#28627B] hover:decoration-[#28627B]/50"
@@ -74,17 +55,12 @@ function WhatsAppLink({ phone, label }: { phone: string; label: string }) {
   );
 }
 
-function phoneToWhatsApp(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  return digits;
-}
-
 function PhoneLink({ phone, label }: { phone: string; label: string }) {
-  const digits = phoneToWhatsApp(phone);
-  if (!digits || digits.length < 8) return null;
+  const href = linkWhatsApp(phone);
+  if (!href) return null;
   return (
     <a
-      href={`https://wa.me/${digits}`}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="flex items-center gap-1.5 text-lg text-[#2195B9] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"

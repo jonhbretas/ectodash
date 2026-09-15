@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { roleLabel } from "@/lib/role-labels";
 import { exibirUnidade } from "@/lib/unidade-label";
+import { formatarTelefone, linkWhatsApp } from "@/lib/telefone";
 
 export type VoluntarioTableRow = {
   id: number;
@@ -43,17 +44,7 @@ function formatData(iso: string | null): string | null {
   return format(new Date(`${iso}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
 }
 
-function phoneToDigits(phone: string): string {
-  return phone.replace(/\D/g, "");
-}
-
-function formatPhoneDisplay(phone: string): string {
-  const digits = phoneToDigits(phone);
-  if (digits.length <= 2) return phone;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return phone;
-}
+const formatPhoneDisplay = formatarTelefone;
 
 export type VoluntarioTableProps = {
   voluntarios: VoluntarioTableRow[];
@@ -186,9 +177,9 @@ export default function VoluntarioTable({
                       {linked.email}
                     </span>
                   )}
-                  {row.telefone1 && (
+                  {row.telefone1 && linkWhatsApp(row.telefone1) && (
                     <a
-                      href={`https://wa.me/${phoneToDigits(row.telefone1).startsWith("55") ? phoneToDigits(row.telefone1) : "55" + phoneToDigits(row.telefone1)}`}
+                      href={linkWhatsApp(row.telefone1)!}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-sm text-[#2195B9] hover:text-[#28627B] hover:underline"
