@@ -387,6 +387,145 @@ export async function mesclarEventos(
   };
 }
 
+export type MassaEventosState = {
+  ok: boolean;
+  message: string;
+  afetados?: number;
+};
+
+const massaInitial: MassaEventosState = { ok: false, message: "" };
+
+// Exclusão em massa — RLS (migration 0008) é a fronteira real: só o
+// criador ou coordenador_geral consegue apagar cada linha. O delete com
+// .in() apaga apenas as linhas permitidas; retornamos a contagem real.
+export async function excluirEventosEmMassa(
+  ids: number[]
+): Promise<MassaEventosState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ...massaInitial, message: "Sessão expirada." };
+  }
+
+  const limpos = [...new Set(ids.filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
+  if (limpos.length === 0) {
+    return { ...massaInitial, message: "Selecione ao menos um evento." };
+  }
+
+  const { data: existentes, error: leituraError } = await supabase
+    .from("eventos")
+    .select("id")
+    .in("id", limpos);
+
+  if (leituraError) {
+    console.error("excluirEventosEmMassa: read failed", leituraError);
+    return { ...massaInitial, message: "Não foi possível excluir agora. Tente novamente." };
+  }
+
+  const visiveis = (existentes ?? []).map((e) => e.id);
+  if (visiveis.length === 0) {
+    return { ...massaInitial, message: "Você não tem permissão para excluir esses eventos." };
+  }
+
+  const { error: deleteError, count } = await supabase
+    .from("eventos")
+    .delete({ count: "exact" })
+    .in("id", visiveis);
+
+  if (deleteError) {
+    console.error("excluirEventosEmMassa: delete failed", deleteError);
+    return { ...massaInitial, message: "Não foi possível excluir agora. Tente novamente." };
+  }
+
+  revalidatePath("/eventos");
+  revalidatePath("/");
+  const apagados = count ?? visiveis.length;
+  return {
+    ok: true,
+    afetados: apagados,
+    message:
+      apagados === 1
+        ? "1 evento excluído."
+        : `${apagados} eventos excluídos.`,
+  };
+}
+
+const editarMassaSchema = z.object({
+  local: z.string().trim().max(200).optional(),
+  descricao: z.string().trim().max(2000).optional(),
+  data_evento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha uma data válida.")
+    .optional(),
+  tipo_evento_id: z.number().int().positive().nullable().optional(),
+});
+
+// Edição em massa — aplica os mesmos valores a todos os ids. Campos
+// omitidos são mantidos. local/descricao com string vazia limpam o campo.
+// tipo_evento_id null remove o vínculo com o tipo.
+export async function editarEventosEmMassa(
+  ids: number[],
+  campos: { local?: string; descricao?: string; data_evento?: string; tipo_evento_id?: number | null }
+): Promise<MassaEventosState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ...massaInitial, message: "Sessão expirada." };
+  }
+
+  const limpos = [...new Set(ids.filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
+  if (limpos.length === 0) {
+    return { ...massaInitial, message: "Selecione ao menos um evento." };
+  }
+
+  const parsed = editarMassaSchema.safeParse(campos);
+  if (!parsed.success) {
+    return { ...massaInitial, message: "Verifique os campos da edição em massa." };
+  }
+
+  const patch: Record<string, string | number | null> = {};
+  if (parsed.data.local !== undefined) patch.local = parsed.data.local || null;
+  if (parsed.data.descricao !== undefined) patch.descricao = parsed.data.descricao || null;
+  if (parsed.data.data_evento !== undefined) patch.data_evento = parsed.data.data_evento;
+  if (parsed.data.tipo_evento_id !== undefined) patch.tipo_evento_id = parsed.data.tipo_evento_id;
+
+  if (Object.keys(patch).length === 0) {
+    return { ...massaInitial, message: "Marque ao menos um campo para alterar." };
+  }
+
+  const { data, error } = await supabase
+    .from("eventos")
+    .update(patch)
+    .in("id", limpos)
+    .select("id");
+
+  if (error) {
+    console.error("editarEventosEmMassa: update failed", error);
+    return { ...massaInitial, message: "Não foi possível salvar agora. Tente novamente." };
+  }
+
+  const afetados = (data ?? []).length;
+  if (afetados === 0) {
+    return { ...massaInitial, message: "Você não tem permissão para editar esses eventos." };
+  }
+
+  revalidatePath("/eventos");
+  revalidatePath("/");
+  return {
+    ok: true,
+    afetados,
+    message:
+      afetados === 1
+        ? "1 evento atualizado."
+        : `${afetados} eventos atualizados.`,
+  };
+}
 export async function adicionarTarefasDoModelo(
   eventoId: number
 ): Promise<AdicionarTarefasState> {

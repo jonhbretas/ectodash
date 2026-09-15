@@ -81,6 +81,8 @@ export default async function EventosPage() {
   const proximos: EventoRow[] = (proximosResult.data ?? []).map(toRow);
   const anteriores: EventoRow[] = (anterioresResult.data ?? []).map(toRow);
 
+  const tipos = (tiposResult.data ?? []).map((t) => ({ id: t.id, nome: t.nome }));
+
   const eventosMerge: EventoMergeOpcao[] = (mergeResult.data ?? []).map((e) => ({
     id: e.id,
     titulo: e.titulo,
@@ -136,7 +138,7 @@ export default async function EventosPage() {
         </div>
       ) : (
         <div className="flex w-full flex-col gap-10">
-          <EventosLista proximos={proximos} anteriores={anteriores} today={today} />
+          <EventosLista proximos={proximos} anteriores={anteriores} today={today} tipos={tipos} />
 
           {isCoordenador && <MergeEventosSection eventos={eventosMerge} />}
         </div>
