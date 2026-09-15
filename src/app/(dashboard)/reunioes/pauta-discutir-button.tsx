@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { CheckCheck, ChevronDown, Loader2 } from "lucide-react";
 import { marcarPautaDiscutida } from "./pauta-actions";
+import { proximaTerca, formatarDataISO } from "@/lib/proxima-reuniao";
 
 type AtaOption = {
   id: number;
@@ -19,27 +20,19 @@ function formatarDataBR(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-/** Gera as próximas N terças-feiras a partir de hoje (BRT). */
+/** Próximas N terças a partir da reunião-alvo (inclui HOJE antes das 19h).
+ * Usa proximaTerca() como base — mesmo corte do servidor — e formata via
+ * formatarDataISO (nunca via toLocaleString/Date, que deslocava o dia). */
 function gerarProximasTerças(qtd: number): { data: string; label: string }[] {
   const resultado: { data: string; label: string }[] = [];
-  const hoje = new Date();
-  const hojeBRT = new Date(
-    hoje.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
-  );
-  const dia = hojeBRT.getDay();
-  const terca = 2;
-  let diff = (terca - dia + 7) % 7;
-  if (diff === 0) diff = 7;
+  const base = proximaTerca();
 
   for (let i = 0; i < qtd; i++) {
-    const data = new Date(hojeBRT);
-    data.setDate(data.getDate() + diff + i * 7);
-    const yyyy = data.getFullYear();
-    const mm = String(data.getMonth() + 1).padStart(2, "0");
-    const dd = String(data.getDate()).padStart(2, "0");
-    const iso = `${yyyy}-${mm}-${dd}`;
-    const label = `${dd}/${mm}/${yyyy}`;
-    resultado.push({ data: iso, label });
+    const data = new Date(base);
+    data.setDate(base.getDate() + i * 7);
+    const iso = formatarDataISO(data);
+    const [yyyy, mm, dd] = iso.split("-");
+    resultado.push({ data: iso, label: `${dd}/${mm}/${yyyy}` });
   }
   return resultado;
 }

@@ -43,6 +43,18 @@ function hojeBRT(agora: Date = new Date()): Date {
   return new Date(parts.year, parts.month - 1, parts.day);
 }
 
+/** Retorna HOJE em BRT como YYYY-MM-DD — direto via Intl, sem Date
+ * intermediário (construir `new Date(y,m,d)` no servidor UTC e reformatar
+ * via Intl desloca um dia para trás — foi o bug da reunião 14/09). */
+export function hojeBRTISO(agora: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: BRT_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(agora);
+}
+
 /** Retorna os minutos desde meia-noite em BRT. */
 function minutosBRT(agora: Date = new Date()): number {
   const str = new Intl.DateTimeFormat("en-GB", {
@@ -95,12 +107,21 @@ export function tercaAnterior(agora?: Date): Date {
   return resultado;
 }
 
-/** Formata Date como YYYY-MM-DD (data local BRT já calculada). */
+/** Formata Date como YYYY-MM-DD (data local BRT já calculada).
+ * ATENÇÃO: este é o ÚNICO formato seguro para o Date retornado por
+ * proximaTerca()/tercaAnterior(). Nunca formate esse Date via Intl com
+ * timeZone America/Sao_Paulo — no servidor (UTC) isso volta um dia
+ * (ex.: 15/09 vira 14/09). */
 export function formatarDataISO(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+/** Atalho: próxima terça já como YYYY-MM-DD (usa formatarDataISO). */
+export function proximaTercaISO(agora?: Date): string {
+  return formatarDataISO(proximaTerca(agora));
 }
 
 /** Texto curto da regra de corte — reutilizado nos formulários. */

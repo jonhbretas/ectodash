@@ -13,7 +13,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
+import {
+  proximaTerca,
+  proximaTercaISO,
+  hojeBRTISO,
+  formatarDataISO,
+  HORARIO_REUNIAO,
+} from "@/lib/proxima-reuniao";
 
 export type CriarPautaState = {
   ok: boolean;
@@ -35,13 +41,8 @@ export type ReuniaoDisponivel = {
 export async function listarReunioesDisponiveis(): Promise<ReuniaoDisponivel[]> {
   const supabase = await createClient();
 
-  // Data de hoje em BRT (YYYY-MM-DD)
-  const hojeStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  // Hoje em BRT direto via Intl (sem Date intermediário — ver proxima-reuniao.ts).
+  const hojeStr = hojeBRTISO();
 
   const { data, error } = await supabase
     .from("reunioes")
@@ -102,13 +103,10 @@ export async function criarPauta(
   // garantimos a linha da reunião-alvo — vincula se já existir, senão cria
   // como "agendada" (sem ata; a ata é preenchida depois que ela acontece).
   // A pauta nunca fica sem vínculo por falta de ata.
+  // IMPORTANTE: alvoStr via formatarDataISO (nunca via Intl no Date da
+  // proximaTerca — no servidor UTC o Intl voltava um dia: 15/09 virava 14/09).
   const proxima = proximaTerca();
-  const alvoStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(proxima);
+  const alvoStr = formatarDataISO(proxima);
   let reuniaoAlvoId: number | null = parsed.data.reuniao_selecionada_id ?? null;
   if (!isEspera && reuniaoAlvoId === null) {
     const { data: reuniaoAlvo } = await supabase
@@ -230,15 +228,9 @@ export async function marcarPautaDiscutida(
   }
 
   // Auto-resolve: find the ata for the next Tuesday's meeting (BRT).
+  // Usa formatarDataISO — nunca Intl no Date da proximaTerca (bug 14/09).
   if (!Number.isInteger(aId) || aId <= 0) {
-    const proxima = proximaTerca();
-    // Formata em BRT para evitar bug de UTC
-    const dataStr = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Sao_Paulo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(proxima);
+    const dataStr = proximaTercaISO();
     const { data: reuniao } = await supabase
       .from("reunioes")
       .select("id")

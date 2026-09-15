@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { CalendarClock, CheckCheck, Clock, FileText, ListChecks, NotebookPen, PlusCircle, Sparkles, MoreHorizontal } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
-import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
+import { proximaTerca, formatarDataISO } from "@/lib/proxima-reuniao";
 import PageContainer from "../page-container";
 import PautaItemActions from "./pauta-item-actions";
 import { PedirPautaTrigger } from "./pauta-modal";
@@ -46,7 +44,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
   const pendentes = pautas.filter((p: any) => p.status === "pendente" && !p.standBy);
   const emEspera = pautas.filter((p: any) => p.status === "pendente" && p.standBy);
   const proxima = proximaTerca();
-  const proximaDataStr = format(proxima, "yyyy-MM-dd");
+  const proximaDataStr = formatarDataISO(proxima);
   const ataProxima = rows.find((r) => r.data_reuniao === proximaDataStr) ?? null;
   const counts = { proxima: pendentes.length, pautas: pautas.length, atas: rows.length };
 
