@@ -28,6 +28,7 @@ import {
   BookOpen,
   CalendarCheck,
   HeartHandshake,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -164,6 +165,7 @@ export const navEntries: SidebarEntry[] = [
 // the sidebar, visually separated from the main menu.
 export const coordinatorEntries: SidebarEntry[] = [
   { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard },
+  { href: "/painel/acessos", label: "Acessos e cargos", Icon: ShieldCheck },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────
