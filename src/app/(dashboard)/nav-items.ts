@@ -27,6 +27,7 @@ import {
   MessageSquareWarning,
   BookOpen,
   CalendarCheck,
+  HeartHandshake,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -151,6 +152,9 @@ export const navEntries: SidebarEntry[] = [
 
   // ─── Relatos (todos veem os próprios; coordenador geral gerencia tudo) ───
   { href: "/feedback", label: "Relatos e melhorias", Icon: MessageSquareWarning },
+
+  // ─── Ouvidoria (escuta anônima; leitura só do colegiado gestor) ───
+  { href: "/ouvidoria", label: "Ouvidoria", Icon: HeartHandshake },
 
   // ─── Perfil ───
   { href: "/perfil", label: "Meu perfil", Icon: UserRound },
