@@ -67,8 +67,7 @@ export default async function EditarDemandaPage({
   const [
     { data: responsaveisRows },
     { data: membrosRows },
-    { data: voluntarios },
-    { data: perfisVinculados },
+    { data: rosterRows },
     { data: eventos },
     { data: etiquetas },
     { data: checklistItems },
@@ -79,8 +78,11 @@ export default async function EditarDemandaPage({
   ] = await Promise.all([
     supabase.from("demanda_responsaveis").select("profile_id, voluntario_id").eq("demanda_id", id),
     supabase.from("demanda_membros").select("profile_id, voluntario_id").eq("demanda_id", id),
-    supabase.from("voluntarios").select("id, nome").eq("ativo", true).order("nome"),
-    supabase.from("profiles").select("id, voluntario_id").not("voluntario_id", "is", null),
+    // Roster via SECURITY DEFINER roster_basico() (id, nome, tem_conta,
+    // profile_id): o SELECT direto em voluntarios/profiles mostra para
+    // voluntario_comum só a própria linha, e o picker ficava com um nome
+    // só. A função expõe só colunas não sensíveis dos ATIVOS.
+    supabase.rpc("roster_basico"),
     supabase.from("eventos").select("id, titulo, data_evento, local")
       .gte("data_evento", new Date().toISOString().slice(0, 10))
       .order("data_evento", { ascending: true }).limit(100),
@@ -99,13 +101,16 @@ export default async function EditarDemandaPage({
       .single(),
   ]);
 
-  // Normalize the persisted assignments (profile_id OR voluntario_id, per
-  // migration 0020) to roster volunteer ids — the UI's single vocabulary.
+  // O roster vem da função roster_basico() (id, nome, tem_conta,
+  // profile_id) — profile_id resolve linhas antigas que só têm profile_id,
+  // sem SELECT em profiles (RLS restrito para voluntario_comum).
+  type RosterRow = { id: number; nome: string; tem_conta: boolean; profile_id: string | null };
+  const roster = ((rosterRows ?? []) as RosterRow[]);
   const voluntarioByProfile = new Map(
-    (perfisVinculados ?? []).map((p) => [p.id, p.voluntario_id])
+    roster.filter((v) => v.profile_id).map((v) => [v.profile_id as string, v.id])
   );
   const voluntarioById = new Map(
-    (voluntarios ?? []).map((v) => [v.id, v])
+    roster.map((v) => [v.id, v])
   );
 
   function normalizarRows(
@@ -120,9 +125,7 @@ export default async function EditarDemandaPage({
       resultado.push({
         id: String(voluntarioId),
         nome: voluntario.nome,
-        temConta: Boolean(
-          [...voluntarioByProfile.entries()].find(([, vid]) => vid === voluntarioId)
-        ),
+        temConta: voluntario.tem_conta,
       });
     }
     return resultado;
@@ -131,10 +134,10 @@ export default async function EditarDemandaPage({
   const responsaveis = normalizarRows(responsaveisRows ?? []);
   const membros = normalizarRows(membrosRows ?? []);
 
-  const voluntarioOptions = (voluntarios ?? []).map((v) => ({
+  const voluntarioOptions = roster.map((v) => ({
     id: String(v.id),
     nome: v.nome,
-    temConta: [...voluntarioByProfile.values()].includes(v.id),
+    temConta: v.tem_conta,
   }));
 
   const eventoNome = (eventos ?? []).find((e) => e.id === demanda.evento_id)?.titulo ?? null;

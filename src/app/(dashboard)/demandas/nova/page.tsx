@@ -7,21 +7,15 @@ import PageContainer from "../../page-container";
 export default async function NovaDemandaPage() {
   const supabase = await createClient();
 
-  // The ROSTER is the source of truth for who can be responsible for a
-  // demanda (user decision 2026-08-04): every registered volunteer is
-  // assignable, "mesmo que eles não estejam cadastrados" (sem conta ativada
-  // ainda). temConta marca quem já ativou o acesso pelo vínculo.
-  const [voluntariosResult, perfisResult, eventosResult, etiquetasResult, areasResult, projetosResult] =
+  // O roster usa a função SECURITY DEFINER roster_basico() (id, nome,
+  // tem_conta) em vez de SELECT direto em voluntarios+profiles: o RLS do
+  // roster (0017+0043) mostra para voluntario_comum só a própria linha, e o
+  // picker de responsáveis ficava com um nome só. A função expõe só colunas
+  // não sensíveis dos ATIVOS para todo autenticado (decisão 2026-08-04:
+  // todo voluntário ativo é atribuível).
+  const [rosterResult, eventosResult, etiquetasResult, areasResult, projetosResult] =
     await Promise.all([
-      supabase
-        .from("voluntarios")
-        .select("id, nome")
-        .eq("ativo", true)
-        .order("nome"),
-      supabase
-        .from("profiles")
-        .select("voluntario_id")
-        .not("voluntario_id", "is", null),
+      supabase.rpc("roster_basico"),
       supabase
         .from("eventos")
         .select("id, titulo, data_evento, local")
@@ -33,14 +27,10 @@ export default async function NovaDemandaPage() {
       supabase.from("projetos").select("nome").order("nome"),
     ]);
 
-  const comConta = new Set(
-    (perfisResult.data ?? []).map((p) => p.voluntario_id)
-  );
-
-  const voluntarios = (voluntariosResult.data ?? []).map((v) => ({
+  const voluntarios = ((rosterResult.data ?? []) as { id: number; nome: string; tem_conta: boolean; profile_id?: string | null }[]).map((v) => ({
     id: v.id,
     nome: v.nome,
-    temConta: comConta.has(v.id),
+    temConta: v.tem_conta,
   }));
 
   return (
