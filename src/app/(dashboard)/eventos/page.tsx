@@ -12,6 +12,7 @@ import EventosLista, { type EventoRow } from "./eventos-lista";
 import ImportEventosToggle from "./import-toggle";
 import MergeEventosSection, { type EventoMergeOpcao } from "./merge-eventos-section";
 import BotaoMesclarEventos from "./botao-mesclar-eventos";
+import AnaliseDuplicadosSection from "./analise-duplicados-section";
 
 export default async function EventosPage() {
   const supabase = await createClient();
@@ -140,6 +141,7 @@ export default async function EventosPage() {
         <div className="flex w-full flex-col gap-10">
           <EventosLista proximos={proximos} anteriores={anteriores} today={today} tipos={tipos} />
 
+          {isCoordenador && <AnaliseDuplicadosSection />}
           {isCoordenador && <MergeEventosSection eventos={eventosMerge} />}
         </div>
       )}
