@@ -63,9 +63,7 @@ export default function OuvidoriaForm({ cicloLabel }: { cicloLabel: string }) {
         </ul>
         <p className="flex items-center gap-2 text-base text-zinc-600">
           <Lock size={16} aria-hidden="true" />
-          Anônimo para todos. A identidade fica registrada sob sigilo e só pode ser
-          revelada pelo coordenador geral em caso excepcional de mau uso, com motivo
-          registrado em auditoria.
+          Anônimo para todos. A identidade fica registrada sob sigilo.
         </p>
       </div>
 
