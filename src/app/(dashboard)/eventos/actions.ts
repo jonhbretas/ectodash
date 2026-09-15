@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseCsv, parseXlsx } from "@/lib/financeiro/parse-file";
+import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
 
 export type ImportarEventosState = {
   ok: boolean;
@@ -300,9 +301,75 @@ async function importarEventosInner(
     return { ...initialState, message: "Nenhum evento encontrado no arquivo." };
   }
 
+  // Regra AGENTS.md (atualizar, não duplicar): filtra duplicados antes de
+  // inserir — (a) dentro do próprio arquivo e (b) contra a base existente
+  // (mesma data + título normalizado igual ou contido). Nada se perde: o
+  // retorno informa quantos foram ignorados e quais.
+  const chaveEvento = (data_evento: string, titulo: string) =>
+    `${data_evento}|${normalizarTituloEvento(titulo)}`;
+
+  const vistosNoArquivo = new Set<string>();
+  const novos: typeof eventos = [];
+  let duplicadosNoArquivo = 0;
+  for (const ev of eventos) {
+    const chave = chaveEvento(ev.data_evento, ev.titulo);
+    if (vistosNoArquivo.has(chave)) {
+      duplicadosNoArquivo++;
+      continue;
+    }
+    vistosNoArquivo.add(chave);
+    novos.push(ev);
+  }
+
+  const { data: existentes } = await supabase
+    .from("eventos")
+    .select("titulo, data_evento");
+  const chavesExistentes = new Set(
+    (existentes ?? []).map((e) =>
+      chaveEvento(String(e.data_evento), String(e.titulo))
+    )
+  );
+  // Match "contido" (título parecido): ex. "Foz 2026" vs "Evento Foz 2026".
+  const normasExistentesPorData = new Map<string, string[]>();
+  for (const e of existentes ?? []) {
+    const data = String(e.data_evento);
+    const lista = normasExistentesPorData.get(data) ?? [];
+    lista.push(normalizarTituloEvento(String(e.titulo)));
+    normasExistentesPorData.set(data, lista);
+  }
+
+  const finais: typeof eventos = [];
+  const ignoradosBase: string[] = [];
+  for (const ev of novos) {
+    const chave = chaveEvento(ev.data_evento, ev.titulo);
+    if (chavesExistentes.has(chave)) {
+      ignoradosBase.push(`${ev.titulo} (${ev.data_evento})`);
+      continue;
+    }
+    const norm = normalizarTituloEvento(ev.titulo);
+    const candidatos = normasExistentesPorData.get(ev.data_evento) ?? [];
+    const parecido = candidatos.some(
+      (ex) =>
+        norm.length >= 6 && (ex.includes(norm) || norm.includes(ex))
+    );
+    if (parecido) {
+      ignoradosBase.push(`${ev.titulo} (${ev.data_evento})`);
+      continue;
+    }
+    finais.push(ev);
+  }
+
+  if (finais.length === 0) {
+    return {
+      ...initialState,
+      message:
+        "Nenhum evento novo — todos já estavam cadastrados (duplicados ignorados).",
+    };
+  }
+
   // criado_por comes from the column default (session) — never from the
   // CSV, same anti-spoofing discipline as every other insert in this app.
-  const { error } = await supabase.from("eventos").insert(eventos);
+  const { error } = await supabase.from("eventos").insert(finais);
 
   if (error) {
     console.error("importarEventos: insert failed", error);
@@ -313,10 +380,24 @@ async function importarEventosInner(
   }
 
   revalidatePath("/eventos");
-  return {
-    ok: true,
-    message: `${eventos.length} eventos importados com sucesso.`,
-  };
+  const partes = [`${finais.length} eventos importados com sucesso.`];
+  const ignoradosTotal = duplicadosNoArquivo + ignoradosBase.length;
+  if (ignoradosTotal > 0) {
+    partes.push(
+      `${ignoradosTotal} ${ignoradosTotal === 1 ? "duplicado ignorado" : "duplicados ignorados"} (já cadastrados ou repetidos no arquivo).`
+    );
+  }
+  return { ok: true, message: partes.join(" ") };
+}
+
+function normalizarTituloEvento(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // Materializes the event type's task template into real demandas linked to
@@ -384,6 +465,79 @@ export async function mesclarEventos(
   return {
     ok: resultado === "ok",
     message: MESCLAR_MENSAGENS[resultado] ?? "Não foi possível mesclar agora.",
+  };
+}
+
+// Mesclagem múltipla — junta N duplicados num único definitivo, chamando
+// o RPC 0046 uma vez por duplicado (cada chamada é atômica; o definitivo
+// acumula descricao/local/tipo vazios e todas as referências). Retorna a
+// contagem de absorvidos; se algum falhar no meio, informa quantos já
+// foram mesclados para o coordenador decidir se continua.
+export async function mesclarEventosEmMassa(
+  manterId: number,
+  removerIds: number[]
+): Promise<MesclarEventosState & { mesclados?: number }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ...mesclarEventosInitialState, message: "Sessão expirada." };
+  }
+
+  if (!Number.isFinite(manterId) || manterId <= 0) {
+    return { ...mesclarEventosInitialState, message: "Escolha o evento definitivo." };
+  }
+
+  const alvos = [...new Set(removerIds.filter((n) => Number.isInteger(n) && n > 0 && n !== manterId))].slice(0, 50);
+  if (alvos.length === 0) {
+    return { ...mesclarEventosInitialState, message: "Selecione ao menos um duplicado diferente do definitivo." };
+  }
+
+  let mesclados = 0;
+  for (const removerId of alvos) {
+    const { data, error } = await supabase.rpc("mesclar_eventos", {
+      p_manter_id: manterId,
+      p_remover_id: removerId,
+    });
+    if (error) {
+      console.error("mesclarEventosEmMassa: rpc failed", { removerId, error });
+      break;
+    }
+    if (data !== "ok") {
+      console.error("mesclarEventosEmMassa: rpc returned", { removerId, data });
+      const detalhe =
+        typeof data === "string" && MESCLAR_MENSAGENS[data]
+          ? ` (${MESCLAR_MENSAGENS[data]})`
+          : "";
+      if (mesclados === 0) {
+        return {
+          ...mesclarEventosInitialState,
+          message: `Não foi possível mesclar agora${detalhe}.`,
+        };
+      }
+      break;
+    }
+    mesclados += 1;
+  }
+
+  if (mesclados === 0) {
+    return { ...mesclarEventosInitialState, message: "Não foi possível mesclar agora. Tente novamente." };
+  }
+
+  revalidatePath("/eventos");
+  revalidatePath("/demandas");
+  revalidatePath("/");
+  return {
+    ok: mesclados === alvos.length,
+    mesclados,
+    message:
+      mesclados === alvos.length
+        ? mesclados === 1
+          ? "Eventos mesclados com sucesso. O duplicado foi removido."
+          : `${mesclados} eventos mesclados no definitivo. Os duplicados foram removidos.`
+        : `${mesclados} de ${alvos.length} mesclados — confira a lista e repita para o restante.`,
   };
 }
 
@@ -792,4 +946,198 @@ export async function removerTipoEvento(
 
   revalidatePath("/eventos/modelos");
   return { ok: true, message: "Tipo de evento removido." };
+}
+
+// ── Análise IA de duplicados (tela /eventos, com conferência humana) ──
+
+export type EventoDuplicadoInfo = {
+  id: number;
+  titulo: string;
+  data_evento: string;
+  local: string | null;
+  descricao: string | null;
+};
+
+export type GrupoDuplicado = {
+  eventos: EventoDuplicadoInfo[];
+  justificativa: string;
+  manterId: number;
+  confianca: "alta" | "media" | "baixa";
+};
+
+export type AnalisarDuplicadosState = {
+  ok: boolean;
+  message: string;
+  grupos: GrupoDuplicado[];
+  totalAnalisado: number;
+};
+
+function diasEntre(a: string, b: string): number {
+  const da = new Date(`${a}T00:00:00`).getTime();
+  const db = new Date(`${b}T00:00:00`).getTime();
+  if (!Number.isFinite(da) || !Number.isFinite(db)) return 999;
+  return Math.abs(Math.round((da - db) / 86400000));
+}
+
+function saoParecidos(a: EventoDuplicadoInfo, b: EventoDuplicadoInfo): boolean {
+  const na = normalizarTituloEvento(a.titulo);
+  const nb = normalizarTituloEvento(b.titulo);
+  if (!na || !nb) return false;
+  const mesmaData = a.data_evento === b.data_evento;
+  const dataProxima = diasEntre(a.data_evento, b.data_evento) <= 3;
+  const tituloIgual = na === nb;
+  const tituloContido =
+    na.length >= 6 && nb.length >= 6 && (na.includes(nb) || nb.includes(na));
+  // Token overlap (ex.: "Encontro Foz 2026" vs "Encontro de Voluntarios Foz 2026")
+  const tokA = new Set(na.split(" ").filter((t) => t.length >= 4));
+  const tokB = new Set(nb.split(" ").filter((t) => t.length >= 4));
+  let comuns = 0;
+  for (const t of tokA) if (tokB.has(t)) comuns++;
+  const overlapForte =
+    tokA.size >= 2 && tokB.size >= 2 && comuns >= Math.min(tokA.size, tokB.size, 2);
+
+  if (tituloIgual && dataProxima) return true;
+  if ((tituloContido || overlapForte) && (mesmaData || dataProxima)) return true;
+  return false;
+}
+
+function sugerirDefinitivo(grupo: EventoDuplicadoInfo[]): number {
+  const pontuacao = (e: EventoDuplicadoInfo) =>
+    (e.local ? 2 : 0) + (e.descricao ? 2 : 0) + (e.titulo.length >= 10 ? 1 : 0);
+  const ordenado = [...grupo].sort((x, y) => {
+    const p = pontuacao(y) - pontuacao(x);
+    if (p !== 0) return p;
+    return x.id - y.id; // mais antigo primeiro em empate
+  });
+  return ordenado[0].id;
+}
+
+const duplicadoGrupoSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(2).max(10),
+  justificativa: z.string().max(300),
+  manterId: z.number().int().positive(),
+  confianca: z.enum(["alta", "media", "baixa"]),
+});
+
+const duplicadoRespostaSchema = z.object({
+  grupos: z.array(duplicadoGrupoSchema).max(50),
+});
+
+// Varre a base procurando réplicas (o mesmo evento extraído em várias atas
+// ou importado várias vezes — 4-5 cópias na tela). Pré-filtro determinístico
+// (union-find por título/data) reduz o custo; a IA confirma cada grupo com
+// justificativa e sugere o definitivo. A mesclagem em si é sempre humana
+// (conferência na UI via mesclarEventos). Coordenador apenas.
+export async function analisarDuplicadosEventosIA(): Promise<AnalisarDuplicadosState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada.", grupos: [], totalAnalisado: 0 };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "coordenador_geral") {
+    return { ok: false, message: "Só o coordenador pode rodar a análise.", grupos: [], totalAnalisado: 0 };
+  }
+
+  const { data, error } = await supabase
+    .from("eventos")
+    .select("id, titulo, data_evento, local, descricao")
+    .order("data_evento", { ascending: true })
+    .limit(1000);
+  if (error) {
+    console.error("analisarDuplicadosEventosIA: read failed", error);
+    return { ok: false, message: "Não foi possível ler os eventos.", grupos: [], totalAnalisado: 0 };
+  }
+  const eventos: EventoDuplicadoInfo[] = (data ?? []).map((e) => ({
+    id: e.id,
+    titulo: String(e.titulo),
+    data_evento: String(e.data_evento),
+    local: e.local ?? null,
+    descricao: e.descricao ? String(e.descricao).slice(0, 200) : null,
+  }));
+  if (eventos.length < 2) {
+    return { ok: true, message: "Menos de 2 eventos — nada para comparar.", grupos: [], totalAnalisado: eventos.length };
+  }
+
+  // Union-find sobre pares parecidos → grupos candidatos.
+  const pai = new Map<number, number>();
+  const find = (x: number): number => {
+    let r = x;
+    while (pai.get(r) !== r) r = pai.get(r)!;
+    return r;
+  };
+  const unir = (a: number, b: number) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) pai.set(Math.max(ra, rb), Math.min(ra, rb));
+  };
+  for (const e of eventos) pai.set(e.id, e.id);
+  for (let i = 0; i < eventos.length; i++) {
+    for (let j = i + 1; j < eventos.length; j++) {
+      if (saoParecidos(eventos[i], eventos[j])) unir(eventos[i].id, eventos[j].id);
+    }
+  }
+  const baldes = new Map<number, EventoDuplicadoInfo[]>();
+  for (const e of eventos) {
+    const r = find(e.id);
+    const lista = baldes.get(r) ?? [];
+    lista.push(e);
+    baldes.set(r, lista);
+  }
+  const candidatos = [...baldes.values()].filter((g) => g.length >= 2);
+  if (candidatos.length === 0) {
+    return { ok: true, message: "Nenhum duplicado encontrado. A base está coerente.", grupos: [], totalAnalisado: eventos.length };
+  }
+
+  const porId = new Map(eventos.map((e) => [e.id, e]));
+  const fallback: GrupoDuplicado[] = candidatos.slice(0, 50).map((g) => ({
+    eventos: g.slice(0, 10),
+    justificativa: "Títulos muito parecidos na mesma época — confira data e local antes de mesclar.",
+    manterId: sugerirDefinitivo(g),
+    confianca: g.every((x) => x.data_evento === g[0].data_evento) ? ("alta" as const) : ("media" as const),
+  }));
+
+  // IA confirma/refina os candidatos (máx. 30 grupos por chamada).
+  try {
+    const amostra = candidatos.slice(0, 30).map((g) =>
+      g.slice(0, 6).map((e) => ({
+        id: e.id,
+        titulo: e.titulo,
+        data: e.data_evento,
+        local: e.local,
+      }))
+    );
+    const raw = JSON.parse(
+      await chatCompletion(
+        `Você confere eventos duplicados de uma instituição (responda APENAS JSON válido com a chave "grupos"). Cada grupo candidato contém eventos possivelmente repetidos (mesmo evento extraído de várias atas ou importado várias vezes). Mantenha um grupo SOMENTE se os eventos forem provavelmente o MESMO evento real: títulos equivalentes (ignorando acentos, caixa, "Palestra/Curso/Encontro" genéricos) E datas iguais ou com até 3 dias de diferença. Separe eventos de anos diferentes ou temas claramente distintos. Para cada grupo mantido, explique em 1 frase (justificativa), escolha manterId (o registro mais completo/mais antigo) e dê confianca alta/media/baixa. Formato exato: {"grupos": [{"ids": [1,2], "justificativa": "...", "manterId": 1, "confianca": "alta"}]}. Se nenhum for duplicado real, retorne {"grupos": []}. JSON apenas.`,
+        wrapUserContent(JSON.stringify(amostra).slice(0, 20000)),
+        { jsonMode: true }
+      )
+    );
+    const parsed = duplicadoRespostaSchema.safeParse(raw);
+    if (!parsed.success) return { ok: true, message: `${candidatos.length} ${candidatos.length === 1 ? "grupo suspeito" : "grupos suspeitos"} (análise por regras — a IA retornou formato inesperado). Confira antes de mesclar.`, grupos: fallback, totalAnalisado: eventos.length };
+    const grupos: GrupoDuplicado[] = [];
+    for (const g of parsed.data.grupos) {
+      const evs = g.ids.map((id) => porId.get(id)).filter((e): e is EventoDuplicadoInfo => !!e);
+      if (evs.length < 2) continue;
+      grupos.push({
+        eventos: evs,
+        justificativa: g.justificativa || "Possível réplica — confira antes de mesclar.",
+        manterId: evs.some((e) => e.id === g.manterId) ? g.manterId : sugerirDefinitivo(evs),
+        confianca: g.confianca,
+      });
+    }
+    if (grupos.length === 0) {
+      return { ok: true, message: "A IA revisou os suspeitos e não confirmou duplicados reais.", grupos: [], totalAnalisado: eventos.length };
+    }
+    return { ok: true, message: `${grupos.length} ${grupos.length === 1 ? "grupo duplicado confirmado" : "grupos duplicados confirmados"} pela IA — confira e mescle.`, grupos, totalAnalisado: eventos.length };
+  } catch (err) {
+    console.error("analisarDuplicadosEventosIA: IA falhou, usando regras", err);
+    return { ok: true, message: `${candidatos.length} ${candidatos.length === 1 ? "grupo suspeito" : "grupos suspeitos"} (análise por regras — a IA falhou). Confira antes de mesclar.`, grupos: fallback, totalAnalisado: eventos.length };
+  }
 }

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
+  GitMerge,
   MapPin,
   Search,
   Tag,
@@ -288,6 +289,24 @@ export default function EventosLista({
               >
                 <Trash2 size={17} aria-hidden="true" />
                 Excluir ({selecionados.size})
+              </button>
+              <button
+                type="button"
+                disabled={selecionados.size < 2}
+                onClick={() =>
+                  document
+                    .getElementById("mesclar-eventos")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                title={
+                  selecionados.size < 2
+                    ? "Selecione ao menos 2 eventos para mesclar"
+                    : "Ir à seção Mesclar com os eventos visíveis"
+                }
+                className="flex min-h-11 items-center gap-1.5 rounded-xl border border-green-700/40 bg-white px-4 text-base font-semibold text-green-800 transition-colors hover:bg-green-50 disabled:opacity-50"
+              >
+                <GitMerge size={17} aria-hidden="true" />
+                Mesclar
               </button>
               <button
                 type="button"
