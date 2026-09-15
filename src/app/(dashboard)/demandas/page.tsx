@@ -10,7 +10,7 @@ import DemandaViewToggle, {
 import KanbanArea from "./kanban-area";
 import CalendarioView from "./calendario-view";
 import PageContainer from "../page-container";
-import { Plus, UserCheck } from "lucide-react";
+import { FilterX, Plus, UserCheck } from "lucide-react";
 import { parseDemandaFilters } from "./demanda-filter-schema";
 import { cn } from "@/lib/utils";
 
@@ -42,9 +42,32 @@ export default async function DemandasPage({
   const minhasDemandasAtivas = Boolean(
     meuVoluntarioId !== null && filters.responsavel === String(meuVoluntarioId)
   );
+  // Toggle "Minhas demandas" ↔ "Ver todas": ao limpar, remove só o filtro
+  // de responsável e preserva os demais (área, projeto, status…); ao ativar,
+  // adiciona o responsável mantendo o resto da URL.
+  function hrefComFiltros(overrides: Record<string, string | undefined>) {
+    const base: Record<string, string | undefined> = {
+      area: filters.area,
+      projeto: filters.projeto,
+      evento: filters.evento,
+      etiqueta: filters.etiqueta,
+      responsavel: filters.responsavel,
+      status: filters.status,
+      agrupar: filters.agrupar,
+      view: filters.view && filters.view !== "lista" ? filters.view : undefined,
+    };
+    const params = new URLSearchParams();
+    for (const [chave, valor] of Object.entries({ ...base, ...overrides })) {
+      if (valor) params.set(chave, valor);
+    }
+    const qs = params.toString();
+    return qs ? `/demandas?${qs}` : "/demandas";
+  }
   const minhasDemandasHref = minhasDemandasAtivas
-    ? "/demandas"
-    : `/demandas?responsavel=${meuVoluntarioId ?? ""}`;
+    ? hrefComFiltros({ responsavel: undefined })
+    : hrefComFiltros({
+        responsavel: meuVoluntarioId !== null ? String(meuVoluntarioId) : undefined,
+      });
 
   const { data: liderAreasRows } =
     role === "coordenador_area"
@@ -314,7 +337,7 @@ export default async function DemandasPage({
                   href={minhasDemandasHref}
                   title={
                     minhasDemandasAtivas
-                      ? "Voltar para todas as demandas"
+                      ? "Limpar filtro e ver todas as demandas da instituição"
                       : "Mostrar apenas as demandas atribuídas a você"
                   }
                   className={cn(
@@ -324,8 +347,12 @@ export default async function DemandasPage({
                       : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
-                  <UserCheck size={18} aria-hidden="true" />
-                  Minhas demandas
+                  {minhasDemandasAtivas ? (
+                    <FilterX size={18} aria-hidden="true" />
+                  ) : (
+                    <UserCheck size={18} aria-hidden="true" />
+                  )}
+                  {minhasDemandasAtivas ? "Ver todas" : "Minhas demandas"}
                 </Link>
               )}
               <Link

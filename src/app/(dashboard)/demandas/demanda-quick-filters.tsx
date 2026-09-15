@@ -26,7 +26,7 @@ function useQuickFilterNavigation() {
       }
     }
     const query = params.toString();
-    router.push(query ? `/?${query}` : "/");
+    router.push(query ? `/demandas?${query}` : "/demandas");
   };
 }
 

@@ -107,7 +107,7 @@ export default function DemandaFilters({
       }
     }
     const query = params.toString();
-    router.push(query ? `/?${query}` : "/");
+    router.push(query ? `/demandas?${query}` : "/demandas");
   }
 
   function removeFilter(
@@ -117,7 +117,7 @@ export default function DemandaFilters({
   }
 
   function clearFilters() {
-    router.push("/");
+    router.push("/demandas");
   }
 
   const responsavelLabelById = new Map(
