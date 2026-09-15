@@ -66,7 +66,7 @@ export default function DemandaViewToggle({
     }
     const query = params.toString();
     setPendingView(view);
-    router.push(query ? `/?${query}` : "/");
+    router.push(query ? `/demandas?${query}` : "/demandas");
   }
 
   return (

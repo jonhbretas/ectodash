@@ -331,7 +331,7 @@ export default async function DemandasPage({
               </div>
             </div>
 
-            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial">
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-initial">
               {meuVoluntarioId !== null && (
                 <Link
                   href={minhasDemandasHref}
@@ -341,7 +341,7 @@ export default async function DemandasPage({
                       : "Mostrar apenas as demandas atribuídas a você"
                   }
                   className={cn(
-                    "flex h-10 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5",
+                    "flex h-10 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-medium ring-1 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5",
                     minhasDemandasAtivas
                       ? "bg-[#E6E6E6] text-[#2195B9] ring-[#E6E6E6] hover:bg-[#E6E6E6]"
                       : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
@@ -352,12 +352,19 @@ export default async function DemandasPage({
                   ) : (
                     <UserCheck size={18} aria-hidden="true" />
                   )}
-                  {minhasDemandasAtivas ? "Ver todas" : "Minhas demandas"}
+                  {minhasDemandasAtivas ? (
+                    "Ver todas"
+                  ) : (
+                    <>
+                      <span className="sm:hidden">Minhas</span>
+                      <span className="hidden sm:inline">Minhas demandas</span>
+                    </>
+                  )}
                 </Link>
               )}
               <Link
                 href="/demandas/nova"
-                className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-4 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5"
+                className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-3 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5"
               >
                 <Plus size={18} aria-hidden="true" />
                 Criar

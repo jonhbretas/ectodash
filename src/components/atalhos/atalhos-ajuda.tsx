@@ -82,7 +82,7 @@ export default function AtalhosAjuda({ voluntarioId }: AtalhosAjudaProps) {
         onClick={() => setOpen(true)}
         aria-label="Ver atalhos — Minhas demandas, Pedir pauta, Ver atas"
         title="Atalhos — Minhas demandas, Pedir pauta, Ver atas"
-        className="fixed bottom-6 left-6 z-40 flex size-14 items-center justify-center rounded-full bg-white text-[#2195B9] shadow-[0_4px_16px_rgba(0,0,0,0.12)] ring-1 ring-slate-200 transition-all hover:bg-[#2195B9] hover:text-white hover:shadow-[0_6px_20px_rgba(33,149,185,0.25)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] lg:bottom-6"
+        className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-[calc(1.5rem+env(safe-area-inset-left))] z-40 flex size-14 items-center justify-center rounded-full bg-white text-[#2195B9] shadow-[0_4px_16px_rgba(0,0,0,0.12)] ring-1 ring-slate-200 transition-all hover:bg-[#2195B9] hover:text-white hover:shadow-[0_6px_20px_rgba(33,149,185,0.25)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] lg:bottom-6"
       >
         <HelpCircle size={26} aria-hidden="true" />
       </button>

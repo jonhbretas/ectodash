@@ -294,7 +294,7 @@ export default function FeedbackButton() {
         onClick={openFeedback}
         aria-label="Reportar bug ou dar sugestão"
         title="Reportar bug ou dar sugestão"
-        className="fixed bottom-6 right-6 z-40 flex size-14 items-center justify-center rounded-full bg-[#2195B9] text-white shadow-[0_4px_16px_rgba(33,149,185,0.4)] transition-all hover:bg-[#28627B] hover:shadow-[0_6px_20px_rgba(33,149,185,0.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+        className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))] z-40 flex size-14 items-center justify-center rounded-full bg-[#2195B9] text-white shadow-[0_4px_16px_rgba(33,149,185,0.4)] transition-all hover:bg-[#28627B] hover:shadow-[0_6px_20px_rgba(33,149,185,0.5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <MessageSquarePlus size={26} aria-hidden="true" />
       </button>

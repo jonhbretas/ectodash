@@ -42,7 +42,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-base font-semibold transition-all duration-200 ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-sm font-semibold transition-all duration-200 sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-base ${className}`}
     >
       <Icon size={15} aria-hidden="true" />
       {label}
