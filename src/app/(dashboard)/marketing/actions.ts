@@ -37,7 +37,10 @@ export interface ActionState {
 }
 
 const CHUNK_IMPORT_LINES = 2000;
-const CHUNK_QUEUE_LEADS = 2000;
+// 1000 por chamada: PostgREST trunca listagens grandes em 1000 linhas e
+// inserts gigantes estouram o timeout serverless — chunks menores com
+// conclusão por contagem (remaining==0) são à prova disso.
+const CHUNK_QUEUE_LEADS = 1000;
 const CHUNK_DISPATCH = 200;
 const BATCH_RESEND = 100;
 
@@ -429,7 +432,15 @@ export async function queueCampaignChunk(
     return { ok: false, message: "Falha ao enfileirar.", queued: 0, done: false };
   }
 
-  const done = leads.length < CHUNK_QUEUE_LEADS;
+  // Conclusão por contagem (não por tamanho do lote): truncamentos
+  // silenciosos no fetch/insert não encerram a fila antes da hora.
+  const newMax = (leads[leads.length - 1]?.id as number) ?? lastLeadId;
+  const { count: remaining } = await admin
+    .from("marketing_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "active")
+    .gt("id", newMax);
+  const done = (remaining ?? 0) === 0;
   return {
     ok: true,
     message: done ? "Fila pronta." : `${leads.length} enfileirados…`,
@@ -507,9 +518,14 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
     if (campaign.status === "testing") {
       return { ok: true, message: "Amostra enviada.", sent: 0, failed: 0, skipped: 0, remaining: 0, done: true };
     }
+    // Recount: a fila pode ter crescido (completar disparo) depois do total.
+    const { count: finalTotal } = await admin
+      .from("marketing_recipients")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaignId);
     await admin
       .from("marketing_campaigns")
-      .update({ status: "sent", sent_at: new Date().toISOString() })
+      .update({ status: "sent", sent_at: new Date().toISOString(), total: finalTotal ?? 0 })
       .eq("id", campaignId);
     revalidatePath("/marketing");
     return { ok: true, message: "Disparo concluído.", sent: 0, failed: 0, skipped: 0, remaining: 0, done: true };
@@ -825,7 +841,9 @@ export async function declareWinner(
   return { ok: true, message: `Vencedora: "${win.subject}" (${(win.rate * 100).toFixed(1)}% de abertura).`, winner: win };
 }
 
-/** Enfileira o restante da base (variant NULL → usa a vencedora). */
+/** Enfileira o restante da base (variant NULL → usa a vencedora, ou o
+ *  assunto único). Nunca repete quem já está na fila (upsert ignora
+ *  duplicados) e reabre campanhas "sent" para completar o disparo. */
 export async function queueRemainderChunk(campaignId: number): Promise<QueueTestChunkResult> {
   const gate = await requireCoordenador();
   if ("error" in gate) return { ok: false, message: gate.error, queued: 0, done: false };
@@ -833,12 +851,18 @@ export async function queueRemainderChunk(campaignId: number): Promise<QueueTest
 
   const { data: campaign } = await admin
     .from("marketing_campaigns")
-    .select("id, status, winner_subject")
+    .select("id, status, ab_test, winner_subject")
     .eq("id", campaignId)
     .single();
   if (!campaign) return { ok: false, message: "Campanha não encontrada.", queued: 0, done: false };
-  if (campaign.status !== "sending" || !(campaign.winner_subject as string | null)) {
+  if (!["sending", "sent", "queued"].includes(campaign.status as string)) {
+    return { ok: false, message: "Campanha não está em disparo.", queued: 0, done: false };
+  }
+  if ((campaign.ab_test as boolean) && !(campaign.winner_subject as string | null)) {
     return { ok: false, message: "Apure a vencedora antes.", queued: 0, done: false };
+  }
+  if (campaign.status !== "sending") {
+    await admin.from("marketing_campaigns").update({ status: "sending" }).eq("id", campaignId);
   }
 
   const { data: last } = await admin
@@ -861,7 +885,7 @@ export async function queueRemainderChunk(campaignId: number): Promise<QueueTest
     return { ok: false, message: "Falha ao ler a base.", queued: 0, done: false };
   }
   if (!leads || leads.length === 0) {
-    return { ok: true, message: "Fila completa.", queued: 0, done: true };
+    return { ok: true, message: "Nada novo na base.", queued: 0, done: true };
   }
 
   const rows = leads.map((l) => ({
@@ -880,7 +904,13 @@ export async function queueRemainderChunk(campaignId: number): Promise<QueueTest
     return { ok: false, message: "Falha ao enfileirar.", queued: 0, done: false };
   }
 
-  const done = leads.length < CHUNK_QUEUE_LEADS;
+  const newMax = (leads[leads.length - 1]?.id as number) ?? lastLeadId;
+  const { count: remaining } = await admin
+    .from("marketing_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "active")
+    .gt("id", newMax);
+  const done = (remaining ?? 0) === 0;
   return {
     ok: true,
     message: done ? "Fila completa." : `${leads.length} enfileirados…`,

@@ -16,6 +16,9 @@ interface ResendEvent {
     email_id?: string;
     to?: string[];
     tags?: ResendTags;
+    click?: { link?: string };
+    link?: string;
+    url?: string;
   };
 }
 
@@ -103,8 +106,35 @@ export async function POST(request: Request) {
   const rec = await findRecipient(supabase, event.data?.email_id, event.data?.tags, toEmail);
   if (!rec) return Response.json({ ok: true, unmatched: true });
 
-  if (event.type === "email.opened") {
-    const { data: current } = await supabase
+  if (event.type === "email.delivered") {
+    await supabase
+      .from("marketing_recipients")
+      .update({ delivered_at: new Date().toISOString() })
+      .eq("id", rec.id)
+      .is("delivered_at", null);
+  } else if (event.type === "email.clicked") {
+    const url = event.data?.click?.link ?? event.data?.link ?? event.data?.url ?? "(desconhecido)";
+    let campaignId = campaignIdFromTags(event.data?.tags);
+    if (!campaignId) {
+      const { data: owner } = await supabase
+        .from("marketing_recipients")
+        .select("campaign_id")
+        .eq("id", rec.id)
+        .single();
+      campaignId = (owner?.campaign_id as number | null) ?? null;
+    }
+    if (!campaignId) return Response.json({ ok: true, unmatched: true });
+    const { error: clickError } = await supabase.from("marketing_link_clicks").insert({
+      campaign_id: campaignId,
+      recipient_id: rec.id,
+      url: url.slice(0, 2000),
+      svix_id: svixId,
+    });
+    // 23505 = replay do mesmo evento (svix_id unique) — não é erro.
+    if (clickError && clickError.code !== "23505") {
+      console.error("marketing webhook: click insert failed", clickError);
+    }
+  } else if (event.type === "email.opened") {    const { data: current } = await supabase
       .from("marketing_recipients")
       .select("open_count")
       .eq("id", rec.id)

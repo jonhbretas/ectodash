@@ -101,7 +101,12 @@ export default async function MarketingPage() {
         </div>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold text-zinc-900">Campanhas recentes</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-zinc-900">Campanhas recentes</h2>
+            <Link href="/marketing/historico" className="text-base font-medium text-[#2195B9] hover:underline">
+              Ver histórico completo
+            </Link>
+          </div>
           {(campanhas.data ?? []).length === 0 && (
             <p className="text-lg text-zinc-500">Nenhuma campanha ainda. Crie a primeira acima.</p>
           )}

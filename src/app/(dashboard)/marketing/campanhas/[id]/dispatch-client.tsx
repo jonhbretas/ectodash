@@ -165,6 +165,35 @@ export default function DispatchClient({
     }
   }
 
+  async function handleComplete() {
+    // Busca demais contatos (novos desde o snapshot ou fila interrompida)
+    // sem repetir quem já recebeu: só entra quem não é destinatário ainda.
+    setRunning(true);
+    setError(null);
+    try {
+      await loopUntilDone(
+        () => queueRemainderChunk(campaignId),
+        () => setPhase("Buscando demais contatos da base…"),
+        "Buscando demais contatos da base…"
+      );
+      const fin = await finalizeQueue(campaignId);
+      if (!fin.ok) throw new Error(fin.message);
+      if ((fin.total ?? 0) === 0) {
+        setPhase("");
+        setError(null);
+      }
+      await dispatchLoop(fin.total ?? 0, sentCount);
+      setPhase("");
+      setFinished(true);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao completar.");
+      setPhase("");
+    } finally {
+      setRunning(false);
+    }
+  }
+
   async function handleResume() {
     setRunning(true);
     setError(null);
@@ -321,13 +350,24 @@ export default function DispatchClient({
       )}
 
       {finished && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+        <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
           <p className="text-lg font-medium text-emerald-800">
             Disparo concluído: {sentCount.toLocaleString("pt-BR")} enviados
             {winnerSubject ? <> com <strong>{winnerSubject}</strong></> : null}
             {failedCount > 0 && ` · ${failedCount} falharam`}
             {skippedCount > 0 && ` · ${skippedCount} pulados (descadastrados no meio do caminho)`}
           </p>
+          <div>
+            <p className="text-base text-emerald-700">
+              Faltou gente? Busca os demais contatos da base (inclusive novos) sem repetir quem já recebeu.
+            </p>
+            <button onClick={() => void handleComplete()} disabled={running} className="mt-2 inline-flex h-11 items-center rounded-xl bg-emerald-600 px-4 text-base font-medium text-white disabled:opacity-50 hover:bg-emerald-700">
+              {running ? "Trabalhando…" : "Disparar para os demais"}
+            </button>
+          </div>
+          {phase && <p className="text-lg text-emerald-700" role="status">{phase}</p>}
+          {progress.total > 0 && <ProgressBar done={progress.done} total={progress.total} />}
+          {error && <p className="rounded-xl bg-red-50 p-3 text-lg text-red-700" role="alert">{error}</p>}
         </div>
       )}
 

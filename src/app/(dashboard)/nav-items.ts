@@ -155,7 +155,17 @@ export const navEntries: SidebarEntry[] = [
   },
 
   // ─── Marketing (coordenador geral ou cargo com o módulo — comunicação) ───
-  { href: "/marketing", label: "Marketing", Icon: Mail, modulo: "marketing" },
+  {
+    type: "group",
+    label: "Marketing",
+    Icon: Mail,
+    href: "/marketing",
+    modulo: "marketing",
+    children: [
+      { href: "/marketing", label: "Visão geral", Icon: Mail, modulo: "marketing" },
+      { href: "/marketing/historico", label: "Histórico", Icon: ClipboardList, modulo: "marketing" },
+    ],
+  },
 
   // ─── Ajuda (todos veem os próprios; coordenador geral gerencia tudo) ───
   { href: "/feedback", label: "Ajuda e melhorias", Icon: MessageSquareWarning },
