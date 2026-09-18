@@ -310,24 +310,54 @@ export async function sendTestEmail(
   if (!campaign) return { ok: false, message: "Campanha não encontrada." };
 
   const resend = new Resend(process.env.RESEND_API_KEY);
+  const toEmail = parsed.data.to.toLowerCase();
+  // Token real (uuid) em vez do ilustrativo "teste".
+  const token = crypto.randomUUID();
   // Token ilustrativo + nome genérico: mostra como as tags resolvem.
   const personalized = applyMergeTags(campaign.html as string, {
     nome: null,
     email: parsed.data.to,
-    unsubscribeUrl: unsubscribeUrl("teste"),
+    unsubscribeUrl: unsubscribeUrl(token),
   });
-  const { error } = await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: "EctoDash <contato@ectolab.org>",
     to: [parsed.data.to],
     subject: `[TESTE] ${campaign.assunto as string}`,
-    html: withUnsubscribeFooter(personalized, "teste"),
+    html: withUnsubscribeFooter(personalized, token),
+    // Tag campaign: o webhook consegue ligar opened/clicked/delivered
+    // deste teste à campanha (antes o teste era "invisível" p/ métricas).
+    tags: [{ name: "campaign", value: String(parsed.data.campaignId) }],
   });
 
-  if (error) {
+  if (error || !data?.id) {
     console.error("sendTestEmail: resend failed", error);
     return { ok: false, message: "Falha no envio de teste." };
   }
-  return { ok: true, message: `Teste enviado p/ ${parsed.data.to}.` };
+
+  // Registra o teste como destinatário (lead_id NULL = linha de teste;
+  // a fila real parte dos leads, então nunca é reenviada). Reenvios p/
+  // o mesmo e-mail substituem a linha anterior p/ não inflar a base.
+  await gate.admin
+    .from("marketing_recipients")
+    .delete()
+    .eq("campaign_id", parsed.data.campaignId)
+    .eq("email", toEmail)
+    .is("lead_id", null);
+  const { error: recError } = await gate.admin
+    .from("marketing_recipients")
+    .insert({
+      campaign_id: parsed.data.campaignId,
+      lead_id: null,
+      email: toEmail,
+      unsubscribe_token: token,
+      status: "sent",
+      resend_id: data.id,
+    });
+  if (recError) {
+    console.error("sendTestEmail: recipient log failed", recError);
+    return { ok: true, message: `Teste enviado p/ ${parsed.data.to}, mas sem metrificação (avise o suporte).` };
+  }
+  return { ok: true, message: `Teste enviado p/ ${parsed.data.to} e ligado às métricas da campanha.` };
 }
 
 export async function deleteCampaign(campaignId: number): Promise<ActionState> {
