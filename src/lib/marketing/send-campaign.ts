@@ -3,6 +3,7 @@
 // de descadastro LGPD. Isola o call site p/ mock em testes, no mesmo
 // padrão de src/lib/reminders/send-reminder.ts.
 import type { Resend } from "resend";
+import { applyMergeTags } from "./merge-tags";
 
 export const MARKETING_FROM = "Ectolab <contato@ectolab.org>";
 
@@ -30,6 +31,7 @@ export function withUnsubscribeFooter(html: string, token: string): string {
 export interface SendCampaignEmailParams {
   resend: Resend;
   to: string;
+  nome: string | null;
   subject: string;
   html: string;
   unsubscribeToken: string;
@@ -44,16 +46,24 @@ export interface SendCampaignEmailResult {
 export async function sendCampaignEmail({
   resend,
   to,
+  nome,
   subject,
   html,
   unsubscribeToken,
   campaignId,
 }: SendCampaignEmailParams): Promise<SendCampaignEmailResult> {
+  // Merge tags do template primeiro (ex.: *|UNSUB|* vira a URL real),
+  // depois o rodapé padrão com descadastro.
+  const personalized = applyMergeTags(html, {
+    nome,
+    email: to,
+    unsubscribeUrl: unsubscribeUrl(unsubscribeToken),
+  });
   const { data, error } = await resend.emails.send({
     from: MARKETING_FROM,
     to: [to],
     subject,
-    html: withUnsubscribeFooter(html, unsubscribeToken),
+    html: withUnsubscribeFooter(personalized, unsubscribeToken),
     tags: [{ name: "campaign", value: String(campaignId) }],
   });
 

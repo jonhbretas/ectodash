@@ -19,9 +19,10 @@ import {
   type InvalidLead,
 } from "@/lib/marketing/sanitize";
 import {
-  sendCampaignEmail,
+  unsubscribeUrl,
   withUnsubscribeFooter,
 } from "@/lib/marketing/send-campaign";
+import { applyMergeTags } from "@/lib/marketing/merge-tags";
 import {
   pickWinner,
   tallyVariants,
@@ -305,13 +306,17 @@ export async function sendTestEmail(
   if (!campaign) return { ok: false, message: "Campanha não encontrada." };
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  // Token ilustrativo: o link de descadastro no e-mail de teste leva a
-  // uma página informando que o link não vale (só leads reais têm token).
+  // Token ilustrativo + nome genérico: mostra como as tags resolvem.
+  const personalized = applyMergeTags(campaign.html as string, {
+    nome: null,
+    email: parsed.data.to,
+    unsubscribeUrl: unsubscribeUrl("teste"),
+  });
   const { error } = await resend.emails.send({
-    from: "Ectolab <contato@ectolab.org>",
+    from: "EctoDash <contato@ectolab.org>",
     to: [parsed.data.to],
     subject: `[TESTE] ${campaign.assunto as string}`,
-    html: withUnsubscribeFooter(campaign.html as string, "teste"),
+    html: withUnsubscribeFooter(personalized, "teste"),
   });
 
   if (error) {
@@ -523,10 +528,13 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
   const leadIds = pending.map((p) => p.lead_id as number);
   const { data: leadRows } = await admin
     .from("marketing_leads")
-    .select("id, status")
+    .select("id, status, nome")
     .in("id", leadIds);
   const leadStatus = new Map<number, string>(
     (leadRows ?? []).map((l) => [l.id as number, l.status as string])
+  );
+  const leadNome = new Map<number, string | null>(
+    (leadRows ?? []).map((l) => [l.id as number, (l.nome as string | null) ?? null])
   );
 
   const skippedIds: number[] = [];
@@ -554,19 +562,24 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
     const batch = sendable.slice(i, i + BATCH_RESEND);
     try {
       const { data, error } = await resend.batch.send(
-        batch.map((p) => ({
-          from: "EctoDash <contato@ectolab.org>",
-          to: p.email as string,
-          subject: subjectFor(p.variant as string | null),
-          html: withUnsubscribeFooter(
-            campaign.html as string,
-            p.unsubscribe_token as string
-          ),
-          tags: [
-            { name: "campaign", value: String(campaignId) },
-            ...(p.variant ? [{ name: "variant", value: p.variant as string }] : []),
-          ],
-        }))
+        batch.map((p) => {
+          const token = p.unsubscribe_token as string;
+          const personalized = applyMergeTags(campaign.html as string, {
+            nome: leadNome.get(p.lead_id as number) ?? null,
+            email: p.email as string,
+            unsubscribeUrl: unsubscribeUrl(token),
+          });
+          return {
+            from: "EctoDash <contato@ectolab.org>",
+            to: p.email as string,
+            subject: subjectFor(p.variant as string | null),
+            html: withUnsubscribeFooter(personalized, token),
+            tags: [
+              { name: "campaign", value: String(campaignId) },
+              ...(p.variant ? [{ name: "variant", value: p.variant as string }] : []),
+            ],
+          };
+        })
       );
       if (error) {
         console.error("dispatchChunk: batch failed", error);
