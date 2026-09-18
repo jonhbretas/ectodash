@@ -7,6 +7,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { MODULOS_CONCEDIVEIS } from "@/lib/acesso";
 
 export type ModeloState = { ok: boolean; message: string };
 const initial: ModeloState = { ok: false, message: "" };
@@ -25,6 +27,7 @@ const MODULOS_VALIDOS = [
   "vendas",
   "financeiro",
   "utilidades",
+  "marketing",
 ] as const;
 
 const NIVEIS_VALIDOS = [
@@ -245,4 +248,60 @@ export async function aplicarModelo(
   revalidatePath("/painel/acessos");
   revalidatePath("/voluntarios");
   return { ok: true, message: "Modelo aplicado — cargo criado para a pessoa." };
+}
+
+// ── Kill switch global de módulos (0105) ───────────────────────────
+// Liga/desliga um módulo p/ todos, menos o coordenador_geral (que
+// mantém acesso p/ diagnosticar e reativar). Escrita via service-role
+// porque system_module_flags não tem write policy p/ authenticated.
+const moduloFlagSchema = z.object({
+  modulo: z.enum(MODULOS_CONCEDIVEIS),
+  ativo: z.boolean(),
+});
+
+export async function alternarModulo(
+  modulo: string,
+  ativo: boolean
+): Promise<ModeloState> {
+  const parsed = moduloFlagSchema.safeParse({ modulo, ativo });
+  if (!parsed.success) return { ...initial, message: "Módulo inválido." };
+
+  const { erro, userId } = await (async () => {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { erro: "Sessão expirada." as const, userId: null };
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    if (profile?.role !== "coordenador_geral")
+      return { erro: "Acesso exclusivo do coordenador geral." as const, userId: null };
+    return { erro: null, userId: user.id };
+  })();
+  if (erro) return { ...initial, message: erro };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("system_module_flags").upsert(
+    {
+      modulo: parsed.data.modulo,
+      ativo: parsed.data.ativo,
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "modulo" }
+  );
+  if (error) {
+    console.error("alternarModulo: upsert failed", error);
+    return { ...initial, message: "Não foi possível salvar." };
+  }
+
+  revalidatePath("/painel/acessos");
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: parsed.data.ativo ? "Módulo ativado." : "Módulo desativado p/ todos (menos você).",
+  };
 }

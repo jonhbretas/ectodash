@@ -6,6 +6,7 @@ import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
 import AcessosClient, { type AreaRow, type ModeloRow, type PessoaRow } from "./acessos-client";
+import ModulosFlagsClient, { type ModuloFlagRow } from "./modulos-flags-client";
 
 export default async function AcessosPage() {
   const supabase = await createClient();
@@ -97,6 +98,13 @@ export default async function AcessosPage() {
     })
   );
 
+  const { data: flagsRaw } = await supabase
+    .from("system_module_flags")
+    .select("modulo, ativo");
+  const flags: ModuloFlagRow[] = ((flagsRaw ?? []) as ModuloFlagRow[]).map(
+    (f) => ({ modulo: f.modulo, ativo: f.ativo })
+  );
+
   return (
     <PageContainer>
       <Link
@@ -117,6 +125,8 @@ export default async function AcessosPage() {
           o menu aparece para cada cargo e aplique o modelo às pessoas.
         </p>
       </header>
+
+      <ModulosFlagsClient initialFlags={flags} />
 
       <AcessosClient modelos={modelos} areas={areas} pessoas={pessoas} />
     </PageContainer>

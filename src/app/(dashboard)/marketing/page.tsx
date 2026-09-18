@@ -25,14 +25,20 @@ export async function requireMarketingGate() {
   // Coordenador geral entra sempre; demais só com cargo que tenha o
   // módulo "marketing" concedido (ex.: equipe de comunicação) —
   // a RLS (0104) aplica a mesma regra no banco.
-  const [{ data: profile }, { data: cargos }] = await Promise.all([
+  const [{ data: profile }, { data: cargos }, { data: flags }] = await Promise.all([
     supabase.from("profiles").select("role").eq("id", user.id).single(),
     supabase.rpc("meus_cargos"),
+    supabase.from("system_module_flags").select("modulo").eq("ativo", false),
   ]);
   const temModuloMarketing = ((cargos ?? []) as { modulos: string[] }[]).some(
     (c) => (c.modulos ?? []).includes("marketing")
   );
-  if (profile?.role !== "coordenador_geral" && !temModuloMarketing) {
+  const isGeral = profile?.role === "coordenador_geral";
+  // Kill switch global (0105): módulo desligado fecha p/ todos, menos o geral.
+  const marketingOff = ((flags ?? []) as { modulo: string }[]).some(
+    (f) => f.modulo === "marketing"
+  );
+  if (!isGeral && (marketingOff || !temModuloMarketing)) {
     return { blocked: true as const };
   }
   return { blocked: false as const, supabase };

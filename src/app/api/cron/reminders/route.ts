@@ -6,7 +6,9 @@
 //
 // Composes plan 07-01's schema (reminder_runs, demanda_reminders_log) and
 // eligibility classifier (reminderTipoFor) into the actual daily reminder
-// mechanism. Structure follows 07-RESEARCH.md's "Cron route skeleton" Code
+// mechanism. Sends ONE digest email per recipient listing all of their
+// eligible demandas (each with a direct link) — never one email per
+// demanda. Structure follows 07-RESEARCH.md's "Cron route skeleton" Code
 // Example, adapted to this repo's real import paths.
 import type { NextRequest } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -101,6 +103,25 @@ export async function GET(request: NextRequest) {
       throw new Error(demandasError.message);
     }
 
+    const siteUrl = (
+      process.env.NEXT_PUBLIC_SITE_URL ?? "https://ectodash.vercel.app"
+    ).replace(/\/$/, "");
+
+    // Fase 1 — coleta: agrupa (demanda → destinatários) por profile_id,
+    // reivindicando o slot de dedup de cada tupla (demanda, profile, tipo)
+    // antes de qualquer envio. LEMB-03: a dedup continua per-recipient,
+    // per-demanda, per-tipo, per-day — só o ENVIO passa a ser 1 digest
+    // por destinatário.
+    interface DigestItem {
+      demandaId: number;
+      titulo: string;
+      prazoFormatado: string;
+      tipo: "atrasada" | "aproximando";
+      url: string;
+      logId: number;
+    }
+    const digestByProfile = new Map<string, { email: string; items: DigestItem[] }>();
+
     for (const demanda of (demandas ?? []) as DemandaRow[]) {
       // reminderTipoFor() is the SOLE source of truth for the
       // atrasada/aproximando/null classification — never re-derived inline.
@@ -141,9 +162,13 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Loop over (demanda, destinatário) PAIRS — LEMB-03's dedup
-      // granularity is per-recipient, not per-demanda
-      // (07-RESEARCH.md Anti-Patterns).
+      // parseISO trata "YYYY-MM-DD" como data local — new Date("YYYY-MM-DD")
+      // interpreta como meia-noite UTC e em BRT formata o dia anterior.
+      const prazoFormatado = format(parseISO(demanda.prazo), "dd/MM/yyyy", {
+        locale: ptBR,
+      });
+      const demandaUrl = `${siteUrl}/demandas/${demanda.id}/editar`;
+
       for (const responsavel of destinatarios.values()) {
         // A roster-only volunteer (demanda_responsaveis/membros row with
         // voluntario_id set, profile_id NULL since migrations 0020/0021)
@@ -214,36 +239,57 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // 5. Send — via the resend package directly, never through Supabase
-        // Auth's SMTP relay (07-RESEARCH.md Pitfall 1).
-        // parseISO trata "YYYY-MM-DD" como data local — new Date("YYYY-MM-DD")
-        // interpreta como meia-noite UTC e em BRT formata o dia anterior.
-        const { error: sendError } = await sendReminder({
-          resend,
-          to: profileRow.email,
+        const entry = digestByProfile.get(responsavel.profile_id);
+        const item: DigestItem = {
+          demandaId: demanda.id,
           titulo: demanda.titulo,
-          prazoFormatado: format(parseISO(demanda.prazo), "dd/MM/yyyy", {
-            locale: ptBR,
-          }),
+          prazoFormatado,
           tipo,
-        });
-
-        // 6. Mark the already-claimed dedup row sent|failed — NEVER deleted,
-        // NEVER retried later this same run (07-RESEARCH.md resolved Open
-        // Question 1: a failed send waits until tomorrow's run).
-        await supabase
-          .from("demanda_reminders_log")
-          .update({
-            status: sendError ? "failed" : "sent",
-            error_message: sendError,
-          })
-          .eq("id", dedupRow.id);
-
-        if (sendError) {
-          failedCount++;
+          url: demandaUrl,
+          logId: dedupRow.id as number,
+        };
+        if (entry) {
+          entry.items.push(item);
         } else {
-          sentCount++;
+          digestByProfile.set(responsavel.profile_id, {
+            email: profileRow.email,
+            items: [item],
+          });
         }
+      }
+    }
+
+    // Fase 2 — envio: UM e-mail digest por destinatário. Todas as linhas
+    // de log já reivindicadas desse destinatário são marcadas
+    // sent|failed juntas — NEVER deleted, NEVER retried later this same
+    // run (a failed send waits until tomorrow's run).
+    let remindedDemandas = 0;
+    for (const { email, items } of digestByProfile.values()) {
+      const { error: sendError } = await sendReminder({
+        resend,
+        to: email,
+        items: items.map(({ titulo, prazoFormatado, tipo, url }) => ({
+          titulo,
+          prazoFormatado,
+          tipo,
+          url,
+        })),
+      });
+
+      const logIds = items.map((i) => i.logId);
+      await supabase
+        .from("demanda_reminders_log")
+        .update({
+          status: sendError ? "failed" : "sent",
+          error_message: sendError,
+        })
+        .in("id", logIds);
+
+      if (sendError) {
+        failedCount++;
+      } else {
+        sentCount++;
+        remindedDemandas += items.length;
       }
     }
 
@@ -264,6 +310,7 @@ export async function GET(request: NextRequest) {
       failedCount,
       skippedCount,
       skippedNoResponsavel,
+      remindedDemandas,
     });
   } catch (err) {
     // A thrown exception mid-run still leaves a traceable, non-'running'-

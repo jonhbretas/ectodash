@@ -55,11 +55,16 @@ export default async function DashboardLayout({
 
   // Acesso por módulo: role global + cargos (nível + escopo, migration
   // 0043) — decide a visibilidade da sidebar; as páginas têm os seus
-  // próprios gates de servidor e a RLS é o limite real.
-  const { data: cargos } = await supabase.rpc("meus_cargos");
+  // próprios gates de servidor e a RLS é o limite real. Inclui o kill
+  // switch global de módulos (0105): desativado some p/ todos, menos o geral.
+  const [{ data: cargos }, { data: flags }] = await Promise.all([
+    supabase.rpc("meus_cargos"),
+    supabase.from("system_module_flags").select("modulo").eq("ativo", false),
+  ]);
   const acesso = {
     role: profile?.role ?? null,
     cargos: (cargos ?? []) as Acesso["cargos"],
+    modulosDesativados: ((flags ?? []) as { modulo: string }[]).map((f) => f.modulo),
   };
 
   // Notificações não lidas — relatos de bug/sugestão do usuário que foram

@@ -1,17 +1,16 @@
 // src/lib/reminders/send-reminder.ts
 // Thin wrapper around resend.emails.send() — isolates the one call site that
-// needs mocking in tests (07-RESEARCH.md's cron route skeleton calls this
-// directly, per demanda/responsável pair, never batching responsáveis into a
-// single `to` array).
+// needs mocking in tests. Sends ONE digest email per recipient listing all
+// of their eligible demandas (each with a direct link), never one email per
+// demanda.
 import type { Resend } from "resend";
-import { ReminderEmail } from "@/emails/reminder-email";
+import { format } from "date-fns";
+import { ReminderEmail, type ReminderDigestItem } from "@/emails/reminder-email";
 
 export interface SendReminderParams {
   resend: Resend;
   to: string;
-  titulo: string;
-  prazoFormatado: string;
-  tipo: "atrasada" | "aproximando";
+  items: ReminderDigestItem[];
 }
 
 export interface SendReminderResult {
@@ -21,15 +20,19 @@ export interface SendReminderResult {
 export async function sendReminder({
   resend,
   to,
-  titulo,
-  prazoFormatado,
-  tipo,
+  items,
 }: SendReminderParams): Promise<SendReminderResult> {
+  const hoje = format(new Date(), "dd/MM/yyyy");
+  const subject =
+    items.length === 1
+      ? `EctoDash — 1 demanda precisa da sua atenção (${hoje})`
+      : `EctoDash — ${items.length} demandas precisam da sua atenção (${hoje})`;
+
   const { error } = await resend.emails.send({
-    from: "EctoDash <contato@ectolab.org>",
+    from: "EctoDash <lembretes@ectolab.org>",
     to: [to],
-    subject: tipo === "atrasada" ? "Demanda atrasada" : "Demanda com prazo próximo",
-    react: ReminderEmail({ titulo, prazoFormatado, tipo }),
+    subject,
+    react: ReminderEmail({ items }),
   });
 
   return { error: error?.message ?? null };

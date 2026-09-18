@@ -30,6 +30,8 @@ export type Cargo = {
 export type Acesso = {
   role: AppRole | null;
   cargos: Cargo[];
+  /** Módulos globalmente desativados (kill switch 0105). Ausente = todos ativos. */
+  modulosDesativados?: string[];
 };
 
 // Módulos concedíveis em cargo_modulos (CHECK da migration 0043) + os
@@ -101,6 +103,10 @@ export function podeAcessar(
   const role = acesso.role;
 
   if (role === "coordenador_geral") return "gerenciar";
+
+  // Kill switch global (0105): módulo desativado some para todos,
+  // menos o geral (que mantém acesso p/ diagnosticar e reativar).
+  if ((acesso.modulosDesativados ?? []).includes(modulo)) return false;
 
   // Contratos contêm dados pessoais de alunos e é exclusivo do coordenador
   // geral (RLS 0042/0047 + gates de página). Cargo nenhum concede este módulo.

@@ -25,6 +25,7 @@ const ALLOWED_PREFIXES = [
   "(auth)/cadastro/actions.ts",
   "(dashboard)/voluntarios/actions.ts",
   "(dashboard)/marketing/actions.ts",
+  "(dashboard)/painel/acessos/actions.ts",
 ];
 
 function assertAllowedCaller() {

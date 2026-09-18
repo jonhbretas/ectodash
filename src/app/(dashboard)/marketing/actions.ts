@@ -54,6 +54,17 @@ async function requireCoordenador(): Promise<
     return { admin, user };
   }
 
+  // Kill switch global (0105): módulo desligado fecha p/ todos, menos o geral.
+  const { data: flags } = await admin
+    .from("system_module_flags")
+    .select("modulo")
+    .eq("modulo", "marketing")
+    .eq("ativo", false)
+    .limit(1);
+  if ((flags ?? []).length > 0) {
+    return { error: "O módulo Marketing está desativado no momento." };
+  }
+
   // Comunicação: cargo com o módulo "marketing" concedido (mesma regra
   // da RLS 0104 e do gate de página). Consulta via service-role porque
   // a leitura de cargos alheios pode ser restrita p/ o próprio usuário.
