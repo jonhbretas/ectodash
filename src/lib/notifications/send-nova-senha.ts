@@ -24,7 +24,7 @@ export async function sendNovaSenha({
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://painel.ectolab.org";
 
   const { error } = await resend.emails.send({
-    from: "EctoDash <lembretes@ectolab.org>",
+    from: "EctoDash <contato@ectolab.org>",
     to: [to],
     subject: "Sua senha de acesso ao EctoDash foi redefinida",
     react: NovaSenhaEmail({ nome, novaSenha, siteUrl }),

@@ -26,7 +26,7 @@ export async function sendReminder({
   tipo,
 }: SendReminderParams): Promise<SendReminderResult> {
   const { error } = await resend.emails.send({
-    from: "EctoDash <lembretes@ectolab.org>",
+    from: "EctoDash <contato@ectolab.org>",
     to: [to],
     subject: tipo === "atrasada" ? "Demanda atrasada" : "Demanda com prazo próximo",
     react: ReminderEmail({ titulo, prazoFormatado, tipo }),

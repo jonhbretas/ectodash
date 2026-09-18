@@ -27,7 +27,7 @@ export async function sendCommentEmail({
   link,
 }: SendCommentEmailParams): Promise<SendCommentEmailResult> {
   const { error } = await resend.emails.send({
-    from: "EctoDash <lembretes@ectolab.org>",
+    from: "EctoDash <contato@ectolab.org>",
     to: [to],
     subject: `Você foi mencionado em "${demandaTitulo}"`,
     react: CommentEmail({
