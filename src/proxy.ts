@@ -13,12 +13,22 @@ function isPublicPath(pathname: string): boolean {
   // this proxy would redirect every cron invocation to /login with a 307
   // before the route's own 401 check ever runs, since no `user` session
   // exists for a cron-triggered request.
+  //
+  // /api/marketing/webhook: mesma razão — o Resend assina o POST via
+  // Svix (RESEND_WEBHOOK_SECRET); sem sessão não há o que refreshar.
+  // Sem esta isenção, todo evento (opened/clicked/bounced) morria num
+  // 307 para /login e a apuração do A/B nunca atualizava.
+  //
+  // /descadastrar: página pública do opt-out (LGPD) — o lead nunca tem
+  // conta; redirecionar para /login quebrava o descadastro.
   return (
     pathname === "/login" ||
     pathname === "/cadastro" ||
     pathname === "/recuperar-senha" ||
+    pathname === "/descadastrar" ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/api/cron")
+    pathname.startsWith("/api/cron") ||
+    pathname === "/api/marketing/webhook"
   );
 }
 
