@@ -43,11 +43,14 @@ const BATCH_RESEND = 100;
 async function requireCoordenador(): Promise<
   { admin: SupabaseClient; user: User } | { error: string }
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Sessão expirada." };
+  // Qualquer exceção aqui (env faltando, rede, sessão) vira mensagem
+  // amigável — nunca estoura o error boundary ("Ops, algo deu errado").
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Sessão expirada. Entre de novo." };
 
   const admin = createAdminClient();
   const { data: profile } = await admin
@@ -85,6 +88,10 @@ async function requireCoordenador(): Promise<
     return { error: "Acesso restrito ao coordenador geral ou à comunicação." };
   }
   return { admin, user };
+  } catch (err) {
+    console.error("requireCoordenador: falha inesperada", err);
+    return { error: "Falha de conexão com o servidor. Tente de novo." };
+  }
 }
 
 // ── Importação de leads (fatiada) ──────────────────────────────────
@@ -242,27 +249,32 @@ export async function createCampaign(
     return { ok: false, message: "Use de 1 a 10 assuntos (1 por linha, máx. 200 caracteres)." };
   }
 
-  const { data, error } = await gate.admin
-    .from("marketing_campaigns")
-    .insert({
-      titulo: parsed.data.titulo,
-      assunto: subjects[0],
-      html: parsed.data.html,
-      status: "draft",
-      ab_test: subjects.length > 1,
-      subjects,
-      created_by: gate.user.id,
-    })
-    .select("id")
-    .single();
+  try {
+    const { data, error } = await gate.admin
+      .from("marketing_campaigns")
+      .insert({
+        titulo: parsed.data.titulo,
+        assunto: subjects[0],
+        html: parsed.data.html,
+        status: "draft",
+        ab_test: subjects.length > 1,
+        subjects,
+        created_by: gate.user.id,
+      })
+      .select("id")
+      .single();
 
-  if (error || !data) {
-    console.error("createCampaign: insert failed", error);
-    return { ok: false, message: "Não foi possível salvar a campanha." };
+    if (error || !data) {
+      console.error("createCampaign: insert failed", error);
+      return { ok: false, message: "Não foi possível salvar a campanha. Tente de novo." };
+    }
+
+    revalidatePath("/marketing");
+    return { ok: true, message: "Rascunho salvo.", id: data.id as number };
+  } catch (err) {
+    console.error("createCampaign: falha inesperada", err);
+    return { ok: false, message: "Falha de conexão ao salvar. Tente de novo." };
   }
-
-  revalidatePath("/marketing");
-  return { ok: true, message: "Rascunho salvo.", id: data.id as number };
 }
 
 const testSchema = z.object({
