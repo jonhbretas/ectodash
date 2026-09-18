@@ -8,7 +8,7 @@ function GateBloqueado() {
     <PageContainer>
       <div className="flex flex-col items-center gap-4 py-16 text-center">
         <Lock size={48} className="text-slate-400" aria-hidden="true" />
-        <h1 className="text-3xl font-semibold text-slate-900">Marketing é exclusivo do coordenador</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">Marketing é exclusivo do coordenador e da comunicação</h1>
         <p className="max-w-md text-lg text-slate-600">Você não tem acesso ao módulo de disparos. Toque abaixo para voltar.</p>
         <Link href="/" className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)]">
           Voltar ao início
@@ -22,12 +22,19 @@ export async function requireMarketingGate() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { blocked: true as const };
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "coordenador_geral") return { blocked: true as const };
+  // Coordenador geral entra sempre; demais só com cargo que tenha o
+  // módulo "marketing" concedido (ex.: equipe de comunicação) —
+  // a RLS (0104) aplica a mesma regra no banco.
+  const [{ data: profile }, { data: cargos }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.rpc("meus_cargos"),
+  ]);
+  const temModuloMarketing = ((cargos ?? []) as { modulos: string[] }[]).some(
+    (c) => (c.modulos ?? []).includes("marketing")
+  );
+  if (profile?.role !== "coordenador_geral" && !temModuloMarketing) {
+    return { blocked: true as const };
+  }
   return { blocked: false as const, supabase };
 }
 

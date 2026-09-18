@@ -41,18 +41,33 @@ async function requireCoordenador(): Promise<
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Sessão expirada." as const };
+  if (!user) return { error: "Sessão expirada." };
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient();
+  const { data: profile } = await admin
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "coordenador_geral") {
-    return { error: "Acesso restrito ao coordenador geral." as const };
+  if (profile?.role === "coordenador_geral") {
+    return { admin, user };
   }
-  return { admin: createAdminClient(), user };
+
+  // Comunicação: cargo com o módulo "marketing" concedido (mesma regra
+  // da RLS 0104 e do gate de página). Consulta via service-role porque
+  // a leitura de cargos alheios pode ser restrita p/ o próprio usuário.
+  const { data: cargos } = await admin
+    .from("cargos")
+    .select("id, cargo_modulos(modulo)")
+    .eq("profile_id", user.id);
+  const temModulo = ((cargos ?? []) as { cargo_modulos: { modulo: string }[] }[]).some(
+    (c) => (c.cargo_modulos ?? []).some((m) => m.modulo === "marketing")
+  );
+  if (!temModulo) {
+    return { error: "Acesso restrito ao coordenador geral ou à comunicação." };
+  }
+  return { admin, user };
 }
 
 // ── Importação de leads (fatiada) ──────────────────────────────────

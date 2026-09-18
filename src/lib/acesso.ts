@@ -48,7 +48,8 @@ export type ModuloAcesso =
   | "vendas"
   | "financeiro"
   | "utilidades"
-  | "contratos";
+  | "contratos"
+  | "marketing";
 
 export type ModuloRestrito = "painel" | "areas";
 
@@ -67,6 +68,7 @@ export const MODULOS_LABELS: Record<ModuloAcesso, string> = {
   financeiro: "Financeiro",
   utilidades: "Utilidades",
   contratos: "Contratos",
+  marketing: "Marketing",
 };
 
 export const NIVEL_CARGO_LABELS: Record<NivelCargo, string> = {
@@ -129,7 +131,9 @@ export function podeAcessar(
   // para qualquer conta autenticada (como sempre foi). PROEP entrou na
   // lista na auditoria 0063: contém PII de alunos (nome/e-mail/telefone)
   // e a RLS do banco agora restringe leitura/escrita a coordenadores.
-  if (modulo === "financeiro" || modulo === "proep") {
+  // Marketing entrou na lista em 0104: contém PII (base de 15k e-mails) —
+  // só coordenador_geral ou cargo com o módulo concedido (comunicação).
+  if (modulo === "financeiro" || modulo === "proep" || modulo === "marketing") {
     return false;
   }
   return "ler";

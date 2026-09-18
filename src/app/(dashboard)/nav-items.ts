@@ -154,6 +154,9 @@ export const navEntries: SidebarEntry[] = [
     ],
   },
 
+  // ─── Marketing (coordenador geral ou cargo com o módulo — comunicação) ───
+  { href: "/marketing", label: "Marketing", Icon: Mail, modulo: "marketing" },
+
   // ─── Ajuda (todos veem os próprios; coordenador geral gerencia tudo) ───
   { href: "/feedback", label: "Ajuda e melhorias", Icon: MessageSquareWarning },
 
@@ -169,7 +172,6 @@ export const navEntries: SidebarEntry[] = [
 export const coordinatorEntries: SidebarEntry[] = [
   { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard },
   { href: "/painel/acessos", label: "Acessos e cargos", Icon: ShieldCheck },
-  { href: "/marketing", label: "Marketing", Icon: Mail },
   // ─── Inteligência (exclusiva do coordenador geral) ───
   {
     type: "group",
