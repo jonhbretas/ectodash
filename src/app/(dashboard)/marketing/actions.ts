@@ -214,7 +214,7 @@ const campaignSchema = z.object({
     .string()
     .trim()
     .min(1, "Cole o código HTML do e-mail.")
-    .max(500000, "HTML grande demais (máx. 500 KB)."),
+    .max(2000000, "HTML grande demais (máx. 2 MB). Tente hospedar as imagens e linkar por URL."),
 });
 
 function parseSubjects(raw: string): string[] | null {

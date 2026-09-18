@@ -39,6 +39,11 @@ const nextConfig: NextConfig = {
     // the compiler API Next.js's build-time type-checker relies on by
     // default. Fall back to shelling out to the `tsc` CLI instead.
     useTypeScriptCli: true,
+    serverActions: {
+      // Marketing cola HTML com imagens inline — o padrão (1mb) estourava
+      // no "Salvar rascunho" antes da action rodar (error boundary).
+      bodySizeLimit: "3mb",
+    },
   },
 };
 

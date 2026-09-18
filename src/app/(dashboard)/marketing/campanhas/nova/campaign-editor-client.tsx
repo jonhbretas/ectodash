@@ -11,14 +11,28 @@ const initial: ActionState & { id?: number } = { ok: false, message: "" };
 export default function CampaignEditorClient() {
   const [state, formAction, pending] = useActionState(createCampaign, initial);
   const [html, setHtml] = useState("");
+  const [sizeError, setSizeError] = useState<string | null>(null);
   const router = useRouter();
+
+  const htmlBytes = new Blob([html]).size;
+  const htmlKB = (htmlBytes / 1024).toFixed(0);
 
   useEffect(() => {
     if (state.ok && state.id) router.push(`/marketing/campanhas/${state.id}`);
   }, [state, router]);
 
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // Trava local antes do envio: acima de ~2,5 MB nem o transporte aceita.
+    if (htmlBytes > 2_500_000) {
+      e.preventDefault();
+      setSizeError("HTML grande demais (acima de ~2,5 MB). Hospede as imagens na internet e use o endereço delas no lugar.");
+    } else {
+      setSizeError(null);
+    }
+  }
+
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-base font-medium text-zinc-700">
           Título interno (só você vê)
@@ -44,7 +58,7 @@ export default function CampaignEditorClient() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="flex flex-col gap-1 text-base font-medium text-zinc-700">
-          Código HTML
+          Código HTML <span className="font-normal text-zinc-500">({htmlKB} KB)</span>
           <textarea
             name="html"
             required
@@ -54,6 +68,11 @@ export default function CampaignEditorClient() {
             placeholder="<h1>Olá!</h1><p>Confira as novidades…</p>"
             className="w-full rounded-xl border border-slate-200 p-3 font-mono text-sm font-normal"
           />
+          {htmlBytes > 102 * 1024 && (
+            <span className="text-base font-normal text-amber-700">
+              Acima de ~102 KB o Gmail corta o e-mail com um botão de ver mensagem completa — prefira imagens por link.
+            </span>
+          )}
         </label>
         <div className="flex flex-col gap-1">
           <span className="text-base font-medium text-zinc-700">Resultado final (como o lead vai ver)</span>
@@ -68,6 +87,9 @@ export default function CampaignEditorClient() {
 
       {!state.ok && state.message && (
         <p className="rounded-xl bg-red-50 p-3 text-lg text-red-700" role="alert">{state.message}</p>
+      )}
+      {sizeError && (
+        <p className="rounded-xl bg-red-50 p-3 text-lg text-red-700" role="alert">{sizeError}</p>
       )}
 
       <div>
