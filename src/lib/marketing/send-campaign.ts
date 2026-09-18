@@ -43,6 +43,23 @@ export interface SendCampaignEmailResult {
   error: string | null;
 }
 
+/**
+ * Extrai os IDs do retorno do resend.batch.send (formato real:
+ * { data: { data: [{id}] }, error }). Defensivo aos dois shapes.
+ */
+export function extractBatchIds(data: unknown): (string | null)[] {
+  const inner =
+    Array.isArray(data) ? data
+    : data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)
+      ? (data as { data: unknown[] }).data
+      : [];
+  return inner.map((d) =>
+    d && typeof d === "object" && typeof (d as { id?: unknown }).id === "string"
+      ? (d as { id: string }).id
+      : null
+  );
+}
+
 export async function sendCampaignEmail({
   resend,
   to,

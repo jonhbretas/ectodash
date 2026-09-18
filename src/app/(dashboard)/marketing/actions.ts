@@ -19,6 +19,7 @@ import {
   type InvalidLead,
 } from "@/lib/marketing/sanitize";
 import {
+  extractBatchIds,
   unsubscribeUrl,
   withUnsubscribeFooter,
 } from "@/lib/marketing/send-campaign";
@@ -592,9 +593,7 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
         failed += batch.length;
         continue;
       }
-      const ids = Array.isArray(data)
-        ? data.map((d) => (d as { id?: string })?.id ?? null)
-        : [];
+      const ids = extractBatchIds(data);
       for (let j = 0; j < batch.length; j++) {
         await admin
           .from("marketing_recipients")
