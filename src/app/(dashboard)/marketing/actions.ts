@@ -15,7 +15,6 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  MAX_IMPORT_LINES,
   sanitizeLeads,
   type InvalidLead,
 } from "@/lib/marketing/sanitize";
@@ -638,8 +637,6 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
     done: false,
   };
 }
-
-export { MAX_IMPORT_LINES };
 
 // ── Teste A/B ──────────────────────────────────────────────────────
 // Fluxo: queueTestChunk (loop) → finalizeTestQueue → dispatchChunk
