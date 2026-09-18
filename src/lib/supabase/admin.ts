@@ -19,6 +19,10 @@ import { createClient } from "@supabase/supabase-js";
 const ALLOWED_PREFIXES = [
   "/api/cron/",
   "/api/marketing/webhook",
+  // Sem a barra inicial: em produção (Turbopack) o stack traz frames
+  // compilados/relativos sem o caminho-fonte completo — sem isso o
+  // webhook do marketing logava "unexpected path" a cada evento.
+  "marketing/webhook",
   "/api/contratos/webhook",
   "/api/wp/sync",
   "/api/wp/debug/",
