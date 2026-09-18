@@ -30,6 +30,7 @@ import {
   HeartHandshake,
   ShieldCheck,
   House,
+  Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -168,6 +169,7 @@ export const navEntries: SidebarEntry[] = [
 export const coordinatorEntries: SidebarEntry[] = [
   { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard },
   { href: "/painel/acessos", label: "Acessos e cargos", Icon: ShieldCheck },
+  { href: "/marketing", label: "Marketing", Icon: Mail },
   // ─── Inteligência (exclusiva do coordenador geral) ───
   {
     type: "group",

@@ -24,6 +24,7 @@ const ALLOWED_PREFIXES = [
   "/api/proep/import-from-store",
   "(auth)/cadastro/actions.ts",
   "(dashboard)/voluntarios/actions.ts",
+  "(dashboard)/marketing/actions.ts",
 ];
 
 function assertAllowedCaller() {
