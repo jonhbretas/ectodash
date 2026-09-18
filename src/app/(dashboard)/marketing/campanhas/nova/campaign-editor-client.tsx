@@ -22,13 +22,25 @@ export default function CampaignEditorClient() {
       <div className="grid gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-base font-medium text-zinc-700">
           Título interno (só você vê)
-          <input name="titulo" required maxLength={200} placeholder="Ex.: Novidades de outubro" className="h-11 rounded-xl border border-slate-200 px-3 text-base font-normal" />
+          <input name="titulo" required maxLength={200} placeholder="Ex.: Divulgação curso de outubro" className="h-11 rounded-xl border border-slate-200 px-3 text-base font-normal" />
         </label>
-        <label className="flex flex-col gap-1 text-base font-medium text-zinc-700">
-          Assunto do e-mail
-          <input name="assunto" required maxLength={200} placeholder="Ex.: Vem aí a nova turma!" className="h-11 rounded-xl border border-slate-200 px-3 text-base font-normal" />
-        </label>
+        <div className="rounded-xl bg-sky-50 p-3 text-base text-sky-900">
+          <strong>Teste A/B automático:</strong> escreva até 10 assuntos (1 por linha).
+          Com 2+, o sistema envia 100 e-mails por assunto, mede a abertura e
+          dispara o restante com o vencedor.
+        </div>
       </div>
+
+      <label className="flex flex-col gap-1 text-base font-medium text-zinc-700">
+        Assuntos do e-mail (1 por linha, até 10)
+        <textarea
+          name="assuntos"
+          required
+          rows={5}
+          placeholder={"Vagas abertas: novo curso!\nÚltimas vagas com desconto\nVocê foi convidado(a)…"}
+          className="w-full rounded-xl border border-slate-200 p-3 text-base font-normal"
+        />
+      </label>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="flex flex-col gap-1 text-base font-medium text-zinc-700">

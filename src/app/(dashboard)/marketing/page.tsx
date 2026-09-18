@@ -47,6 +47,7 @@ export async function requireMarketingGate() {
 const STATUS_LABEL: Record<string, string> = {
   draft: "Rascunho",
   queued: "Na fila",
+  testing: "Testando A/B",
   sending: "Disparando",
   sent: "Enviada",
   failed: "Falhou",

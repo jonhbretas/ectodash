@@ -23,6 +23,12 @@ import {
   sendCampaignEmail,
   withUnsubscribeFooter,
 } from "@/lib/marketing/send-campaign";
+import {
+  pickWinner,
+  tallyVariants,
+  variantLetters,
+  type VariantTally,
+} from "@/lib/marketing/ab";
 
 export interface ActionState {
   ok: boolean;
@@ -196,13 +202,24 @@ export async function importLeadsChunk(
 
 const campaignSchema = z.object({
   titulo: z.string().trim().min(1, "Dê um título à campanha.").max(200),
-  assunto: z.string().trim().min(1, "Digite o assunto do e-mail.").max(200),
+  subjectsRaw: z.string().trim().min(1, "Digite ao menos 1 assunto."),
   html: z
     .string()
     .trim()
     .min(1, "Cole o código HTML do e-mail.")
     .max(500000, "HTML grande demais (máx. 500 KB)."),
 });
+
+function parseSubjects(raw: string): string[] | null {
+  const list = raw
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+  if (list.length === 0 || list.length > 10) return null;
+  if (list.some((s) => s.length === 0 || s.length > 200)) return null;
+  return list;
+}
 
 export async function createCampaign(
   prevState: ActionState,
@@ -213,20 +230,27 @@ export async function createCampaign(
 
   const parsed = campaignSchema.safeParse({
     titulo: formData.get("titulo"),
-    assunto: formData.get("assunto"),
+    subjectsRaw: formData.get("assuntos"),
     html: formData.get("html"),
   });
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  // 1 assunto = disparo direto; 2–10 = teste A/B (100 leads por variante).
+  const subjects = parseSubjects(parsed.data.subjectsRaw);
+  if (!subjects) {
+    return { ok: false, message: "Use de 1 a 10 assuntos (1 por linha, máx. 200 caracteres)." };
   }
 
   const { data, error } = await gate.admin
     .from("marketing_campaigns")
     .insert({
       titulo: parsed.data.titulo,
-      assunto: parsed.data.assunto,
+      assunto: subjects[0],
       html: parsed.data.html,
       status: "draft",
+      ab_test: subjects.length > 1,
+      subjects,
       created_by: gate.user.id,
     })
     .select("id")
@@ -442,25 +466,30 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
 
   const { data: campaign } = await admin
     .from("marketing_campaigns")
-    .select("id, status, assunto, html")
+    .select("id, status, assunto, html, subjects, winner_subject")
     .eq("id", campaignId)
     .single();
   if (!campaign) {
     return { ok: false, message: "Campanha não encontrada.", sent: 0, failed: 0, skipped: 0, remaining: -1, done: false };
   }
-  if (campaign.status !== "sending") {
+  if (campaign.status !== "sending" && campaign.status !== "testing") {
     return { ok: false, message: "Campanha não está em disparo.", sent: 0, failed: 0, skipped: 0, remaining: -1, done: false };
   }
 
   const { data: pending } = await admin
     .from("marketing_recipients")
-    .select("id, lead_id, email, unsubscribe_token")
+    .select("id, lead_id, email, unsubscribe_token, variant")
     .eq("campaign_id", campaignId)
     .eq("status", "pending")
     .order("id", { ascending: true })
     .limit(CHUNK_DISPATCH);
 
   if (!pending || pending.length === 0) {
+    // Fase de teste: esgotou a amostra, mas a campanha segue em "testing"
+    // até a apuração da vencedora — nunca marca "sent" aqui.
+    if (campaign.status === "testing") {
+      return { ok: true, message: "Amostra enviada.", sent: 0, failed: 0, skipped: 0, remaining: 0, done: true };
+    }
     await admin
       .from("marketing_campaigns")
       .update({ status: "sent", sent_at: new Date().toISOString() })
@@ -468,6 +497,16 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
     revalidatePath("/marketing");
     return { ok: true, message: "Disparo concluído.", sent: 0, failed: 0, skipped: 0, remaining: 0, done: true };
   }
+
+  const subjects = ((campaign.subjects as string[] | null) ?? []) as string[];
+  const subjectFor = (variant: string | null): string => {
+    if (variant) {
+      const idx = variant.charCodeAt(0) - 65;
+      if (subjects[idx]) return subjects[idx] as string;
+    }
+    // Restante pós-teste usa a vencedora; disparo simples usa o assunto.
+    return ((campaign.winner_subject as string | null) ?? (campaign.assunto as string));
+  };
 
   // Lead que se descadastrou DEPOIS do snapshot: pula (LGPD), não envia.
   const leadIds = pending.map((p) => p.lead_id as number);
@@ -505,14 +544,17 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
     try {
       const { data, error } = await resend.batch.send(
         batch.map((p) => ({
-          from: "Ectolab <contato@ectolab.org>",
+          from: "EctoDash <contato@ectolab.org>",
           to: p.email as string,
-          subject: campaign.assunto as string,
+          subject: subjectFor(p.variant as string | null),
           html: withUnsubscribeFooter(
             campaign.html as string,
             p.unsubscribe_token as string
           ),
-          tags: [{ name: "campaign", value: String(campaignId) }],
+          tags: [
+            { name: "campaign", value: String(campaignId) },
+            ...(p.variant ? [{ name: "variant", value: p.variant as string }] : []),
+          ],
         }))
       );
       if (error) {
@@ -586,3 +628,242 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
 }
 
 export { MAX_IMPORT_LINES };
+
+// ── Teste A/B ──────────────────────────────────────────────────────
+// Fluxo: queueTestChunk (loop) → finalizeTestQueue → dispatchChunk
+// (loop, mesma action do disparo normal) → aguardar aberturas →
+// tallyAb → declareWinner → queueRemainderChunk (loop) →
+// finalizeQueue → dispatchChunk (loop com a vencedora).
+
+export interface QueueTestChunkResult extends ActionState {
+  queued: number;
+  done: boolean;
+}
+
+/**
+ * Congela a amostra do teste: test_per_variant (100) primeiros leads
+ * ativos por variante (A..J, round-robin). Só vale p/ campanha ab_test
+ * em draft.
+ */
+export async function queueTestChunk(campaignId: number): Promise<QueueTestChunkResult> {
+  const gate = await requireCoordenador();
+  if ("error" in gate) return { ok: false, message: gate.error, queued: 0, done: false };
+  const { admin } = gate;
+
+  const { data: campaign } = await admin
+    .from("marketing_campaigns")
+    .select("id, status, ab_test, subjects, test_per_variant")
+    .eq("id", campaignId)
+    .single();
+  if (!campaign) return { ok: false, message: "Campanha não encontrada.", queued: 0, done: false };
+  if (!(campaign.ab_test as boolean) || campaign.status !== "draft") {
+    return { ok: false, message: "Teste A/B só vale p/ rascunho com 2+ assuntos.", queued: 0, done: false };
+  }
+
+  const subjects = ((campaign.subjects as string[] | null) ?? []) as string[];
+  const letters = variantLetters(subjects.length);
+  const perVariant = (campaign.test_per_variant as number) ?? 100;
+  const target = perVariant * letters.length;
+
+  const { count: have } = await admin
+    .from("marketing_recipients")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId);
+  const haveCount = have ?? 0;
+  if (haveCount >= target) {
+    return { ok: true, message: "Amostra pronta.", queued: 0, done: true };
+  }
+
+  const { data: last } = await admin
+    .from("marketing_recipients")
+    .select("lead_id")
+    .eq("campaign_id", campaignId)
+    .order("lead_id", { ascending: false })
+    .limit(1);
+  const lastLeadId = (last?.[0]?.lead_id as number | null) ?? 0;
+
+  const need = Math.min(CHUNK_QUEUE_LEADS, target - haveCount);
+  const { data: leads, error: leadsError } = await admin
+    .from("marketing_leads")
+    .select("id, email, unsubscribe_token")
+    .eq("status", "active")
+    .gt("id", lastLeadId)
+    .order("id", { ascending: true })
+    .limit(need);
+  if (leadsError) {
+    console.error("queueTestChunk: leads fetch failed", leadsError);
+    return { ok: false, message: "Falha ao ler a base.", queued: 0, done: false };
+  }
+  if (!leads || leads.length === 0) {
+    return { ok: false, message: "Base ativa menor que a amostra do teste.", queued: 0, done: false };
+  }
+
+  const rows = leads.map((l, i) => ({
+    campaign_id: campaignId,
+    lead_id: l.id as number,
+    email: l.email as string,
+    unsubscribe_token: l.unsubscribe_token as string,
+    status: "pending",
+    variant: letters[(haveCount + i) % letters.length] as string,
+  }));
+  const { error: insertError } = await admin
+    .from("marketing_recipients")
+    .upsert(rows, { onConflict: "campaign_id,lead_id", ignoreDuplicates: true });
+  if (insertError) {
+    console.error("queueTestChunk: insert failed", insertError);
+    return { ok: false, message: "Falha ao enfileirar amostra.", queued: 0, done: false };
+  }
+
+  const done = haveCount + leads.length >= target;
+  return {
+    ok: true,
+    message: done ? "Amostra pronta." : `${leads.length} enfileirados…`,
+    queued: leads.length,
+    done,
+  };
+}
+
+/** Fecha a amostra e põe a campanha em "testing". */
+export async function finalizeTestQueue(campaignId: number): Promise<ActionState> {
+  const gate = await requireCoordenador();
+  if ("error" in gate) return { ok: false, message: gate.error };
+
+  const { count } = await gate.admin
+    .from("marketing_recipients")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId);
+  if (!count) return { ok: false, message: "Amostra vazia." };
+
+  await gate.admin
+    .from("marketing_campaigns")
+    .update({ status: "testing", test_sent_at: new Date().toISOString() })
+    .eq("id", campaignId);
+  revalidatePath("/marketing");
+  return { ok: true, message: `${count} e-mails de teste na fila.` };
+}
+
+export interface TallyResult extends ActionState {
+  tally: VariantTally[];
+  winner: VariantTally | null;
+}
+
+/** Apuração atual por variante (taxa de abertura). */
+export async function tallyAb(campaignId: number): Promise<TallyResult> {
+  const gate = await requireCoordenador();
+  if ("error" in gate) return { ok: false, message: gate.error, tally: [], winner: null };
+
+  const [{ data: campaign }, { data: recipients }] = await Promise.all([
+    gate.admin.from("marketing_campaigns").select("subjects").eq("id", campaignId).single(),
+    gate.admin
+      .from("marketing_recipients")
+      .select("variant, status, opened_at")
+      .eq("campaign_id", campaignId)
+      .not("variant", "is", null),
+  ]);
+  if (!campaign) return { ok: false, message: "Campanha não encontrada.", tally: [], winner: null };
+
+  const subjects = ((campaign.subjects as string[] | null) ?? []) as string[];
+  const tally = tallyVariants(subjects, (recipients ?? []) as { variant: string | null; status: string; opened_at: string | null }[]);
+  return { ok: true, message: "Apuração atualizada.", tally, winner: pickWinner(tally) };
+}
+
+/**
+ * Declara a vencedora (auto = maior taxa, ou a variante escolhida) e
+ * volta a campanha p/ "sending" — o restante usa winner_subject.
+ */
+export async function declareWinner(
+  campaignId: number,
+  variant?: string
+): Promise<ActionState & { winner?: VariantTally }> {
+  const gate = await requireCoordenador();
+  if ("error" in gate) return { ok: false, message: gate.error };
+
+  const [{ data: campaign }, { data: recipients }] = await Promise.all([
+    gate.admin.from("marketing_campaigns").select("id, status, subjects").eq("id", campaignId).single(),
+    gate.admin
+      .from("marketing_recipients")
+      .select("variant, status, opened_at")
+      .eq("campaign_id", campaignId)
+      .not("variant", "is", null),
+  ]);
+  if (!campaign) return { ok: false, message: "Campanha não encontrada." };
+  if (campaign.status !== "testing") return { ok: false, message: "Apuração só vale na fase de teste." };
+
+  const subjects = ((campaign.subjects as string[] | null) ?? []) as string[];
+  const tally = tallyVariants(subjects, (recipients ?? []) as { variant: string | null; status: string; opened_at: string | null }[]);
+  const win = variant
+    ? tally.find((t) => t.variant === variant) ?? null
+    : pickWinner(tally);
+  if (!win || win.sent === 0) return { ok: false, message: "Ainda sem dados de envio p/ apurar." };
+
+  await gate.admin
+    .from("marketing_campaigns")
+    .update({ winner_subject: win.subject, status: "sending" })
+    .eq("id", campaignId);
+  revalidatePath("/marketing");
+  return { ok: true, message: `Vencedora: "${win.subject}" (${(win.rate * 100).toFixed(1)}% de abertura).`, winner: win };
+}
+
+/** Enfileira o restante da base (variant NULL → usa a vencedora). */
+export async function queueRemainderChunk(campaignId: number): Promise<QueueTestChunkResult> {
+  const gate = await requireCoordenador();
+  if ("error" in gate) return { ok: false, message: gate.error, queued: 0, done: false };
+  const { admin } = gate;
+
+  const { data: campaign } = await admin
+    .from("marketing_campaigns")
+    .select("id, status, winner_subject")
+    .eq("id", campaignId)
+    .single();
+  if (!campaign) return { ok: false, message: "Campanha não encontrada.", queued: 0, done: false };
+  if (campaign.status !== "sending" || !(campaign.winner_subject as string | null)) {
+    return { ok: false, message: "Apure a vencedora antes.", queued: 0, done: false };
+  }
+
+  const { data: last } = await admin
+    .from("marketing_recipients")
+    .select("lead_id")
+    .eq("campaign_id", campaignId)
+    .order("lead_id", { ascending: false })
+    .limit(1);
+  const lastLeadId = (last?.[0]?.lead_id as number | null) ?? 0;
+
+  const { data: leads, error: leadsError } = await admin
+    .from("marketing_leads")
+    .select("id, email, unsubscribe_token")
+    .eq("status", "active")
+    .gt("id", lastLeadId)
+    .order("id", { ascending: true })
+    .limit(CHUNK_QUEUE_LEADS);
+  if (leadsError) {
+    console.error("queueRemainderChunk: leads fetch failed", leadsError);
+    return { ok: false, message: "Falha ao ler a base.", queued: 0, done: false };
+  }
+  if (!leads || leads.length === 0) {
+    return { ok: true, message: "Fila completa.", queued: 0, done: true };
+  }
+
+  const rows = leads.map((l) => ({
+    campaign_id: campaignId,
+    lead_id: l.id as number,
+    email: l.email as string,
+    unsubscribe_token: l.unsubscribe_token as string,
+    status: "pending",
+    variant: null,
+  }));
+  const { error: insertError } = await admin
+    .from("marketing_recipients")
+    .upsert(rows, { onConflict: "campaign_id,lead_id", ignoreDuplicates: true });
+  if (insertError) {
+    console.error("queueRemainderChunk: insert failed", insertError);
+    return { ok: false, message: "Falha ao enfileirar.", queued: 0, done: false };
+  }
+
+  const done = leads.length < CHUNK_QUEUE_LEADS;
+  return {
+    ok: true,
+    message: done ? "Fila completa." : `${leads.length} enfileirados…`,
+    queued: leads.length,
+    done,
+  };
+}

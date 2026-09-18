@@ -18,6 +18,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const ALLOWED_PREFIXES = [
   "/api/cron/",
+  "/api/marketing/webhook",
   "/api/contratos/webhook",
   "/api/wp/sync",
   "/api/wp/debug/",

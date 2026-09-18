@@ -7,6 +7,7 @@ import DispatchClient from "./dispatch-client";
 const STATUS_LABEL: Record<string, string> = {
   draft: "Rascunho",
   queued: "Na fila",
+  testing: "Testando A/B",
   sending: "Disparando",
   sent: "Enviada",
   failed: "Falhou",
@@ -31,7 +32,7 @@ export default async function CampanhaPage({
 
   const { data: campaign } = await supabase
     .from("marketing_campaigns")
-    .select("id, titulo, assunto, html, status, total, sent_count, failed_count, skipped_count, created_at")
+    .select("id, titulo, assunto, html, status, total, sent_count, failed_count, skipped_count, created_at, ab_test, subjects, winner_subject")
     .eq("id", campaignId)
     .single();
 
@@ -66,6 +67,9 @@ export default async function CampanhaPage({
           sentCount={(campaign.sent_count as number) ?? 0}
           failedCount={(campaign.failed_count as number) ?? 0}
           skippedCount={(campaign.skipped_count as number) ?? 0}
+          abTest={(campaign.ab_test as boolean) ?? false}
+          subjects={((campaign.subjects as string[] | null) ?? []) as string[]}
+          winnerSubject={(campaign.winner_subject as string | null) ?? null}
         />
 
         <section className="flex flex-col gap-1">
