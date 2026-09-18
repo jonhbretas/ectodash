@@ -43,6 +43,26 @@ const CHUNK_IMPORT_LINES = 2000;
 const CHUNK_QUEUE_LEADS = 1000;
 const CHUNK_DISPATCH = 200;
 const BATCH_RESEND = 100;
+// Pausa entre lotes: ~2 lotes/s, folga ante o limite de 10 req/s do
+// Resend (rajadas sem pausa tomavam 429 e derrubavam o lote inteiro).
+const BATCH_PAUSE_MS = 500;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function resendErrorMessage(e: unknown): string {
+  if (!e) return "unknown";
+  if (typeof e === "string") return e;
+  if (e instanceof Error) return e.message;
+  const m = (e as { message?: unknown }).message;
+  if (typeof m === "string" && m) return m;
+  try {
+    return JSON.stringify(e).slice(0, 300);
+  } catch {
+    return "unknown";
+  }
+}
 
 async function requireCoordenador(): Promise<
   { admin: SupabaseClient; user: User } | { error: string }
@@ -605,60 +625,96 @@ export async function dispatchChunk(campaignId: number): Promise<DispatchChunkRe
   let sent = 0;
   let failed = 0;
 
+  const buildPayload = (p: (typeof sendable)[number]) => {
+    const token = p.unsubscribe_token as string;
+    const personalized = applyMergeTags(campaign.html as string, {
+      nome: leadNome.get(p.lead_id as number) ?? null,
+      email: p.email as string,
+      unsubscribeUrl: unsubscribeUrl(token),
+    });
+    return {
+      from: "EctoDash <contato@ectolab.org>",
+      to: p.email as string,
+      subject: subjectFor(p.variant as string | null),
+      html: withUnsubscribeFooter(personalized, token),
+      tags: [
+        { name: "campaign", value: String(campaignId) },
+        ...(p.variant ? [{ name: "variant", value: p.variant as string }] : []),
+      ],
+    };
+  };
+
+  const markSent = async (items: typeof sendable, ids: (string | null)[]) => {
+    for (let j = 0; j < items.length; j++) {
+      await admin
+        .from("marketing_recipients")
+        .update({ status: "sent", resend_id: ids[j] ?? null })
+        .eq("id", items[j].id);
+    }
+  };
+
+  const markFailed = async (items: typeof sendable, message: string) => {
+    for (const p of items) {
+      await admin
+        .from("marketing_recipients")
+        .update({ status: "failed", error_message: message.slice(0, 300) })
+        .eq("id", p.id);
+    }
+  };
+
+  // Envia um lote com 1 retry; se o lote inteiro for rejeitado de novo,
+  // parte ao meio (1 endereço "venenoso" — ex. inválido p/ o Resend —
+  // derruba o batch.send inteiro; sem split, 1 ruim = 100 perdidos).
+  const sendBatchResilient = async (
+    items: typeof sendable
+  ): Promise<{ sent: number; failed: number }> => {
+    if (items.length === 0) return { sent: 0, failed: 0 };
+    const attempt = async (): Promise<{ ids: (string | null)[]; error: unknown }> => {
+      try {
+        const { data, error } = await resend.batch.send(items.map(buildPayload));
+        if (error) return { ids: [], error };
+        return { ids: extractBatchIds(data), error: null };
+      } catch (err) {
+        return { ids: [], error: err };
+      }
+    };
+    let r = await attempt();
+    if (r.error) {
+      console.error("dispatchChunk: batch failed, retrying once", resendErrorMessage(r.error));
+      await sleep(2000);
+      r = await attempt();
+    }
+    if (!r.error) {
+      await markSent(items, r.ids);
+      return { sent: items.length, failed: 0 };
+    }
+    if (items.length <= 10) {
+      const msg = resendErrorMessage(r.error);
+      console.error("dispatchChunk: sub-batch failed", msg);
+      await markFailed(items, msg);
+      return { sent: 0, failed: items.length };
+    }
+    const mid = Math.ceil(items.length / 2);
+    const left = await sendBatchResilient(items.slice(0, mid));
+    const right = await sendBatchResilient(items.slice(mid));
+    return { sent: left.sent + right.sent, failed: left.failed + right.failed };
+  };
+
   for (let i = 0; i < sendable.length; i += BATCH_RESEND) {
+    // Validação local: e-mail malformado falha sozinho, sem nem entrar
+    // no lote (não envenena os outros 99).
     const batch = sendable.slice(i, i + BATCH_RESEND);
-    try {
-      const { data, error } = await resend.batch.send(
-        batch.map((p) => {
-          const token = p.unsubscribe_token as string;
-          const personalized = applyMergeTags(campaign.html as string, {
-            nome: leadNome.get(p.lead_id as number) ?? null,
-            email: p.email as string,
-            unsubscribeUrl: unsubscribeUrl(token),
-          });
-          return {
-            from: "EctoDash <contato@ectolab.org>",
-            to: p.email as string,
-            subject: subjectFor(p.variant as string | null),
-            html: withUnsubscribeFooter(personalized, token),
-            tags: [
-              { name: "campaign", value: String(campaignId) },
-              ...(p.variant ? [{ name: "variant", value: p.variant as string }] : []),
-            ],
-          };
-        })
-      );
-      if (error) {
-        console.error("dispatchChunk: batch failed", error);
-        for (const p of batch) {
-          await admin
-            .from("marketing_recipients")
-            .update({ status: "failed", error_message: "batch rejected" })
-            .eq("id", p.id);
-        }
-        failed += batch.length;
-        continue;
-      }
-      const ids = extractBatchIds(data);
-      for (let j = 0; j < batch.length; j++) {
-        await admin
-          .from("marketing_recipients")
-          .update({ status: "sent", resend_id: ids[j] ?? null })
-          .eq("id", batch[j].id);
-      }
-      sent += batch.length;
-    } catch (err) {
-      console.error("dispatchChunk: batch threw", err);
-      for (const p of batch) {
-        await admin
-          .from("marketing_recipients")
-          .update({
-            status: "failed",
-            error_message: err instanceof Error ? err.message.slice(0, 300) : "unknown",
-          })
-          .eq("id", p.id);
-      }
-      failed += batch.length;
+    const invalid = batch.filter((p) => !EMAIL_RE.test(String(p.email ?? "")));
+    const valid = batch.filter((p) => EMAIL_RE.test(String(p.email ?? "")));
+    if (invalid.length > 0) {
+      await markFailed(invalid, "e-mail inválido");
+      failed += invalid.length;
+    }
+    if (i > 0) await sleep(BATCH_PAUSE_MS);
+    if (valid.length > 0) {
+      const r = await sendBatchResilient(valid);
+      sent += r.sent;
+      failed += r.failed;
     }
   }
 
