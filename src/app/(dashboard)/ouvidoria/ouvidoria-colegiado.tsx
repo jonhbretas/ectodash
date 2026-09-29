@@ -2,32 +2,21 @@
 
 // src/app/(dashboard)/ouvidoria/ouvidoria-colegiado.tsx
 // Painel do colegiado gestor: ciclos mensais (lacrado → aberto →
-// concluído), leitura ANONIMIZADA dos relatos e quebra de sigilo
-// exclusiva do coordenador geral (com motivo + auditoria).
+// concluído) com leitura IDENTIFICADA dos relatos (sem anonimato — a
+// autoria fica visível ao colegiado para evitar uso anti cosmoético).
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  Archive,
-  Eye,
-  EyeOff,
-  FolderLock,
-  History,
-  LockOpen,
-  ShieldAlert,
-} from "lucide-react";
+import { Archive, FolderLock, LockOpen, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   abrirCiclo,
   atualizarRelato,
   concluirCiclo,
-  listarQuebras,
-  listarRelatosAnonimos,
-  revelarIdentidade,
+  listarRelatos,
   type ActionResult,
-  type QuebraRow,
-  type RelatoAnonimo,
+  type RelatoIdentificado,
 } from "./ouvidoria-actions";
 import { CATEGORIA_LABELS, SENTIMENTO_LABELS } from "./ouvidoria-form";
 
@@ -72,36 +61,13 @@ function formatarReferencia(ref: string): string {
 const CONCLUIR_INICIAL: ActionResult = { ok: false };
 const ATUALIZAR_INICIAL: ActionResult = { ok: false };
 
-function RelatoCard({
-  relato,
-  isGeral,
-}: {
-  relato: RelatoAnonimo;
-  isGeral: boolean;
-}) {
+function RelatoCard({ relato }: { relato: RelatoIdentificado }) {
   const [estado, acao, pendente] = useActionState(atualizarRelato, ATUALIZAR_INICIAL);
-  const [motivo, setMotivo] = useState("");
-  const [revelando, setRevelando] = useState(false);
-  const [revelado, setRevelado] = useState<string | null>(null);
-  const [erroRevelar, setErroRevelar] = useState<string | null>(null);
-  const [mostrarQuebra, setMostrarQuebra] = useState(false);
 
-  async function handleRevelar() {
-    setErroRevelar(null);
-    setRevelando(true);
-    const res = await revelarIdentidade(relato.id, motivo);
-    setRevelando(false);
-    if (!res.ok) {
-      setErroRevelar(res.error ?? "Falha na quebra de sigilo.");
-      return;
-    }
-    setRevelado(
-      res.autor
-        ? `${res.autor.full_name?.trim() || "Nome não cadastrado"}${res.autor.email ? ` · ${res.autor.email}` : ""}`
-        : "Identidade revelada e registrada em auditoria."
-    );
-    setMostrarQuebra(false);
-  }
+  const autorRotulo =
+    relato.autor_nome?.trim() ||
+    relato.autor_email?.trim() ||
+    "Autor não identificado";
 
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4">
@@ -118,12 +84,13 @@ function RelatoCard({
           <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700">
             {STATUS_RELATO[relato.status] ?? relato.status}
           </span>
-          {relato.identidade_revelada && (
-            <span className="flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-sm font-semibold text-red-700">
-              <ShieldAlert size={14} aria-hidden="true" />
-              Sigilo quebrado (auditoria)
-            </span>
-          )}
+          <span className="flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-3 py-1 text-sm font-semibold text-[#28627B]">
+            <UserRound size={14} aria-hidden="true" />
+            {autorRotulo}
+            {relato.autor_email && relato.autor_nome?.trim()
+              ? ` · ${relato.autor_email}`
+              : ""}
+          </span>
         </div>
         <span className="text-sm text-zinc-500">{formatarData(relato.created_at)}</span>
       </div>
@@ -183,79 +150,15 @@ function RelatoCard({
           </p>
         )}
       </form>
-
-      {isGeral && (
-        <div className="flex flex-col gap-2 rounded-lg bg-red-50/60 px-3 py-2">
-          {!mostrarQuebra && !revelado && (
-            <button
-              type="button"
-              onClick={() => setMostrarQuebra(true)}
-              className="flex w-fit items-center gap-2 text-sm font-medium text-red-700 hover:underline"
-            >
-              <Eye size={15} aria-hidden="true" />
-              Quebrar sigilo (excepcional, com auditoria)
-            </button>
-          )}
-          {mostrarQuebra && !revelado && (
-            <div className="flex flex-col gap-2">
-              <label htmlFor={`motivo-${relato.id}`} className="text-sm text-red-800">
-                Motivo da quebra (mínimo 10 caracteres — fica registrado com seu nome em
-                auditoria):
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <input
-                  id={`motivo-${relato.id}`}
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="Ex.: relato com indícios de mau uso reiterado…"
-                  maxLength={1000}
-                  className="min-h-10 min-w-52 flex-1 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm text-zinc-900"
-                />
-                <button
-                  type="button"
-                  disabled={revelando || motivo.trim().length < 10}
-                  onClick={handleRevelar}
-                  className="flex min-h-10 items-center rounded-lg bg-red-700 px-4 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60"
-                >
-                  {revelando ? "Revelando…" : "Confirmar quebra"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMostrarQuebra(false);
-                    setMotivo("");
-                    setErroRevelar(null);
-                  }}
-                  className="flex min-h-10 items-center rounded-lg px-3 text-sm text-zinc-600 hover:bg-red-100"
-                >
-                  Cancelar
-                </button>
-              </div>
-              {erroRevelar && (
-                <p role="alert" className="text-sm text-red-700">
-                  {erroRevelar}
-                </p>
-              )}
-            </div>
-          )}
-          {revelado && (
-            <p role="status" className="flex items-center gap-2 text-sm font-medium text-red-800">
-              <EyeOff size={15} aria-hidden="true" />
-              Autor: {revelado}
-            </p>
-          )}
-        </div>
-      )}
     </article>
   );
 }
 
 export default function OuvidoriaColegiado({
   ciclos,
-  isGeral,
 }: {
   ciclos: CicloColegiado[];
-  isGeral: boolean;
+  isGeral?: boolean;
 }) {
   const router = useRouter();
   const [cicloId, setCicloId] = useState<string>(() => {
@@ -263,7 +166,7 @@ export default function OuvidoriaColegiado({
     if (aberto) return aberto.id;
     return ciclos[0]?.id ?? "";
   });
-  const [relatos, setRelatos] = useState<RelatoAnonimo[] | null>(null);
+  const [relatos, setRelatos] = useState<RelatoIdentificado[] | null>(null);
   const [carregando, setCarregando] = useState(() => {
     const aberto = ciclos.find((c) => c.status === "aberto");
     const inicial = aberto ?? ciclos[0];
@@ -271,7 +174,6 @@ export default function OuvidoriaColegiado({
   });
   const [erro, setErro] = useState<string | null>(null);
   const [abrindo, startAbrir] = useTransition();
-  const [quebras, setQuebras] = useState<QuebraRow[] | null>(null);
   const [estadoConcluir, acaoConcluir] = useActionState(concluirCiclo, CONCLUIR_INICIAL);
 
   const ciclo = ciclos.find((c) => c.id === cicloId) ?? null;
@@ -290,7 +192,7 @@ export default function OuvidoriaColegiado({
       return;
     }
     let vivo = true;
-    listarRelatosAnonimos(cicloId).then((res) => {
+    listarRelatos(cicloId).then((res) => {
       if (!vivo) return;
       setCarregando(false);
       if (!res.ok) {
@@ -304,13 +206,6 @@ export default function OuvidoriaColegiado({
       vivo = false;
     };
   }, [cicloId, cicloStatus]);
-
-  useEffect(() => {
-    if (!isGeral) return;
-    listarQuebras().then((res) => {
-      if (res.ok) setQuebras(res.quebras ?? []);
-    });
-  }, [isGeral]);
 
   function handleAbrir() {
     if (!cicloId) return;
@@ -339,6 +234,7 @@ export default function OuvidoriaColegiado({
         </h2>
         <p className="text-lg text-zinc-600">
           Abertura uma vez por mês, em reunião. Ciclos lacrados não mostram conteúdo.
+          Relatos identificados: a autoria fica visível ao colegiado.
         </p>
       </div>
 
@@ -488,29 +384,11 @@ export default function OuvidoriaColegiado({
           {relatos && relatos.length > 0 && (
             <div className="flex flex-col gap-3">
               {relatos.map((r) => (
-                <RelatoCard key={r.id} relato={r} isGeral={isGeral} />
+                <RelatoCard key={r.id} relato={r} />
               ))}
             </div>
           )}
         </>
-      )}
-
-      {isGeral && quebras && quebras.length > 0 && (
-        <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3">
-          <h3 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-            <History size={18} aria-hidden="true" />
-            Quebras de sigilo registradas ({quebras.length})
-          </h3>
-          <ul className="flex flex-col gap-1 text-base text-zinc-600">
-            {quebras.map((q) => (
-              <li key={q.id} className="rounded-lg bg-zinc-50 px-3 py-2">
-                {formatarData(q.created_at)} — revelado por{" "}
-                <strong>{q.revelado_por_nome ?? "?"}</strong>, autor{" "}
-                <strong>{q.autor_nome ?? "?"}</strong>. Motivo: {q.motivo}
-              </li>
-            ))}
-          </ul>
-        </div>
       )}
     </section>
   );

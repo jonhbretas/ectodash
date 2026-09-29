@@ -7,11 +7,12 @@ import OuvidoriaForm from "./ouvidoria-form";
 import OuvidoriaColegiado, { type CicloColegiado } from "./ouvidoria-colegiado";
 
 // src/app/(dashboard)/ouvidoria/page.tsx
-// Ouvidoria dos voluntários: envio anônimo (qualquer autenticado) +
-// painel do colegiado gestor (leitura anonimizada por ciclo mensal
-// lacrado) + quebra de sigilo exclusiva do coordenador geral.
-// O sigilo é garantido no banco (0095): a tabela de relatos não tem
-// policy direta — todo acesso passa por RPCs SECURITY DEFINER.
+// Ouvidoria dos voluntários: envio IDENTIFICADO (qualquer autenticado) +
+// painel do colegiado gestor (leitura identificada por ciclo mensal
+// lacrado). Sem anonimato: a autoria fica visível ao colegiado para
+// evitar uso anti cosmoético do canal.
+// A tabela de relatos não tem policy direta — todo acesso passa por RPCs
+// SECURITY DEFINER (0095 + 0109).
 
 type MeuRelato = {
   id: string;
@@ -126,8 +127,10 @@ export default async function OuvidoriaPage() {
             Ouvidoria — escuta dos voluntários
           </h1>
           <p className="max-w-2xl text-xl text-zinc-500">
-            Espaço anônimo para compartilhar como você se sente e ajudar na reciclagem
-            institucional. O colegiado gestor abre a caixinha uma vez por mês, em reunião.
+            Espaço identificado para compartilhar como você se sente e ajudar na
+            reciclagem institucional. Sua autoria fica visível ao colegiado
+            gestor — escreva de forma responsável e cosmoética. O colegiado abre
+            a caixinha uma vez por mês, em reunião.
           </p>
         </div>
       </header>
@@ -144,7 +147,7 @@ export default async function OuvidoriaPage() {
         {meusRelatos.length === 0 ? (
           <p className="text-lg text-zinc-600">
             Você ainda não guardou nenhum relato. Quando enviar, ele aparece aqui só para
-            você — ninguém mais vê quem escreveu.
+            você — o colegiado gestor vê a autoria de cada relato.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">

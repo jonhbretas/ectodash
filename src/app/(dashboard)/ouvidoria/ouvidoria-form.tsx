@@ -1,10 +1,11 @@
 "use client";
 
 // src/app/(dashboard)/ouvidoria/ouvidoria-form.tsx
-// Formulário de envio anônimo com orientação de comunicação não-violenta:
-// reforça relato respeitoso focado em COMO a pessoa se sente.
+// Formulário de envio IDENTIFICADO com orientação de comunicação não-violenta:
+// reforça relato respeitoso focado em COMO a pessoa se sente. A autoria é
+// visível ao colegiado gestor (sem anonimato) para evitar uso anti cosmoético.
 import { useActionState } from "react";
-import { HeartHandshake, Lock, Send } from "lucide-react";
+import { Eye, HeartHandshake, Send } from "lucide-react";
 import { enviarRelato, type ActionResult } from "./ouvidoria-actions";
 
 export const CATEGORIA_LABELS: Record<string, string> = {
@@ -62,8 +63,9 @@ export default function OuvidoriaForm({ cicloLabel }: { cicloLabel: string }) {
           <li>Termine com uma sugestão de melhoria, se puder.</li>
         </ul>
         <p className="flex items-center gap-2 text-base text-zinc-600">
-          <Lock size={16} aria-hidden="true" />
-          Anônimo para todos. A identidade fica registrada sob sigilo.
+          <Eye size={16} aria-hidden="true" />
+          Identificado: seu nome fica visível ao colegiado gestor. Escreva de
+          forma responsável e cosmoética.
         </p>
       </div>
 
@@ -146,7 +148,7 @@ export default function OuvidoriaForm({ cicloLabel }: { cicloLabel: string }) {
         )}
         {estado.ok && (
           <p role="status" className="rounded-lg bg-green-50 px-3 py-2 text-lg text-green-700">
-            Relato guardado na caixinha com sigilo. Obrigado por cuidar do grupo.
+            Relato guardado na caixinha de forma identificada. Obrigado por cuidar do grupo.
           </p>
         )}
 

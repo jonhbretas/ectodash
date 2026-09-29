@@ -1,9 +1,11 @@
 "use server";
 
 // src/app/(dashboard)/ouvidoria/ouvidoria-actions.ts
-// Server actions da Ouvidoria: todo acesso ao banco passa pelas funções
-// SECURITY DEFINER da migration 0095 (a tabela ouvidoria_relatos não tem
-// nenhuma policy direta, então author_id nunca vaza pela Data API).
+// Server actions da Ouvidoria IDENTIFICADA: todo acesso ao banco passa
+// pelas funções SECURITY DEFINER da migration 0095 (+ 0109, que expõe a
+// autoria ao colegiado). A tabela ouvidoria_relatos não tem nenhuma
+// policy direta — a identidade do autor é visível ao colegiado gestor,
+// sem anonimato, para evitar uso anti cosmoético do canal.
 import { revalidatePath } from "next/cache";
 import { requireUsuario } from "@/lib/role-gates";
 
@@ -122,40 +124,7 @@ export async function atualizarRelato(
   }
 }
 
-export type RevelacaoResult = ActionResult & {
-  autor?: { autor_id: string; full_name: string | null; email: string | null };
-};
-
-export async function revelarIdentidade(
-  relatoId: string,
-  motivo: string
-): Promise<RevelacaoResult> {
-  try {
-    const { supabase } = await requireUsuario();
-    if (!relatoId) return { ok: false, error: "Relato inválido." };
-    const { data, error } = await supabase.rpc("revelar_identidade_relato", {
-      p_relato_id: relatoId,
-      p_motivo: motivo,
-    });
-    if (error) return { ok: false, error: error.message };
-    const linha = Array.isArray(data) ? data[0] : null;
-    revalidatePath("/ouvidoria");
-    return {
-      ok: true,
-      autor: linha
-        ? {
-            autor_id: String(linha.autor_id),
-            full_name: (linha.full_name as string | null) ?? null,
-            email: (linha.email as string | null) ?? null,
-          }
-        : undefined,
-    };
-  } catch (e) {
-    return erro(e, "Não foi possível revelar a identidade.");
-  }
-}
-
-export type RelatoAnonimo = {
+export type RelatoIdentificado = {
   id: string;
   categoria: string;
   sentimento: string | null;
@@ -163,30 +132,37 @@ export type RelatoAnonimo = {
   status: string;
   created_at: string;
   nota_colegiado: string | null;
-  identidade_revelada: boolean;
+  autor_id: string | null;
+  autor_nome: string | null;
+  autor_email: string | null;
 };
 
-export async function listarRelatosAnonimos(
+/** Alias legado — a listagem agora é identificada (0109). */
+export type RelatoAnonimo = RelatoIdentificado;
+
+export async function listarRelatos(
   cicloId: string
-): Promise<{ ok: boolean; error?: string; relatos?: RelatoAnonimo[] }> {
+): Promise<{ ok: boolean; error?: string; relatos?: RelatoIdentificado[] }> {
   try {
     const { supabase } = await requireUsuario();
-    const { data, error } = await supabase.rpc("listar_relatos_anonimos", {
+    const { data, error } = await supabase.rpc("listar_relatos_ouvidoria", {
       p_ciclo_id: cicloId,
     });
     if (error) return { ok: false, error: error.message };
-    const relatos: RelatoAnonimo[] = ((data ?? []) as Array<Record<string, unknown>>).map(
-      (r) => ({
-        id: String(r.id),
-        categoria: String(r.categoria),
-        sentimento: (r.sentimento as string | null) ?? null,
-        mensagem: String(r.mensagem),
-        status: String(r.status),
-        created_at: String(r.created_at),
-        nota_colegiado: (r.nota_colegiado as string | null) ?? null,
-        identidade_revelada: Boolean(r.identidade_revelada),
-      })
-    );
+    const relatos: RelatoIdentificado[] = (
+      (data ?? []) as Array<Record<string, unknown>>
+    ).map((r) => ({
+      id: String(r.id),
+      categoria: String(r.categoria),
+      sentimento: (r.sentimento as string | null) ?? null,
+      mensagem: String(r.mensagem),
+      status: String(r.status),
+      created_at: String(r.created_at),
+      nota_colegiado: (r.nota_colegiado as string | null) ?? null,
+      autor_id: (r.autor_id as string | null) ?? null,
+      autor_nome: (r.autor_nome as string | null) ?? null,
+      autor_email: (r.autor_email as string | null) ?? null,
+    }));
     return { ok: true, relatos };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Falha ao carregar relatos.";
@@ -194,37 +170,9 @@ export async function listarRelatosAnonimos(
   }
 }
 
-export type QuebraRow = {
-  id: number;
-  relato_id: string;
-  motivo: string;
-  created_at: string;
-  revelado_por_nome: string | null;
-  autor_nome: string | null;
-};
-
-export async function listarQuebras(): Promise<{
-  ok: boolean;
-  error?: string;
-  quebras?: QuebraRow[];
-}> {
-  try {
-    const { supabase } = await requireUsuario();
-    const { data, error } = await supabase.rpc("listar_quebras_ouvidoria");
-    if (error) return { ok: false, error: error.message };
-    const quebras: QuebraRow[] = ((data ?? []) as Array<Record<string, unknown>>).map(
-      (q) => ({
-        id: Number(q.id),
-        relato_id: String(q.relato_id),
-        motivo: String(q.motivo),
-        created_at: String(q.created_at),
-        revelado_por_nome: (q.revelado_por_nome as string | null) ?? null,
-        autor_nome: (q.autor_nome as string | null) ?? null,
-      })
-    );
-    return { ok: true, quebras };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Falha ao carregar quebras.";
-    return { ok: false, error: msg };
-  }
+/** Alias legado — delega para listarRelatos (resultado já identificado). */
+export async function listarRelatosAnonimos(
+  cicloId: string
+): Promise<{ ok: boolean; error?: string; relatos?: RelatoIdentificado[] }> {
+  return listarRelatos(cicloId);
 }

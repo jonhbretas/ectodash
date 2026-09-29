@@ -170,7 +170,7 @@ export const navEntries: SidebarEntry[] = [
   // ─── Ajuda (todos veem os próprios; coordenador geral gerencia tudo) ───
   { href: "/feedback", label: "Ajuda e melhorias", Icon: MessageSquareWarning },
 
-  // ─── Ouvidoria (escuta anônima; leitura só do colegiado gestor) ───
+  // ─── Ouvidoria (escuta identificada; leitura só do colegiado gestor) ───
   { href: "/ouvidoria", label: "Ouvidoria", Icon: HeartHandshake },
 
   // ─── Perfil ───
