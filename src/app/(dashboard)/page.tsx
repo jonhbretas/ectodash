@@ -16,6 +16,7 @@ import { displayName } from "@/lib/display-name";
 import { podeAcessar, type Acesso, type ModuloAcesso } from "@/lib/acesso";
 import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 import PageContainer from "./page-container";
+import PagamentosHome from "./pagamentos-home";
 
 type HubCard = {
   href: string;
@@ -314,6 +315,9 @@ export default async function InicioPage() {
           </span>
         </Link>
       </section>
+
+      {/* ── Pagamentos e cobranças (só financeiro/coordenador_geral) ── */}
+      <PagamentosHome />
 
       {/* ── Faixa do coordenador: visão macro sem poluir o voluntário ── */}
       {isCoordenadorGeral && (

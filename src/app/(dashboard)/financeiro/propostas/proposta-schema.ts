@@ -98,9 +98,21 @@ export const propostaSchema = z.object({
     .max(2000)
     .optional()
     .transform((v) => (v === "" ? undefined : v)),
+  // Parcelamento: 1 = à vista; 2–24 gera N vencimentos mensais
+  // automáticos a partir do prazo (ou de hoje).
+  parcelas: z.coerce.number().int().min(1).max(24).optional().default(1),
 });
 
 export type PropostaFormValues = z.infer<typeof propostaSchema>;
+
+export type Parcela = {
+  id: number;
+  numero: number;
+  vencimento: string;
+  valor: number;
+  status: "pendente" | "pago";
+  pago_em: string | null;
+};
 
 export type Proposta = {
   id: number;
@@ -120,6 +132,7 @@ export type Proposta = {
   observacoes: string | null;
   origem: "sistema" | "planilha";
   sincronizado_em: string | null;
+  parcelas: Parcela[];
 };
 
 export type AlunoSugestao = { nome: string; email: string };

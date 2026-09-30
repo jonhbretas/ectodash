@@ -18,7 +18,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { alternarPago, excluirProposta } from "./actions";
+import { alternarPago, alternarParcela, excluirProposta } from "./actions";
 import PropostaForm from "./proposta-form";
 import {
   METODO_LABELS,
@@ -168,6 +168,58 @@ export default function PropostasList({ propostas, alunos, eventos, cursosSugeri
               <p className="text-base text-green-700">
                 Pago em {formatarPrazo(p.pago_em)}.
               </p>
+            )}
+
+            {p.parcelas.length > 1 && (
+              <details className="rounded-lg bg-zinc-50 px-3 py-2">
+                <summary className="cursor-pointer text-lg font-medium text-zinc-800">
+                  {p.parcelas.length} parcelas mensais (
+                  {p.parcelas.filter((x) => x.status === "pago").length} pagas)
+                </summary>
+                <ul className="flex flex-col gap-1 pt-2">
+                  {p.parcelas.map((parc) => {
+                    const atrasada =
+                      parc.status === "pendente" && parc.vencimento < new Date().toISOString().slice(0, 10);
+                    return (
+                      <li
+                        key={parc.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-zinc-200/60"
+                      >
+                        <span className="text-lg text-zinc-800">
+                          {parc.numero}/{p.parcelas.length} · {formatarPrazo(parc.vencimento)} ·{" "}
+                          <strong>{brl.format(parc.valor)}</strong>{" "}
+                          {parc.status === "pago" ? (
+                            <span className="text-base font-medium text-green-700">paga</span>
+                          ) : atrasada ? (
+                            <span className="text-base font-semibold text-red-700">atrasada</span>
+                          ) : (
+                            <span className="text-base text-amber-700">pendente</span>
+                          )}
+                        </span>
+                        {p.status !== "cancelado" && (
+                          <button
+                            type="button"
+                            disabled={agindo}
+                            onClick={() =>
+                              comTransicao(p.id, () =>
+                                alternarParcela(parc.id, parc.status !== "pago")
+                              )
+                            }
+                            className={cn(
+                              "flex min-h-10 items-center rounded-lg px-3 text-base font-medium transition-colors disabled:opacity-60",
+                              parc.status === "pago"
+                                ? "text-zinc-600 hover:bg-zinc-100"
+                                : "bg-green-600 text-white hover:bg-green-700"
+                            )}
+                          >
+                            {parc.status === "pago" ? "Desmarcar" : "Dar baixa"}
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>
             )}
 
             {editando ? (

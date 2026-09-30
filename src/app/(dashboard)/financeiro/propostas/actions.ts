@@ -10,6 +10,7 @@
 // coordenador_geral). Config via env: PROPOSTAS_SHEET_ID (obrigatório
 // p/ sync) e PROPOSTAS_SHEET_ABA (default "Propostas").
 import { revalidatePath } from "next/cache";
+import { addMonths, format } from "date-fns";
 import { requireFinanceiro } from "@/lib/role-gates";
 import { createSheetsClient, createSheetsWriteClient } from "@/lib/sheets/client";
 import {
@@ -48,6 +49,7 @@ function validar(formData: FormData) {
     status: String(formData.get("status") ?? "") || undefined,
     sheet_url: String(formData.get("sheet_url") ?? ""),
     observacoes: String(formData.get("observacoes") ?? ""),
+    parcelas: String(formData.get("parcelas") ?? "1"),
   });
 }
 
@@ -59,6 +61,26 @@ function errosDoZod(
     if (msgs?.[0]) out[campo as keyof PropostaFormValues] = msgs[0];
   }
   return out;
+}
+
+// Divide o total em N parcelas mensais (centavos exatos: a diferença de
+// arredondamento cai na última). Vencimentos mês a mês a partir do
+// primeiro (prazo ou hoje).
+export function montarParcelas(
+  total: number,
+  qtd: number,
+  primeiroVencimento: string
+): Array<{ numero: number; vencimento: string; valor: number }> {
+  const n = Math.min(Math.max(Math.floor(qtd) || 1, 1), 24);
+  const centavos = Math.round(total * 100);
+  const base = Math.floor(centavos / n);
+  const [y, m, d] = primeiroVencimento.split("-").map(Number);
+  const inicio = new Date(y, m - 1, d);
+  return Array.from({ length: n }, (_, i) => ({
+    numero: i + 1,
+    vencimento: format(addMonths(inicio, i), "yyyy-MM-dd"),
+    valor: (i === n - 1 ? centavos - base * (n - 1) : base) / 100,
+  }));
 }
 
 export async function criarProposta(
@@ -76,27 +98,46 @@ export async function criarProposta(
       };
     }
     const v = parsed.data;
-    const { error } = await supabase.from("propostas_financeiras").insert({
-      titulo: gerarTitulo(v.curso_atividade, v.aluno_nome),
-      aluno_nome: v.aluno_nome,
-      aluno_email: v.aluno_email ?? null,
-      curso_atividade: v.curso_atividade,
-      evento_id: v.evento_id ? Number(v.evento_id) : null,
-      descricao: v.descricao ?? null,
-      valor: brlParaNumero(v.valor),
-      metodo: v.metodo,
-      prazo: v.prazo ?? null,
-      sheet_url: v.sheet_url ?? null,
-      observacoes: v.observacoes ?? null,
-      origem: "sistema",
-      created_by: user.id,
-    });
-    if (error) {
+    const total = brlParaNumero(v.valor);
+    const { data: criada, error } = await supabase
+      .from("propostas_financeiras")
+      .insert({
+        titulo: gerarTitulo(v.curso_atividade, v.aluno_nome),
+        aluno_nome: v.aluno_nome,
+        aluno_email: v.aluno_email ?? null,
+        curso_atividade: v.curso_atividade,
+        evento_id: v.evento_id ? Number(v.evento_id) : null,
+        descricao: v.descricao ?? null,
+        valor: total,
+        metodo: v.metodo,
+        prazo: v.prazo ?? null,
+        sheet_url: v.sheet_url ?? null,
+        observacoes: v.observacoes ?? null,
+        origem: "sistema",
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+    if (error || !criada) {
       console.error("criarProposta: insert failed", error);
       return { ...initialState, message: "Não foi possível salvar. Tente de novo." };
     }
+    // Parcelas mensais automáticas (1x = à vista, parcela única).
+    const { error: parcError } = await supabase.from("proposta_parcelas").insert(
+      montarParcelas(total, v.parcelas, v.prazo ?? hojeISO()).map((p) => ({
+        proposta_id: criada.id,
+        numero: p.numero,
+        vencimento: p.vencimento,
+        valor: p.valor,
+      }))
+    );
+    if (parcError) {
+      console.error("criarProposta: parcelas failed", parcError);
+      return { ...initialState, message: "Proposta salva, mas as parcelas falharam. Edite e confira." };
+    }
     revalidatePath("/financeiro/propostas");
-    return { ok: true, message: `Proposta de ${v.aluno_nome} registrada.` };
+    const detalhe = v.parcelas > 1 ? ` em ${v.parcelas}x` : "";
+    return { ok: true, message: `Proposta de ${v.aluno_nome} registrada${detalhe}.` };
   } catch (e) {
     return { ...initialState, message: e instanceof Error ? e.message : "Sem permissão." };
   }
@@ -150,8 +191,8 @@ export async function atualizarProposta(
   }
 }
 
-// Alterna pago ↔ pendente. Pago grava pago_em=hoje; voltar a pendente
-// limpa pago_em. Cancelado não passa por aqui (só pela edição).
+// Alterna pago ↔ pendente NA PROPOSTA e em TODAS as parcelas (baixa em
+// bloco). Cancelado não passa por aqui (só pela edição).
 export async function alternarPago(
   id: number,
   pago: boolean
@@ -173,8 +214,77 @@ export async function alternarPago(
       console.error("alternarPago: update failed", error);
       return { ok: false, message: "Não foi possível atualizar. Tente de novo." };
     }
+    const { error: parcError } = await supabase
+      .from("proposta_parcelas")
+      .update({
+        status: pago ? "pago" : "pendente",
+        pago_em: pago ? hojeISO() : null,
+      })
+      .eq("proposta_id", id);
+    if (parcError) {
+      console.error("alternarPago: parcelas failed", parcError);
+      return { ok: false, message: "Proposta atualizada, mas as parcelas falharam. Confira." };
+    }
     revalidatePath("/financeiro/propostas");
     return { ok: true, message: pago ? "Marcada como paga." : "Voltou para pendente." };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Sem permissão." };
+  }
+}
+
+// Baixa de UMA parcela (cobrança mês a mês). Se todas as irmãs ficarem
+// pagas, a proposta vira 'pago'; se abrir uma pendência numa proposta
+// 'pago', ela volta a 'pendente'. Cancelada nunca é tocada aqui.
+export async function alternarParcela(
+  parcelaId: number,
+  pago: boolean
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    const { supabase } = await requireFinanceiro();
+    if (!Number.isInteger(parcelaId) || parcelaId <= 0) {
+      return { ok: false, message: "Parcela inválida." };
+    }
+    const { data: parcela, error: getError } = await supabase
+      .from("proposta_parcelas")
+      .select("id, proposta_id")
+      .eq("id", parcelaId)
+      .single();
+    if (getError || !parcela) {
+      return { ok: false, message: "Parcela não encontrada." };
+    }
+    const { error } = await supabase
+      .from("proposta_parcelas")
+      .update({ status: pago ? "pago" : "pendente", pago_em: pago ? hojeISO() : null })
+      .eq("id", parcelaId);
+    if (error) {
+      console.error("alternarParcela: update failed", error);
+      return { ok: false, message: "Não foi possível atualizar. Tente de novo." };
+    }
+    const { data: irmas } = await supabase
+      .from("proposta_parcelas")
+      .select("status")
+      .eq("proposta_id", parcela.proposta_id);
+    const todasPagas = (irmas ?? []).length > 0 && (irmas ?? []).every((p) => p.status === "pago");
+    const { data: prop } = await supabase
+      .from("propostas_financeiras")
+      .select("status")
+      .eq("id", parcela.proposta_id)
+      .single();
+    if (prop && prop.status !== "cancelado") {
+      const novoStatus = todasPagas ? "pago" : "pendente";
+      if (novoStatus !== prop.status) {
+        await supabase
+          .from("propostas_financeiras")
+          .update({
+            status: novoStatus,
+            pago_em: todasPagas ? hojeISO() : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", parcela.proposta_id);
+      }
+    }
+    revalidatePath("/financeiro/propostas");
+    return { ok: true, message: pago ? "Parcela marcada como paga." : "Parcela voltou para pendente." };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Sem permissão." };
   }
@@ -248,27 +358,45 @@ export async function sincronizarPlanilha(): Promise<{ ok: boolean; message: str
     }
 
     if (linhas.length > 0) {
-      const { error: insError } = await supabase.from("propostas_financeiras").insert(
-        linhas.map((l) => ({
-          titulo: gerarTitulo(l.curso, l.aluno),
-          aluno_nome: l.aluno,
-          aluno_email: l.email,
-          curso_atividade: l.curso,
-          valor: l.valor,
-          metodo: l.metodo,
-          prazo: l.prazo,
-          status: l.pago ? "pago" : "pendente",
-          pago_em: l.pago ? hojeISO() : null,
-          observacoes: l.observacoes,
-          origem: "planilha",
-          sheet_row: `${aba}!${l.sheetRow}`,
-          sincronizado_em: agora,
-          created_by: user.id,
-        }))
-      );
-      if (insError) {
+      const { data: inseridas, error: insError } = await supabase
+        .from("propostas_financeiras")
+        .insert(
+          linhas.map((l) => ({
+            titulo: gerarTitulo(l.curso, l.aluno),
+            aluno_nome: l.aluno,
+            aluno_email: l.email,
+            curso_atividade: l.curso,
+            valor: l.valor,
+            metodo: l.metodo,
+            prazo: l.prazo,
+            status: l.pago ? "pago" : "pendente",
+            pago_em: l.pago ? hojeISO() : null,
+            observacoes: l.observacoes,
+            origem: "planilha",
+            sheet_row: `${aba}!${l.sheetRow}`,
+            sincronizado_em: agora,
+            created_by: user.id,
+          }))
+        )
+        .select("id, valor, prazo, status");
+      if (insError || !inseridas) {
         console.error("sincronizarPlanilha: insert failed", insError);
         return { ok: false, message: "Falha ao salvar as linhas da planilha." };
+      }
+      // 1 parcela por linha puxada (à vista), já com a situação da planilha.
+      const { error: parcError } = await supabase.from("proposta_parcelas").insert(
+        inseridas.map((p) => ({
+          proposta_id: p.id,
+          numero: 1,
+          vencimento: (p.prazo as string | null) ?? hojeISO(),
+          valor: Number(p.valor),
+          status: p.status as "pago" | "pendente",
+          pago_em: (p.status as string) === "pago" ? hojeISO() : null,
+        }))
+      );
+      if (parcError) {
+        console.error("sincronizarPlanilha: parcelas failed", parcError);
+        return { ok: false, message: "Linhas salvas, mas as parcelas falharam. Confira." };
       }
     }
 

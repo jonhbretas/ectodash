@@ -141,7 +141,33 @@ export default async function PropostasPage({
     observacoes: (r.observacoes as string | null) ?? null,
     origem: (r.origem as Proposta["origem"]) ?? "sistema",
     sincronizado_em: (r.sincronizado_em as string | null) ?? null,
+    parcelas: [],
   }));
+
+  // Parcelas das propostas listadas (cobrança mês a mês).
+  const ids = todas.map((p) => p.id);
+  if (ids.length > 0) {
+    const { data: parcRows } = await supabase
+      .from("proposta_parcelas")
+      .select("id, proposta_id, numero, vencimento, valor, status, pago_em")
+      .in("proposta_id", ids)
+      .order("numero", { ascending: true });
+    const porProposta = new Map<number, Proposta["parcelas"]>();
+    for (const row of (parcRows ?? []) as Array<Record<string, unknown>>) {
+      const pid = Number(row.proposta_id);
+      const lista = porProposta.get(pid) ?? [];
+      lista.push({
+        id: Number(row.id),
+        numero: Number(row.numero),
+        vencimento: String(row.vencimento),
+        valor: Number(row.valor),
+        status: row.status as "pendente" | "pago",
+        pago_em: (row.pago_em as string | null) ?? null,
+      });
+      porProposta.set(pid, lista);
+    }
+    for (const p of todas) p.parcelas = porProposta.get(p.id) ?? [];
+  }
 
   const eventos: EventoOpcao[] = ((eventosResult.data ?? []) as Array<Record<string, unknown>>).map(
     (e) => ({ id: Number(e.id), titulo: String(e.titulo) })

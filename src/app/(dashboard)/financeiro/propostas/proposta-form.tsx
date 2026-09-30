@@ -6,6 +6,8 @@
 // e preenche o e-mail sozinho ao escolher; curso/atividade sugere eventos
 // e produtos da loja; evento vincula ao cadastro de eventos.
 import { useActionState, useMemo, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { PlusCircle, Save } from "lucide-react";
 import {
   atualizarProposta,
@@ -84,6 +86,32 @@ export default function PropostaForm({ proposta, alunos, eventos, cursosSugerido
     const achou = emailPorNome.get(valor.trim());
     if (achou) setEmail(achou);
   }
+
+  // Prévia do parcelamento (só no registro): divide o total e projeta os
+  // vencimentos mês a mês a partir do prazo (ou de hoje).
+  const [qtd, setQtd] = useState(1);
+  const [valorPrev, setValorPrev] = useState(
+    proposta ? String(proposta.valor).replace(".", ",") : ""
+  );
+  const [prazoPrev, setPrazoPrev] = useState(proposta?.prazo ?? "");
+
+  const previa = useMemo(() => {
+    if (editando || qtd <= 1) return null;
+    const total = Number(valorPrev.replace(/\./g, "").replace(",", "."));
+    if (!Number.isFinite(total) || total <= 0) return null;
+    const centavos = Math.round(total * 100);
+    const base = Math.floor(centavos / qtd);
+    const baseISO = prazoPrev || new Date().toISOString().slice(0, 10);
+    const [y, m, d] = baseISO.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    const inicio = new Date(y, m - 1, d);
+    const fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+    return Array.from({ length: qtd }, (_, i) => {
+      const dt = new Date(inicio.getFullYear(), inicio.getMonth() + i, inicio.getDate());
+      const valor = (i === qtd - 1 ? centavos - base * (qtd - 1) : base) / 100;
+      return `${i + 1}/${qtd} · ${format(dt, "dd/MM/yyyy", { locale: ptBR })} · ${fmt.format(valor)}`;
+    });
+  }, [editando, qtd, valorPrev, prazoPrev]);
 
   return (
     <form action={acao} className="flex flex-col gap-4">
@@ -174,13 +202,14 @@ export default function PropostaForm({ proposta, alunos, eventos, cursosSugerido
       </Campo>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Campo id={`valor${sufixo}`} rotulo="Valor (R$) *" erro={estado.fieldErrors?.valor}>
+        <Campo id={`valor${sufixo}`} rotulo="Valor total (R$) *" erro={estado.fieldErrors?.valor}>
           <input
             id={`valor${sufixo}`}
             name="valor"
             required
             inputMode="decimal"
             defaultValue={proposta ? String(proposta.valor).replace(".", ",") : ""}
+            onInput={(e) => setValorPrev(e.currentTarget.value)}
             placeholder="Ex.: 1.234,56"
             className={inputCls}
           />
@@ -203,16 +232,53 @@ export default function PropostaForm({ proposta, alunos, eventos, cursosSugerido
             ))}
           </select>
         </Campo>
-        <Campo id={`prazo${sufixo}`} rotulo="Prazo" erro={estado.fieldErrors?.prazo}>
+        <Campo id={`prazo${sufixo}`} rotulo={editando ? "Prazo" : "1º vencimento"} erro={estado.fieldErrors?.prazo}>
           <input
             id={`prazo${sufixo}`}
             name="prazo"
             type="date"
             defaultValue={proposta?.prazo ?? ""}
+            onInput={(e) => setPrazoPrev(e.currentTarget.value)}
             className={inputCls}
           />
         </Campo>
       </div>
+
+      {!editando && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Campo id="parcelas" rotulo="Parcelas mensais" erro={estado.fieldErrors?.parcelas}>
+            <select
+              id="parcelas"
+              name="parcelas"
+              value={qtd}
+              onChange={(e) => setQtd(Number(e.target.value))}
+              className={inputCls}
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n === 1 ? "À vista (1x)" : `${n}x mensais`}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <div className="flex flex-col gap-1">
+            <span className="text-base font-medium text-zinc-700">Prévia</span>
+            {previa ? (
+              <ul className="max-h-28 overflow-auto rounded-lg bg-zinc-50 px-3 py-2 text-base text-zinc-700">
+                {previa.map((linha) => (
+                  <li key={linha}>{linha}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-lg bg-zinc-50 px-3 py-2 text-base text-zinc-500">
+                {qtd <= 1
+                  ? "Parcela única no vencimento."
+                  : "Informe o valor para ver as parcelas."}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className={`grid gap-4 ${editando ? "md:grid-cols-2" : ""}`}>
         <Campo

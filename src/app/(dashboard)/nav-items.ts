@@ -12,6 +12,7 @@ import {
   CalendarDays,
   Wrench,
   Wallet,
+  DollarSign,
   LayoutDashboard,
   BarChart3,
   UserRound,
@@ -125,6 +126,7 @@ export const navEntries: SidebarEntry[] = [
       { href: "/financeiro", label: "Visão geral", Icon: Wallet, modulo: "financeiro" },
       { href: "/financeiro/lancamentos", label: "Lançamentos", Icon: Receipt, modulo: "financeiro" },
       { href: "/financeiro/propostas", label: "Propostas", Icon: FileText, modulo: "financeiro" },
+      { href: "/financeiro/pagar", label: "A pagar", Icon: DollarSign, modulo: "financeiro" },
     ],
   },
 
