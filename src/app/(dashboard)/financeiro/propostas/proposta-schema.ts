@@ -1,7 +1,8 @@
 // src/app/(dashboard)/financeiro/propostas/proposta-schema.ts
-// Contrato compartilhado da tela de Propostas financeiras: rótulos,
-// validação zod (mesmo padrão de contrato-schema.ts) e tipos usados pela
-// page (server), pelo form (client) e pelas server actions.
+// Contrato compartilhado da tela de Propostas financeiras com foco no
+// ALUNO (cursos/eventos/atividades da Ectolab): rótulos, validação zod
+// (mesmo padrão de contrato-schema.ts) e tipos usados pela page
+// (server), pelo form (client) e pelas server actions.
 import { z } from "zod";
 
 export const METODOS = [
@@ -46,13 +47,25 @@ const sheetUrl = z
 
 export const propostaSchema = z.object({
   id: z.string().regex(/^\d+$/, "Proposta inválida").optional(),
-  titulo: z.string().trim().min(3, "Dê um título com ao menos 3 letras").max(200),
-  contraparte: z
+  aluno_nome: z.string().trim().min(3, "Informe o nome do aluno").max(200),
+  aluno_email: z
     .string()
     .trim()
     .max(200)
     .optional()
-    .transform((v) => (v === "" ? undefined : v)),
+    .transform((v) => (v === "" ? undefined : v))
+    .refine((v) => v === undefined || /.+@.+\..+/.test(v), "E-mail inválido"),
+  curso_atividade: z
+    .string()
+    .trim()
+    .min(3, "Informe o curso, evento ou atividade")
+    .max(200),
+  evento_id: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v === "" ? undefined : v))
+    .refine((v) => v === undefined || /^\d+$/.test(v), "Evento inválido"),
   descricao: z
     .string()
     .trim()
@@ -92,7 +105,11 @@ export type PropostaFormValues = z.infer<typeof propostaSchema>;
 export type Proposta = {
   id: number;
   titulo: string;
-  contraparte: string | null;
+  aluno_nome: string;
+  aluno_email: string | null;
+  curso_atividade: string;
+  evento_id: number | null;
+  evento_titulo: string | null;
   descricao: string | null;
   valor: number;
   metodo: (typeof METODOS)[number];
@@ -101,9 +118,14 @@ export type Proposta = {
   pago_em: string | null;
   sheet_url: string | null;
   observacoes: string | null;
+  origem: "sistema" | "planilha";
+  sincronizado_em: string | null;
 };
 
-/** "DD/MM/AAAA" → "AAAA-MM-DD" (input date) e vice-versa. */
+export type AlunoSugestao = { nome: string; email: string };
+export type EventoOpcao = { id: number; titulo: string };
+
+/** "1.234,56" → 1234.56 */
 export function brlParaNumero(raw: string): number {
   return Number(raw.replace(/\./g, "").replace(",", "."));
 }
@@ -119,4 +141,9 @@ export function hojeISO(): string {
 /** Atrasada = pendente com prazo anterior a hoje (derivado, não gravado). */
 export function estaAtrasada(p: Pick<Proposta, "status" | "prazo">): boolean {
   return p.status === "pendente" && p.prazo !== null && p.prazo < hojeISO();
+}
+
+/** Título exibido/legado: "Curso — Aluno" (máx. 200). */
+export function gerarTitulo(curso: string, aluno: string): string {
+  return `${curso} — ${aluno}`.slice(0, 200);
 }

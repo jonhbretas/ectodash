@@ -1,10 +1,11 @@
 "use client";
 
 // src/app/(dashboard)/financeiro/propostas/proposta-form.tsx
-// Formulário de criar/editar proposta (mesmo padrão visual dos forms do
-// app: rótulos grandes, campos min-h-11, foco em anel azul). Em modo
-// edição recebe a proposta e inclui o id oculto + seletor de status.
-import { useActionState } from "react";
+// Formulário de criar/editar proposta do ALUNO (mesmo padrão visual dos
+// forms do app). Aluno tem datalist com os clientes da loja (wp_customers)
+// e preenche o e-mail sozinho ao escolher; curso/atividade sugere eventos
+// e produtos da loja; evento vincula ao cadastro de eventos.
+import { useActionState, useMemo, useState } from "react";
 import { PlusCircle, Save } from "lucide-react";
 import {
   atualizarProposta,
@@ -16,6 +17,8 @@ import {
   METODOS,
   STATUS_LABELS,
   STATUS,
+  type AlunoSugestao,
+  type EventoOpcao,
   type Proposta,
 } from "./proposta-schema";
 
@@ -52,57 +55,128 @@ function Campo({
   );
 }
 
-export default function PropostaForm({ proposta }: { proposta?: Proposta }) {
+type Props = {
+  proposta?: Proposta;
+  alunos: AlunoSugestao[];
+  eventos: EventoOpcao[];
+  cursosSugeridos: string[];
+};
+
+export default function PropostaForm({ proposta, alunos, eventos, cursosSugeridos }: Props) {
   const editando = Boolean(proposta);
+  const sufixo = editando ? `-${proposta!.id}` : "";
   const [estado, acao, pendente] = useActionState(
     editando ? atualizarProposta : criarProposta,
     INICIAL
   );
+
+  const emailPorNome = useMemo(() => {
+    const mapa = new Map<string, string>();
+    for (const a of alunos) {
+      if (!mapa.has(a.nome)) mapa.set(a.nome, a.email);
+    }
+    return mapa;
+  }, [alunos]);
+
+  const [email, setEmail] = useState(proposta?.aluno_email ?? "");
+
+  function aoDigitarAluno(valor: string) {
+    const achou = emailPorNome.get(valor.trim());
+    if (achou) setEmail(achou);
+  }
 
   return (
     <form action={acao} className="flex flex-col gap-4">
       {editando && <input type="hidden" name="id" value={proposta!.id} />}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Campo id={editando ? `titulo-${proposta!.id}` : "titulo"} rotulo="Título *" erro={estado.fieldErrors?.titulo}>
+        <Campo id={`aluno_nome${sufixo}`} rotulo="Aluno *" erro={estado.fieldErrors?.aluno_nome}>
           <input
-            id={editando ? `titulo-${proposta!.id}` : "titulo"}
-            name="titulo"
+            id={`aluno_nome${sufixo}`}
+            name="aluno_nome"
             required
             maxLength={200}
-            defaultValue={proposta?.titulo ?? ""}
-            placeholder="Ex.: Orçamento gráfica — apostilas PROEP"
+            list={`alunos${sufixo}`}
+            autoComplete="off"
+            defaultValue={proposta?.aluno_nome ?? ""}
+            onInput={(e) => aoDigitarAluno(e.currentTarget.value)}
+            placeholder="Nome do aluno"
             className={inputCls}
           />
+          <datalist id={`alunos${sufixo}`}>
+            {alunos.map((a) => (
+              <option key={`${a.nome}|${a.email}`} value={a.nome}>
+                {a.email}
+              </option>
+            ))}
+          </datalist>
         </Campo>
-        <Campo id={editando ? `contraparte-${proposta!.id}` : "contraparte"} rotulo="Fornecedor / cliente" erro={estado.fieldErrors?.contraparte}>
+        <Campo id={`aluno_email${sufixo}`} rotulo="E-mail do aluno" erro={estado.fieldErrors?.aluno_email}>
           <input
-            id={editando ? `contraparte-${proposta!.id}` : "contraparte"}
-            name="contraparte"
+            id={`aluno_email${sufixo}`}
+            name="aluno_email"
+            type="email"
             maxLength={200}
-            defaultValue={proposta?.contraparte ?? ""}
-            placeholder="Ex.: Gráfica Central"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="aluno@exemplo.com"
             className={inputCls}
           />
         </Campo>
       </div>
 
-      <Campo id={editando ? `descricao-${proposta!.id}` : "descricao"} rotulo="Descrição" erro={estado.fieldErrors?.descricao}>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Campo id={`curso_atividade${sufixo}`} rotulo="Curso / evento / atividade *" erro={estado.fieldErrors?.curso_atividade}>
+          <input
+            id={`curso_atividade${sufixo}`}
+            name="curso_atividade"
+            required
+            maxLength={200}
+            list={`cursos${sufixo}`}
+            autoComplete="off"
+            defaultValue={proposta?.curso_atividade ?? ""}
+            placeholder="Ex.: Curso de Campo — turma 2026"
+            className={inputCls}
+          />
+          <datalist id={`cursos${sufixo}`}>
+            {cursosSugeridos.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </Campo>
+        <Campo id={`evento_id${sufixo}`} rotulo="Vincular ao evento" erro={estado.fieldErrors?.evento_id}>
+          <select
+            id={`evento_id${sufixo}`}
+            name="evento_id"
+            defaultValue={proposta?.evento_id ? String(proposta.evento_id) : ""}
+            className={inputCls}
+          >
+            <option value="">Sem vínculo</option>
+            {eventos.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.titulo}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      </div>
+
+      <Campo id={`descricao${sufixo}`} rotulo="Descrição" erro={estado.fieldErrors?.descricao}>
         <textarea
-          id={editando ? `descricao-${proposta!.id}` : "descricao"}
+          id={`descricao${sufixo}`}
           name="descricao"
           rows={2}
           maxLength={2000}
           defaultValue={proposta?.descricao ?? ""}
-          placeholder="Detalhes da proposta…"
+          placeholder="Detalhes (parcela, desconto, combinação…)"
           className={`${inputCls} leading-relaxed`}
         />
       </Campo>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Campo id={editando ? `valor-${proposta!.id}` : "valor"} rotulo="Valor (R$) *" erro={estado.fieldErrors?.valor}>
+        <Campo id={`valor${sufixo}`} rotulo="Valor (R$) *" erro={estado.fieldErrors?.valor}>
           <input
-            id={editando ? `valor-${proposta!.id}` : "valor"}
+            id={`valor${sufixo}`}
             name="valor"
             required
             inputMode="decimal"
@@ -111,9 +185,9 @@ export default function PropostaForm({ proposta }: { proposta?: Proposta }) {
             className={inputCls}
           />
         </Campo>
-        <Campo id={editando ? `metodo-${proposta!.id}` : "metodo"} rotulo="Método de pagamento *" erro={estado.fieldErrors?.metodo}>
+        <Campo id={`metodo${sufixo}`} rotulo="Método de pagamento *" erro={estado.fieldErrors?.metodo}>
           <select
-            id={editando ? `metodo-${proposta!.id}` : "metodo"}
+            id={`metodo${sufixo}`}
             name="metodo"
             required
             defaultValue={proposta?.metodo ?? ""}
@@ -129,9 +203,9 @@ export default function PropostaForm({ proposta }: { proposta?: Proposta }) {
             ))}
           </select>
         </Campo>
-        <Campo id={editando ? `prazo-${proposta!.id}` : "prazo"} rotulo="Prazo" erro={estado.fieldErrors?.prazo}>
+        <Campo id={`prazo${sufixo}`} rotulo="Prazo" erro={estado.fieldErrors?.prazo}>
           <input
-            id={editando ? `prazo-${proposta!.id}` : "prazo"}
+            id={`prazo${sufixo}`}
             name="prazo"
             type="date"
             defaultValue={proposta?.prazo ?? ""}
@@ -142,12 +216,12 @@ export default function PropostaForm({ proposta }: { proposta?: Proposta }) {
 
       <div className={`grid gap-4 ${editando ? "md:grid-cols-2" : ""}`}>
         <Campo
-          id={editando ? `sheet_url-${proposta!.id}` : "sheet_url"}
-          rotulo="Link da planilha Google"
+          id={`sheet_url${sufixo}`}
+          rotulo="Link da planilha Google do aluno"
           erro={estado.fieldErrors?.sheet_url}
         >
           <input
-            id={editando ? `sheet_url-${proposta!.id}` : "sheet_url"}
+            id={`sheet_url${sufixo}`}
             name="sheet_url"
             type="url"
             inputMode="url"
@@ -175,14 +249,14 @@ export default function PropostaForm({ proposta }: { proposta?: Proposta }) {
         )}
       </div>
 
-      <Campo id={editando ? `observacoes-${proposta!.id}` : "observacoes"} rotulo="Observações" erro={estado.fieldErrors?.observacoes}>
+      <Campo id={`observacoes${sufixo}`} rotulo="Observações" erro={estado.fieldErrors?.observacoes}>
         <textarea
-          id={editando ? `observacoes-${proposta!.id}` : "observacoes"}
+          id={`observacoes${sufixo}`}
           name="observacoes"
           rows={2}
           maxLength={2000}
           defaultValue={proposta?.observacoes ?? ""}
-          placeholder="Ex.: aguardar nota fiscal, parcelado em 2x…"
+          placeholder="Ex.: aguardar comprovante, parcelado em 2x…"
           className={`${inputCls} leading-relaxed`}
         />
       </Campo>

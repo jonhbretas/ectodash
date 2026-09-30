@@ -60,3 +60,28 @@ export function createSheetsClient() {
     client: google.sheets({ version: "v4", auth }) as sheets_v4.Sheets,
   };
 }
+
+// Cliente de ESCRITA (sistema → planilha, ex.: exportar propostas).
+// Escopo spreadsheets (leitura + escrita) — separado do cliente readonly
+// acima de propósito: o sync do financeiro continua com least-privilege.
+// Exige que a planilha esteja compartilhada com o e-mail da service
+// account como Editor.
+export function createSheetsWriteClient() {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    throw new Error(
+      "Falta variável de ambiente: GOOGLE_SERVICE_ACCOUNT_JSON (service account base64)"
+    );
+  }
+
+  const { client_email, private_key } = credentials();
+
+  const auth = new google.auth.JWT({
+    email: client_email,
+    key: private_key,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+
+  return {
+    client: google.sheets({ version: "v4", auth }) as sheets_v4.Sheets,
+  };
+}

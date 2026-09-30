@@ -1,7 +1,8 @@
-// /financeiro/propostas — acompanhamento de propostas financeiras:
-// valor, método de pagamento, prazo, situação (pago/pendente) e link da
-// planilha Google para acesso externo. Mesmo gate do /financeiro
-// (financeiro ou coordenador_geral); a RLS da 0110 é o limite real.
+// /financeiro/propostas — acompanhamento por ALUNO dos cursos, eventos
+// e atividades da Ectolab: valor, método de pagamento, prazo, situação
+// (pago/pendente) e vínculo com o Google Planilhas (puxar e gravar).
+// Mesmo gate do /financeiro (financeiro ou coordenador_geral); a RLS da
+// 0110 é o limite real. Alunos sugeridos vêm da loja (wp_customers).
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,17 +11,25 @@ import {
   Lock,
   SearchX,
 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeSearch } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import PageContainer from "../../page-container";
 import PropostaForm from "./proposta-form";
 import PropostasList from "./propostas-list";
+import PropostasSync from "./propostas-sync";
 import {
   parsePropostasFilters,
   type PropostasFilters,
 } from "./propostas-filter-schema";
-import { estaAtrasada, type Proposta } from "./proposta-schema";
+import {
+  estaAtrasada,
+  type AlunoSugestao,
+  type EventoOpcao,
+  type Proposta,
+} from "./proposta-schema";
 
 export const metadata = { title: "Propostas — Financeiro | EctoDash" };
 
@@ -92,25 +101,36 @@ export default async function PropostasPage({
 
   const termo = filters.busca ? sanitizeSearch(filters.busca) : null;
 
-  let query = supabase
-    .from("propostas_financeiras")
-    .select(
-      "id, titulo, contraparte, descricao, valor, metodo, prazo, status, pago_em, sheet_url, observacoes"
-    );
-  if (termo) query = query.or(`titulo.ilike.%${termo}%,contraparte.ilike.%${termo}%`);
+  // Propostas + eventos + alunos da loja + nomes de cursos em paralelo —
+  // leituras independentes (RLS 0035 já libera wp_* ao financeiro).
+  const [propResult, eventosResult, alunosResult, produtosResult] = await Promise.all([
+    (() => {
+      let q = supabase
+        .from("propostas_financeiras")
+        .select(
+          "id, titulo, aluno_nome, aluno_email, curso_atividade, evento_id, descricao, valor, metodo, prazo, status, pago_em, sheet_url, observacoes, origem, sincronizado_em, eventos:evento_id (titulo)"
+        );
+      if (termo) {
+        q = q.or(`aluno_nome.ilike.%${termo}%,curso_atividade.ilike.%${termo}%,titulo.ilike.%${termo}%`);
+      }
+      return q.order("prazo", { ascending: true, nullsFirst: false }).order("id", { ascending: false });
+    })(),
+    supabase.from("eventos").select("id, titulo").order("data_evento", { ascending: false }).limit(100),
+    supabase.from("wp_customers").select("first_name, last_name, email").limit(300),
+    supabase.from("wp_products").select("name").limit(200),
+  ]);
 
-  const { data: rows, error } = await query
-    .order("prazo", { ascending: true, nullsFirst: false })
-    .order("id", { ascending: false });
+  if (propResult.error) console.error("propostas: select failed", propResult.error);
 
-  if (error) {
-    console.error("propostas: select failed", error);
-  }
-
-  const todas: Proposta[] = (rows ?? []).map((r) => ({
+  const todas: Proposta[] = ((propResult.data ?? []) as Array<Record<string, unknown>>).map((r) => ({
     id: Number(r.id),
     titulo: String(r.titulo),
-    contraparte: (r.contraparte as string | null) ?? null,
+    aluno_nome: String(r.aluno_nome),
+    aluno_email: (r.aluno_email as string | null) ?? null,
+    curso_atividade: String(r.curso_atividade),
+    evento_id: (r.evento_id as number | null) ?? null,
+    evento_titulo:
+      (r.eventos as { titulo?: string } | null)?.titulo ?? null,
     descricao: (r.descricao as string | null) ?? null,
     valor: Number(r.valor),
     metodo: r.metodo as Proposta["metodo"],
@@ -119,10 +139,32 @@ export default async function PropostasPage({
     pago_em: (r.pago_em as string | null) ?? null,
     sheet_url: (r.sheet_url as string | null) ?? null,
     observacoes: (r.observacoes as string | null) ?? null,
+    origem: (r.origem as Proposta["origem"]) ?? "sistema",
+    sincronizado_em: (r.sincronizado_em as string | null) ?? null,
   }));
 
-  // Totais sempre sobre TODAS (não sobre o filtro) — o filtro só recorta
-  // a lista abaixo.
+  const eventos: EventoOpcao[] = ((eventosResult.data ?? []) as Array<Record<string, unknown>>).map(
+    (e) => ({ id: Number(e.id), titulo: String(e.titulo) })
+  );
+
+  const alunos: AlunoSugestao[] = ((alunosResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((c) => ({
+      nome: `${String(c.first_name ?? "").trim()} ${String(c.last_name ?? "").trim()}`.trim(),
+      email: String(c.email ?? "").trim(),
+    }))
+    .filter((a) => a.nome.length >= 3);
+
+  const cursosSugeridos = [
+    ...new Set([
+      ...eventos.map((e) => e.titulo),
+      ...((produtosResult.data ?? []) as Array<Record<string, unknown>>).map((p) =>
+        String(p.name ?? "").trim()
+      ).filter(Boolean),
+      ...todas.map((p) => p.curso_atividade),
+    ]),
+  ].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  // Totais sempre sobre TODAS (não sobre o filtro).
   const totalPendente = todas
     .filter((p) => p.status === "pendente")
     .reduce((s, p) => s + p.valor, 0);
@@ -141,9 +183,16 @@ export default async function PropostasPage({
     return true;
   });
 
-  // Planilhas vinculadas (acesso externo rápido): links distintos
-  // cadastrados nas propostas.
   const planilhas = [...new Set(todas.map((p) => p.sheet_url).filter(Boolean))] as string[];
+
+  const ultimaSync = todas
+    .map((p) => p.sincronizado_em)
+    .filter((s): s is string => Boolean(s))
+    .sort()
+    .pop();
+  const ultimaSincronizacao = ultimaSync
+    ? format(new Date(ultimaSync), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+    : null;
 
   return (
     <PageContainer>
@@ -156,10 +205,10 @@ export default async function PropostasPage({
             <ArrowLeft size={18} aria-hidden="true" />
             Voltar ao Financeiro
           </Link>
-          <h1 className="text-3xl font-semibold text-zinc-900">Propostas financeiras</h1>
+          <h1 className="text-3xl font-semibold text-zinc-900">Propostas — alunos</h1>
           <p className="max-w-2xl text-xl text-zinc-500">
-            Métodos de pagamento, prazos e situação (pago ou não), com link
-            da planilha Google para acesso externo.
+            Pagamentos dos alunos nos cursos, eventos e atividades: método,
+            prazo e situação (pago ou não), vinculados ao Google Planilhas.
           </p>
         </div>
       </header>
@@ -173,7 +222,7 @@ export default async function PropostasPage({
           <p className="text-base text-zinc-500">A receber / pendente</p>
           <p className="text-2xl font-semibold text-amber-700">{brl.format(totalPendente)}</p>
           <p className="text-base text-zinc-500">
-            {qtdPendentes} {qtdPendentes === 1 ? "proposta" : "propostas"}
+            {qtdPendentes} {qtdPendentes === 1 ? "aluno" : "alunos"}
           </p>
         </div>
         <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
@@ -204,6 +253,11 @@ export default async function PropostasPage({
         </div>
       </section>
 
+      <PropostasSync
+        ultimaSincronizacao={ultimaSincronizacao}
+        planilhaConfigurada={Boolean(process.env.PROPOSTAS_SHEET_ID)}
+      />
+
       {/* Nova proposta */}
       <section
         aria-labelledby="nova-proposta-titulo"
@@ -211,9 +265,9 @@ export default async function PropostasPage({
       >
         <h2 id="nova-proposta-titulo" className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
           <FileText size={24} aria-hidden="true" className="text-[#2195B9]" />
-          Registrar proposta
+          Registrar proposta do aluno
         </h2>
-        <PropostaForm />
+        <PropostaForm alunos={alunos} eventos={eventos} cursosSugeridos={cursosSugeridos} />
       </section>
 
       {/* Filtros */}
@@ -226,13 +280,13 @@ export default async function PropostasPage({
       >
         <div className="flex min-w-52 flex-1 flex-col gap-1">
           <label htmlFor="busca" className="text-base font-medium text-zinc-700">
-            Buscar
+            Buscar aluno ou curso
           </label>
           <input
             id="busca"
             name="busca"
             defaultValue={filters.busca ?? ""}
-            placeholder="Título ou fornecedor…"
+            placeholder="Nome do aluno ou curso…"
             maxLength={120}
             className="min-h-11 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-lg text-zinc-900 placeholder:text-zinc-400"
           />
@@ -275,7 +329,7 @@ export default async function PropostasPage({
           </h2>
           <p className="max-w-md text-xl text-zinc-700">
             {todas.length === 0
-              ? "Registre a primeira proposta no formulário acima."
+              ? "Registre a primeira proposta no formulário acima ou puxe da planilha."
               : "Tente outro filtro ou busca."}
           </p>
         </div>
@@ -284,7 +338,7 @@ export default async function PropostasPage({
           <p className="text-base text-zinc-500">
             {visiveis.length} {visiveis.length === 1 ? "proposta" : "propostas"}
           </p>
-          <PropostasList propostas={visiveis} />
+          <PropostasList propostas={visiveis} alunos={alunos} eventos={eventos} cursosSugeridos={cursosSugeridos} />
         </section>
       )}
     </PageContainer>

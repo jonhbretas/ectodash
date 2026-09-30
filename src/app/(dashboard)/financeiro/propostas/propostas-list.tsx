@@ -1,10 +1,10 @@
 "use client";
 
 // src/app/(dashboard)/financeiro/propostas/propostas-list.tsx
-// Lista de propostas em cards: selo de situação (pendente/pago/atrasada/
-// cancelado), método, prazo, valor + ações (marcar pago/pendente,
-// editar, excluir, abrir planilha). Edição expande o PropostaForm
-// preenchido dentro do próprio card.
+// Lista de propostas em cards com foco no ALUNO: nome + curso em
+// destaque, selo de situação (pendente/pago/atrasada/cancelado), método,
+// prazo, valor + ações (marcar pago/pendente, editar, excluir, abrir
+// planilha). Origem 'planilha' ganha selo verde de sincronizada.
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -13,6 +13,7 @@ import {
   BadgeCheck,
   ExternalLink,
   Pencil,
+  Table2,
   Trash2,
   Undo2,
 } from "lucide-react";
@@ -23,6 +24,8 @@ import {
   METODO_LABELS,
   STATUS_LABELS,
   estaAtrasada,
+  type AlunoSugestao,
+  type EventoOpcao,
   type Proposta,
 } from "./proposta-schema";
 
@@ -66,7 +69,14 @@ function formatarPrazo(iso: string | null): string {
   return format(new Date(`${iso}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
 }
 
-export default function PropostasList({ propostas }: { propostas: Proposta[] }) {
+type Props = {
+  propostas: Proposta[];
+  alunos: AlunoSugestao[];
+  eventos: EventoOpcao[];
+  cursosSugeridos: string[];
+};
+
+export default function PropostasList({ propostas, alunos, eventos, cursosSugeridos }: Props) {
   const router = useRouter();
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [agindoId, setAgindoId] = useState<number | null>(null);
@@ -85,7 +95,7 @@ export default function PropostasList({ propostas }: { propostas: Proposta[] }) 
   }
 
   function handleExcluir(p: Proposta) {
-    if (!window.confirm(`Excluir "${p.titulo}"? Não dá para desfazer.`)) return;
+    if (!window.confirm(`Excluir a proposta de "${p.aluno_nome}"? Não dá para desfazer.`)) return;
     comTransicao(p.id, () => excluirProposta(p.id));
   }
 
@@ -106,15 +116,22 @@ export default function PropostasList({ propostas }: { propostas: Proposta[] }) 
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 flex-col gap-1">
-                <h3 className="text-xl font-semibold text-zinc-900">{p.titulo}</h3>
-                {p.contraparte && (
-                  <p className="text-lg text-zinc-600">{p.contraparte}</p>
+                <h3 className="text-xl font-semibold text-zinc-900">{p.aluno_nome}</h3>
+                <p className="text-lg text-zinc-600">{p.curso_atividade}</p>
+                {p.aluno_email && (
+                  <p className="text-base text-zinc-500">{p.aluno_email}</p>
                 )}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Selo proposta={p} />
                   <span className="rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-base font-medium text-[#28627B]">
                     {METODO_LABELS[p.metodo]}
                   </span>
+                  {p.origem === "planilha" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-base font-medium text-green-700 ring-1 ring-green-200/60">
+                      <Table2 size={14} aria-hidden="true" />
+                      Planilha
+                    </span>
+                  )}
                   <span
                     className={cn(
                       "text-base",
@@ -131,8 +148,13 @@ export default function PropostasList({ propostas }: { propostas: Proposta[] }) 
               </p>
             </div>
 
-            {(p.descricao || p.observacoes) && (
+            {(p.evento_titulo || p.descricao || p.observacoes) && (
               <div className="flex flex-col gap-1 text-lg text-zinc-700">
+                {p.evento_titulo && (
+                  <p className="text-zinc-600">
+                    Evento: <strong>{p.evento_titulo}</strong>
+                  </p>
+                )}
                 {p.descricao && <p className="whitespace-pre-wrap break-words">{p.descricao}</p>}
                 {p.observacoes && (
                   <p className="whitespace-pre-wrap break-words text-zinc-600">
@@ -150,7 +172,7 @@ export default function PropostasList({ propostas }: { propostas: Proposta[] }) 
 
             {editando ? (
               <div className="border-t border-zinc-100 pt-3">
-                <PropostaForm proposta={p} />
+                <PropostaForm proposta={p} alunos={alunos} eventos={eventos} cursosSugeridos={cursosSugeridos} />
                 <div className="pt-2">
                   <button
                     type="button"
