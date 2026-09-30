@@ -124,6 +124,7 @@ export const navEntries: SidebarEntry[] = [
     children: [
       { href: "/financeiro", label: "Visão geral", Icon: Wallet, modulo: "financeiro" },
       { href: "/financeiro/lancamentos", label: "Lançamentos", Icon: Receipt, modulo: "financeiro" },
+      { href: "/financeiro/propostas", label: "Propostas", Icon: FileText, modulo: "financeiro" },
     ],
   },
 
