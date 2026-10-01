@@ -4,6 +4,7 @@
 // CRUD das contas que a Ectolab precisa pagar. Gate real:
 // requireFinanceiro() + RLS da 0112 (financeiro/coordenador_geral).
 import { revalidatePath } from "next/cache";
+import { addMonths, format } from "date-fns";
 import { z } from "zod";
 import { requireFinanceiro } from "@/lib/role-gates";
 import { brlParaNumero, hojeISO } from "../propostas/proposta-schema";
@@ -47,6 +48,9 @@ const pagarSchema = z.object({
     .max(2000)
     .optional()
     .transform((v) => (v === "" ? undefined : v)),
+  // Repetição mensal: gera N ocorrências mês a mês (débito fixo).
+  recorrencia: z.enum(["unica", "mensal"]).optional().default("unica"),
+  meses: z.coerce.number().int().min(1).max(24).optional().default(1),
 });
 
 export type PagarActionState = { ok: boolean; message: string };
@@ -63,6 +67,8 @@ function validar(formData: FormData) {
     metodo: String(formData.get("metodo") ?? ""),
     status: String(formData.get("status") ?? "") || undefined,
     observacoes: String(formData.get("observacoes") ?? ""),
+    recorrencia: String(formData.get("recorrencia") ?? "unica") || undefined,
+    meses: String(formData.get("meses") ?? "1"),
   });
 }
 
@@ -77,21 +83,36 @@ export async function criarConta(
       return { ...INICIAL, message: "Confira os campos (título, valor e método)." };
     }
     const v = parsed.data;
-    const { error } = await supabase.from("pagamentos_ectolab").insert({
-      titulo: v.titulo,
-      fornecedor: v.fornecedor ?? null,
-      valor: brlParaNumero(v.valor),
-      vencimento: v.vencimento ?? null,
-      metodo: v.metodo,
-      observacoes: v.observacoes ?? null,
-      created_by: user.id,
-    });
+    const valor = brlParaNumero(v.valor);
+    // Débito mensal: N ocorrências mês a mês a partir do vencimento
+    // (ou de hoje), ligadas pelo mesmo grupo.
+    const n = v.recorrencia === "mensal" ? v.meses : 1;
+    const baseISO = v.vencimento ?? hojeISO();
+    const [y, m, d] = baseISO.split("-").map(Number);
+    const inicio = new Date(y, m - 1, d);
+    const grupo = n > 1 ? crypto.randomUUID() : null;
+    const { error } = await supabase.from("pagamentos_ectolab").insert(
+      Array.from({ length: n }, (_, i) => ({
+        titulo: n > 1 ? `${v.titulo} (${i + 1}/${n})` : v.titulo,
+        fornecedor: v.fornecedor ?? null,
+        valor,
+        vencimento: format(addMonths(inicio, i), "yyyy-MM-dd"),
+        metodo: v.metodo,
+        observacoes: v.observacoes ?? null,
+        recorrencia: n > 1 ? "mensal" : "unica",
+        grupo_recorrencia: grupo,
+        created_by: user.id,
+      }))
+    );
     if (error) {
       console.error("criarConta: insert failed", error);
       return { ...INICIAL, message: "Não foi possível salvar. Tente de novo." };
     }
     revalidatePath("/financeiro/pagar");
-    return { ok: true, message: "Conta registrada." };
+    return {
+      ok: true,
+      message: n > 1 ? `Conta mensal criada (${n} ocorrências).` : "Conta registrada.",
+    };
   } catch (e) {
     return { ...INICIAL, message: e instanceof Error ? e.message : "Sem permissão." };
   }

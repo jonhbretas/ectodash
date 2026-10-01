@@ -1,8 +1,9 @@
 "use client";
 
 // src/app/(dashboard)/financeiro/pagar/pagar-form.tsx
-// Formulário de criar/editar conta a pagar da Ectolab.
-import { useActionState } from "react";
+// Formulário de criar/editar conta a pagar da Ectolab. No registro, débito
+// fixo pode se repetir todo mês por N meses (gera as ocorrências).
+import { useActionState, useState } from "react";
 import { PlusCircle, Save } from "lucide-react";
 import { atualizarConta, criarConta, type PagarActionState } from "./actions";
 import { METODO_LABELS, METODOS } from "../propostas/proposta-schema";
@@ -16,6 +17,8 @@ export type Conta = {
   status: "pendente" | "pago" | "cancelado";
   metodo: (typeof METODOS)[number];
   observacoes: string | null;
+  recorrencia: "unica" | "mensal";
+  grupo_recorrencia: string | null;
 };
 
 const INICIAL: PagarActionState = { ok: false, message: "" };
@@ -31,6 +34,7 @@ export default function PagarForm({ conta }: { conta?: Conta }) {
     editando ? atualizarConta : criarConta,
     INICIAL
   );
+  const [mensal, setMensal] = useState(false);
 
   return (
     <form action={acao} className="flex flex-col gap-4">
@@ -131,7 +135,7 @@ export default function PagarForm({ conta }: { conta?: Conta }) {
             className={`${inputCls} leading-relaxed`}
           />
         </div>
-        {editando && (
+        {editando ? (
           <div className="flex flex-col gap-1">
             <label htmlFor={`status-${conta!.id}`} className={labelCls}>
               Situação
@@ -146,6 +150,36 @@ export default function PagarForm({ conta }: { conta?: Conta }) {
               <option value="pago">Pago</option>
               <option value="cancelado">Cancelado</option>
             </select>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <span className={labelCls}>Repetição</span>
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg bg-zinc-50 px-3 py-2 text-lg text-zinc-700">
+              <input
+                type="checkbox"
+                checked={mensal}
+                onChange={(e) => setMensal(e.target.checked)}
+                className="h-5 w-5 accent-[#2195B9]"
+              />
+              <span>
+                Débito mensal <span className="text-zinc-500">(repete todo mês)</span>
+              </span>
+            </label>
+            <input type="hidden" name="recorrencia" value={mensal ? "mensal" : "unica"} />
+            {mensal && (
+              <div className="flex items-center gap-2">
+                <label htmlFor="meses" className="text-base text-zinc-600">
+                  Por quantos meses?
+                </label>
+                <select id="meses" name="meses" defaultValue={12} className={inputCls}>
+                  {[6, 12, 18, 24].map((n) => (
+                    <option key={n} value={n}>
+                      {n} meses
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
       </div>

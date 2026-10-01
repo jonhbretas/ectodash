@@ -34,6 +34,23 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
+  // Posição dentro da repetição mensal (2/12 etc.), calculada pelo grupo
+  // ordenado por vencimento.
+  const posicaoNoGrupo = new Map<number, { indice: number; total: number }>();
+  const grupos = new Map<string, typeof contas>();
+  for (const c of contas) {
+    if (!c.grupo_recorrencia) continue;
+    const lista = grupos.get(c.grupo_recorrencia) ?? [];
+    lista.push(c);
+    grupos.set(c.grupo_recorrencia, lista);
+  }
+  for (const lista of grupos.values()) {
+    const ordenada = [...lista].sort((a, b) =>
+      (a.vencimento ?? "").localeCompare(b.vencimento ?? "")
+    );
+    ordenada.forEach((c, i) => posicaoNoGrupo.set(c.id, { indice: i + 1, total: ordenada.length }));
+  }
+
   function comTransicao(id: number, fn: () => Promise<{ ok: boolean; message: string }>) {
     setAgindoId(id);
     setFeedback(null);
@@ -87,6 +104,11 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
                   <span className="rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-base font-medium text-[#28627B]">
                     {METODO_LABELS[c.metodo]}
                   </span>
+                  {posicaoNoGrupo.has(c.id) && (
+                    <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-base font-medium text-violet-700 ring-1 ring-violet-200/60">
+                      Mensal {posicaoNoGrupo.get(c.id)!.indice}/{posicaoNoGrupo.get(c.id)!.total}
+                    </span>
+                  )}
                   <span className={cn("text-base", atrasada ? "font-semibold text-red-700" : "text-zinc-500")}>
                     Vence: {formatarData(c.vencimento)}
                   </span>
