@@ -126,6 +126,11 @@ export default function PropostasList({ propostas, alunos, eventos, cursosSugeri
                   <span className="rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-base font-medium text-[#28627B]">
                     {METODO_LABELS[p.metodo]}
                   </span>
+                  {p.parcelas.length > 1 && (
+                    <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-base font-semibold text-violet-700 ring-1 ring-violet-200/60">
+                      {p.parcelas.length}x de {brl.format(p.parcelas[0].valor)}
+                    </span>
+                  )}
                   {p.origem === "planilha" && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-base font-medium text-green-700 ring-1 ring-green-200/60">
                       <Table2 size={14} aria-hidden="true" />

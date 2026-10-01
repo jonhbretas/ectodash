@@ -254,7 +254,7 @@ export default function PropostaForm({ proposta, alunos, eventos, cursosSugerido
               onChange={(e) => setQtd(Number(e.target.value))}
               className={inputCls}
             >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+              {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
                   {n === 1 ? "À vista (1x)" : `${n}x mensais`}
                 </option>
