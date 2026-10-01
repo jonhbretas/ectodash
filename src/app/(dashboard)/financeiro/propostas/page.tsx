@@ -6,20 +6,16 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  ExternalLink,
-  FileText,
   Lock,
+  PlusCircle,
   SearchX,
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeSearch } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import PageContainer from "../../page-container";
-import PropostaForm from "./proposta-form";
 import PropostasList from "./propostas-list";
-import PropostasSync from "./propostas-sync";
+import PropostasTabs from "./propostas-tabs";
 import {
   parsePropostasFilters,
   type PropostasFilters,
@@ -209,17 +205,6 @@ export default async function PropostasPage({
     return true;
   });
 
-  const planilhas = [...new Set(todas.map((p) => p.sheet_url).filter(Boolean))] as string[];
-
-  const ultimaSync = todas
-    .map((p) => p.sincronizado_em)
-    .filter((s): s is string => Boolean(s))
-    .sort()
-    .pop();
-  const ultimaSincronizacao = ultimaSync
-    ? format(new Date(ultimaSync), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
-    : null;
-
   return (
     <PageContainer>
       <header className="flex w-full flex-wrap items-start justify-between gap-6">
@@ -237,12 +222,21 @@ export default async function PropostasPage({
             prazo e situação (pago ou não), vinculados ao Google Planilhas.
           </p>
         </div>
+        <Link
+          href="/financeiro/propostas/nova"
+          className="flex min-h-11 items-center gap-2 rounded-lg bg-[#2195B9] px-5 text-lg font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+        >
+          <PlusCircle size={18} aria-hidden="true" />
+          Nova proposta
+        </Link>
       </header>
+
+      <PropostasTabs />
 
       {/* Resumo */}
       <section
         aria-label="Resumo das propostas"
-        className="grid w-full grid-cols-2 gap-4 xl:grid-cols-4"
+        className="grid w-full grid-cols-2 gap-4 xl:grid-cols-3"
       >
         <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
           <p className="text-base text-zinc-500">A receber / pendente</p>
@@ -261,39 +255,6 @@ export default async function PropostasPage({
             {qtdAtrasadas}
           </p>
         </div>
-        <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
-          <p className="text-base text-zinc-500">Planilhas vinculadas</p>
-          <p className="text-2xl font-semibold text-zinc-900">{planilhas.length}</p>
-          {planilhas.slice(0, 2).map((url) => (
-            <a
-              key={url}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-base font-medium text-[#2195B9] hover:text-[#28627B]"
-            >
-              <ExternalLink size={15} aria-hidden="true" />
-              Abrir planilha
-            </a>
-          ))}
-        </div>
-      </section>
-
-      <PropostasSync
-        ultimaSincronizacao={ultimaSincronizacao}
-        planilhaConfigurada={Boolean(process.env.PROPOSTAS_SHEET_ID)}
-      />
-
-      {/* Nova proposta */}
-      <section
-        aria-labelledby="nova-proposta-titulo"
-        className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
-      >
-        <h2 id="nova-proposta-titulo" className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-          <FileText size={24} aria-hidden="true" className="text-[#2195B9]" />
-          Registrar proposta do aluno
-        </h2>
-        <PropostaForm alunos={alunos} eventos={eventos} cursosSugeridos={cursosSugeridos} />
       </section>
 
       {/* Filtros */}
@@ -355,7 +316,7 @@ export default async function PropostasPage({
           </h2>
           <p className="max-w-md text-xl text-zinc-700">
             {todas.length === 0
-              ? "Registre a primeira proposta no formulário acima ou puxe da planilha."
+              ? "Cadastre na aba Cadastrar ou puxe da planilha na aba Planilha."
               : "Tente outro filtro ou busca."}
           </p>
         </div>
