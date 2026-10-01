@@ -3,6 +3,11 @@
 // ALUNO (cursos/eventos/atividades da Ectolab): rótulos, validação zod
 // (mesmo padrão de contrato-schema.ts) e tipos usados pela page
 // (server), pelo form (client) e pelas server actions.
+//
+// NOTA: este módulo NÃO tem "use server" — as helpers puras (ex.:
+// montarParcelas) moram aqui de propósito. Exportar função não-async de
+// um módulo "use server" quebra o build de produção (Turbopack).
+import { addMonths, format } from "date-fns";
 import { z } from "zod";
 
 export const METODOS = [
@@ -159,4 +164,24 @@ export function estaAtrasada(p: Pick<Proposta, "status" | "prazo">): boolean {
 /** Título exibido/legado: "Curso — Aluno" (máx. 200). */
 export function gerarTitulo(curso: string, aluno: string): string {
   return `${curso} — ${aluno}`.slice(0, 200);
+}
+
+// Divide o total em N parcelas mensais (centavos exatos: a diferença de
+// arredondamento cai na última). Vencimentos mês a mês a partir do
+// primeiro (prazo ou hoje).
+export function montarParcelas(
+  total: number,
+  qtd: number,
+  primeiroVencimento: string
+): Array<{ numero: number; vencimento: string; valor: number }> {
+  const n = Math.min(Math.max(Math.floor(qtd) || 1, 1), 24);
+  const centavos = Math.round(total * 100);
+  const base = Math.floor(centavos / n);
+  const [y, m, d] = primeiroVencimento.split("-").map(Number);
+  const inicio = new Date(y, m - 1, d);
+  return Array.from({ length: n }, (_, i) => ({
+    numero: i + 1,
+    vencimento: format(addMonths(inicio, i), "yyyy-MM-dd"),
+    valor: (i === n - 1 ? centavos - base * (n - 1) : base) / 100,
+  }));
 }

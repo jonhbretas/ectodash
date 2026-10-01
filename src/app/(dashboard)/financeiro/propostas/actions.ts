@@ -10,7 +10,6 @@
 // coordenador_geral). Config via env: PROPOSTAS_SHEET_ID (obrigatório
 // p/ sync) e PROPOSTAS_SHEET_ABA (default "Propostas").
 import { revalidatePath } from "next/cache";
-import { addMonths, format } from "date-fns";
 import { requireFinanceiro } from "@/lib/role-gates";
 import { createSheetsClient, createSheetsWriteClient } from "@/lib/sheets/client";
 import {
@@ -21,6 +20,7 @@ import {
   brlParaNumero,
   gerarTitulo,
   hojeISO,
+  montarParcelas,
   propostaSchema,
   STATUS_LABELS,
   METODO_LABELS,
@@ -61,26 +61,6 @@ function errosDoZod(
     if (msgs?.[0]) out[campo as keyof PropostaFormValues] = msgs[0];
   }
   return out;
-}
-
-// Divide o total em N parcelas mensais (centavos exatos: a diferença de
-// arredondamento cai na última). Vencimentos mês a mês a partir do
-// primeiro (prazo ou hoje).
-export function montarParcelas(
-  total: number,
-  qtd: number,
-  primeiroVencimento: string
-): Array<{ numero: number; vencimento: string; valor: number }> {
-  const n = Math.min(Math.max(Math.floor(qtd) || 1, 1), 24);
-  const centavos = Math.round(total * 100);
-  const base = Math.floor(centavos / n);
-  const [y, m, d] = primeiroVencimento.split("-").map(Number);
-  const inicio = new Date(y, m - 1, d);
-  return Array.from({ length: n }, (_, i) => ({
-    numero: i + 1,
-    vencimento: format(addMonths(inicio, i), "yyyy-MM-dd"),
-    valor: (i === n - 1 ? centavos - base * (n - 1) : base) / 100,
-  }));
 }
 
 export async function criarProposta(
