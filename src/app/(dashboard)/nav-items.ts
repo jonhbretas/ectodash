@@ -7,6 +7,7 @@ import {
   ClipboardList,
   NotebookPen,
   Users,
+  UserX,
   FolderKanban,
   FlaskConical,
   CalendarDays,
@@ -84,6 +85,8 @@ export const navEntries: SidebarEntry[] = [
     Icon: Users,
     children: [
       { href: "/voluntarios", label: "Voluntários", Icon: Users, modulo: "voluntarios" },
+      { href: "/voluntarios/cuidar", label: "Cuidar das pessoas", Icon: HeartHandshake, modulo: "voluntarios" },
+      { href: "/voluntarios/limpeza", label: "Limpeza", Icon: UserX, modulo: "voluntarios" },
       { href: "/trilha", label: "Trilha do Voluntário", Icon: Map, modulo: "voluntarios" },
     ],
   },
