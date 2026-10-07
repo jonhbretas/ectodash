@@ -103,6 +103,14 @@ export default function AnaliseForm({
     salvarInitialState
   );
   const [resetKey, setResetKey] = useState(0);
+  // Novo modelo (2026-10-07): "transcricao" = fluxo antigo (Tactiq/bruta);
+  // "ata_pronta" = usuário gera a ata numa IA externa e o sistema só disseca
+  // (demandas/eventos/DIPs/pautas). Ata pronta é curta (~5-10k chars),
+  // então nunca estoura limite nem cai no erro de página.
+  const [tipoFonte, setTipoFonte] = useState<"transcricao" | "ata_pronta">(
+    "transcricao"
+  );
+  const [charCount, setCharCount] = useState(0);
 
   const analise = analiseState.analise;
 
@@ -139,10 +147,9 @@ export default function AnaliseForm({
             Analisar reunião por IA
           </h1>
           <p className="max-w-2xl text-xl text-zinc-500">
-            Envie a transcrição e a IA separa tudo no lugar certo: resumo da
-            ata, deliberações viram demandas, eventos mencionados,
-            atualizações de demandas existentes e registros da Dinâmica
-            DIP.
+            {tipoFonte === "ata_pronta"
+              ? "Cole a ata já redigida (ex.: gerada no ChatGPT/Claude a partir da transcrição) e a IA separa tudo no lugar certo: demandas, eventos, DIPs e pautas — sem re-resumir."
+              : "Envie a transcrição e a IA separa tudo no lugar certo: resumo da ata, deliberações viram demandas, eventos mencionados, atualizações de demandas existentes e registros da Dinâmica DIP."}
           </p>
         </div>
         <Link
@@ -157,8 +164,65 @@ export default function AnaliseForm({
       <section className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
         <h2 className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
           <FileUp size={24} aria-hidden="true" />
-          Enviar transcrição
+          {tipoFonte === "ata_pronta" ? "Enviar ata pronta" : "Enviar transcrição"}
         </h2>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-xl font-medium text-zinc-900">
+            O que você vai colar?
+          </legend>
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${tipoFonte === "transcricao" ? "border-[#2195B9] bg-sky-50/60" : "border-zinc-300 bg-white hover:bg-zinc-50"}`}
+            >
+              <input
+                type="radio"
+                name="tipoFonte"
+                value="transcricao"
+                checked={tipoFonte === "transcricao"}
+                onChange={() => setTipoFonte("transcricao")}
+                className="mt-1 h-5 w-5 accent-[#2195B9]"
+              />
+              <span>
+                <span className="block text-lg font-semibold text-zinc-900">
+                  Transcrição bruta
+                </span>
+                <span className="block text-base text-zinc-600">
+                  Texto do Tactiq/Meet (longo, com falas e timestamps).
+                </span>
+              </span>
+            </label>
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${tipoFonte === "ata_pronta" ? "border-[#2195B9] bg-sky-50/60" : "border-zinc-300 bg-white hover:bg-zinc-50"}`}
+            >
+              <input
+                type="radio"
+                name="tipoFonte"
+                value="ata_pronta"
+                checked={tipoFonte === "ata_pronta"}
+                onChange={() => setTipoFonte("ata_pronta")}
+                className="mt-1 h-5 w-5 accent-[#2195B9]"
+              />
+              <span>
+                <span className="block text-lg font-semibold text-zinc-900">
+                  Ata pronta (recomendado)
+                </span>
+                <span className="block text-base text-zinc-600">
+                  Gerada numa IA externa — o sistema só disseca em demandas e eventos.
+                </span>
+              </span>
+            </label>
+          </div>
+          {tipoFonte === "ata_pronta" && (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-base leading-relaxed text-emerald-900">
+              Fluxo sugerido: cole a transcrição bruta no ChatGPT/Claude, peça
+              “gere a ata estruturada com decisões, responsáveis, prazos e
+              eventos”, revise o texto e cole o resultado aqui. Atas prontas
+              têm ~5-10 mil caracteres — cabem no limite com folga e geram
+              dissecação de qualidade superior.
+            </p>
+          )}
+        </fieldset>
 
         <div className="flex flex-col gap-2">
           <label htmlFor="arquivo" className="text-xl font-medium text-zinc-900">
@@ -213,12 +277,25 @@ export default function AnaliseForm({
 
         <div className="flex flex-col gap-2">
           <label htmlFor="texto" className="text-xl font-medium text-zinc-900">
-            Ou cole a transcrição
+            {tipoFonte === "ata_pronta"
+              ? "Ou cole a ata pronta"
+              : "Ou cole a transcrição"}
+            <span className="ml-2 text-base font-normal text-zinc-500">
+              {charCount.toLocaleString("pt-BR")} / 120.000 caracteres
+              {tipoFonte === "transcricao" && charCount > 60000
+                ? " — prefira enviar como arquivo .txt"
+                : ""}
+            </span>
           </label>
           <textarea
             id="texto"
             name="texto"
-            placeholder="Cole aqui o texto da transcrição da reunião..."
+            placeholder={
+              tipoFonte === "ata_pronta"
+                ? "Cole aqui a ata já redigida (título, data, participantes, decisões, responsáveis, prazos, eventos...)"
+                : "Cole aqui o texto da transcrição da reunião... (até 120.000 caracteres; acima disso, salve como .txt e envie no campo Arquivo)"
+            }
+            onChange={(e) => setCharCount(e.target.value.length)}
             className="min-h-40 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           />
         </div>

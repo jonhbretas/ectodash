@@ -56,16 +56,28 @@ const initialState: AnalisarTranscricaoState = {
   texto: null,
 };
 
-// Tactiq transcripts can be far longer than a paste — the cap bounds cost
-// only (same tradeoff as demandas/extrair/actions.ts).
 const MEETING_TEXT_MAX = 60000;
+
+// Paste aceita o mesmo teto dos arquivos (.txt/.md): a transcrição Tactiq
+// de 77 min tem ~77k caracteres e estourava o antigo teto de 20k, forçando
+// o usuário a fracionar o texto ou tomar erro de validação. Arquivos seguem
+// com ATA_FILE_TEXT_MAX (120k); Tactiq segue com MEETING_TEXT_MAX (60k).
+const PASTE_TEXT_MAX = 120000;
 
 const pasteSchema = z.object({
   texto: z
     .string()
     .trim()
     .min(1, "Cole a transcrição ou envie um arquivo antes de continuar.")
-    .max(20000),
+    .max(
+      PASTE_TEXT_MAX,
+      `Texto muito longo (${PASTE_TEXT_MAX} caracteres no máximo). Para textos maiores, envie como arquivo .txt — o upload aceita até 120.000 caracteres.`
+    ),
+  // Novo modelo (2026-10-07, pedido do usuário): a transcrição pode ser
+  // pré-resumida numa IA externa e o sistema recebe a ATA PRONTA para só
+  // fazer a dissecação (demandas/eventos/DIPs/pautas). "transcricao" mantém
+  // o comportamento antigo; "ata_pronta" usa prompt de dissecação.
+  tipoFonte: z.enum(["transcricao", "ata_pronta"]).optional().or(z.literal("")),
 });
 
 const AI_SYSTEM_PROMPT =
@@ -87,6 +99,24 @@ const AI_SYSTEM_PROMPT =
   "ANTI-ENXUTO (CRÍTICO): Você está PROIBIDO de resumir. Esta ata de 118 min tem 8 blocos de pauta e dezenas de números — gerar 5 pontos e 7 deliberações genéricas é FALHA. Para transcrição >4000 caracteres, gere NO MÍNIMO 12 pontos_principais, 10 deliberacoes e 12 demandas (incluindo vencidas e problemas operacionais). Resumo deve ter 700-1200 caracteres e 8-12 frases, cobrindo CADA bloco (UNICIN, DIP Curitiba, Encontro SP, Virada, DIP à 8ª potência, Sistema, CEAEC, Escola) — nunca 2 linhas genéricas como 'foram discutidos assuntos gerais'. " +
   "EXEMPLO DE DENSIDADE ESPERADA (não copiar, seguir o nível): pontos_principais deve conter itens como 'Orçamento DIP Curitiba: patrocínio R$ 5.900 + doação ~R$ 6.400, total aportes ~R$ 7.800 vs custo R$ 7.743, saldo positivo; hotel já pago, poltronas de empresa hospitalar, passagem Myriam pendente R$ 600+15%' e 'Encontro SP: 9 presenciais/2 online, duplicidade ICNET com 2 e 11 alunos, PIX falhando, só Daniel entregou modelo (prazo 30/08 vencido)' e 'Sistema DIP: 406 presenciais/60 à distância/176 usuários/512 pedidos agosto/37 relatórios, export Excel com gráficos'. deliberacoes deve conter 'Decidido: Rinaldo+ Eliane no workshop UNICIN 27/09', 'Aprovada precificação Escola Paraambulatório lote1 R$400/300 até 30/09 lote2 R$600/400 com combo a apresentar', 'Definido: Margrit envia link+PDF hoje, Fernanda negocia hotel (R$345 simples/R$395 duplo, jantar R$90-120) e lista de espera', 'Alerta: CEAEC é delicado — alinhar interno antes de tratar externo; reunião 02/09 17h30 Jonathan/Myriam/Giuliano'. Se você gerar menos detalhe que isso, você falhou. " +
   "Se apenas UMA seção realmente não tiver conteúdo, use array vazio; jamais deixe pontos_principais/deliberacoes/demandas vazios em transcrição longa. Não escreva nada fora do JSON. Nunca invente prazo, valor ou nome para preencher lacuna.";
+
+// Prompt do NOVO MODELO (ata pronta): a entrada já é uma ata redigida
+// (ex.: gerada numa IA externa a partir da transcrição). Não há fala
+// cruzada nem erro de ASR para corrigir — o trabalho é DISSECAÇÃO fiel:
+// preservar o texto da ata em pontos/deliberações/resumo e extrair as
+// entidades acionáveis no mesmo envelope JSON. Mesmas chaves do modo
+// transcrição para a tela de revisão funcionar sem mudança.
+const AI_SYSTEM_PROMPT_ATA_PRONTA =
+  "Você recebe uma ATA DE REUNIÃO já redigida do Ectolab (não é transcrição bruta) e responde APENAS com JSON. " +
+  'Formato obrigatório: {"analise": {"ata": {"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "horario": string (HH:mm, "" se não mencionado), "duracao": string (ex "77 min", "" se não mencionado), "formato": string (ex "online", "" se não mencionado), "conducao": string, "proxima_reuniao": string (yyyy-MM-dd), "saidas_antecipadas": [{"nome": string, "horario": string, "motivo": string}], "decisoes": string[], "calendario": [{"data": string, "compromisso": string}], "observacoes": string, "participantes": string[], "pontos_principais": string[], "deliberacoes": string[], "resumo": string}, "demandas": [{"titulo": string, "responsavel_texto": string, "prazo_texto": string, "prazo_sugerido": string, "area_texto": string, "projeto_texto": string, "evento_texto": string, "etiqueta_texto": string}], "eventos": [{"titulo": string, "data": string (yyyy-MM-dd, "" se não mencionada), "local": string ("" se não mencionado), "descricao": string ("" se não mencionado)}], "atualizacoes": [{"titulo": string, "comentario": string}], "dips": [{"localidade": string, "pais": string, "data": string (yyyy-MM-dd, "" se não mencionada), "participantes": number | "", "observacoes": string}], "pautas": [{"titulo": string, "contexto": string}]}}. ' +
+  "REGRAS DE DISSECAÇÃO (siga à risca): " +
+  "(1) FIDELIDADE: ata.titulo/data/horario/participantes/resumo vêm do cabeçalho da ata pronta — nunca invente; se a data não estiver na ata, use \"\". " +
+  "(2) pontos_principais = cada bloco/tema da ata vira 1+ item factual preservando números, valores R$, datas e nomes exatamente como escritos. " +
+  "(3) deliberacoes = cada decisão explícita da ata ('ficou decidido', 'aprovado', 'definido que', 'vai fazer') vira 1 item. " +
+  "(4) demandas = deliberações NOVAS com responsável e/ou prazo; responsável_texto = nome citado na ata ou \"\" quando não houver; prazo_sugerido em yyyy-MM-dd quando a ata citar data, senão \"\"; inclua area/projeto/evento/etiqueta quando a ata mencionar, senão \"\". Nunca invente responsável ou prazo. " +
+  "(5) eventos = eventos institucionais citados na ata com titulo/data/local/descricao; atualizacoes = menções a demandas já existentes; dips = menções à Dinâmica DIP (localidade/pais/data/participantes); pautas = assuntos adiados para a próxima. " +
+  "(6) Não resuma a ponto de perder dado: todo número, valor, data e nome da ata pronta deve aparecer em algum campo do JSON. " +
+  "Não escreva nada fora do JSON.";
 
 function hojeBRTISO(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -110,9 +140,27 @@ function hojeBRTISO(): string {
 
 async function extractWithAi(
   texto: string,
-  contextoAtaAnterior?: string | null
+  contextoAtaAnterior?: string | null,
+  tipoFonte: "transcricao" | "ata_pronta" = "transcricao"
 ): Promise<AtaAnalise> {
   const hoje = hojeBRTISO();
+  // Modo ata pronta: dissecação direta, sem pré-extração de transcrição
+  // nem auto-expansão agressiva (a ata externa já é densa e curta).
+  if (tipoFonte === "ata_pronta") {
+    const rawJson = JSON.parse(
+      await chatCompletion(
+        AI_SYSTEM_PROMPT_ATA_PRONTA,
+        `Hoje é ${hoje} (America/Sao_Paulo).${contextoAtaAnterior ? `\n\nATA ANTERIOR (só para continuidade, não duplicar concluídas):\n${wrapUserContent(contextoAtaAnterior.slice(0, 4000))}\n` : ""}\nATA PRONTA a dissecar (extraia TUDO no JSON, sem resumir para fora do formato):\n\n${wrapUserContent(texto)}\n\nVocabulário: Ectolab, DIP, Sympla, UNICIN, CEAEC, POLICONS, Epicon, paracirurgia, conscienciologia. Não invente prazo/valor/responsável.`,
+        { jsonMode: true }
+      )
+    );
+    const validated = ataAnaliseEnvelopeSchema.safeParse(rawJson);
+    if (!validated.success) {
+      console.error("analise ata_pronta validation failed", validated.error.issues.slice(0, 5));
+      throw new Error("análise em formato inesperado");
+    }
+    return validated.data.analise;
+  }
   const contextoBloco = contextoAtaAnterior
     ? `\n\nATA ANTERIOR (para continuidade de demandas em aberto e progresso):\n${wrapUserContent(contextoAtaAnterior.slice(0, 4000))}\nUse-a apenas para dar continuidade — registre o que foi concluído desde então e não duplique demandas já concluídas.\n`
     : "";
@@ -203,9 +251,13 @@ async function analisarTranscricaoImpl(
   }
 
   // Source resolution, in priority order: uploaded file > Tactiq meeting >
-  // pasted text.
+  // pasted text. tipoFonte ("transcricao" | "ata_pronta") seleciona o prompt:
+  // transcrição bruta usa extração em duas passadas; ata pronta usa dissecação.
   let texto: string;
   let arquivoNome: string | null = null;
+  const tipoRaw = formData.get("tipoFonte");
+  const tipoFonte: "transcricao" | "ata_pronta" =
+    tipoRaw === "ata_pronta" ? "ata_pronta" : "transcricao";
 
   const arquivo = formData.get("arquivo");
   if (arquivo instanceof File && arquivo.size > 0) {
@@ -238,9 +290,19 @@ async function analisarTranscricaoImpl(
         };
       }
     } else {
-      const parsed = pasteSchema.safeParse({ texto: formData.get("texto") });
+      const parsed = pasteSchema.safeParse({
+        texto: formData.get("texto"),
+        tipoFonte: formData.get("tipoFonte"),
+      });
       if (!parsed.success) {
-        return { ...initialState, message: "Cole a transcrição ou envie um arquivo antes de continuar." };
+        const issue = parsed.error.issues[0];
+        return {
+          ...initialState,
+          message:
+            issue?.code === "too_big"
+              ? `Texto com ${String(formData.get("texto") ?? "").length} caracteres — acima do limite de ${PASTE_TEXT_MAX}. Dica: envie como arquivo .txt (aceita até 120.000) ou use o modo "Ata pronta" com o texto já resumido pela IA.`
+              : "Cole a transcrição ou envie um arquivo antes de continuar.",
+        };
       }
       texto = parsed.data.texto;
     }
@@ -285,11 +347,14 @@ async function analisarTranscricaoImpl(
     } catch {
       // continuidade é best-effort — falha não bloqueia a análise
     }
-    const analise = await extractWithAi(texto, contextoAtaAnterior);
+    const analise = await extractWithAi(texto, contextoAtaAnterior, tipoFonte);
     if (!analise.ata.resumo && analise.ata.titulo.trim().length === 0) {
       return {
         ...initialState,
-        message: "A IA não conseguiu extrair a ata dessa transcrição. Tente novamente.",
+        message:
+          tipoFonte === "ata_pronta"
+            ? "A IA não conseguiu dissecar essa ata. Verifique se o texto contém decisões, responsáveis e datas."
+            : "A IA não conseguiu extrair a ata dessa transcrição. Tente novamente.",
       };
     }
     return {
