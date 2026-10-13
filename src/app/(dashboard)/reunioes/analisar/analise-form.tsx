@@ -68,6 +68,7 @@ type AnaliseFormProps = {
   meetings: Meeting[];
   meetingsError: string | null;
   meetingsConfigured: boolean;
+  textoInicial?: string | null;
 };
 
 function formatMeetingDate(iso: string): string {
@@ -92,6 +93,7 @@ export default function AnaliseForm({
   meetings,
   meetingsError,
   meetingsConfigured,
+  textoInicial,
 }: AnaliseFormProps) {
   const router = useRouter();
   const [analiseState, analiseAction] = useActionState(
@@ -108,9 +110,9 @@ export default function AnaliseForm({
   // (demandas/eventos/DIPs/pautas). Ata pronta é curta (~5-10k chars),
   // então nunca estoura limite nem cai no erro de página.
   const [tipoFonte, setTipoFonte] = useState<"transcricao" | "ata_pronta">(
-    "transcricao"
+    textoInicial ? "ata_pronta" : "transcricao"
   );
-  const [charCount, setCharCount] = useState(0);
+  const [charCount, setCharCount] = useState(textoInicial?.length ?? 0);
 
   const analise = analiseState.analise;
 
@@ -290,6 +292,7 @@ export default function AnaliseForm({
           <textarea
             id="texto"
             name="texto"
+            defaultValue={textoInicial ?? ""}
             placeholder={
               tipoFonte === "ata_pronta"
                 ? "Cole aqui a ata já redigida (título, data, participantes, decisões, responsáveis, prazos, eventos...)"
@@ -431,17 +434,17 @@ function ReviewScreen({
   onBack,
   onSaved,
 }: ReviewScreenProps) {
-  const [titulo, setTitulo] = useState(analise.ata.titulo);
-  const [dataReuniao, setDataReuniao] = useState(analise.ata.data || "");
-  const [horario, setHorario] = useState(analise.ata.horario || "");
+  const [titulo, setTitulo] = useState(analise.ata?.titulo ?? "");
+  const [dataReuniao, setDataReuniao] = useState(analise.ata?.data || "");
+  const [horario, setHorario] = useState(analise.ata?.horario || "");
   const [participantes, setParticipantes] = useState(
-    analise.ata.participantes.join("\n")
+    (analise.ata?.participantes ?? []).join("\n")
   );
-  const [pontos, setPontos] = useState(analise.ata.pontos_principais.join("\n"));
+  const [pontos, setPontos] = useState((analise.ata?.pontos_principais ?? []).join("\n"));
   const [deliberacoes, setDeliberacoes] = useState(
-    analise.ata.deliberacoes.join("\n")
+    (analise.ata?.deliberacoes ?? []).join("\n")
   );
-  const [resumo, setResumo] = useState(analise.ata.resumo);
+  const [resumo, setResumo] = useState(analise.ata?.resumo ?? "");
   const [duracao, setDuracao] = useState((analise.ata as any).duracao || "");
   const [formato, setFormato] = useState((analise.ata as any).formato || "");
   const [conducao, setConducao] = useState((analise.ata as any).conducao || "");
@@ -454,7 +457,7 @@ function ReviewScreen({
     // Eventos desta análise que serão criados de fato — mesmo filtro do
     // save (titulo+data), na mesma ordem — usado para resolver evento_texto
     // e para o índice do ref "novo:<index>".
-    const novosEventos = analise.eventos.filter(
+    const novosEventos = (analise.eventos ?? []).filter(
       (evento) => evento.titulo.trim() && evento.data
     );
 
@@ -475,7 +478,7 @@ function ReviewScreen({
       return existente ? `existente:${existente.id}` : "";
     }
 
-    return analise.demandas.map((demanda, index) => {
+    return (analise.demandas ?? []).map((demanda, index) => {
       // Roster-based match: returns the volunteer id when the name found a
       // roster row (linked account or not) — same rule as /analisar.
       const match = matchResponsavelRoster(
@@ -507,7 +510,7 @@ function ReviewScreen({
     });
   });
   const [dips, setDips] = useState<DipReview[]>(() =>
-    analise.dips.map((dip, index) => ({
+    (analise.dips ?? []).map((dip, index) => ({
       id: index,
       localidade: dip.localidade,
       pais: dip.pais,
@@ -517,7 +520,7 @@ function ReviewScreen({
     }))
   );
   const [eventos, setEventos] = useState<EventoReview[]>(() =>
-    analise.eventos.map((evento, index) => ({
+    (analise.eventos ?? []).map((evento, index) => ({
       id: index,
       incluido: true,
       titulo: evento.titulo,
@@ -527,7 +530,7 @@ function ReviewScreen({
     }))
   );
   const [pautas, setPautas] = useState<PautaReview[]>(() =>
-    analise.pautas.map((pauta, index) => ({
+    (analise.pautas ?? []).map((pauta, index) => ({
       id: index,
       incluida: true,
       titulo: pauta.titulo,

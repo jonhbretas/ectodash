@@ -13,7 +13,11 @@ import AnaliseForm from "./analise-form";
 // budget on long transcripts — give the page's server actions room.
 export const maxDuration = 60;
 
-export default async function AnalisarReuniaoPage() {
+export default async function AnalisarReuniaoPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ ata?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -91,6 +95,37 @@ export default async function AnalisarReuniaoPage() {
       .filter((id): id is number => typeof id === "number")
   );
 
+  // ?ata=<id>: preload da ata existente como "ata pronta" para dissecar em
+  // demandas/eventos/DIPs sem recostar a transcrição bruta na IA.
+  let textoInicial: string | null = null;
+  try {
+    const ataParam = (await searchParams)?.ata;
+    const ataId = typeof ataParam === "string" ? Number.parseInt(ataParam, 10) : NaN;
+    if (Number.isInteger(ataId) && ataId > 0) {
+      const { data: ata } = await supabase
+        .from("reunioes")
+        .select("titulo, data_reuniao, horario, resumo, participantes, pontos_principais, deliberacoes")
+        .eq("id", ataId)
+        .maybeSingle();
+      if (ata) {
+        textoInicial = [
+          `Título: ${ata.titulo ?? ""}`,
+          `Data: ${ata.data_reuniao ?? ""}`,
+          ata.horario ? `Horário: ${ata.horario}` : "",
+          ata.participantes ? `Participantes:\n${ata.participantes}` : "",
+          ata.resumo ? `Resumo:\n${ata.resumo}` : "",
+          ata.pontos_principais ? `Pontos principais:\n${ata.pontos_principais}` : "",
+          ata.deliberacoes ? `Deliberações:\n${ata.deliberacoes}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+          .slice(0, 120000);
+      }
+    }
+  } catch {
+    // preload é best-effort — nunca bloqueia a página
+  }
+
   const voluntarios = (voluntariosResult.data ?? []).map((v) => ({
     id: v.id,
     nome: v.nome,
@@ -121,6 +156,7 @@ export default async function AnalisarReuniaoPage() {
         meetings={meetingsResult.meetings}
         meetingsError={meetingsResult.error}
         meetingsConfigured={meetingsResult.configured}
+        textoInicial={textoInicial}
       />
     </PageContainer>
   );
