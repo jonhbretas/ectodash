@@ -445,14 +445,14 @@ function ReviewScreen({
     (analise.ata?.deliberacoes ?? []).join("\n")
   );
   const [resumo, setResumo] = useState(analise.ata?.resumo ?? "");
-  const [duracao, setDuracao] = useState((analise.ata as any).duracao || "");
-  const [formato, setFormato] = useState((analise.ata as any).formato || "");
-  const [conducao, setConducao] = useState((analise.ata as any).conducao || "");
-  const [proximaReuniao, setProximaReuniao] = useState((analise.ata as any).proxima_reuniao || "");
-  const [saidasTexto, setSaidasTexto] = useState(() => (((analise.ata as any).saidas_antecipadas as any[] | undefined) || []).map((s: any) => `${s.nome}${s.horario ? ` — ${s.horario}` : ""}${s.motivo ? ` (${s.motivo})` : ""}`).join("\n"));
-  const [decisoesTexto, setDecisoesTexto] = useState(() => (((analise.ata as any).decisoes as string[] | undefined) || []).join("\n"));
-  const [calendarioTexto, setCalendarioTexto] = useState(() => (((analise.ata as any).calendario as any[] | undefined) || []).map((c: any) => `${c.data} | ${c.compromisso}`).join("\n"));
-  const [observacoes, setObservacoes] = useState((analise.ata as any).observacoes || "");
+  const [duracao, setDuracao] = useState((analise.ata as any)?.duracao || "");
+  const [formato, setFormato] = useState((analise.ata as any)?.formato || "");
+  const [conducao, setConducao] = useState((analise.ata as any)?.conducao || "");
+  const [proximaReuniao, setProximaReuniao] = useState((analise.ata as any)?.proxima_reuniao || "");
+  const [saidasTexto, setSaidasTexto] = useState(() => (((analise.ata as any)?.saidas_antecipadas as any[] | undefined) || []).map((s: any) => `${s.nome}${s.horario ? ` — ${s.horario}` : ""}${s.motivo ? ` (${s.motivo})` : ""}`).join("\n"));
+  const [decisoesTexto, setDecisoesTexto] = useState(() => (((analise.ata as any)?.decisoes as string[] | undefined) || []).join("\n"));
+  const [calendarioTexto, setCalendarioTexto] = useState(() => (((analise.ata as any)?.calendario as any[] | undefined) || []).map((c: any) => `${c.data} | ${c.compromisso}`).join("\n"));
+  const [observacoes, setObservacoes] = useState((analise.ata as any)?.observacoes || "");
   const [demandas, setDemandas] = useState<DemandaReview[]>(() => {
     // Eventos desta análise que serão criados de fato — mesmo filtro do
     // save (titulo+data), na mesma ordem — usado para resolver evento_texto
