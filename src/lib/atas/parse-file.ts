@@ -5,8 +5,6 @@
 // (2026-08-04): only the extracted TEXT is ever persisted — no binary
 // blobs in the database — so a PDF here is a one-way conversion into the
 // lightweight source kept on the ata.
-import { PDFParse } from "pdf-parse";
-
 // Cost guard: analysis runs the AI over the text, so oversized files are
 // truncated to the first N characters (the opening and decisions of a
 // meeting are the densest part; the same tradeoff as the Tactiq cap in
@@ -57,6 +55,10 @@ export async function parseArquivoFonte(file: File): Promise<ArquivoFonte> {
   }
 
   if (formato === "pdf") {
+    // pdf-parse/pdfjs reads browser globals (DOMMatrix) during module
+    // evaluation. Keep it out of the Server Action's startup path so .md and
+    // .txt uploads can run in Node runtimes without browser canvas APIs.
+    const { PDFParse } = await import("pdf-parse");
     const buffer = Buffer.from(await file.arrayBuffer());
     const parser = new PDFParse({ data: buffer });
     let texto: string;
