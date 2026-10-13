@@ -9,9 +9,9 @@ import { listarReunioes } from "@/lib/meetings";
 import PageContainer from "../../page-container";
 import AnaliseForm from "./analise-form";
 
-// analisarTranscricao's AI call may run past the default 10s function
-// budget on long transcripts — give the page's server actions room.
-export const maxDuration = 60;
+// Long transcripts and slow AI responses can exceed 60s. Server Actions on
+// this page use Vercel's maximum 5-minute duration to avoid cutting them off.
+export const maxDuration = 300;
 
 export default async function AnalisarReuniaoPage({
   searchParams,
