@@ -198,52 +198,58 @@ export async function marcarPautaDiscutida(
 
   let aId = Number(ataId);
 
-  // Se ataId não foi informado, mas dataReuniao foi, buscar ou criar a reuniao
-  if ((!Number.isInteger(aId) || aId <= 0) && dataReuniao) {
+  // Garante a linha da reunião para uma data (a REUNIÃO existe antes da
+  // ata — mesmo padrão do criarPauta): vincula se já existir, senão cria
+  // como "agendada". A pauta nunca falha por falta de ata.
+  async function garantirReuniao(dataStr: string): Promise<number | null> {
     const { data: existente } = await supabase
       .from("reunioes")
       .select("id")
-      .eq("data_reuniao", dataReuniao)
+      .eq("data_reuniao", dataStr)
+      .limit(1)
       .maybeSingle();
-
-    if (existente) {
-      aId = existente.id;
-    } else {
-      // Criar uma ata automática para esta data
-      const { data: novaAta, error: erroAta } = await supabase
-        .from("reunioes")
-        .insert({
-          titulo: `Reunião ${dataReuniao.split("-").reverse().join("/")}`,
-          data_reuniao: dataReuniao,
-        })
-        .select("id")
-        .single();
-
-      if (erroAta || !novaAta) {
-        console.error("marcarPautaDiscutida: auto-create ata failed", erroAta);
-        return { ok: false, message: "Não foi possível criar a ata para esta data." };
-      }
-      aId = novaAta.id;
+    if (existente) return existente.id;
+    const { data: nova, error: erroCriacao } = await supabase
+      .from("reunioes")
+      .insert({
+        titulo: `Reunião ${dataStr.split("-").reverse().join("/")}`,
+        data_reuniao: dataStr,
+        horario: HORARIO_REUNIAO,
+        status: "agendada",
+      })
+      .select("id")
+      .single();
+    if (erroCriacao || !nova) {
+      console.error("marcarPautaDiscutida: auto-create reuniao failed", erroCriacao);
+      return null;
     }
+    return nova.id;
   }
 
-  // Auto-resolve: find the ata for the next Tuesday's meeting (BRT).
-  // Usa formatarDataISO — nunca Intl no Date da proximaTerca (bug 14/09).
+  // Se ataId não foi informado, mas dataReuniao foi, buscar ou criar a reuniao
+  if ((!Number.isInteger(aId) || aId <= 0) && dataReuniao) {
+    const garantida = await garantirReuniao(dataReuniao);
+    if (garantida === null) {
+      return { ok: false, message: "Não foi possível criar a ata para esta data." };
+    }
+    aId = garantida;
+  }
+
+  // Auto-resolve: ata da próxima terça (BRT). Usa formatarDataISO — nunca
+  // Intl no Date da proximaTerca (bug 14/09). Se a reunião ainda não existe
+  // (ex.: após o corte de terça 19h o alvo rola para a terça seguinte),
+  // cria como "agendada" em vez de falhar — mesmo padrão do criarPauta.
   if (!Number.isInteger(aId) || aId <= 0) {
     const dataStr = proximaTercaISO();
-    const { data: reuniao } = await supabase
-      .from("reunioes")
-      .select("id")
-      .eq("data_reuniao", dataStr)
-      .maybeSingle();
-    if (!reuniao) {
+    const garantida = await garantirReuniao(dataStr);
+    if (garantida === null) {
       return {
         ok: false,
         message:
           "Nenhuma ata registrada para a próxima reunião. Registre a ata primeiro.",
       };
     }
-    aId = reuniao.id;
+    aId = garantida;
   }
 
   // status = 'discutida' e o vínculo com a ata andam juntos (CHECK 0077).
