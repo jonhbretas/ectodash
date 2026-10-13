@@ -68,7 +68,9 @@ export const ataAnaliseSchema = z.object({
     participantes: z.array(z.string().trim().min(1).max(200)).max(200),
     pontos_principais: z.array(z.string().trim().min(1).max(3000)).max(100),
     deliberacoes: z.array(z.string().trim().min(1).max(3000)).max(100),
-    resumo: z.string().trim().min(1).max(15000),
+    // A concise summary is useful but not required for a valid extraction;
+    // the full source and the other structured sections may still be valid.
+    resumo: z.string().trim().max(15000),
   }),
   demandas: z.array(ataDemandaSchema).max(50),
   eventos: z
@@ -96,8 +98,11 @@ export const ataAnaliseSchema = z.object({
   dips: z
     .array(
       z.object({
-        localidade: z.string().trim().min(1).max(200),
-        pais: z.string().trim().min(1).max(100),
+        // Incomplete locations/countries stay visible for human review rather
+        // than rejecting the entire analysis. The save flow skips incomplete
+        // DIPs until both fields are supplied.
+        localidade: z.string().trim().max(200),
+        pais: z.string().trim().max(100),
         data: z
           .string()
           .regex(dataRegex, "data_dip deve ser yyyy-MM-dd")

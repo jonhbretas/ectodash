@@ -100,6 +100,36 @@ describe("ataAnaliseSchema demandas", () => {
     expect(result.pautas[1].contexto).toBeUndefined();
   });
 
+  it("aceita ata sem resumo e DIP sem país para revisão humana", () => {
+    const result = ataAnaliseSchema.parse({
+      ata: { ...baseAta, resumo: "" },
+      demandas: [],
+      eventos: [],
+      atualizacoes: [],
+      dips: [
+        {
+          localidade: "Lisboa",
+          pais: "",
+          data: "2026-10-09",
+          participantes: 12,
+          observacoes: "",
+        },
+        {
+          localidade: "",
+          pais: "",
+          data: "2026-10-09",
+          participantes: 12,
+          observacoes: "",
+        },
+      ],
+      pautas: [],
+    });
+
+    expect(result.ata.resumo).toBe("");
+    expect(result.dips[0].pais).toBe("");
+    expect(result.dips[1].localidade).toBe("");
+  });
+
   it("envelope JSON-mode continua exigindo a chave analise", () => {
     const ok = ataAnaliseEnvelopeSchema.safeParse({
       analise: {
