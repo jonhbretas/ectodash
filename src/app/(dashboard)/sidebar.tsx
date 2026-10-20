@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanelLeftClose, PanelLeftOpen, X, ChevronDown } from "lucide-react";
 import {
@@ -40,6 +40,7 @@ function SidebarLinks({
   feedbackNovos?: number;
   isCoordenador?: boolean;
 }) {
+  const searchParams = useSearchParams();
   const visibilidade = (modulo: ModuloAcesso) =>
     acesso ? podeAcessar(acesso, modulo) : false;
 
@@ -60,13 +61,13 @@ function SidebarLinks({
   // Auto-expand groups whose children include the current route
   const defaultExpanded = useMemo(() => {
     const set = new Set<string>();
-    for (const entry of main) {
+    for (const entry of [...main, ...coord]) {
       if (entry.type === "group" && isGroupActive(entry, pathname)) {
         set.add(entry.label);
       }
     }
     return set;
-  }, [main, pathname]);
+  }, [main, coord, pathname]);
 
   const [expanded, setExpanded] = useState<Set<string>>(defaultExpanded);
 
@@ -79,7 +80,7 @@ function SidebarLinks({
     setExpanded((prev) => {
       let changed = false;
       const next = new Set(prev);
-      for (const entry of main) {
+      for (const entry of [...main, ...coord]) {
         if (entry.type === "group" && isGroupActive(entry, pathname) && !next.has(entry.label)) {
           next.add(entry.label);
           changed = true;
@@ -99,7 +100,14 @@ function SidebarLinks({
   }
 
   const linkClassName = (href: string) => {
-    const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+    const [targetPath, targetQuery] = href.split("?");
+    const active = targetQuery
+      ? pathname === targetPath && searchParams.toString() === targetQuery
+      : href === "/"
+        ? pathname === "/"
+        : href === "/reunioes"
+          ? pathname === href && !searchParams.get("tab")
+          : pathname.startsWith(href);
     return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
       collapsed
         ? "flex-col justify-center gap-0.5 px-0 text-center"

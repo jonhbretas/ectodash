@@ -28,6 +28,7 @@ import {
   HeartHandshake,
   ShieldCheck,
   House,
+  ListTodo,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -69,6 +70,7 @@ export const navEntries: SidebarEntry[] = [
     children: [
       { href: "/demandas", label: "Demandas", Icon: ClipboardList, modulo: "demandas" },
       { href: "/reunioes", label: "Reuniões", Icon: NotebookPen, modulo: "reunioes" },
+      { href: "/reunioes?tab=pautas", label: "Pedidos de pauta", Icon: ListTodo, modulo: "reunioes" },
       { href: "/projetos", label: "Projetos", Icon: FolderKanban, modulo: "projetos" },
     ],
   },
@@ -168,8 +170,16 @@ export const navEntries: SidebarEntry[] = [
 // Coordenador-only entry points live in their own section at the bottom of
 // the sidebar, visually separated from the main menu.
 export const coordinatorEntries: SidebarEntry[] = [
-  { href: "/administrativo", label: "Administrativo", Icon: LayoutDashboard },
-  { href: "/configuracoes", label: "Configurações", Icon: ShieldCheck },
+  {
+    type: "group",
+    label: "Administrativo",
+    Icon: LayoutDashboard,
+    href: "/administrativo",
+    children: [
+      { href: "/administrativo", label: "Visão geral", Icon: LayoutDashboard },
+      { href: "/painel/acessos", label: "Acessos e cargos", Icon: ShieldCheck },
+    ],
+  },
   { href: "/demandas?coordenacao=1", label: "Demandas da Coordenação", Icon: ClipboardList },
 ];
 

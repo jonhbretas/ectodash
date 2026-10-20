@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Bot, ChevronRight, LayoutDashboard, Lock, Mail, ShoppingCart } from "lucide-react";
+import { BarChart3, Bot, ChevronRight, LayoutDashboard, Lock, Mail, ShieldCheck, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 
@@ -38,6 +38,13 @@ const atalhos = [
     description: "Consulte pedidos, produtos, alunos e o desempenho da loja.",
     Icon: ShoppingCart,
     tone: "bg-amber-50 text-amber-700 ring-amber-100",
+  },
+  {
+    href: "/painel/acessos",
+    title: "Acessos e cargos",
+    description: "Gerencie modelos de cargos, permissões por módulo e acessos das pessoas.",
+    Icon: ShieldCheck,
+    tone: "bg-sky-50 text-sky-700 ring-sky-100",
   },
 ];
 
