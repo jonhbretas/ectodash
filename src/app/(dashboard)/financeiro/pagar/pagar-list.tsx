@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BadgeCheck, CheckCircle2, Pencil, Search, Trash2, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { alternarContaPaga, excluirConta } from "./actions";
+import { alternarContaPaga, excluirConta, excluirDebito } from "./actions";
 import PagarForm, { type Conta } from "./pagar-form";
 import { METODO_LABELS } from "../propostas/proposta-schema";
 
@@ -58,15 +58,16 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
   const [mesSelecionado, setMesSelecionado] = useState(mesInicial);
   const [, startTransition] = useTransition();
 
-  // Posição dentro da repetição mensal (2/12 etc.), calculada pelo grupo
-  // ordenado por vencimento.
+  // Posição dentro da repetição mensal (2/12 etc.), calculada pela mãe
+  // do débito; grupos legados continuam funcionando até serem migrados.
   const posicaoNoGrupo = new Map<number, { indice: number; total: number }>();
   const grupos = new Map<string, typeof contas>();
   for (const c of contas) {
-    if (!c.grupo_recorrencia) continue;
-    const lista = grupos.get(c.grupo_recorrencia) ?? [];
+    const chave = c.debito_id ? `debito-${c.debito_id}` : c.grupo_recorrencia;
+    if (!chave) continue;
+    const lista = grupos.get(chave) ?? [];
     lista.push(c);
-    grupos.set(c.grupo_recorrencia, lista);
+    grupos.set(chave, lista);
   }
   for (const lista of grupos.values()) {
     const ordenada = [...lista].sort((a, b) =>
@@ -276,15 +277,31 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
                   type="button"
                   disabled={agindo}
                   onClick={() => {
-                    if (window.confirm(`Excluir "${c.titulo}"? Não dá para desfazer.`)) {
+                    if (window.confirm(`Excluir somente a parcela "${c.titulo}"? Não dá para desfazer.`)) {
                       comTransicao(c.id, () => excluirConta(c.id));
                     }
                   }}
                   className="flex min-h-11 items-center gap-2 rounded-lg px-4 text-lg font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-60"
                 >
                   <Trash2 size={18} aria-hidden="true" />
-                  Excluir
+                  Excluir parcela
                 </button>
+                {c.debito_id && (posicaoNoGrupo.get(c.id)?.total ?? 0) > 1 && (
+                  <button
+                    type="button"
+                    disabled={agindo}
+                    onClick={() => {
+                      const total = posicaoNoGrupo.get(c.id)?.total ?? 0;
+                      if (window.confirm(`Excluir o débito inteiro e suas ${total} parcelas? Esta ação não pode ser desfeita.`)) {
+                        comTransicao(c.debito_id!, () => excluirDebito(c.debito_id!));
+                      }
+                    }}
+                    className="flex min-h-11 items-center gap-2 rounded-lg bg-red-700 px-4 text-lg font-medium text-white transition-colors hover:bg-red-800 disabled:opacity-60"
+                  >
+                    <Trash2 size={18} aria-hidden="true" />
+                    Excluir débito inteiro
+                  </button>
+                )}
               </div>
             )}
           </article>

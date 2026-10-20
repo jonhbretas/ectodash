@@ -66,7 +66,7 @@ export default async function PagarPage() {
 
   const { data } = await supabase
     .from("pagamentos_ectolab")
-    .select("id, titulo, fornecedor, valor, vencimento, status, metodo, observacoes, recorrencia, grupo_recorrencia")
+    .select("id, titulo, fornecedor, valor, vencimento, status, metodo, observacoes, recorrencia, grupo_recorrencia, debito_id")
     .order("vencimento", { ascending: true, nullsFirst: false })
     .order("id", { ascending: false });
 
@@ -81,6 +81,7 @@ export default async function PagarPage() {
     observacoes: (r.observacoes as string | null) ?? null,
     recorrencia: (r.recorrencia as Conta["recorrencia"]) ?? "unica",
     grupo_recorrencia: (r.grupo_recorrencia as string | null) ?? null,
+    debito_id: (r.debito_id as number | null) ?? null,
   }));
 
   const totalPendente = contas

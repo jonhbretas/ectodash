@@ -84,13 +84,36 @@ export async function criarConta(
     }
     const v = parsed.data;
     const valor = brlParaNumero(v.valor);
-    // Débito mensal: N ocorrências mês a mês a partir do vencimento
-    // (ou de hoje), ligadas pelo mesmo grupo.
+    // Débito mensal: uma mãe em debitos_ectolab e N parcelas filhas.
+    // A mãe pode ser excluída de uma vez; cada filha mantém baixa e exclusão
+    // individual próprias.
     const n = v.recorrencia === "mensal" ? v.meses : 1;
     const baseISO = v.vencimento ?? hojeISO();
     const [y, m, d] = baseISO.split("-").map(Number);
     const inicio = new Date(y, m - 1, d);
     const grupo = n > 1 ? crypto.randomUUID() : null;
+    let debitoId: number | null = null;
+    if (grupo) {
+      const { data: debito, error: debitoError } = await supabase
+        .from("debitos_ectolab")
+        .insert({
+          titulo: v.titulo,
+          fornecedor: v.fornecedor ?? null,
+          valor,
+          metodo: v.metodo,
+          observacoes: v.observacoes ?? null,
+          grupo_recorrencia: grupo,
+          created_by: user.id,
+        })
+        .select("id")
+        .single();
+      if (debitoError || !debito) {
+        console.error("criarConta: debit insert failed", debitoError);
+        return { ...INICIAL, message: "Não foi possível registrar o débito." };
+      }
+      debitoId = Number(debito.id);
+    }
+
     const { error } = await supabase.from("pagamentos_ectolab").insert(
       Array.from({ length: n }, (_, i) => ({
         titulo: n > 1 ? `${v.titulo} (${i + 1}/${n})` : v.titulo,
@@ -101,11 +124,15 @@ export async function criarConta(
         observacoes: v.observacoes ?? null,
         recorrencia: n > 1 ? "mensal" : "unica",
         grupo_recorrencia: grupo,
+        debito_id: debitoId,
         created_by: user.id,
       }))
     );
     if (error) {
       console.error("criarConta: insert failed", error);
+      // Compensação segura: o lote de parcelas falhou como uma unidade e a
+      // mãe não deve ficar sem filhas. O cascade cobre qualquer filha criada.
+      if (debitoId) await supabase.from("debitos_ectolab").delete().eq("id", debitoId);
       return { ...INICIAL, message: "Não foi possível salvar. Tente de novo." };
     }
     revalidatePath("/financeiro/pagar");
@@ -190,6 +217,31 @@ export async function excluirConta(id: number): Promise<{ ok: boolean; message: 
     }
     revalidatePath("/financeiro/pagar");
     return { ok: true, message: "Conta excluída." };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Sem permissão." };
+  }
+}
+
+export async function excluirDebito(
+  debitoId: number
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    const { supabase } = await requireFinanceiro();
+    if (!Number.isInteger(debitoId) || debitoId <= 0) {
+      return { ok: false, message: "Débito inválido." };
+    }
+    // A FK pagamentos_ectolab.debito_id tem ON DELETE CASCADE: apagar a mãe
+    // remove todas as parcelas filhas de forma atômica no banco.
+    const { error } = await supabase
+      .from("debitos_ectolab")
+      .delete()
+      .eq("id", debitoId);
+    if (error) {
+      console.error("excluirDebito failed", error);
+      return { ok: false, message: "Não foi possível excluir o débito." };
+    }
+    revalidatePath("/financeiro/pagar");
+    return { ok: true, message: "Débito e todas as parcelas foram excluídos." };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Sem permissão." };
   }

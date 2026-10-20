@@ -19,6 +19,7 @@ export type Conta = {
   observacoes: string | null;
   recorrencia: "unica" | "mensal";
   grupo_recorrencia: string | null;
+  debito_id: number | null;
 };
 
 const INICIAL: PagarActionState = { ok: false, message: "" };
