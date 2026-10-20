@@ -84,7 +84,6 @@ export const navEntries: SidebarEntry[] = [
       { href: "/voluntarios", label: "Voluntários", Icon: Users, modulo: "voluntarios" },
       { href: "/voluntarios/cuidar", label: "Cuidar das pessoas", Icon: HeartHandshake, modulo: "voluntarios" },
       { href: "/voluntarios/limpeza", label: "Limpeza", Icon: UserX, modulo: "voluntarios" },
-      { href: "/trilha", label: "Trilha do Voluntário", Icon: Map, modulo: "voluntarios" },
     ],
   },
 
@@ -112,6 +111,7 @@ export const navEntries: SidebarEntry[] = [
     children: [
       { href: "/pesquisas", label: "Pesquisas", Icon: FlaskConical, modulo: "pesquisas" },
       { href: "/proep", label: "PROEP", Icon: GraduationCap, modulo: "proep" },
+      { href: "/trilha", label: "Trilha do Voluntário", Icon: Map, modulo: "voluntarios" },
     ],
   },
 
