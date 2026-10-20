@@ -75,10 +75,10 @@ export const navEntries: SidebarEntry[] = [
     ],
   },
 
-  // ─── Pessoas e Engajamento ───
+  // ─── Pessoas e Voluntariado ───
   {
     type: "group",
-    label: "Engajamento",
+    label: "Voluntariado",
     Icon: Users,
     children: [
       { href: "/voluntarios", label: "Voluntários", Icon: Users, modulo: "voluntarios" },
