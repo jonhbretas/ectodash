@@ -136,6 +136,50 @@ export function removerNulos<T>(valor: T): T {
   return valor;
 }
 
+/** "6:56:47 PM", "18:56:47", "19h01" → "HH:mm"; formato irreconhecível → undefined. */
+export function normalizarHorario(valor: unknown): string | undefined {
+  if (typeof valor !== "string") return undefined;
+  const m = valor.trim().match(/^(\d{1,2})\s*[:h]\s*(\d{2})(?::\d{2})?\s*([ap])?\.?\s*m?\.?$/i);
+  if (!m) return undefined;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  const ampm = m[3]?.toLowerCase();
+  if (ampm === "p" && h < 12) h += 12;
+  if (ampm === "a" && h === 12) h = 0;
+  if (h > 23 || min > 59) return undefined;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+const ISO_DATA = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Ajusta campos de data/hora que o schema valida por regex: horário vira
+ * "HH:mm" e datas fora de yyyy-MM-dd são descartadas (viram ausentes).
+ */
+export function normalizarDatasEHorarios(json: Record<string, any>): Record<string, any> {
+  const out = { ...json };
+  if (out.ata && typeof out.ata === "object") {
+    const ata = { ...out.ata };
+    if ("horario" in ata) {
+      const h = normalizarHorario(ata.horario);
+      if (h) ata.horario = h;
+      else delete ata.horario;
+    }
+    if (typeof ata.data === "string" && !ISO_DATA.test(ata.data.trim())) delete ata.data;
+    out.ata = ata;
+  }
+  for (const lista of ["eventos", "dips"]) {
+    if (!Array.isArray(out[lista])) continue;
+    out[lista] = out[lista].map((item: any) => {
+      if (!item || typeof item !== "object" || typeof item.data !== "string") return item;
+      if (ISO_DATA.test(item.data.trim()) || item.data === "") return item;
+      const { data: _descartada, ...resto } = item;
+      return resto;
+    });
+  }
+  return out;
+}
+
 export function filtrarResultado(
   json: Record<string, any>,
   transcricaoFonte: string,
