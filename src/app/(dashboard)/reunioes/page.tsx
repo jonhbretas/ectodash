@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { CalendarClock, CheckCheck, Clock, FileText, ListChecks, NotebookPen, PlusCircle, Sparkles, MoreHorizontal } from "lucide-react";
+import { Clock, FileText, ListChecks, NotebookPen, PlusCircle, Sparkles, MoreHorizontal } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
-import { proximaTerca, formatarDataISO } from "@/lib/proxima-reuniao";
+import { proximaTerca, formatarDataISO, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 import PageContainer from "../page-container";
 import PautaItemActions from "./pauta-item-actions";
 import { PedirPautaTrigger } from "./pauta-modal";
@@ -15,7 +15,7 @@ type Props = { searchParams?: Promise<{ tab?: string }> };
 
 export default async function ReunioesPage({ searchParams }: Props) {
   const sp = searchParams ? await searchParams : {};
-  const tab = sp.tab === "pautas" ? "pautas" : sp.tab === "atas" ? "atas" : "proxima";
+  const tab = sp.tab === "historico" ? "historico" : sp.tab === "atas" ? "atas" : "proxima";
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -58,8 +58,8 @@ export default async function ReunioesPage({ searchParams }: Props) {
         {/* Header */}
         <header className="flex w-full flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900"><NotebookPen size={28} /> Reuniões</h1>
-            <p className="text-base text-zinc-600">Reunião geral toda terça às 19h. Pedidos até terça 19h valem para a reunião de hoje; após 19h entram na próxima terça.</p>
+            <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900"><NotebookPen size={28} /> {sp.tab === "pautas" ? "Pedidos de pauta" : "Reuniões"}</h1>
+            <p className="text-base text-zinc-600">Veja os assuntos para a próxima reunião e sugira uma pauta. Consulte os pedidos anteriores no histórico de pautas.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <PedirPautaTrigger />
@@ -79,8 +79,8 @@ export default async function ReunioesPage({ searchParams }: Props) {
 
         {/* Tabs */}
         <nav aria-label="Abas" className="flex gap-2 overflow-x-auto border-b border-zinc-200 pb-3">
-          <Link href="/reunioes" className={`${tabBase} ${tab === "proxima" ? tabActive : tabIdle}`}>Próxima reunião</Link>
-          <Link href="/reunioes?tab=pautas" className={`${tabBase} ${tab === "pautas" ? tabActive : tabIdle}`}>Pautas <span className={`rounded-full px-2 py-0.5 text-xs ${tab === "pautas" ? "bg-white/20" : "bg-white"}`}>{counts.pautas}</span></Link>
+          <Link href={sp.tab === "pautas" ? "/reunioes?tab=pautas" : "/reunioes"} aria-current={tab === "proxima" ? "page" : undefined} className={`${tabBase} ${tab === "proxima" ? tabActive : tabIdle}`}>Próxima reunião <span className={`rounded-full px-2 py-0.5 text-xs ${tab === "proxima" ? "bg-white/20" : "bg-white"}`}>{counts.proxima}</span></Link>
+          <Link href="/reunioes?tab=historico" aria-current={tab === "historico" ? "page" : undefined} className={`${tabBase} ${tab === "historico" ? tabActive : tabIdle}`}>Histórico de pautas <span className={`rounded-full px-2 py-0.5 text-xs ${tab === "historico" ? "bg-white/20" : "bg-white"}`}>{counts.pautas}</span></Link>
           <Link href="/reunioes?tab=atas" className={`${tabBase} ${tab === "atas" ? tabActive : tabIdle}`}>Atas <span className={`rounded-full px-2 py-0.5 text-xs ${tab === "atas" ? "bg-white/20" : "bg-white"}`}>{counts.atas}</span></Link>
         </nav>
 
@@ -88,11 +88,12 @@ export default async function ReunioesPage({ searchParams }: Props) {
           <section className="flex flex-col gap-4">
             {/* Bloco A */}
             <div className="rounded-2xl bg-white p-5 ring-1 ring-zinc-200/60">
-              <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-                <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900"><ListChecks size={20} className="text-[#2195B9]" /> Pauta confirmada</h2>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 pb-3">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900"><ListChecks size={20} className="shrink-0 text-[#2195B9]" /> Pautas da próxima reunião</h2>
                 <span className="rounded-full bg-[#E6E6E6] px-3 py-1 text-sm font-medium text-[#28627B]">{pendentes.length} {pendentes.length === 1 ? "pauta" : "pautas"}</span>
               </div>
-              <p className="mt-2 text-sm text-zinc-500">Todas as pautas pendentes aparecem aqui — inclusive as pedidas hoje antes das 19h. Pedidos após 19h de terça valem para a próxima reunião.</p>
+              <p className="mt-3 text-base font-medium text-[#28627B]">{formatarProximaLabel(proxima, HORARIO_REUNIAO)}</p>
+              <p className="mt-1 text-sm text-zinc-500">Assuntos pendentes para discussão. Pautas já discutidas ficam no histórico; as que estão em espera aparecem abaixo.</p>
 
               {ataProxima && (
                 <Link href={`/reunioes/${ataProxima.id}`} className="mt-3 flex items-center gap-3 rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 px-4 py-3 text-sm text-[#2195B9] hover:bg-[#2195B9]/10">
@@ -102,7 +103,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
 
               {pendentes.length === 0 ? (
                 <div className="flex max-h-[160px] flex-col items-center justify-center gap-3 py-8 text-center">
-                  <p className="text-base text-zinc-600">Ainda não há pautas. Sugira o primeiro assunto.</p>
+                  <p className="text-base text-zinc-600">Ainda não há pautas para a próxima reunião. Sugira o primeiro assunto.</p>
                   <PedirPautaTrigger className="!min-h-10 !text-base" />
                 </div>
               ) : (
@@ -143,7 +144,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
           </section>
         )}
 
-        {tab === "pautas" && <PautasTab pautas={pautas} />}
+        {tab === "historico" && <PautasTab pautas={pautas} />}
         {tab === "atas" && <AtasTab atas={rows} />}
       </div>
 
