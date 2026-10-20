@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeftClose, PanelLeftOpen, X, ChevronDown } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, X, ChevronDown, UserRound } from "lucide-react";
 import {
   filterEntries,
   filterCoordinatorEntries,
@@ -289,6 +289,22 @@ function SidebarBrand({
   );
 }
 
+function AccountQuickActions({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`flex items-center ${compact ? "justify-start" : "justify-end"} gap-1 px-4`}>
+      <a
+        href="/perfil"
+        aria-label="Meu perfil"
+        title="Meu perfil"
+        className="flex size-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+      >
+        <UserRound size={19} aria-hidden="true" strokeWidth={1.75} />
+      </a>
+      <SignOutButton iconOnly inline />
+    </div>
+  );
+}
+
 export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOptions = [] }: SidebarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -377,6 +393,7 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
             compact
           />
         )}
+        <AccountQuickActions compact />
         <SidebarLinks
           acesso={visibleAccess}
           pathname={pathname}
@@ -407,6 +424,7 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
         {!visuallyCollapsed && showViewAs && (
           <ViewAsSelector options={viewAsOptions} value={viewAs} onChange={setViewAs} />
         )}
+        {!visuallyCollapsed && <AccountQuickActions />}
         {!visuallyCollapsed && <div className="px-4"><QuickSearch /></div>}
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none px-4">
