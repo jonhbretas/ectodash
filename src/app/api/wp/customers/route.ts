@@ -2,11 +2,11 @@
 // GET /api/wp/customers — list synced WooCommerce customers.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { requireFinanceiro } from "@/lib/role-gates";
+import { requireCoordenadorGeral } from "@/lib/role-gates";
 import { sanitizeSearch } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
-  try { await requireFinanceiro(); } catch {
+  try { await requireCoordenadorGeral(); } catch {
     return NextResponse.json({ error: "Sem acesso." }, { status: 403 });
   }
   const supabase = await createClient();

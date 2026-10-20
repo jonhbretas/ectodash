@@ -7,6 +7,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight, Lock, SearchX } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { obterAcesso } from "@/lib/acesso-server";
+import { podeAcessar } from "@/lib/acesso";
 import { sanitizeSearch } from "@/lib/utils";
 import PageContainer from "../../page-container";
 import FinanceNavigation from "../finance-nav";
@@ -55,14 +57,8 @@ export default async function LancamentosPage({
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const allowed =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+  const acesso = await obterAcesso();
+  const allowed = acesso !== null && podeAcessar(acesso, "financeiro") !== false;
 
   if (!allowed) {
     return (

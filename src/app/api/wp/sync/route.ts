@@ -17,7 +17,7 @@
 //               even if it takes a while.
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireFinanceiro } from "@/lib/role-gates";
+import { requireCoordenadorGeral } from "@/lib/role-gates";
 import {
   fetchProducts,
   fetchOrders,
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   // restrição cron-only de src/lib/supabase/admin.ts: o sync grava em
   // wp_* e proep_* sem políticas de escrita de sessão.
   try {
-    await requireFinanceiro();
+    await requireCoordenadorGeral();
   } catch {
     return NextResponse.json(
       { error: "Sem permissão para sincronizar" },

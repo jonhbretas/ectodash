@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { temCargoModulo } from "@/lib/role-gates";
 import { parseFinancialDocument } from "@/lib/financeiro/parse-document";
 import { normalizeText } from "@/lib/financeiro/automation";
 
@@ -27,7 +28,11 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (!profile || !["financeiro", "coordenador_geral"].includes(profile.role)) return NextResponse.json({ error: "Sem acesso ao financeiro" }, { status: 403 });
+  const allowed =
+    profile?.role === "coordenador_geral" ||
+    profile?.role === "financeiro" ||
+    (await temCargoModulo(supabase, "financeiro"));
+  if (!allowed) return NextResponse.json({ error: "Sem acesso ao financeiro" }, { status: 403 });
   const form = await request.formData();
   const files = form.getAll("files").filter((item): item is File => item instanceof File);
   if (!files.length) return NextResponse.json({ error: "Envie ao menos um arquivo" }, { status: 400 });

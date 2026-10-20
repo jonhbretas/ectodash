@@ -19,6 +19,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { obterAcesso } from "@/lib/acesso-server";
+import { podeAcessar } from "@/lib/acesso";
 import PageContainer from "../page-container";
 import ImportFinanceiroToggle from "./import-toggle";
 import FinanceNavigation from "./finance-nav";
@@ -88,14 +90,8 @@ export default async function FinanceiroPage({
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const allowed =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+  const acesso = await obterAcesso();
+  const allowed = acesso !== null && podeAcessar(acesso, "financeiro") !== false;
 
   if (!allowed) {
     return (

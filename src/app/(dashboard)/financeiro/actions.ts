@@ -6,6 +6,7 @@ import { parseFinanceiroFile } from "@/lib/financeiro/parse-file";
 import { parseRefValor } from "@/lib/financeiro/parse-ectolab";
 import { labelMes } from "./financeiro-filter-schema";
 import { chatCompletion, wrapUserContent } from "@/lib/ai/ai-client";
+import { temCargoModulo } from "@/lib/role-gates";
 
 export type ImportarFinanceiroState = {
   ok: boolean;
@@ -64,7 +65,9 @@ async function importarFinanceiroInner(
     .single();
 
   const allowed =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+    profile?.role === "coordenador_geral" ||
+    profile?.role === "financeiro" ||
+    (await temCargoModulo(supabase, "financeiro"));
 
   if (!allowed) {
     return { ...initialState, message: "Você não tem acesso ao financeiro." };
@@ -254,7 +257,9 @@ export async function salvarReferenciasFinanceiras(
     .single();
 
   const allowed =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+    profile?.role === "coordenador_geral" ||
+    profile?.role === "financeiro" ||
+    (await temCargoModulo(supabase, "financeiro"));
 
   if (!allowed) {
     return { ...referenciasInitialState, message: "Você não tem acesso ao financeiro." };
@@ -347,7 +352,9 @@ export async function limparFinanceiro(
     .single();
 
   const allowed =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+    profile?.role === "coordenador_geral" ||
+    profile?.role === "financeiro" ||
+    (await temCargoModulo(supabase, "financeiro"));
 
   if (!allowed) {
     return { ...limparInitialState, message: "Você não tem acesso ao financeiro." };

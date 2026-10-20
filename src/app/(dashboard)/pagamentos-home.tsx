@@ -11,6 +11,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { obterAcesso } from "@/lib/acesso-server";
+import { podeAcessar } from "@/lib/acesso";
 
 const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -38,14 +40,8 @@ export default async function PagamentosHome() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const pode =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+  const acesso = await obterAcesso();
+  const pode = acesso !== null && podeAcessar(acesso, "financeiro") !== false;
   if (!pode) return null;
 
   const today = hojeISO();

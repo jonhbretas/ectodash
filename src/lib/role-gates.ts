@@ -104,5 +104,13 @@ export async function requireUtilidades(): Promise<RoleGateContext> {
 
 /** Acesso ao financeiro (rotas com efeitos colaterais). */
 export async function requireFinanceiro(): Promise<RoleGateContext> {
-  return requireRole(["coordenador_geral", "financeiro"]);
+  const ctx = await requireUsuario();
+  const ok =
+    ctx.role === "coordenador_geral" ||
+    ctx.role === "financeiro" ||
+    (await temCargoModulo(ctx.supabase, "financeiro"));
+  if (!ok) {
+    throw new Error("Você não tem acesso ao financeiro.");
+  }
+  return ctx;
 }

@@ -4,7 +4,7 @@
 // ECTODASH_DEBUG_ENABLED=true) e com gate de role centralizado.
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireFinanceiro } from "@/lib/role-gates";
+import { requireCoordenadorGeral } from "@/lib/role-gates";
 
 export async function GET() {
   if (process.env.ECTODASH_DEBUG_ENABLED !== "true") {
@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   try {
-    await requireFinanceiro();
+    await requireCoordenadorGeral();
   } catch {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }

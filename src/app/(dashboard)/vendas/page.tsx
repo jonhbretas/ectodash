@@ -1,5 +1,5 @@
 // /vendas — WooCommerce ECTOLAB dashboard: KPIs, top products, recent orders.
-// Only coordenador_geral and financeiro can view it.
+// A Loja contém dados de clientes e é exclusiva da coordenação geral.
 // Queries Supabase directly (same pattern as financeiro/page.tsx).
 import Link from "next/link";
 import {
@@ -66,8 +66,7 @@ export default async function VendasPage({
     .eq("id", user.id)
     .single();
 
-  const allowed =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+  const allowed = profile?.role === "coordenador_geral";
 
   if (!allowed) {
     return (

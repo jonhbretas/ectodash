@@ -4,6 +4,8 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, Lock, Plus, ReceiptText, SearchX, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { obterAcesso } from "@/lib/acesso-server";
+import { podeAcessar } from "@/lib/acesso";
 import PageContainer from "../../page-container";
 import FinanceNavigation from "../finance-nav";
 import PagarForm, { type Conta } from "./pagar-form";
@@ -34,14 +36,8 @@ export default async function PagarPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const allowed =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+  const acesso = await obterAcesso();
+  const allowed = acesso !== null && podeAcessar(acesso, "financeiro") !== false;
 
   if (!allowed) {
     return (

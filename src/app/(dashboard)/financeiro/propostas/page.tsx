@@ -11,6 +11,8 @@ import {
   SearchX,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { obterAcesso } from "@/lib/acesso-server";
+import { podeAcessar } from "@/lib/acesso";
 import { sanitizeSearch } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import PageContainer from "../../page-container";
@@ -64,14 +66,8 @@ export default async function PropostasPage({
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const allowed =
-    profile?.role === "coordenador_geral" || profile?.role === "financeiro";
+  const acesso = await obterAcesso();
+  const allowed = acesso !== null && podeAcessar(acesso, "financeiro") !== false;
 
   if (!allowed) {
     return (

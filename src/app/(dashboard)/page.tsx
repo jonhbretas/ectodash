@@ -10,6 +10,7 @@ import {
   MessageSquarePlus,
   NotebookPen,
   Wrench,
+  Wallet,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
@@ -208,6 +209,14 @@ export default async function InicioPage() {
       cor: "bg-[#ea580c]",
       modulo: "utilidades" as ModuloAcesso,
     },
+    {
+      href: "/financeiro",
+      titulo: "Financeiro",
+      descricao: "Pagamentos, cobranças e fluxo de caixa",
+      Icon: Wallet,
+      cor: "bg-emerald-600",
+      modulo: "financeiro" as ModuloAcesso,
+    },
   ].filter((c) => pode(c.modulo));
 
   return (
@@ -217,7 +226,9 @@ export default async function InicioPage() {
           Olá, {primeiroNome}
         </h1>
         <p className="text-base text-slate-500 sm:text-lg">
-          O que você quer fazer hoje?
+          {podeAcessar(acesso, "financeiro") !== false
+            ? "Sua visão de coordenação e finanças para hoje."
+            : "Veja suas demandas, eventos e próximos compromissos."}
         </p>
       </header>
 

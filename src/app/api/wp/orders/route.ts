@@ -2,13 +2,13 @@
 // GET /api/wp/orders — list synced WooCommerce orders with filters.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { requireFinanceiro } from "@/lib/role-gates";
+import { requireCoordenadorGeral } from "@/lib/role-gates";
 import { sanitizeSearch } from "@/lib/utils";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(req: NextRequest) {
-  try { await requireFinanceiro(); } catch {
+  try { await requireCoordenadorGeral(); } catch {
     return NextResponse.json({ error: "Sem acesso." }, { status: 403 });
   }
   const supabase = await createClient();
