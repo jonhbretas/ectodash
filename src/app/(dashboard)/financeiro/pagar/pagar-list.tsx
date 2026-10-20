@@ -27,13 +27,35 @@ function formatarData(iso: string | null): string {
   return format(new Date(`${iso}T00:00:00`), "dd/MM/yyyy", { locale: ptBR });
 }
 
+function mesDaConta(vencimento: string | null): string {
+  return vencimento ? vencimento.slice(0, 7) : "sem-vencimento";
+}
+
+function rotuloMes(mes: string): string {
+  if (mes === "sem-vencimento") return "Sem vencimento";
+  const rotulo = format(new Date(`${mes}-01T00:00:00`), "MMMM 'de' yyyy", {
+    locale: ptBR,
+  });
+  return rotulo.charAt(0).toUpperCase() + rotulo.slice(1);
+}
+
 export default function PagarList({ contas }: { contas: Conta[] }) {
   const router = useRouter();
+  const meses = [...new Set(contas.map((conta) => mesDaConta(conta.vencimento)))].sort(
+    (a, b) => {
+      if (a === "sem-vencimento") return 1;
+      if (b === "sem-vencimento") return -1;
+      return a.localeCompare(b);
+    }
+  );
+  const mesAtual = hoje().slice(0, 7);
+  const mesInicial = meses.includes(mesAtual) ? mesAtual : meses[0] ?? "todos";
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [agindoId, setAgindoId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<"pendente" | "atrasada" | "pago" | "todos">("pendente");
+  const [mesSelecionado, setMesSelecionado] = useState(mesInicial);
   const [, startTransition] = useTransition();
 
   // Posição dentro da repetição mensal (2/12 etc.), calculada pelo grupo
@@ -73,7 +95,8 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
       (filtro === "atrasada" && atrasada) ||
       (filtro === "pago" && conta.status === "pago");
     const texto = `${conta.titulo} ${conta.fornecedor ?? ""}`.toLocaleLowerCase("pt-BR");
-    return passaFiltro && (!termo || texto.includes(termo));
+    const passaMes = mesSelecionado === "todos" || mesDaConta(conta.vencimento) === mesSelecionado;
+    return passaMes && passaFiltro && (!termo || texto.includes(termo));
   });
 
   return (
@@ -83,6 +106,32 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
           {feedback}
         </p>
       )}
+      <section aria-label="Selecionar mês" className="rounded-2xl bg-white p-3 ring-1 ring-zinc-200/60">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {meses.map((mes) => {
+            const quantidade = contas.filter((conta) => mesDaConta(conta.vencimento) === mes).length;
+            return (
+              <button
+                key={mes}
+                type="button"
+                onClick={() => setMesSelecionado(mes)}
+                aria-pressed={mesSelecionado === mes}
+                className={cn(
+                  "flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-base font-medium transition-colors",
+                  mesSelecionado === mes
+                    ? "bg-[#2195B9] text-white"
+                    : "bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                )}
+              >
+                {rotuloMes(mes)}
+                <span className={cn("rounded-full px-2 py-0.5 text-sm", mesSelecionado === mes ? "bg-white/20" : "bg-zinc-200 text-zinc-600")}>
+                  {quantidade}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
       <div className="flex flex-col gap-3 rounded-2xl bg-white p-3 ring-1 ring-zinc-200/60 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative min-w-0 flex-1">
           <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -118,7 +167,7 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
         </div>
       </div>
       <p className="text-base text-zinc-500">
-        {contasFiltradas.length === 1 ? "1 conta encontrada" : `${contasFiltradas.length} contas encontradas`}
+        {rotuloMes(mesSelecionado)} · {contasFiltradas.length === 1 ? "1 conta encontrada" : `${contasFiltradas.length} contas encontradas`}
       </p>
       {contasFiltradas.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-5 py-10 text-center">
