@@ -2,11 +2,12 @@
 // dinâmicas (toda sexta-feira). Mostra escalas por data/localidade, com
 // status (rascunho/publicada/cancelada) e botões de ação.
 import Link from "next/link";
-import { CalendarCheck, Plus, Eye, Trash2, CalendarDays } from "lucide-react";
+import { CalendarCheck, Plus, Eye, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
 import EscalaStatusBadge from "./escala-status-badge";
 import GerarEscalaButton from "./gerar-escala-button";
+import ExcluirEscalaButton from "./excluir-escala-button";
 
 type EscalaRow = {
   id: number;
@@ -45,6 +46,7 @@ export default async function EscalaPage() {
   const role = profile?.role;
   const canManage =
     role === "coordenador_geral" || role === "voluntariado";
+  const isCoordenadorGeral = role === "coordenador_geral";
 
   // Buscar escalas com contagem de alocações e ausências
   const { data: escalas } = await supabase
@@ -165,6 +167,7 @@ export default async function EscalaPage() {
                   <Eye size={18} aria-hidden="true" />
                   Ver
                 </Link>
+                {isCoordenadorGeral && <ExcluirEscalaButton escalaId={escala.id} />}
               </div>
             </div>
           ))}
