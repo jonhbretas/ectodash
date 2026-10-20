@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { BadgeCheck, Pencil, Trash2, Undo2 } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Pencil, Search, Trash2, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { alternarContaPaga, excluirConta } from "./actions";
 import PagarForm, { type Conta } from "./pagar-form";
@@ -32,6 +32,8 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [agindoId, setAgindoId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState<"pendente" | "atrasada" | "pago" | "todos">("pendente");
   const [, startTransition] = useTransition();
 
   // Posição dentro da repetição mensal (2/12 etc.), calculada pelo grupo
@@ -62,6 +64,18 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
     });
   }
 
+  const termo = busca.trim().toLocaleLowerCase("pt-BR");
+  const contasFiltradas = contas.filter((conta) => {
+    const atrasada = conta.status === "pendente" && Boolean(conta.vencimento && conta.vencimento < hoje());
+    const passaFiltro =
+      filtro === "todos" ||
+      (filtro === "pendente" && conta.status === "pendente") ||
+      (filtro === "atrasada" && atrasada) ||
+      (filtro === "pago" && conta.status === "pago");
+    const texto = `${conta.titulo} ${conta.fornecedor ?? ""}`.toLocaleLowerCase("pt-BR");
+    return passaFiltro && (!termo || texto.includes(termo));
+  });
+
   return (
     <div className="flex flex-col gap-3">
       {feedback && (
@@ -69,7 +83,50 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
           {feedback}
         </p>
       )}
-      {contas.map((c) => {
+      <div className="flex flex-col gap-3 rounded-2xl bg-white p-3 ring-1 ring-zinc-200/60 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative min-w-0 flex-1">
+          <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            type="search"
+            value={busca}
+            onChange={(event) => setBusca(event.target.value)}
+            placeholder="Buscar por conta ou fornecedor"
+            aria-label="Buscar conta ou fornecedor"
+            className="min-h-11 w-full rounded-lg border border-zinc-200 bg-white py-2 pl-10 pr-3 text-lg text-zinc-900 outline-none transition-colors focus:border-[#2195B9] focus:ring-2 focus:ring-[#2195B9]/20"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1" aria-label="Filtrar contas">
+          {([
+            ["pendente", "Em aberto"],
+            ["atrasada", "Atrasadas"],
+            ["pago", "Pagas"],
+            ["todos", "Todas"],
+          ] as const).map(([valor, rotulo]) => (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => setFiltro(valor)}
+              aria-pressed={filtro === valor}
+              className={cn(
+                "min-h-10 rounded-lg px-3 text-base font-medium transition-colors",
+                filtro === valor ? "bg-[#2195B9] text-white" : "text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="text-base text-zinc-500">
+        {contasFiltradas.length === 1 ? "1 conta encontrada" : `${contasFiltradas.length} contas encontradas`}
+      </p>
+      {contasFiltradas.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-5 py-10 text-center">
+          <CheckCircle2 size={32} aria-hidden="true" className="mx-auto text-zinc-400" />
+          <p className="mt-3 text-lg font-medium text-zinc-700">Nenhuma conta nesta visão</p>
+          <p className="mt-1 text-base text-zinc-500">Ajuste a busca ou escolha outro filtro.</p>
+        </div>
+      ) : contasFiltradas.map((c) => {
         const atrasada = c.status === "pendente" && c.vencimento !== null && c.vencimento < hoje();
         const agindo = agindoId === c.id;
         const editando = editandoId === c.id;

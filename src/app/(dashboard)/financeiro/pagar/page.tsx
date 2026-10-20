@@ -2,7 +2,7 @@
 // fornecedor, valor, vencimento, método e situação. Mesmo gate do
 // /financeiro (financeiro ou coordenador_geral); RLS da 0112 é o limite.
 import Link from "next/link";
-import { ArrowLeft, Lock, ReceiptText, SearchX } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, Lock, Plus, ReceiptText, SearchX, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
 import PagarForm, { type Conta } from "./pagar-form";
@@ -15,6 +15,16 @@ const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
+
+function hojeISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function adicionarDias(iso: string, dias: number) {
+  const data = new Date(`${iso}T00:00:00`);
+  data.setDate(data.getDate() + dias);
+  return data.toISOString().slice(0, 10);
+}
 
 export default async function PagarPage() {
   const supabase = await createClient();
@@ -76,6 +86,14 @@ export default async function PagarPage() {
   const totalPendente = contas
     .filter((c) => c.status === "pendente")
     .reduce((s, c) => s + c.valor, 0);
+  const hoje = hojeISO();
+  const proximaSemana = adicionarDias(hoje, 7);
+  const pendentes = contas.filter((c) => c.status === "pendente");
+  const vencidas = pendentes.filter((c) => c.vencimento && c.vencimento < hoje);
+  const vencemHoje = pendentes.filter((c) => c.vencimento === hoje);
+  const vencemNaSemana = pendentes.filter(
+    (c) => c.vencimento && c.vencimento > hoje && c.vencimento <= proximaSemana
+  );
 
   return (
     <PageContainer>
@@ -94,21 +112,36 @@ export default async function PagarPage() {
           </p>
         </div>
         <div className="rounded-2xl bg-white px-5 py-4 ring-1 ring-zinc-200/60">
-          <p className="text-base text-zinc-500">Pendente de pagamento</p>
+          <p className="text-base text-zinc-500">Em aberto</p>
           <p className="text-2xl font-semibold text-amber-700">{brl.format(totalPendente)}</p>
         </div>
       </header>
 
-      <section
-        aria-labelledby="nova-conta-titulo"
-        className="flex w-full flex-col gap-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
-      >
-        <h2 id="nova-conta-titulo" className="flex items-center gap-2 text-2xl font-semibold text-zinc-900">
-          <ReceiptText size={24} aria-hidden="true" className="text-[#2195B9]" />
-          Registrar conta
-        </h2>
-        <PagarForm />
+      <section aria-label="Resumo de pagamentos" className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <ResumoCard icon={AlertTriangle} label="Em atraso" value={String(vencidas.length)} detail={brl.format(vencidas.reduce((s, c) => s + c.valor, 0))} tone="red" />
+        <ResumoCard icon={CalendarClock} label="Vencem hoje" value={String(vencemHoje.length)} detail={brl.format(vencemHoje.reduce((s, c) => s + c.valor, 0))} tone="amber" />
+        <ResumoCard icon={WalletCards} label="Próximos 7 dias" value={String(vencemNaSemana.length)} detail={brl.format(vencemNaSemana.reduce((s, c) => s + c.valor, 0))} tone="blue" />
+        <ResumoCard icon={CheckCircle2} label="Pagas" value={String(contas.filter((c) => c.status === "pago").length)} detail="no período listado" tone="green" />
       </section>
+
+      <details
+        aria-labelledby="nova-conta-titulo"
+        className="group w-full rounded-2xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60"
+      >
+        <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-2xl font-semibold text-zinc-900 marker:hidden">
+          <span id="nova-conta-titulo" className="flex items-center gap-2">
+            <ReceiptText size={24} aria-hidden="true" className="text-[#2195B9]" />
+            Registrar nova conta
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-lg bg-[#2195B9] px-3 py-2 text-base font-medium text-white group-open:hidden">
+            <Plus size={17} aria-hidden="true" />
+            Nova conta
+          </span>
+        </summary>
+        <div className="border-t border-zinc-100 p-5">
+          <PagarForm />
+        </div>
+      </details>
 
       {contas.length === 0 ? (
         <div className="flex w-full flex-col items-center gap-4 rounded-2xl bg-white px-6 py-16 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
@@ -127,5 +160,36 @@ export default async function PagarPage() {
         </section>
       )}
     </PageContainer>
+  );
+}
+
+function ResumoCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: typeof AlertTriangle;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "red" | "amber" | "blue" | "green";
+}) {
+  const tones = {
+    red: "bg-red-50 text-red-700 ring-red-100",
+    amber: "bg-amber-50 text-amber-700 ring-amber-100",
+    blue: "bg-sky-50 text-sky-700 ring-sky-100",
+    green: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  };
+  return (
+    <div className={`rounded-2xl p-4 ring-1 ${tones[tone]}`}>
+      <div className="flex items-center gap-2 text-base font-medium">
+        <Icon size={18} aria-hidden="true" />
+        {label}
+      </div>
+      <p className="mt-2 text-3xl font-semibold">{value}</p>
+      <p className="mt-1 text-base opacity-80">{detail}</p>
+    </div>
   );
 }
