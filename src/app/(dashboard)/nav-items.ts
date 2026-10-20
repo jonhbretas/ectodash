@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   House,
   ListTodo,
+  ChartNoAxesColumn,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -97,6 +98,7 @@ export const navEntries: SidebarEntry[] = [
     children: [
       { href: "/dips", label: "Dinâmica DIP", Icon: Globe2, modulo: "dips" },
       { href: "/voluntarios/escala", label: "Escala da DIP", Icon: CalendarCheck, modulo: "dips" },
+      { href: "/voluntarios/escala/analise", label: "Análise da DIP", Icon: ChartNoAxesColumn, modulo: "dips" },
     ],
   },
 
