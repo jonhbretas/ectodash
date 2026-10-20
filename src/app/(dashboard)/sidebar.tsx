@@ -276,14 +276,22 @@ function SidebarBrand({
       href="/"
       title={collapsed ? "EctoLab — página inicial" : undefined}
       aria-label="EctoLab — página inicial"
-      className={`flex min-h-12 items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
-        collapsed ? "justify-start gap-0" : "w-full"
-      }`}
+      className="relative flex h-12 w-full items-center overflow-hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
     >
       <img
-        src={collapsed ? "/favicon.png" : "/logo-ectolab.png"}
+        src="/favicon.png"
+        alt=""
+        aria-hidden="true"
+        className={`absolute left-0 top-1/2 h-9 w-9 -translate-y-1/2 object-contain transition-opacity duration-200 ease-out ${
+          collapsed ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <img
+        src="/logo-ectolab.png"
         alt="EctoLab"
-        className={`shrink-0 ${collapsed ? "h-9 w-9" : "w-full"}`}
+        className={`absolute left-0 top-1/2 h-12 w-auto max-w-full -translate-y-1/2 object-contain object-left transition-[opacity,transform] duration-300 ease-out ${
+          collapsed ? "-translate-x-2 opacity-0" : "translate-x-0 opacity-100"
+        }`}
       />
     </a>
   );
@@ -389,7 +397,7 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
         ref={sidebarRef}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className={`sticky top-0 z-30 hidden h-dvh shrink-0 flex-col gap-5 border-r border-slate-200/60 bg-white/95 backdrop-blur-xl py-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
+        className={`sticky top-0 z-30 hidden h-dvh shrink-0 flex-col gap-5 border-r border-slate-200/60 bg-white/95 backdrop-blur-xl py-5 transition-all duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] lg:flex ${
           visuallyCollapsed ? "w-18 px-2" : "w-64 shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
         }`}
       >
