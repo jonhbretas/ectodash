@@ -187,6 +187,7 @@ export const navEntries: SidebarEntry[] = [
 // the sidebar, visually separated from the main menu.
 export const coordinatorEntries: SidebarEntry[] = [
   { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard },
+  { href: "/demandas?coordenacao=1", label: "Demandas da Coordenação", Icon: ClipboardList },
   { href: "/painel/acessos", label: "Acessos e cargos", Icon: ShieldCheck },
   // ─── Inteligência (exclusiva do coordenador geral) ───
   {

@@ -55,6 +55,7 @@ export async function createDemanda(
   const etiquetaId = etiquetaIdSchema.safeParse(
     formData.get("etiquetaId") ?? undefined
   );
+  const restritaCoordenacaoGeral = formData.get("restritaCoordenacaoGeral") === "true";
 
   if (!parsed.success || !eventoId.success || !etiquetaId.success) {
     return { ok: false, message: "Verifique os campos destacados.", id: null };
@@ -74,6 +75,7 @@ export async function createDemanda(
       projeto: parsed.data.projeto,
       evento_id: eventoId.data ?? null,
       etiqueta_id: etiquetaId.data ?? null,
+      restrita_coordenacao_geral: restritaCoordenacaoGeral,
     })
     .select("id")
     .single();

@@ -19,7 +19,9 @@ export default async function DemandasPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const filters = parseDemandaFilters(await searchParams);
+  const rawSearchParams = await searchParams;
+  const filters = parseDemandaFilters(rawSearchParams);
+  const demandasDaCoordenacao = rawSearchParams.coordenacao === "1";
 
   const supabase = await createClient();
   const {
@@ -37,6 +39,11 @@ export default async function DemandasPage({
     .single();
 
   const role = profile?.role;
+  const podeVerDemandasDaCoordenacao = role === "coordenador_geral";
+
+  if (demandasDaCoordenacao && !podeVerDemandasDaCoordenacao) {
+    return null;
+  }
 
   const meuVoluntarioId = profile?.voluntario_id ?? null;
   const minhasDemandasAtivas = Boolean(
@@ -100,6 +107,8 @@ export default async function DemandasPage({
     .select("id, titulo, prazo, status, area, projeto, evento_id, etiqueta_id, atrasada")
     .order("prazo", { ascending: true });
 
+  query = query.eq("restrita_coordenacao_geral", demandasDaCoordenacao);
+
   if (filters.area) {
     query = query.ilike("area", filters.area);
   }
@@ -123,6 +132,7 @@ export default async function DemandasPage({
   const { data: baseDemandas } = await supabase
     .from("demandas_com_status")
     .select("id, area, projeto, status, atrasada, evento_id")
+    .eq("restrita_coordenacao_geral", demandasDaCoordenacao)
     .order("prazo", { ascending: true });
 
   const baseRows = baseDemandas ?? [];
@@ -309,10 +319,14 @@ export default async function DemandasPage({
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-col gap-0.5">
             <h1 className="text-xl font-bold tracking-tight text-slate-900">
-              Olá, {displayName(profile ?? { email: user.email ?? "" })}
+              {demandasDaCoordenacao
+                ? "Demandas da Coordenação Geral"
+                : `Olá, ${displayName(profile ?? { email: user.email ?? "" })}`}
             </h1>
             <p className="text-sm text-slate-500">
-              Acompanhe suas demandas e prazos por aqui.
+              {demandasDaCoordenacao
+                ? "Projetos institucionais e demandas privadas da Coordenação Geral."
+                : "Acompanhe suas demandas e prazos por aqui."}
             </p>
           </div>
 
@@ -363,7 +377,7 @@ export default async function DemandasPage({
                 </Link>
               )}
               <Link
-                href="/demandas/nova"
+                href={demandasDaCoordenacao ? "/demandas/nova?coordenacao=1" : "/demandas/nova"}
                 className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-3 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5"
               >
                 <Plus size={18} aria-hidden="true" />

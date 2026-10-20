@@ -4,8 +4,25 @@ import { ArrowLeft } from "lucide-react";
 import DemandaForm from "../demanda-form";
 import PageContainer from "../../page-container";
 
-export default async function NovaDemandaPage() {
+export default async function NovaDemandaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ coordenacao?: string | string[] }>;
+}) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const demandaDaCoordenacao = params.coordenacao === "1";
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+
+  if (demandaDaCoordenacao && profile?.role !== "coordenador_geral") {
+    return null;
+  }
 
   // O roster usa a função SECURITY DEFINER roster_basico() (id, nome,
   // tem_conta) em vez de SELECT direto em voluntarios+profiles: o RLS do
@@ -37,14 +54,23 @@ export default async function NovaDemandaPage() {
     <PageContainer>
       <div className="flex w-full flex-col gap-8">
         <Link
-          href="/demandas"
+          href={demandaDaCoordenacao ? "/demandas?coordenacao=1" : "/demandas"}
           className="inline-flex w-fit items-center gap-1.5 text-base font-medium text-zinc-400 transition-colors hover:text-zinc-600"
         >
           <ArrowLeft size={16} aria-hidden="true" />
           Voltar para a lista
         </Link>
 
-        <h1 className="text-3xl font-semibold text-zinc-900">Nova demanda</h1>
+        <div>
+          <h1 className="text-3xl font-semibold text-zinc-900">
+            {demandaDaCoordenacao ? "Nova demanda da Coordenação Geral" : "Nova demanda"}
+          </h1>
+          {demandaDaCoordenacao && (
+            <p className="mt-2 text-base text-zinc-500">
+              Esta demanda será visível somente para coordenadores gerais.
+            </p>
+          )}
+        </div>
 
         <DemandaForm
           voluntarios={voluntarios}
@@ -53,6 +79,7 @@ export default async function NovaDemandaPage() {
           areas={(areasResult.data ?? []).map((a) => a.nome)}
           projetos={(projetosResult.data ?? []).map((p) => p.nome)}
           wide
+          restritaCoordenacaoGeral={demandaDaCoordenacao}
         />
       </div>
     </PageContainer>

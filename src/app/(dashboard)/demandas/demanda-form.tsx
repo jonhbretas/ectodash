@@ -160,6 +160,8 @@ type DemandaFormProps = {
   // wide: desktop full-width layout (the edit screen's two-column grid);
   // the create screen stays at max-w-md.
   wide?: boolean;
+  // A proteção é aplicada por RLS; este campo apenas identifica a rota de criação.
+  restritaCoordenacaoGeral?: boolean;
 };
 
 const fieldLabelClass = "text-xl font-medium text-zinc-900";
@@ -188,6 +190,7 @@ export default function DemandaForm({
   demandaId,
   defaultValues,
   wide = false,
+  restritaCoordenacaoGeral = false,
 }: DemandaFormProps) {
   // One DemandaForm handles both modes via props — mode="edit" binds the
   // update action to a server-trusted demandaId via .bind(null, demandaId),
@@ -369,6 +372,7 @@ export default function DemandaForm({
   if (wide) {
     return (
       <form onSubmit={handleSubmit(onValid)} className="flex w-full flex-col gap-8">
+        <input type="hidden" name="restritaCoordenacaoGeral" value={restritaCoordenacaoGeral ? "true" : "false"} />
         <p className="text-base text-zinc-500">
           Campos com * são obrigatórios.
         </p>
@@ -622,6 +626,7 @@ export default function DemandaForm({
       onSubmit={handleSubmit(onValid)}
       className="flex w-full flex-col gap-6 max-w-md"
     >
+      <input type="hidden" name="restritaCoordenacaoGeral" value={restritaCoordenacaoGeral ? "true" : "false"} />
       <p className="text-base text-zinc-500">
         Campos com * são obrigatórios.
       </p>
