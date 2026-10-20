@@ -185,7 +185,7 @@ export type AnalisarState = {
 };
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
-// Go gateway (modelo via ai_config, default muse-spark-1.3) — teto só protege o tempo de resposta, não o custo.
+// OpenAI (modelo via ai_config, padrão gpt-5.4-mini) — teto limita o texto enviado.
 const MAX_TEXT_CHARS = 60000;
 const EMPTY_INPUT = "Cole um texto ou envie um arquivo antes de analisar.";
 

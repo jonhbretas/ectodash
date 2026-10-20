@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // The single most important test this plan adds (08-RESEARCH.md Wave 0
 // Gaps): proves extractDemandas() NEVER calls .insert() on "demandas" or
 // "demanda_responsaveis" under any input, including hostile/malformed
-// mocked AI responses. Mocks global fetch — never calls the real DeepSeek/
-// Zen API (cost, flakiness, non-determinism) — mirroring how
+// mocked AI responses. Mocks global fetch — never calls the real OpenAI
+// API (cost, flakiness, non-determinism) — mirroring how
 // tests/db/reminder-run-log.test.ts mocks the "resend" SDK boundary in this
 // repo.
 
@@ -52,14 +52,15 @@ function formDataWith(texto: string): FormData {
   return formData;
 }
 
-// Builds a fake OpenAI-compatible chat completions response carrying the
+// Builds a fake OpenAI Responses API response carrying the
 // given model content string.
 function responseWith(content: string) {
   return {
     ok: true,
     status: 200,
     json: async () => ({
-      choices: [{ message: { content } }],
+      status: "completed",
+      output: [{ type: "message", content: [{ type: "output_text", text: content }] }],
     }),
   } as unknown as Response;
 }
@@ -78,7 +79,7 @@ describe("extractDemandas — zero-database-write invariant (IA-04)", () => {
     getUserMock.mockResolvedValue({ data: { user: FAKE_USER } });
     // The action requires a configured provider key to even attempt the
     // call; the mocked fetch never touches the real API regardless.
-    vi.stubEnv("OPENCODE_API_KEY", "test-key");
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
     vi.stubGlobal("fetch", fetchMock);
   });
 

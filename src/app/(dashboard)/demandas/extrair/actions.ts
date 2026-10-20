@@ -42,10 +42,10 @@ const pasteSchema = z.object({
 // opening/decisions).
 const MEETING_TEXT_MAX = 60000;
 
-// Provider: OpenCode Go gateway (mimo-v2.5 por padrão).
+// Provider: OpenAI Responses API (gpt-5.4-mini por padrão).
 // Shared client in src/lib/ai/ai-client.ts.
 
-// Muse Spark / Go json mode requires a top-level JSON OBJECT (never a bare
+// OpenAI JSON mode requires a top-level JSON OBJECT (never a bare
 // array), so the prompt asks for the array wrapped under a "demandas" key
 // and this schema re-validates the envelope. The inner array validation is
 // extractionResponseSchema unchanged — the same untrusted-output boundary
