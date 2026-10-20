@@ -10,7 +10,7 @@ const VIEW_AS_KEY = "ectodash:visualizar-como";
 export default function AccountFloatingMenu({ isCoordenador, viewAsOptions }: { isCoordenador: boolean; viewAsOptions: ViewAsOption[] }) {
   const [viewAs, setViewAs] = useStoredPreference(VIEW_AS_KEY, "eu");
   return (
-    <details className="fixed right-4 top-2 z-50 lg:right-6 lg:top-5">
+    <details className="absolute right-4 top-2 z-50 lg:right-6 lg:top-5">
       <summary className="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-2.5 text-slate-700 shadow-lg shadow-slate-900/10 backdrop-blur transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] [&::-webkit-details-marker]:hidden">
         <UserRound size={19} aria-hidden="true" /><span className="hidden text-sm font-semibold sm:inline">Minha conta</span><ChevronDown size={15} aria-hidden="true" />
       </summary>

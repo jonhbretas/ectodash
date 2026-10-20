@@ -202,8 +202,13 @@ export default async function DashboardLayout({
         feedbackNovos={feedbackNovos}
         viewAsOptions={viewAsOptions}
       />
-      <AccountFloatingMenu isCoordenador={isCoordenadorGeral} viewAsOptions={viewAsOptions} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="relative h-14 shrink-0 sm:h-16">
+          <AccountFloatingMenu
+            isCoordenador={isCoordenadorGeral}
+            viewAsOptions={viewAsOptions}
+          />
+        </div>
         <FeedbackAlertaBanner
           initialCount={feedbackNovos}
           isCoordenador={isCoordenadorGeral}
