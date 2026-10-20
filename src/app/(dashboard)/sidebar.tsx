@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeftClose, PanelLeftOpen, X, ChevronDown } from "lucide-react";
+import { PanelLeftOpen, Pin, X, ChevronDown } from "lucide-react";
 import {
   filterEntries,
   filterCoordinatorEntries,
@@ -25,7 +25,7 @@ export type SidebarProps = {
   viewAsOptions?: Array<ViewAsOption & { acesso: Acesso }>;
 };
 
-const COLLAPSED_KEY = "ectodash:sidebar-colapsada";
+const SIDEBAR_MODE_KEY = "ectodash:sidebar-modo";
 const VIEW_AS_KEY = "ectodash:visualizar-como";
 
 function SidebarLinks({
@@ -302,11 +302,13 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
-  const [collapsedRaw, setCollapsedRaw] = useStoredPreference(COLLAPSED_KEY, "1");
+  // Fixa é o padrão: o menu permanece aberto. No modo automático, ele se
+  // recolhe fora do hover e volta a abrir ao passar o mouse.
+  const [sidebarMode, setSidebarMode] = useStoredPreference(SIDEBAR_MODE_KEY, "fixa");
   const [viewAs] = useStoredPreference(VIEW_AS_KEY, "eu");
-  const collapsed = collapsedRaw === "1";
+  const automatic = sidebarMode === "automatica";
 
-  const visuallyCollapsed = collapsed && !hovered;
+  const visuallyCollapsed = automatic && !hovered;
   const isCoordenador = acesso?.role === "coordenador_geral";
   const simulatedAccess = viewAsOptions.find((option) => option.value === viewAs)?.acesso;
   const visibleAccess = isCoordenador && viewAs !== "eu" ? simulatedAccess ?? acesso : acesso;
@@ -341,8 +343,8 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
     };
   }, [isCoordenador]);
 
-  function toggleCollapsed() {
-    setCollapsedRaw(collapsed ? "0" : "1");
+  function toggleSidebarMode() {
+    setSidebarMode(automatic ? "fixa" : "automatica");
   }
 
   useEffect(() => {
@@ -416,29 +418,34 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
         </div>
 
         <div className="mt-auto flex flex-col items-center gap-2 px-4">
-          {!visuallyCollapsed && (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label="Recolher menu lateral"
-              title="Recolher menu"
-              className="flex h-9 w-full items-center justify-center gap-2 rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-            >
-              <PanelLeftClose size={18} aria-hidden="true" strokeWidth={1.5} />
-              <span className="text-xs font-medium">Recolher</span>
-            </button>
-          )}
-          {visuallyCollapsed && (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label="Expandir menu lateral"
-              title="Fixar menu"
-              className="flex h-9 w-full items-center justify-center rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-            >
+          <button
+            type="button"
+            onClick={toggleSidebarMode}
+            aria-label={
+              automatic
+                ? "Fixar a barra lateral aberta"
+                : "Ativar retração automática da barra lateral"
+            }
+            title={
+              automatic
+                ? "Fixar a barra lateral aberta"
+                : "Ativar retração automática ao tirar o mouse"
+            }
+            className={`flex h-9 w-full items-center justify-center gap-2 rounded-xl text-slate-400 transition-all duration-200 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
+              visuallyCollapsed ? "px-0" : "px-2"
+            }`}
+          >
+            {automatic ? (
               <PanelLeftOpen size={18} aria-hidden="true" strokeWidth={1.5} />
-            </button>
-          )}
+            ) : (
+              <Pin size={17} aria-hidden="true" strokeWidth={1.5} />
+            )}
+            {!visuallyCollapsed && (
+              <span className="text-xs font-medium">
+                {automatic ? "Fixar aberta" : "Menu fixo"}
+              </span>
+            )}
+          </button>
           <SignOutButton iconOnly={visuallyCollapsed} />
         </div>
       </aside>
