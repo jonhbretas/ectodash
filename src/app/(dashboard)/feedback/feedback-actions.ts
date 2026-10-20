@@ -32,3 +32,36 @@ export async function atualizarStatusFeedback(formData: FormData) {
   await supabase.from("feedback").update({ status }).eq("id", id);
   revalidatePath("/feedback");
 }
+
+export type ComentarFeedbackState = { ok: boolean; message: string };
+
+// Comentário no fio do relato — autor do relato ou coordenador geral. A RLS
+// de feedback_comentarios garante o escopo; o trigger notifica o outro lado.
+export async function comentarFeedback(
+  feedbackId: string,
+  _prev: ComentarFeedbackState,
+  formData: FormData
+): Promise<ComentarFeedbackState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Entre novamente para comentar." };
+
+  const conteudo = String(formData.get("conteudo") ?? "").trim();
+  if (!conteudo) return { ok: false, message: "Escreva o comentário antes de enviar." };
+  if (conteudo.length > 2000) {
+    return { ok: false, message: "O comentário pode ter no máximo 2000 caracteres." };
+  }
+
+  const { error } = await supabase
+    .from("feedback_comentarios")
+    .insert({ feedback_id: feedbackId, autor_id: user.id, conteudo });
+  if (error) {
+    console.error("comentarFeedback: insert failed", error);
+    return { ok: false, message: "Não foi possível enviar o comentário. Tente novamente." };
+  }
+
+  revalidatePath("/feedback");
+  return { ok: true, message: "" };
+}

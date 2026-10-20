@@ -29,9 +29,33 @@ export default async function FeedbackPage() {
   const { data: itens } = await supabase
     .from("feedback")
     .select(
-      "id, tipo, mensagem, pagina, navegador, status, created_at, anexos, profiles(full_name, email)"
+      "id, user_id, tipo, mensagem, pagina, navegador, status, created_at, anexos, profiles(full_name, email)"
     )
     .order("created_at", { ascending: false });
+
+  // Conversa de cada relato (RLS: autor do relato ou coordenador geral).
+  const idsRelatos = (itens ?? []).map((i) => String(i.id));
+  const { data: comentariosRaw } = idsRelatos.length
+    ? await supabase
+        .from("feedback_comentarios")
+        .select("id, feedback_id, autor_id, conteudo, created_at, profiles(full_name, email)")
+        .in("feedback_id", idsRelatos)
+        .order("created_at", { ascending: true })
+    : { data: [] };
+  const autorPorRelato = new Map((itens ?? []).map((i) => [String(i.id), String(i.user_id)]));
+  const comentariosPorRelato = new Map<string, RelatoRow["comentarios"]>();
+  for (const c of comentariosRaw ?? []) {
+    const perfil = c.profiles as unknown as { full_name: string | null; email: string | null } | null;
+    const lista = comentariosPorRelato.get(String(c.feedback_id)) ?? [];
+    lista.push({
+      id: Number(c.id),
+      autorNome: perfil?.full_name?.trim() || perfil?.email || "Usuário",
+      doAutorDoRelato: String(c.autor_id) === autorPorRelato.get(String(c.feedback_id)),
+      conteudo: String(c.conteudo),
+      createdAt: String(c.created_at),
+    });
+    comentariosPorRelato.set(String(c.feedback_id), lista);
+  }
 
   const relatos: RelatoRow[] = await Promise.all(
     (itens ?? []).map(async (item) => {
@@ -61,6 +85,7 @@ export default async function FeedbackPage() {
         createdAt: String(item.created_at),
         autor: autor?.full_name?.trim() || autor?.email || "Usuário",
         anexos,
+        comentarios: comentariosPorRelato.get(String(item.id)) ?? [],
       };
     })
   );

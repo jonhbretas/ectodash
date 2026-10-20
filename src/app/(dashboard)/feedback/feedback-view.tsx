@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { atualizarStatusFeedback } from "./feedback-actions";
+import FeedbackComentarios, { type FeedbackComentario } from "./feedback-comentarios";
 
 export type RelatoRow = {
   id: string;
@@ -21,6 +22,7 @@ export type RelatoRow = {
   createdAt: string;
   autor: string;
   anexos: { nome: string; url: string }[];
+  comentarios: FeedbackComentario[];
 };
 
 type FiltroTipo = "todos" | "bug" | "sugestao";
@@ -286,6 +288,12 @@ export default function FeedbackView({
                     </button>
                   </form>
                 )}
+
+                <FeedbackComentarios
+                  feedbackId={r.id}
+                  comentarios={r.comentarios}
+                  isCoordenador={isCoordenador}
+                />
               </article>
             );
           })}

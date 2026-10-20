@@ -40,6 +40,12 @@ export default function NotificacoesResolvidas({
 
   if (itens.length === 0) return null;
 
+  // Um só tipo de aviso (ex.: todos "resolvido") mantém o título dele;
+  // mistura de resolvidos e comentários usa um título geral.
+  const titulos = new Set(itens.map((n) => n.titulo));
+  const tituloDialog = titulos.size === 1 ? itens[0].titulo : "Novidades nos seus relatos";
+  const soResolvidos = itens.every((n) => n.titulo === "Sua solicitação foi atendida");
+
   const fechar = () => {
     if (!aberto) return;
     setAberto(false);
@@ -57,12 +63,14 @@ export default function NotificacoesResolvidas({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <CheckCircle2 size={26} className="text-green-700" aria-hidden="true" />
-            Sua solicitação foi atendida
+            {tituloDialog}
           </DialogTitle>
           <DialogDescription>
-            {itens.length === 1
-              ? "Um relato seu foi resolvido enquanto você estava fora:"
-              : `${itens.length} relatos seus foram resolvidos enquanto você estava fora:`}
+            {soResolvidos
+              ? itens.length === 1
+                ? "Um relato seu foi resolvido enquanto você estava fora:"
+                : `${itens.length} relatos seus foram resolvidos enquanto você estava fora:`
+              : "Enquanto você estava fora:"}
           </DialogDescription>
         </DialogHeader>
 
@@ -76,7 +84,8 @@ export default function NotificacoesResolvidas({
                 {n.mensagem}
               </p>
               <span className="text-sm text-zinc-500">
-                Atendido em {formatarData(n.createdAt)}
+                {titulos.size > 1 && `${n.titulo} · `}
+                {formatarData(n.createdAt)}
               </span>
             </li>
           ))}
@@ -89,7 +98,7 @@ export default function NotificacoesResolvidas({
               onClick={fechar}
               className="flex min-h-10 items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
             >
-              Ver meus relatos
+              {soResolvidos ? "Ver meus relatos" : "Abrir relatos"}
             </Link>
           )}
           <button
