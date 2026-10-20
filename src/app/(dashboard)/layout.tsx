@@ -10,6 +10,7 @@ import NotificacoesResolvidas, {
 import { FeedbackAlertaBanner } from "@/components/notificacoes/feedback-alerta";
 import AtalhosAjuda from "@/components/atalhos/atalhos-ajuda";
 import Sidebar from "./sidebar";
+import type { ViewAsOption } from "./view-as-selector";
 
 export default async function DashboardLayout({
   children,
@@ -85,6 +86,105 @@ export default async function DashboardLayout({
 
   // Contagem inicial de feedbacks novos para o banner + badge (só coordenador)
   const isCoordenadorGeral = profile?.role === "coordenador_geral";
+  const viewAsOptions: Array<ViewAsOption & { acesso: Acesso }> = [];
+
+  // O seletor "Visualizar como" é exclusivo do coordenador geral e só
+  // controla os itens exibidos no menu. A sessão e as políticas RLS continuam
+  // sendo as da pessoa autenticada.
+  if (isCoordenadorGeral) {
+    const funcoes: Array<{ role: NonNullable<Acesso["role"]>; label: string }> = [
+      { role: "voluntario_comum", label: "Função: Voluntário comum" },
+      { role: "coordenador_area", label: "Função: Coordenador de área" },
+      { role: "financeiro", label: "Função: Financeiro" },
+      { role: "voluntariado", label: "Função: Voluntariado" },
+    ];
+    for (const funcao of funcoes) {
+      viewAsOptions.push({
+        value: `funcao:${funcao.role}`,
+        label: funcao.label,
+        description: "Função padrão",
+        acesso: { role: funcao.role, cargos: [], modulosDesativados: acesso.modulosDesativados },
+      });
+    }
+
+    const [profilesPreviewResult, modelosPreviewResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, role, cargos(id, nivel, area_id, localidade_id, cargo_modulos(modulo))")
+        .order("full_name", { ascending: true })
+        .limit(300),
+      supabase
+        .from("cargo_modelos")
+        .select("id, nome, nivel, area_id, modulos")
+        .order("nome"),
+    ]);
+
+    type CargoPreviewRaw = {
+      id: number;
+      nivel: Acesso["cargos"][number]["nivel"];
+      area_id: number | null;
+      localidade_id: number | null;
+      cargo_modulos: Array<{ modulo: string }> | null;
+    };
+    type ProfilePreviewRaw = {
+      id: string;
+      full_name: string | null;
+      email: string;
+      role: Acesso["role"];
+      cargos: CargoPreviewRaw[] | null;
+    };
+
+    for (const preview of (profilesPreviewResult.data ?? []) as unknown as ProfilePreviewRaw[]) {
+      if (preview.id === user.id) continue;
+      const nome = preview.full_name?.trim() || preview.email;
+      viewAsOptions.push({
+        value: `pessoa:${preview.id}`,
+        label: `Pessoa: ${nome}`,
+        description: "Pessoa",
+        acesso: {
+          role: preview.role,
+          cargos: (preview.cargos ?? []).map((cargo) => ({
+            cargo_id: cargo.id,
+            nivel: cargo.nivel,
+            area_id: cargo.area_id,
+            area_nome: null,
+            localidade_id: cargo.localidade_id,
+            localidade_nome: null,
+            modulos: (cargo.cargo_modulos ?? []).map((modulo) => modulo.modulo),
+          })),
+          modulosDesativados: acesso.modulosDesativados,
+        },
+      });
+    }
+
+    type ModeloPreviewRaw = {
+      id: number;
+      nome: string;
+      nivel: Acesso["cargos"][number]["nivel"];
+      area_id: number | null;
+      modulos: string[] | null;
+    };
+    for (const modelo of (modelosPreviewResult.data ?? []) as unknown as ModeloPreviewRaw[]) {
+      viewAsOptions.push({
+        value: `cargo:${modelo.id}`,
+        label: `Cargo: ${modelo.nome}`,
+        description: "Modelo de cargo",
+        acesso: {
+          role: null,
+          cargos: [{
+            cargo_id: -modelo.id,
+            nivel: modelo.nivel,
+            area_id: modelo.area_id,
+            area_nome: null,
+            localidade_id: null,
+            localidade_nome: null,
+            modulos: modelo.modulos ?? [],
+          }],
+          modulosDesativados: acesso.modulosDesativados,
+        },
+      });
+    }
+  }
   let feedbackNovos = 0;
   if (isCoordenadorGeral) {
     const { count } = await supabase
@@ -96,7 +196,11 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20 lg:flex-row">
-      <Sidebar acesso={acesso} feedbackNovos={feedbackNovos} />
+      <Sidebar
+        acesso={acesso}
+        feedbackNovos={feedbackNovos}
+        viewAsOptions={viewAsOptions}
+      />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <FeedbackAlertaBanner
           initialCount={feedbackNovos}

@@ -17,13 +17,16 @@ import { useStoredPreference } from "@/lib/use-stored-preference";
 import { podeAcessar, type Acesso, type ModuloAcesso } from "@/lib/acesso";
 import SignOutButton from "./sign-out-button";
 import QuickSearch from "./quick-search";
+import ViewAsSelector, { type ViewAsOption } from "./view-as-selector";
 
 export type SidebarProps = {
   acesso?: Acesso | null;
   feedbackNovos?: number;
+  viewAsOptions?: Array<ViewAsOption & { acesso: Acesso }>;
 };
 
 const COLLAPSED_KEY = "ectodash:sidebar-colapsada";
+const VIEW_AS_KEY = "ectodash:visualizar-como";
 
 function SidebarLinks({
   acesso,
@@ -286,16 +289,20 @@ function SidebarBrand({
   );
 }
 
-export default function Sidebar({ acesso = null, feedbackNovos = 0 }: SidebarProps) {
+export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOptions = [] }: SidebarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const [collapsedRaw, setCollapsedRaw] = useStoredPreference(COLLAPSED_KEY, "1");
+  const [viewAs, setViewAs] = useStoredPreference(VIEW_AS_KEY, "eu");
   const collapsed = collapsedRaw === "1";
 
   const visuallyCollapsed = collapsed && !hovered;
   const isCoordenador = acesso?.role === "coordenador_geral";
+  const simulatedAccess = viewAsOptions.find((option) => option.value === viewAs)?.acesso;
+  const visibleAccess = isCoordenador && viewAs !== "eu" ? simulatedAccess ?? acesso : acesso;
+  const showViewAs = isCoordenador && viewAsOptions.length > 0;
 
   // Polling simples para badge da sidebar (coordenador_geral apenas).
   // Atualiza o contador de "novos" a cada 60s sem realtime.
@@ -362,8 +369,16 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0 }: SidebarPro
           </button>
         </div>
         <QuickSearch onNavigate={() => setOpen(false)} />
+        {showViewAs && (
+          <ViewAsSelector
+            options={viewAsOptions}
+            value={viewAs}
+            onChange={setViewAs}
+            compact
+          />
+        )}
         <SidebarLinks
-          acesso={acesso}
+          acesso={visibleAccess}
           pathname={pathname}
           collapsed={false}
           onNavigate={() => setOpen(false)}
@@ -389,11 +404,14 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0 }: SidebarPro
       >
         <SidebarBrand collapsed={visuallyCollapsed} size="lg" />
 
+        {!visuallyCollapsed && showViewAs && (
+          <ViewAsSelector options={viewAsOptions} value={viewAs} onChange={setViewAs} />
+        )}
         {!visuallyCollapsed && <div className="px-4"><QuickSearch /></div>}
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none px-4">
           <SidebarLinks
-            acesso={acesso}
+            acesso={visibleAccess}
             pathname={pathname}
             collapsed={visuallyCollapsed}
             feedbackNovos={feedbackCount}
