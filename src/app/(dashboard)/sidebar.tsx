@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeftClose, PanelLeftOpen, X, ChevronDown, UserRound } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, X, ChevronDown } from "lucide-react";
 import {
   filterEntries,
   filterCoordinatorEntries,
@@ -17,7 +17,7 @@ import { useStoredPreference } from "@/lib/use-stored-preference";
 import { podeAcessar, type Acesso, type ModuloAcesso } from "@/lib/acesso";
 import SignOutButton from "./sign-out-button";
 import QuickSearch from "./quick-search";
-import ViewAsSelector, { type ViewAsOption } from "./view-as-selector";
+import type { ViewAsOption } from "./view-as-selector";
 
 export type SidebarProps = {
   acesso?: Acesso | null;
@@ -289,36 +289,19 @@ function SidebarBrand({
   );
 }
 
-function AccountQuickActions({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className={`flex items-center ${compact ? "justify-start" : "justify-end"} gap-1 px-4`}>
-      <a
-        href="/perfil"
-        aria-label="Meu perfil"
-        title="Meu perfil"
-        className="flex size-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-      >
-        <UserRound size={19} aria-hidden="true" strokeWidth={1.75} />
-      </a>
-      <SignOutButton iconOnly inline />
-    </div>
-  );
-}
-
 export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOptions = [] }: SidebarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const [collapsedRaw, setCollapsedRaw] = useStoredPreference(COLLAPSED_KEY, "1");
-  const [viewAs, setViewAs] = useStoredPreference(VIEW_AS_KEY, "eu");
+  const [viewAs] = useStoredPreference(VIEW_AS_KEY, "eu");
   const collapsed = collapsedRaw === "1";
 
   const visuallyCollapsed = collapsed && !hovered;
   const isCoordenador = acesso?.role === "coordenador_geral";
   const simulatedAccess = viewAsOptions.find((option) => option.value === viewAs)?.acesso;
   const visibleAccess = isCoordenador && viewAs !== "eu" ? simulatedAccess ?? acesso : acesso;
-  const showViewAs = isCoordenador && viewAsOptions.length > 0;
 
   // Polling simples para badge da sidebar (coordenador_geral apenas).
   // Atualiza o contador de "novos" a cada 60s sem realtime.
@@ -385,15 +368,6 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
           </button>
         </div>
         <QuickSearch onNavigate={() => setOpen(false)} />
-        {showViewAs && (
-          <ViewAsSelector
-            options={viewAsOptions}
-            value={viewAs}
-            onChange={setViewAs}
-            compact
-          />
-        )}
-        <AccountQuickActions compact />
         <SidebarLinks
           acesso={visibleAccess}
           pathname={pathname}
@@ -421,10 +395,6 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
       >
         <SidebarBrand collapsed={visuallyCollapsed} size="lg" />
 
-        {!visuallyCollapsed && showViewAs && (
-          <ViewAsSelector options={viewAsOptions} value={viewAs} onChange={setViewAs} />
-        )}
-        {!visuallyCollapsed && <AccountQuickActions />}
         {!visuallyCollapsed && <div className="px-4"><QuickSearch /></div>}
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none px-4">

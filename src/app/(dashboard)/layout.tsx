@@ -11,6 +11,7 @@ import { FeedbackAlertaBanner } from "@/components/notificacoes/feedback-alerta"
 import AtalhosAjuda from "@/components/atalhos/atalhos-ajuda";
 import Sidebar from "./sidebar";
 import type { ViewAsOption } from "./view-as-selector";
+import AccountFloatingMenu from "./account-floating-menu";
 
 export default async function DashboardLayout({
   children,
@@ -201,6 +202,7 @@ export default async function DashboardLayout({
         feedbackNovos={feedbackNovos}
         viewAsOptions={viewAsOptions}
       />
+      <AccountFloatingMenu isCoordenador={isCoordenadorGeral} viewAsOptions={viewAsOptions} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <FeedbackAlertaBanner
           initialCount={feedbackNovos}
