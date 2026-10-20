@@ -16,7 +16,7 @@ const FUNCOES_ORDEM = [
   "Energizador 3",
   "Monitoria",
   "Acoplador 1",
-  "Acoplador 2",
+  "Acoplador 12",
 ];
 
 function formatarDataCurta(dateStr: string): string {

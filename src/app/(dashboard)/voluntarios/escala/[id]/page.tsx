@@ -12,6 +12,7 @@ import { EditarParticipantesButton } from "../participantes-localidade-dialog";
 import DisponibilidadePanel from "../disponibilidade-panel";
 import AlertasRepeticaoPanel from "../alertas-repeticao-panel";
 import ImportarEscalaTextoDialog from "../importar-escala-texto-dialog";
+import EpiconAgendaSelector from "../epicon-agenda-selector";
 
 type EscalaDetalhe = {
   id: number;
@@ -176,6 +177,8 @@ export default async function EscalaDetalhePage({
           </div>
         )}
       </header>
+
+      {canManage && escala.status === "rascunho" && <EpiconAgendaSelector escalaId={escala.id} />}
 
       {canManage && (
         <AlertasRepeticaoPanel escalaId={escala.id} alocacoes={alocacoes} />

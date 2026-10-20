@@ -41,7 +41,7 @@ const FUNCOES_ORDEM = [
   "Energizador 3",
   "Monitoria",
   "Acoplador 1",
-  "Acoplador 2",
+  "Acoplador 12",
 ];
 
 const FUNCOES_VAGAS: Record<string, number> = {
@@ -53,7 +53,7 @@ const FUNCOES_VAGAS: Record<string, number> = {
   "Energizador 3": 1,
   Monitoria: 2,
   "Acoplador 1": 1,
-  "Acoplador 2": 1,
+  "Acoplador 12": 1,
 };
 
 function monitorLabel(funcao: string): string | null {
@@ -328,7 +328,7 @@ export default function EscalaTable({
                   </TableCell>
                   {canManage && (
                     <TableCell className="text-right">
-                      {status === "rascunho" && vagasRestantes > 0 && (
+                      {status === "rascunho" && funcao !== "Epicon" && vagasRestantes > 0 && (
                         <button
                           onClick={() => handleAlocar(funcao)}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-[#2195B9]/10 px-3 py-1.5 text-sm font-medium text-[#2195B9] transition-colors hover:bg-[#2195B9]/20"

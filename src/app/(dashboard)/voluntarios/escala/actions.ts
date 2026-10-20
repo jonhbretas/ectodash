@@ -47,7 +47,7 @@ const importarEscalaTextoSchema = z.string().trim().min(3).max(20_000);
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-/** Funções da escala — Epicon será cargo especial no futuro, por enquanto aberto */
+/** Funções da escala. Epicon é definido pela agenda, nunca pelo algoritmo. */
 const FUNCOES: {
   nome: string;
   vagas: number;
@@ -60,7 +60,7 @@ const FUNCOES: {
   { nome: "Energizador 3", vagas: 1 },
   { nome: "Monitoria", vagas: 2 },
   { nome: "Acoplador 1", vagas: 1 },
-  { nome: "Acoplador 2", vagas: 1 },
+  { nome: "Acoplador 12", vagas: 1 },
 ];
 
 /** Pontuação de desejabilidade por função (menor = menos desejável) */
@@ -68,7 +68,7 @@ const PONTUACAO_DESEJABILIDADE: Record<string, number> = {
   Monitoria: 1,
   Cronometrista: 2,
   "Acoplador 1": 3,
-  "Acoplador 2": 3,
+  "Acoplador 12": 3,
   "Energizador 3": 4,
   "Energizador 2": 5,
   "Energizador 1": 6,
@@ -86,7 +86,7 @@ function isElegivel(
   // Funções de confiança não entram no sorteio geral. Epicon só pode ser
   // exercida por quem está identificado para isso; epicons não são sorteados
   // para as demais funções, exceto Observador Parapsíquico.
-  if (funcao.nome === "Epicon") return vol.epicom === true;
+  if (funcao.nome === "Epicon") return false;
   if (funcao.nome === "Energizador 1") return vol.epicom !== true && vol.docenteConscienciologia;
   if (funcao.nome === "Observador Parapsíquico") return true;
   return vol.epicom !== true;
@@ -365,7 +365,7 @@ export async function gerarAlocacao(
   const alocados = new Set<number>();
   const alocacoes: { funcao: string; voluntario_id: number }[] = [];
 
-  for (const funcao of FUNCOES) {
+  for (const funcao of FUNCOES.filter((funcao) => funcao.nome !== "Epicon")) {
     for (let vaga = 0; vaga < funcao.vagas; vaga++) {
       const elegiveisBase = volElegiveis.filter((v) =>
         isElegivel(v, funcao, alocados)
@@ -583,6 +583,53 @@ export async function importarEscalaPorTexto(
     ok: true,
     message: `${alocacoes.length} alocação(ões) importada(s).${nomesPendentes.length ? ` Revise: ${nomesPendentes.join(", ")} não foi(ram) localizado(s).` : ""}`,
   };
+}
+
+/** Define o Epicon consultado na agenda da DIP; não participa do sorteio. */
+export async function definirEpiconDaAgenda(
+  escalaId: number,
+  nome: string
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return auth;
+  const nomeLimpo = nome.trim();
+  if (nomeLimpo.length < 3 || nomeLimpo.length > 200) {
+    return { ok: false, message: "Informe o nome completo do Epicon." };
+  }
+  const { data: escala } = await supabase
+    .from("escala_semanal")
+    .select("status")
+    .eq("id", escalaId)
+    .maybeSingle();
+  if (!escala) return { ok: false, message: "Escala não encontrada." };
+  if (escala.status !== "rascunho") {
+    return { ok: false, message: "O Epicon só pode ser definido enquanto a escala está em rascunho." };
+  }
+  const { data: voluntarios } = await supabase
+    .from("voluntarios")
+    .select("id, nome")
+    .eq("ativo", true)
+    .is("data_saida", null);
+  const voluntario = (voluntarios ?? []).find(
+    (item) => normalizarNomeParticipante(item.nome) === normalizarNomeParticipante(nomeLimpo)
+  );
+  if (!voluntario) {
+    return { ok: false, message: "Esse nome não corresponde a um voluntário ativo cadastrado." };
+  }
+  const { error: removerError } = await supabase
+    .from("escala_alocacao")
+    .delete()
+    .eq("escala_id", escalaId)
+    .eq("funcao", "Epicon");
+  if (removerError) return { ok: false, message: "Não foi possível atualizar o Epicon." };
+  const { error: inserirError } = await supabase
+    .from("escala_alocacao")
+    .insert({ escala_id: escalaId, funcao: "Epicon", voluntario_id: voluntario.id });
+  if (inserirError) return { ok: false, message: "Não foi possível salvar o Epicon." };
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  return { ok: true, message: `${voluntario.nome} definido(a) como Epicon pela agenda.` };
 }
 
 /** Marcar ausência e gerar substituição automática */
