@@ -15,13 +15,9 @@ import {
   Wallet,
   DollarSign,
   LayoutDashboard,
-  BarChart3,
   UserRound,
-  Sparkles,
   Globe2,
   GraduationCap,
-  ShoppingCart,
-  Package,
   Receipt,
   FileSignature,
   FileText,
@@ -32,7 +28,6 @@ import {
   HeartHandshake,
   ShieldCheck,
   House,
-  Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuloAcesso } from "@/lib/acesso";
@@ -160,19 +155,6 @@ export const navEntries: SidebarEntry[] = [
     ],
   },
 
-  // ─── Marketing (coordenador geral ou cargo com o módulo — comunicação) ───
-  {
-    type: "group",
-    label: "Marketing",
-    Icon: Mail,
-    href: "/marketing",
-    modulo: "marketing",
-    children: [
-      { href: "/marketing", label: "Visão geral", Icon: Mail, modulo: "marketing" },
-      { href: "/marketing/historico", label: "Histórico", Icon: ClipboardList, modulo: "marketing" },
-    ],
-  },
-
   // ─── Ajuda (todos veem os próprios; coordenador geral gerencia tudo) ───
   { href: "/feedback", label: "Ajuda e melhorias", Icon: MessageSquareWarning },
 
@@ -186,33 +168,9 @@ export const navEntries: SidebarEntry[] = [
 // Coordenador-only entry points live in their own section at the bottom of
 // the sidebar, visually separated from the main menu.
 export const coordinatorEntries: SidebarEntry[] = [
-  { href: "/painel", label: "Painel do coordenador", Icon: LayoutDashboard },
+  { href: "/administrativo", label: "Administrativo", Icon: LayoutDashboard },
+  { href: "/configuracoes", label: "Configurações", Icon: ShieldCheck },
   { href: "/demandas?coordenacao=1", label: "Demandas da Coordenação", Icon: ClipboardList },
-  { href: "/painel/acessos", label: "Acessos e cargos", Icon: ShieldCheck },
-  // ─── Inteligência (exclusiva do coordenador geral) ───
-  {
-    type: "group",
-    label: "Inteligência",
-    Icon: BarChart3,
-    children: [
-      { href: "/analise", label: "Análise", Icon: BarChart3, modulo: "analise" },
-      { href: "/analisar", label: "Analisar com IA", Icon: Sparkles, modulo: "analisar" },
-    ],
-  },
-  // ─── Loja Ectolab (oculta; só o coordenador geral vê — fora de operação) ───
-  {
-    type: "group",
-    label: "Loja Ectolab",
-    Icon: ShoppingCart,
-    href: "/vendas",
-    modulo: "vendas",
-    children: [
-      { href: "/vendas", label: "Visão geral", Icon: ShoppingCart, modulo: "vendas" },
-      { href: "/vendas/produtos", label: "Produtos", Icon: Package, modulo: "vendas" },
-      { href: "/vendas/pedidos", label: "Pedidos", Icon: Receipt, modulo: "vendas" },
-      { href: "/vendas/alunos", label: "Alunos", Icon: Users, modulo: "vendas" },
-    ],
-  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────
