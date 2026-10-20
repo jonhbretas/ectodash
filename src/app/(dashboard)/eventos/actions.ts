@@ -691,6 +691,13 @@ export async function adicionarTarefasDoModelo(
   if (!user) {
     return { ...adicionarTarefasInitialState, message: "Sessão expirada." };
   }
+  const { data: podeGerirEventos } = await supabase.rpc("pode_gerir_eventos");
+  if (podeGerirEventos !== true) {
+    return {
+      ...adicionarTarefasInitialState,
+      message: "Esta ação é exclusiva da equipe responsável por eventos.",
+    };
+  }
 
   const { data: evento, error: eventoError } = await supabase
     .from("eventos")
@@ -1035,13 +1042,9 @@ export async function analisarDuplicadosEventosIA(): Promise<AnalisarDuplicadosS
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Sessão expirada.", grupos: [], totalAnalisado: 0 };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "coordenador_geral") {
-    return { ok: false, message: "Só o coordenador pode rodar a análise.", grupos: [], totalAnalisado: 0 };
+  const { data: podeGerirEventos } = await supabase.rpc("pode_gerir_eventos");
+  if (podeGerirEventos !== true) {
+    return { ok: false, message: "Esta análise é exclusiva da equipe responsável por eventos.", grupos: [], totalAnalisado: 0 };
   }
 
   const { data, error } = await supabase

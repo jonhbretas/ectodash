@@ -49,7 +49,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
     );
   }
 
-  const [eventoResult, demandasResult, profileResult] = await Promise.all([
+  const [eventoResult, demandasResult, profileResult, gestaoEventosResult] = await Promise.all([
     supabase
       .from("eventos")
       .select("id, titulo, descricao, data_evento, local, tipo_evento_id, criado_por")
@@ -61,6 +61,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
       .eq("evento_id", id)
       .order("prazo", { ascending: true }),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.rpc("pode_gerir_eventos"),
   ]);
 
   if (eventoResult.error || !eventoResult.data) {
@@ -80,11 +81,8 @@ export default async function EventoPage({ params }: EventoPageProps) {
   const evento = eventoResult.data;
   const rawDemandas = demandasResult.data ?? [];
 
-  // UX gate mirroring RLS 0008: only the creator or a coordenador_geral
-  // sees the edit panel (RLS is the real boundary).
-  const canEdit =
-    evento.criado_por === user.id ||
-    profileResult.data?.role === "coordenador_geral";
+  // Mesmo escopo da RLS: equipe de Comunicação, coordenação da área ou geral.
+  const canEdit = gestaoEventosResult.data === true;
 
   // Responsável display names for the kanban cards — one batched read over
   // the event's demandas.
@@ -168,7 +166,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
       </header>
 
       <div className="flex w-full flex-wrap items-start gap-3">
-        <AdicionarTarefasButton eventoId={id} />
+        {canEdit && <AdicionarTarefasButton eventoId={id} />}
         {profileResult.data?.role === "coordenador_geral" && (
           <Link
             href={`/eventos/${id}/contratos`}

@@ -31,6 +31,8 @@ export default async function EventosPage() {
     .eq("id", user.id)
     .single();
   const isCoordenador = profile?.role === "coordenador_geral";
+  const { data: podeGerirEventos } = await supabase.rpc("pode_gerir_eventos");
+  const podeGerir = podeGerirEventos === true;
 
   // RLS (migration 0008): every authenticated volunteer reads every event.
   const [proximosResult, anterioresResult, tiposResult, mergeResult] = await Promise.all([
@@ -107,7 +109,7 @@ export default async function EventosPage() {
           {isCoordenador && (
             <BotaoMesclarEventos />
           )}
-          {isCoordenador && (
+          {podeGerir && (
             <Link
               href="/eventos/modelos"
               className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
@@ -116,7 +118,7 @@ export default async function EventosPage() {
               Modelos
             </Link>
           )}
-          <ImportEventosToggle />
+          {podeGerir && <ImportEventosToggle />}
         </div>
       </header>
 
@@ -139,9 +141,15 @@ export default async function EventosPage() {
         </div>
       ) : (
         <div className="flex w-full flex-col gap-10">
-          <EventosLista proximos={proximos} anteriores={anteriores} today={today} tipos={tipos} />
+          <EventosLista
+            proximos={proximos}
+            anteriores={anteriores}
+            today={today}
+            tipos={tipos}
+            podeGerir={podeGerir}
+          />
 
-          {isCoordenador && <AnaliseDuplicadosSection />}
+          {podeGerir && <AnaliseDuplicadosSection />}
           {isCoordenador && <MergeEventosSection eventos={eventosMerge} />}
         </div>
       )}

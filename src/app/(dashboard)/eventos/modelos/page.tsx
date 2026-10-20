@@ -22,19 +22,15 @@ export default async function ModelosEventosPage() {
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const { data: podeGerirEventos } = await supabase.rpc("pode_gerir_eventos");
 
-  if (profile?.role !== "coordenador_geral") {
+  if (podeGerirEventos !== true) {
     return (
       <PageContainer>
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <Lock size={48} className="text-zinc-400" aria-hidden="true" />
           <h1 className="text-3xl font-semibold text-zinc-900">
-            A configuração de modelos é exclusiva do coordenador
+            A configuração de modelos é exclusiva da equipe responsável por eventos
           </h1>
           <Link
             href="/eventos"

@@ -86,11 +86,13 @@ export default function EventosLista({
   anteriores,
   today,
   tipos = [],
+  podeGerir = false,
 }: {
   proximos: EventoRow[];
   anteriores: EventoRow[];
   today: string;
   tipos?: EventoTipoOpcao[];
+  podeGerir?: boolean;
 }) {
   const router = useRouter();
   const [termo, setTermo] = useState("");
@@ -207,7 +209,7 @@ export default function EventosLista({
   }
 
   const rowProps = (id: number) => ({
-    selecionavel: selecionando,
+    selecionavel: podeGerir && selecionando,
     checked: selecionados.has(id),
     onToggle: (checked: boolean) => toggleUm(id, checked),
   });
@@ -241,7 +243,7 @@ export default function EventosLista({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {podeGerir && <div className="flex flex-wrap items-center gap-2">
           {!selecionando ? (
             <button
               type="button"
@@ -317,7 +319,7 @@ export default function EventosLista({
               </button>
             </>
           )}
-        </div>
+        </div>}
 
         {mensagem && (
           <p
