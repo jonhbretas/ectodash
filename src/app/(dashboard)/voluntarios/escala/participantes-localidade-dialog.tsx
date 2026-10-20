@@ -61,7 +61,9 @@ export default function ParticipantesLocalidadeDialog({
         setSelecionados(
           result.configurado
             ? result.selecionados
-            : result.participantes.map((participante) => participante.id)
+            : result.participantes
+                .filter((participante) => participante.daLocalidade)
+                .map((participante) => participante.id)
         );
         setNovoNome("");
         setCarregado(true);
@@ -106,7 +108,11 @@ export default function ParticipantesLocalidadeDialog({
   }
 
   function marcarTodos() {
-    setSelecionados(participantes.filter((p) => p.ativo).map((p) => p.id));
+    setSelecionados(
+      participantes
+        .filter((p) => p.ativo && (p.daLocalidade || p.selecionado))
+        .map((p) => p.id)
+    );
   }
 
   function limparSelecao() {
@@ -175,7 +181,7 @@ export default function ParticipantesLocalidadeDialog({
           </DialogTitle>
           <DialogDescription>
             {localidade
-              ? `Escolha quem participa da DIP em ${localidade}.`
+              ? `A base local de ${localidade} já vem selecionada. Você pode incluir um visitante de outra localidade para esta DIP.`
               : "Escolha os participantes que poderão ser sorteados para a DIP."}
             {sortearDepoisDeSalvar && " Depois de salvar, o sorteio será feito automaticamente."}
           </DialogDescription>
@@ -200,7 +206,7 @@ export default function ParticipantesLocalidadeDialog({
                   onClick={marcarTodos}
                   className="rounded-lg px-3 py-2 text-sm font-medium text-[#2195B9] hover:bg-[#2195B9]/10"
                 >
-                  Marcar todos
+                  Base local
                 </button>
                 <button
                   type="button"
@@ -241,6 +247,7 @@ export default function ParticipantesLocalidadeDialog({
                           </span>
                           <span className="truncate text-sm text-zinc-500">
                             {participante.unidade ?? "Sem unidade"}
+                            {!participante.daLocalidade && " · outra localidade"}
                             {!participante.ativo && " · inativo"}
                           </span>
                         </span>

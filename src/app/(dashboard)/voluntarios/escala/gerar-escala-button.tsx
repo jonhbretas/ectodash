@@ -55,7 +55,7 @@ export default function GerarEscalaButton({ escalaId }: { escalaId: number }) {
         className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-4 text-lg font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
       >
         <Wand2 size={18} aria-hidden="true" />
-        {pending ? "Sorteando..." : "Sortear escala"}
+        {pending ? "Gerando..." : "Gerar escala equilibrada"}
       </button>
       {error && (
         <span className="text-sm text-red-600">{error}</span>

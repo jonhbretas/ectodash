@@ -22,6 +22,7 @@ export type ParticipanteLocalidade = {
   nome: string;
   unidade: string | null;
   ativo: boolean;
+  daLocalidade: boolean;
   selecionado?: boolean;
 };
 
@@ -41,6 +42,8 @@ const criarEscalaSchema = z.object({
   dataSemana: z.string().min(1, "Selecione a data da sexta-feira."),
   localidade: z.string().min(1, "Selecione a localidade da dinâmica."),
 });
+
+const importarEscalaTextoSchema = z.string().trim().min(3).max(20_000);
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -75,11 +78,18 @@ const PONTUACAO_DESEJABILIDADE: Record<string, number> = {
 
 /** Verifica se um voluntário é elegível para uma função */
 function isElegivel(
-  vol: { id: number },
-  _funcao: { nome: string; vagas: number },
+  vol: { id: number; epicom: boolean | null; docenteConscienciologia: boolean },
+  funcao: { nome: string; vagas: number },
   alocados: Set<number>
 ): boolean {
-  return !alocados.has(vol.id);
+  if (alocados.has(vol.id)) return false;
+  // Funções de confiança não entram no sorteio geral. Epicon só pode ser
+  // exercida por quem está identificado para isso; epicons não são sorteados
+  // para as demais funções, exceto Observador Parapsíquico.
+  if (funcao.nome === "Epicon") return vol.epicom === true;
+  if (funcao.nome === "Energizador 1") return vol.epicom !== true && vol.docenteConscienciologia;
+  if (funcao.nome === "Observador Parapsíquico") return true;
+  return vol.epicom !== true;
 }
 
 // ── Actions ──────────────────────────────────────────────────────────
@@ -195,9 +205,8 @@ export async function gerarAlocacao(
   // o primeiro sorteio precisa voltar para a tela para que o coordenador
   // confirme quem realmente participa da DIP.
   let participantesIds: Set<number> | null = null;
+  let localidadesDaEscala: Array<{ id: number; nome: string }> = [];
   if (escala.localidade) {
-    console.log("[gerarAlocacao] localidade da escala:", escala.localidade);
-
     const { data: localidades, error: localidadesError } = await supabase
       .from("voluntario_localidades")
       .select("id, nome");
@@ -207,11 +216,9 @@ export async function gerarAlocacao(
       return { ok: false, message: "Não foi possível carregar as localidades." };
     }
 
-    console.log("[gerarAlocacao] localidades cadastradas:", JSON.stringify(localidades?.map(l => ({ id: l.id, nome: l.nome }))));
+    localidadesDaEscala = localidades ?? [];
 
     const localidadeId = resolverLocalidadeId(escala.localidade, localidades ?? []);
-    console.log("[gerarAlocacao] localidadeId resolvido:", localidadeId);
-
     if (localidadeId === null) {
       console.error("[gerarAlocacao] localidade não encontrada:", escala.localidade);
       return {
@@ -233,17 +240,12 @@ export async function gerarAlocacao(
       };
     }
 
-    console.log("[gerarAlocacao] vinculos encontrados:", vinculos?.length ?? 0, "ids:", JSON.stringify(vinculos?.map(v => v.voluntario_id)));
-
-    if (!vinculos || vinculos.length === 0) {
-      return {
-        ok: false,
-        message: "Selecione os participantes da DIP antes do primeiro sorteio.",
-        needsParticipants: true,
-      };
+    // A lista salva inclui membros convidados de outras localidades. Quando
+    // ainda não há lista, a escala começa automaticamente com os voluntários
+    // ativos da localidade, sem travar o coordenador no primeiro sorteio.
+    if (vinculos && vinculos.length > 0) {
+      participantesIds = new Set(vinculos.map((v) => v.voluntario_id));
     }
-
-    participantesIds = new Set(vinculos.map((v) => v.voluntario_id));
   }
 
   // Buscar voluntários ativos
@@ -257,29 +259,41 @@ export async function gerarAlocacao(
     return { ok: false, message: "Nenhum voluntário ativo encontrado." };
   }
 
-  console.log("[gerarAlocacao] total voluntários ativos:", voluntarios.length);
-
-  // Depois da confirmação inicial, somente os participantes salvos para a
-  // localidade podem entrar no sorteio. Escalas antigas sem localidade mantêm
-  // o comportamento anterior, usando todos os voluntários ativos.
+  // Depois da confirmação, somente a lista salva participa (inclusive
+  // convidados de outra localidade). Sem configuração anterior, usa a base
+  // local automaticamente; escalas sem localidade mantêm todos os ativos.
   const voluntariosFiltrados = participantesIds
     ? voluntarios.filter((voluntario) => participantesIds!.has(voluntario.id))
-    : voluntarios;
-
-  console.log("[gerarAlocacao] voluntários após filtro de participantes:", voluntariosFiltrados.length);
+    : escala.localidade
+      ? filtrarVoluntariosPorLocalidade(
+          voluntarios,
+          escala.localidade,
+          localidadesDaEscala,
+          new Set<number>()
+        )
+      : voluntarios;
 
   if (voluntariosFiltrados.length === 0) {
-    const detalhes = escala.localidade
-      ? ` localidade="${escala.localidade}" participantesConfigurados=${participantesIds !== null} totalAtivos=${voluntarios.length}`
-      : "";
-    console.error("[gerarAlocacao] nenhum voluntário elegível encontrado." + detalhes);
     return {
       ok: false,
       message: participantesIds !== null
         ? `Nenhum dos ${participantesIds.size} participante(s) configurado(s) para "${escala.localidade}" está ativo. Verifique os participantes em "Editar participantes".`
-        : `Nenhum voluntário ativo encontrado para esta localidade.${detalhes}`,
+        : `Nenhum voluntário ativo encontrado para esta localidade. Verifique os vínculos de localidade no cadastro dos voluntários.`,
     };
   }
+
+  const { data: atividades, error: atividadesError } = await supabase
+    .from("voluntario_atividades")
+    .select("voluntario_id")
+    .in("voluntario_id", voluntariosFiltrados.map((voluntario) => voluntario.id))
+    .eq("atividade", "docente_conscienciologia");
+  if (atividadesError) {
+    console.error("gerarAlocacao: atividades failed", atividadesError);
+    return { ok: false, message: "Não foi possível validar as qualificações para a escala." };
+  }
+  const docentesConscienciologia = new Set(
+    (atividades ?? []).map((atividade) => atividade.voluntario_id)
+  );
 
   // Buscar histórico de funções (round-robin ponderado)
   const { data: historico } = await supabase.rpc("historico_funcoes_voluntario", {
@@ -343,6 +357,8 @@ export async function gerarAlocacao(
     .map((v) => ({
       id: v.id,
       nome: v.nome,
+      epicom: v.epicom,
+      docenteConscienciologia: docentesConscienciologia.has(v.id),
     }));
 
   // Alocação round-robin: para cada função, ordenar por menos participações
@@ -351,11 +367,26 @@ export async function gerarAlocacao(
 
   for (const funcao of FUNCOES) {
     for (let vaga = 0; vaga < funcao.vagas; vaga++) {
-      const elegiveis = volElegiveis.filter((v) =>
+      const elegiveisBase = volElegiveis.filter((v) =>
         isElegivel(v, funcao, alocados)
       );
 
-      if (elegiveis.length === 0) continue;
+      if (elegiveisBase.length === 0) continue;
+
+      // Monitoria e Cronometrista desgastam mais. Quando houver alternativa,
+      // bloqueia quem acabou de exercer a mesma função nas últimas 3 semanas.
+      const exigeDescanso = funcao.nome === "Monitoria" || funcao.nome === "Cronometrista";
+      const elegiveis = exigeDescanso
+        ? (() => {
+            const comDescanso = elegiveisBase.filter((v) => {
+              const ultima = ultimaDataPorFuncaoVoluntario.get(`${v.id}:${funcao.nome}`);
+              if (!ultima) return true;
+              const dias = Math.floor((Date.parse(`${escala.data_semana}T00:00:00`) - Date.parse(`${ultima}T00:00:00`)) / 86_400_000);
+              return dias >= 21;
+            });
+            return comDescanso.length > 0 ? comDescanso : elegiveisBase;
+          })()
+        : elegiveisBase;
 
       // Ordenar por:
       // 1. Menos vezes exercendo ESTA função (normalizada)
@@ -412,8 +443,6 @@ export async function gerarAlocacao(
     return { ok: false, message: "Não foi possível alocar nenhum voluntário. Verifique se há voluntários elegíveis disponíveis." };
   }
 
-  console.log("[gerarAlocacao] alocações geradas:", alocacoes.length, JSON.stringify(alocacoes.map(a => `${a.funcao}=${a.voluntario_id}`)));
-
   // Limpar alocações antigas só agora — evita deixar a escala vazia se a geração falhar.
   const { error: limpezaError } = await supabase
     .from("escala_alocacao")
@@ -445,6 +474,114 @@ export async function gerarAlocacao(
   return {
     ok: true,
     message: `${alocacoes.length} alocações geradas com sucesso.`,
+  };
+}
+
+/**
+ * Importa a escala que foi definida na reunião geral a partir de texto
+ * copiado do PDF/ata. Não usa OCR nem IA: evita custo e deixa o resultado
+ * auditável antes da publicação.
+ */
+export async function importarEscalaPorTexto(
+  escalaId: number,
+  texto: string
+): Promise<EscalaActionState> {
+  const supabase = await createClient();
+  const auth = await verificarPermissaoEscala(supabase);
+  if (!auth.ok) return auth;
+
+  const parsed = importarEscalaTextoSchema.safeParse(texto);
+  if (!parsed.success) {
+    return { ok: false, message: "Cole o texto da escala (até 20 mil caracteres)." };
+  }
+  const { data: escala } = await supabase
+    .from("escala_semanal")
+    .select("status")
+    .eq("id", escalaId)
+    .maybeSingle();
+  if (!escala) return { ok: false, message: "Escala não encontrada." };
+  if (escala.status !== "rascunho") {
+    return { ok: false, message: "A importação só pode alterar uma escala em rascunho." };
+  }
+
+  const funcoesBase = FUNCOES.map((funcao) => funcao.nome).sort((a, b) => b.length - a.length);
+  const linhas = parsed.data.split(/\r?\n/).map((linha) => linha.trim()).filter(Boolean);
+  const entradas: Array<{ funcao: string; nome: string }> = [];
+  for (const linha of linhas) {
+    const funcaoBase = funcoesBase.find((funcao) =>
+      linha.localeCompare(funcao, "pt-BR", { sensitivity: "base", usage: "search" }) === 0 ||
+      linha.toLocaleLowerCase("pt-BR").startsWith(funcao.toLocaleLowerCase("pt-BR"))
+    );
+    if (!funcaoBase) continue;
+    const restante = linha.slice(funcaoBase.length).replace(/^\s*\d*\s*[:\-–—]\s*/, "").trim();
+    if (restante) entradas.push({ funcao: funcaoBase, nome: restante });
+  }
+  if (entradas.length === 0) {
+    return {
+      ok: false,
+      message: "Não identifiquei linhas no formato “Função: Nome”. Ex.: “Cronometrista: Maria Silva”.",
+    };
+  }
+
+  const { data: voluntarios, error: voluntariosError } = await supabase
+    .from("voluntarios")
+    .select("id, nome, epicom")
+    .eq("ativo", true)
+    .is("data_saida", null);
+  if (voluntariosError) return { ok: false, message: "Não foi possível consultar os voluntários." };
+  const porNome = new Map((voluntarios ?? []).map((voluntario) => [normalizarNomeParticipante(voluntario.nome), voluntario]));
+  const { data: atividades } = await supabase
+    .from("voluntario_atividades")
+    .select("voluntario_id")
+    .eq("atividade", "docente_conscienciologia");
+  const docentesConscienciologia = new Set((atividades ?? []).map((atividade) => atividade.voluntario_id));
+  const ocupados = new Set<number>();
+  const vagasUsadas = new Map<string, number>();
+  const alocacoes: Array<{ funcao: string; voluntario_id: number }> = [];
+  const pendencias: string[] = [];
+
+  for (const entrada of entradas) {
+    const voluntario = porNome.get(normalizarNomeParticipante(entrada.nome));
+    const vagas = FUNCOES.find((funcao) => funcao.nome === entrada.funcao)?.vagas ?? 1;
+    const usadas = vagasUsadas.get(entrada.funcao) ?? 0;
+    if (!voluntario) {
+      pendencias.push(entrada.nome);
+      continue;
+    }
+    if (
+      ocupados.has(voluntario.id) ||
+      usadas >= vagas ||
+      (entrada.funcao === "Epicon" && !voluntario.epicom) ||
+      (entrada.funcao === "Energizador 1" && (!docentesConscienciologia.has(voluntario.id) || voluntario.epicom)) ||
+      (entrada.funcao !== "Epicon" && entrada.funcao !== "Observador Parapsíquico" && voluntario.epicom)
+    ) continue;
+    ocupados.add(voluntario.id);
+    vagasUsadas.set(entrada.funcao, usadas + 1);
+    alocacoes.push({
+      funcao: vagas > 1 ? `${entrada.funcao} ${usadas + 1}` : entrada.funcao,
+      voluntario_id: voluntario.id,
+    });
+  }
+  if (alocacoes.length === 0) {
+    return { ok: false, message: "Nenhum nome do texto corresponde a um voluntário ativo cadastrado." };
+  }
+
+  const { error: limparError } = await supabase
+    .from("escala_alocacao")
+    .delete()
+    .eq("escala_id", escalaId);
+  if (limparError) return { ok: false, message: "Não foi possível preparar a importação." };
+  const { error: inserirError } = await supabase
+    .from("escala_alocacao")
+    .insert(alocacoes.map((alocacao) => ({ escala_id: escalaId, ...alocacao })));
+  if (inserirError) return { ok: false, message: "Não foi possível salvar a escala importada." };
+
+  revalidatePath("/voluntarios/escala");
+  revalidatePath(`/voluntarios/escala/${escalaId}`);
+  const nomesPendentes = [...new Set(pendencias)].slice(0, 3);
+  return {
+    ok: true,
+    message: `${alocacoes.length} alocação(ões) importada(s).${nomesPendentes.length ? ` Revise: ${nomesPendentes.join(", ")} não foi(ram) localizado(s).` : ""}`,
   };
 }
 
@@ -917,21 +1054,24 @@ async function carregarContextoParticipantes(
   }
 
   const vinculados = new Set(vinculos.map((v) => v.voluntario_id));
-  const candidatos = filtrarVoluntariosPorLocalidade(
+  const locais = filtrarVoluntariosPorLocalidade(
     voluntarios ?? [],
     escala.localidade,
     localidades ?? [],
     vinculados
-  ).filter(
-    (voluntario) =>
-      (voluntario.ativo && !voluntario.data_saida) ||
-      vinculados.has(voluntario.id)
   );
-
-  console.log("[carregarContextoParticipantes] total voluntários:", voluntarios?.length ?? 0);
-  console.log("[carregarContextoParticipantes] candidatos após filtro:", candidatos.length);
-  console.log("[carregarContextoParticipantes] voluntários com localidade_id:", voluntarios?.filter(v => v.localidade_id !== null).length ?? 0);
-  console.log("[carregarContextoParticipantes] amostra de unidades:", JSON.stringify([...new Set(voluntarios?.slice(0, 20).map(v => v.unidade) ?? [])]));
+  const locaisIds = new Set(locais.map((voluntario) => voluntario.id));
+  // A lista abre com a base local primeiro, mas também mostra os demais
+  // voluntários ativos para que alguém em visita à região possa participar
+  // desta escala sem alterar o cadastro de origem.
+  const candidatos = (voluntarios ?? [])
+    .filter((voluntario) => (voluntario.ativo && !voluntario.data_saida) || vinculados.has(voluntario.id))
+    .sort((a, b) => {
+      const aLocal = locaisIds.has(a.id) || vinculados.has(a.id);
+      const bLocal = locaisIds.has(b.id) || vinculados.has(b.id);
+      if (aLocal !== bLocal) return aLocal ? -1 : 1;
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
 
   return {
     ok: true,
@@ -945,6 +1085,7 @@ async function carregarContextoParticipantes(
         nome: voluntario.nome,
         unidade: voluntario.unidade,
         ativo: voluntario.ativo && !voluntario.data_saida,
+        daLocalidade: locaisIds.has(voluntario.id),
         selecionado: vinculados.has(voluntario.id),
       })),
     },
@@ -1061,6 +1202,7 @@ export async function salvarParticipantesLocalidade(
     localidade: contexto.localidade,
     participantes: contexto.participantes.map((participante) => ({
       ...participante,
+      daLocalidade: participante.daLocalidade,
       selecionado: selecionados.has(participante.id),
     })),
     selecionados: ids,
@@ -1110,6 +1252,7 @@ export async function adicionarNovoParticipanteLocalidade(
       localidade: contexto.localidade,
       participantes: contexto.participantes.map((participante) => ({
         ...participante,
+      daLocalidade: participante.daLocalidade,
         selecionado: participante.id === existente.id || participante.selecionado,
       })),
       selecionados: [...new Set([...contexto.vinculados, existente.id])],
@@ -1152,6 +1295,7 @@ export async function adicionarNovoParticipanteLocalidade(
     nome: parsedNome.data,
     unidade: contexto.localidade,
     ativo: true,
+    daLocalidade: true,
     selecionado: true,
   };
   revalidatePath("/voluntarios");

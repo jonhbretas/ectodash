@@ -11,6 +11,7 @@ import GerarEscalaButton from "../gerar-escala-button";
 import { EditarParticipantesButton } from "../participantes-localidade-dialog";
 import DisponibilidadePanel from "../disponibilidade-panel";
 import AlertasRepeticaoPanel from "../alertas-repeticao-panel";
+import ImportarEscalaTextoDialog from "../importar-escala-texto-dialog";
 
 type EscalaDetalhe = {
   id: number;
@@ -170,6 +171,7 @@ export default async function EscalaDetalhePage({
         {canManage && escala.status === "rascunho" && (
           <div className="flex flex-wrap items-center gap-3">
             <EditarParticipantesButton escalaId={escala.id} />
+            <ImportarEscalaTextoDialog escalaId={escala.id} />
             <GerarEscalaButton escalaId={escala.id} />
           </div>
         )}
