@@ -186,7 +186,8 @@ export type AnalisarState = {
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 // OpenAI (modelo via ai_config, padrão gpt-5.4-mini) — teto limita o texto enviado.
-const MAX_TEXT_CHARS = 60000;
+// Reunião geral de ~90 min passa de 60 mil caracteres; cortar perdia o final da pauta.
+const MAX_TEXT_CHARS = 160000;
 const EMPTY_INPUT = "Cole um texto ou envie um arquivo antes de analisar.";
 
 function erroState(message: string): AnalisarState {
@@ -284,7 +285,9 @@ async function chamarIA(
       participantesConhecidos,
       glossarioExistente,
     }),
-    { jsonMode: true }
+    // Ata detalhada + listas de uma reunião longa: "medium" cobre a pauta
+    // inteira; o timeout fica abaixo do maxDuration da rota (layout.tsx).
+    { jsonMode: true, reasoningEffort: "medium", timeoutMs: 270_000 }
   );
 }
 

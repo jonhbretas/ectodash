@@ -61,12 +61,19 @@ async function resolveEffectiveConfig(): Promise<AIConfig> {
   }
 }
 
+export type CompletionOptions = {
+  jsonMode?: boolean;
+  /** Atas longas pedem mais raciocínio; o padrão "low" atende extrações curtas. */
+  reasoningEffort?: "low" | "medium" | "high";
+  timeoutMs?: number;
+};
+
 /** Compartilhada pela análise e pelo teste de conexão para validar o mesmo contrato. */
 export async function requestCompletion(
   config: AIConfig,
   system: string,
   user: string,
-  options: { jsonMode?: boolean } = {},
+  options: CompletionOptions = {},
 ): Promise<string> {
   if (!config.apiKey) throw new Error("OPENAI_API_KEY não configurada no servidor. Adicione a chave no .env.local ou na Vercel.");
   const response = await fetch(config.url, {
@@ -78,10 +85,10 @@ export async function requestCompletion(
       // json_object exige a palavra "json" no input (instructions não contam).
       input: options.jsonMode && !/json/i.test(user) ? `${user}\n\nResponda somente em JSON.` : user,
       store: false,
-      reasoning: { effort: "low" },
+      reasoning: { effort: options.reasoningEffort ?? "low" },
       ...(options.jsonMode ? { text: { format: { type: "json_object" } } } : {}),
     }),
-    signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.timeout(options.timeoutMs ?? 120_000),
     cache: "no-store",
   });
   if (!response.ok) {
@@ -104,6 +111,6 @@ export async function requestCompletion(
   return text;
 }
 
-export async function chatCompletion(system: string, user: string, options: { jsonMode?: boolean } = {}): Promise<string> {
+export async function chatCompletion(system: string, user: string, options: CompletionOptions = {}): Promise<string> {
   return requestCompletion(await resolveEffectiveConfig(), system, user, options);
 }

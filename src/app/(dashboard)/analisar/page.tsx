@@ -95,6 +95,7 @@ const tipoLabels: Record<string, { label: string; Icon: LucideIcon }> = {
     Icon: ClipboardList,
   },
   ata_reuniao: { label: "Ata de reuniao", Icon: FileText },
+  reuniao_geral: { label: "Reuniao geral", Icon: ClipboardList },
   outro: { label: "Outro", Icon: FileText },
 };
 
@@ -627,9 +628,9 @@ function ResultsScreen({
                   />
                   <AtaTextarea
                     id="ata-resumo"
-                    label="Resumo"
+                    label="Ata detalhada"
                     value={ataEdit.resumo}
-                    rows={5}
+                    rows={18}
                     onChange={(v) => setAtaEdit((prev) => ({ ...prev, resumo: v }))}
                   />
                   <p className="text-xs text-slate-400">

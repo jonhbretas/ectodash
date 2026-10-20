@@ -185,7 +185,7 @@ export function filtrarResultado(
   transcricaoFonte: string,
   opts: { maxDemandas?: number } = {},
 ): { resultado: Record<string, any>; descartados: Descartado[] } {
-  const maxDemandas = opts.maxDemandas ?? 7;
+  const maxDemandas = opts.maxDemandas ?? 15;
   if (!json || typeof json !== "object" || Array.isArray(json)) {
     return { resultado: {}, descartados: [{ lista: "resposta", item: {}, motivo: "resposta da IA não é um objeto" }] };
   }
