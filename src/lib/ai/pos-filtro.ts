@@ -117,6 +117,25 @@ function forcaDemanda(d: ItemBase): number {
   return s;
 }
 
+/**
+ * O prompt pede `null` para campos desconhecidos, mas o schema Zod aceita
+ * ausência (optional) e nem sempre `null`. Remove chaves nulas de objetos e
+ * nulos dentro de listas para que `null` vire "campo ausente".
+ */
+export function removerNulos<T>(valor: T): T {
+  if (Array.isArray(valor)) {
+    return valor.filter((v) => v !== null).map((v) => removerNulos(v)) as T;
+  }
+  if (valor && typeof valor === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(valor)) {
+      if (v !== null) out[k] = removerNulos(v);
+    }
+    return out as T;
+  }
+  return valor;
+}
+
 export function filtrarResultado(
   json: Record<string, any>,
   transcricaoFonte: string,

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { chatCompletion } from "@/lib/ai/ai-client";
 import { SYSTEM_PROMPT_V2, buildUserPrompt } from "@/lib/ai/prompt-v2";
-import { preprocessarTranscricao, filtrarResultado } from "@/lib/ai/pos-filtro";
+import { preprocessarTranscricao, filtrarResultado, removerNulos } from "@/lib/ai/pos-filtro";
 import { matchResponsavelRoster } from "@/lib/ai/match-responsavel";
 import { requireAnaliseComIA } from "@/lib/role-gates";
 import { resolverDestinosVoluntario } from "@/lib/destinos-voluntario";
@@ -427,7 +427,7 @@ export async function analisarComIA(
     const rawJson = JSON.parse(await chamarIA(textoIA, dataReuniao, participantesConhecidos, glossarioExistente));
     // Pós-filtro V2: evidência obrigatória, hedge->pauta, ranking e dedup (custo zero)
     const { resultado: filtrado } = filtrarResultado(rawJson as Record<string, unknown>, textoFonteParaFiltro);
-    const parsed = responseSchema.safeParse(filtrado);
+    const parsed = responseSchema.safeParse(removerNulos(filtrado));
 
     if (!parsed.success) {
       console.error("analisarComIA: schema fail", parsed.error.flatten());
