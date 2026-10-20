@@ -75,7 +75,8 @@ export async function requestCompletion(
     body: JSON.stringify({
       model: config.model,
       instructions: system,
-      input: user,
+      // json_object exige a palavra "json" no input (instructions não contam).
+      input: options.jsonMode && !/json/i.test(user) ? `${user}\n\nResponda somente em JSON.` : user,
       store: false,
       reasoning: { effort: "low" },
       ...(options.jsonMode ? { text: { format: { type: "json_object" } } } : {}),

@@ -54,7 +54,7 @@ describe("contrato Responses API", () => {
     const [url, request] = fetchMock.mock.calls[0];
     expect(url).toBe("https://api.openai.com/v1/responses");
     expect(request.headers).toEqual({ "Content-Type": "application/json", Authorization: "Bearer test-openai-key" });
-    expect(JSON.parse(request.body)).toEqual({ model: "gpt-5.4-mini", instructions: "Responda JSON", input: user, store: false, reasoning: { effort: "low" }, text: { format: { type: "json_object" } } });
+    expect(JSON.parse(request.body)).toEqual({ model: "gpt-5.4-mini", instructions: "Responda JSON", input: `${user}\n\nResponda somente em JSON.`, store: false, reasoning: { effort: "low" }, text: { format: { type: "json_object" } } });
   });
   it("não faz requisição quando falta chave", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
