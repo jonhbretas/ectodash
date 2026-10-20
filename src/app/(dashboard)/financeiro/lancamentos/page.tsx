@@ -9,6 +9,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Lock, SearchX } from "lucide-reac
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeSearch } from "@/lib/utils";
 import PageContainer from "../../page-container";
+import FinanceNavigation from "../finance-nav";
 import LancamentosToolbar from "./lancamentos-toolbar";
 import {
   LANCAMENTOS_POR_PAGINA,
@@ -100,6 +101,14 @@ export default async function LancamentosPage({
   if (termo) {
     query = query.ilike("descricao", `%${termo}%`);
   }
+  if (filters.tipo) {
+    query = query.eq("tipo", filters.tipo);
+  }
+  if (filters.mes) {
+    const [ano, mes] = filters.mes.split("-").map(Number);
+    const proximoMes = mes === 12 ? `${ano + 1}-01` : `${ano}-${String(mes + 1).padStart(2, "0")}`;
+    query = query.gte("data", `${filters.mes}-01`).lt("data", `${proximoMes}-01`);
+  }
 
   const { data: rows, count } = await query
     .order("data", { ascending: false })
@@ -155,24 +164,30 @@ export default async function LancamentosPage({
         </div>
       </header>
 
+      <FinanceNavigation />
+
       <LancamentosToolbar
         currentFilters={filters}
         total={total}
         totalPages={totalPages}
       />
 
+      {entries.length > 0 && (
+        <ResumoDaPagina entries={entries} />
+      )}
+
       {entries.length === 0 ? (
         <div className="flex w-full flex-col items-center gap-4 rounded-2xl bg-white px-6 py-16 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
           <SearchX size={48} className="text-zinc-400" aria-hidden="true" />
           <h2 className="text-3xl font-semibold text-zinc-900">
-            {filters.busca ? "Nenhum lançamento encontrado" : "Nenhum lançamento ainda"}
+            {filters.busca || filters.mes || filters.tipo ? "Nenhum lançamento encontrado" : "Nenhum lançamento ainda"}
           </h2>
           <p className="max-w-md text-xl text-zinc-700">
-            {filters.busca
-              ? `Nenhum lançamento tem "${filters.busca}" no nome. Tente outra busca ou veja a lista completa.`
+            {filters.busca || filters.mes || filters.tipo
+              ? "Nenhum lançamento corresponde aos filtros aplicados. Ajuste os filtros ou consulte a lista completa."
               : "Importe a planilha no Financeiro ou aguarde a sincronização automática com o Google Sheets."}
           </p>
-          {filters.busca && (
+          {(filters.busca || filters.mes || filters.tipo) && (
             <Link
               href="/financeiro/lancamentos"
               className="flex min-h-14 items-center justify-center rounded-lg bg-[#2195B9] px-4 py-3 text-xl font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
@@ -297,8 +312,41 @@ export default async function LancamentosPage({
 function paginaHref(filters: LancamentosFilters, paginaAlvo: number): string {
   const params = new URLSearchParams();
   if (filters.busca) params.set("busca", filters.busca);
+  if (filters.mes) params.set("mes", filters.mes);
+  if (filters.tipo) params.set("tipo", filters.tipo);
   params.set("pagina", String(paginaAlvo));
   return `/financeiro/lancamentos?${params.toString()}`;
+}
+
+function ResumoDaPagina({ entries }: { entries: EntryRow[] }) {
+  const entradas = entries
+    .filter((entry) => entry.tipo === "entrada")
+    .reduce((total, entry) => total + entry.valor, 0);
+  const saidas = entries
+    .filter((entry) => entry.tipo === "saida")
+    .reduce((total, entry) => total + entry.valor, 0);
+
+  return (
+    <section aria-label="Resumo dos lançamentos exibidos" className="grid w-full gap-3 sm:grid-cols-3">
+      <ResumoCard label="Entradas nesta página" value={brl.format(entradas)} tone="green" />
+      <ResumoCard label="Saídas nesta página" value={brl.format(saidas)} tone="red" />
+      <ResumoCard label="Resultado nesta página" value={brl.format(entradas - saidas)} tone={entradas - saidas >= 0 ? "blue" : "red"} />
+    </section>
+  );
+}
+
+function ResumoCard({ label, value, tone }: { label: string; value: string; tone: "green" | "red" | "blue" }) {
+  const tones = {
+    green: "bg-green-50 text-green-700 ring-green-200/60",
+    red: "bg-red-50 text-red-700 ring-red-200/60",
+    blue: "bg-sky-50 text-sky-700 ring-sky-200/60",
+  };
+  return (
+    <div className={`rounded-xl p-4 ring-1 ${tones[tone]}`}>
+      <p className="text-base opacity-80">{label}</p>
+      <p className="mt-1 text-xl font-semibold">{value}</p>
+    </div>
+  );
 }
 
 function PaginaLink({

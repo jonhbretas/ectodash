@@ -11,6 +11,14 @@ export const lancamentosFilterSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().trim().max(120).optional()
   ),
+  mes: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional()
+  ),
+  tipo: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["entrada", "saida"]).optional()
+  ),
   pagina: z.coerce.number().int().min(1).optional(),
 });
 
@@ -21,6 +29,8 @@ export function parseLancamentosFilters(raw: {
 }): LancamentosFilters {
   return lancamentosFilterSchema.parse({
     busca: typeof raw.busca === "string" ? raw.busca : undefined,
+    mes: typeof raw.mes === "string" ? raw.mes : undefined,
+    tipo: typeof raw.tipo === "string" ? raw.tipo : undefined,
     pagina: typeof raw.pagina === "string" ? raw.pagina : undefined,
   });
 }

@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../../page-container";
+import FinanceNavigation from "../../finance-nav";
 import PropostasSync from "../propostas-sync";
 import PropostasTabs from "../propostas-tabs";
 
@@ -92,6 +93,8 @@ export default async function PlanilhaPage() {
           </p>
         </div>
       </header>
+
+      <FinanceNavigation />
 
       <PropostasTabs />
 

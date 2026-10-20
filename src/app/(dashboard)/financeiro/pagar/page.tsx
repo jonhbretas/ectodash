@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, Lock, Plus, ReceiptText, SearchX, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
+import FinanceNavigation from "../finance-nav";
 import PagarForm, { type Conta } from "./pagar-form";
 import PagarList from "./pagar-list";
 import type { METODOS } from "../propostas/proposta-schema";
@@ -117,6 +118,8 @@ export default async function PagarPage() {
           <p className="text-2xl font-semibold text-amber-700">{brl.format(totalPendente)}</p>
         </div>
       </header>
+
+      <FinanceNavigation />
 
       <section aria-label="Resumo de pagamentos" className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ResumoCard icon={AlertTriangle} label="Em atraso" value={String(vencidas.length)} detail={brl.format(vencidas.reduce((s, c) => s + c.valor, 0))} tone="red" />

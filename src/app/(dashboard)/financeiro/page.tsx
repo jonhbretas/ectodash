@@ -21,6 +21,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import ImportFinanceiroToggle from "./import-toggle";
+import FinanceNavigation from "./finance-nav";
 import FinanceiroFilters from "./financeiro-filters";
 import {
   labelMes,
@@ -172,6 +173,7 @@ export default async function FinanceiroPage({
     return (
       <PageContainer>
         <Header />
+        <FinanceNavigation />
         <div className="flex w-full flex-col items-center gap-4 rounded-2xl bg-white px-6 py-16 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
           <Wallet size={48} className="text-zinc-400" aria-hidden="true" />
           <h2 className="text-3xl font-semibold text-zinc-900">
@@ -310,6 +312,7 @@ export default async function FinanceiroPage({
   return (
     <PageContainer>
       <Header />
+      <FinanceNavigation />
 
       <FinanceiroFilters
         mesOptions={mesOptions}

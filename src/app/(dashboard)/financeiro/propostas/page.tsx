@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { sanitizeSearch } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import PageContainer from "../../page-container";
+import FinanceNavigation from "../finance-nav";
 import PropostasList from "./propostas-list";
 import PropostasTabs from "./propostas-tabs";
 import {
@@ -230,6 +231,8 @@ export default async function PropostasPage({
           Nova proposta
         </Link>
       </header>
+
+      <FinanceNavigation />
 
       <PropostasTabs />
 

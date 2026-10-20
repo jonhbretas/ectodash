@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, FileText, Lock, PlusCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../../page-container";
+import FinanceNavigation from "../../finance-nav";
 import PropostaForm from "../proposta-form";
 import PropostasTabs from "../propostas-tabs";
 import type { AlunoSugestao, EventoOpcao } from "../proposta-schema";
@@ -98,6 +99,8 @@ export default async function NovaPropostaPage() {
           </p>
         </div>
       </header>
+
+      <FinanceNavigation />
 
       <PropostasTabs />
 
