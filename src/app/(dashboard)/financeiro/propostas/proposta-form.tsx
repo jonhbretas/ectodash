@@ -9,6 +9,7 @@ import { useActionState, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PlusCircle, Save } from "lucide-react";
+import DateFieldBr from "@/components/ui/date-field";
 import {
   atualizarProposta,
   criarProposta,
@@ -233,12 +234,11 @@ export default function PropostaForm({ proposta, alunos, eventos, cursosSugerido
           </select>
         </Campo>
         <Campo id={`prazo${sufixo}`} rotulo={editando ? "Prazo" : "1º vencimento"} erro={estado.fieldErrors?.prazo}>
-          <input
+          <DateFieldBr
             id={`prazo${sufixo}`}
             name="prazo"
-            type="date"
             defaultValue={proposta?.prazo ?? ""}
-            onInput={(e) => setPrazoPrev(e.currentTarget.value)}
+            onChange={setPrazoPrev}
             className={inputCls}
           />
         </Campo>

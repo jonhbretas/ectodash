@@ -19,16 +19,20 @@ function brParaIso(texto: string): string {
 
 export default function DateFieldBr({
   name,
+  id,
   defaultValue,
   className,
   placeholder = "dd/mm/aaaa",
   required = false,
+  onChange,
 }: {
   name: string;
+  id?: string;
   defaultValue?: string | null;
   className?: string;
   placeholder?: string;
   required?: boolean;
+  onChange?: (iso: string) => void;
 }) {
   const [texto, setTexto] = useState(isoParaBr(defaultValue ?? ""));
 
@@ -41,11 +45,13 @@ export default function DateFieldBr({
       formatado = `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
     }
     setTexto(formatado);
+    onChange?.(brParaIso(formatado));
   }
 
   return (
     <>
       <input
+        id={id}
         value={texto}
         onChange={(e) => aoMudar(e.target.value)}
         inputMode="numeric"

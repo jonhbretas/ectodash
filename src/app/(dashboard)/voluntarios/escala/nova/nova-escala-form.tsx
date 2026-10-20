@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
+import DateFieldBr from "@/components/ui/date-field";
 import { Label } from "@/components/ui/label";
 import { FormSelect, FORM_SELECT_VAZIO } from "@/components/ui/form-select";
 import { criarEscala } from "../actions";
@@ -52,11 +52,10 @@ export default function NovaEscalaForm({
         <Label htmlFor="dataSemana" className="text-lg font-medium text-zinc-700">
           Data da sexta-feira *
         </Label>
-        <Input
+        <DateFieldBr
           id="dataSemana"
-          type="date"
-          value={dataSemana}
-          onChange={(e) => setDataSemana(e.target.value)}
+          name="dataSemanaVisual"
+          onChange={setDataSemana}
           required
           className="min-h-14 text-lg"
         />

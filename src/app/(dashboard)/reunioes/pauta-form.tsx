@@ -6,8 +6,6 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, ListPlus, CalendarDays, Clock, ChevronDown } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   criarPauta,
   listarReunioesDisponiveis,
@@ -15,6 +13,7 @@ import {
   type ReuniaoDisponivel,
 } from "./pauta-actions";
 import { rotuloStatusReuniao } from "./_lib/format-data";
+import DateFieldBr from "@/components/ui/date-field";
 
 const initialState: CriarPautaState = { ok: false, message: "" };
 
@@ -116,10 +115,8 @@ export default function PautaForm() {
           Quando quer tratar essa pauta? (opcional)
         </span>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            type="date"
+          <DateFieldBr
             name="data_solicitada"
-            min={format(new Date(), "yyyy-MM-dd")}
             className={`${inputClassName} sm:w-auto`}
           />
           <div className="flex items-center gap-2">

@@ -7,6 +7,7 @@ import { useActionState, useState } from "react";
 import { PlusCircle, Save } from "lucide-react";
 import { atualizarConta, criarConta, type PagarActionState } from "./actions";
 import { METODO_LABELS, METODOS } from "../propostas/proposta-schema";
+import DateFieldBr from "@/components/ui/date-field";
 
 export type Conta = {
   id: number;
@@ -90,10 +91,9 @@ export default function PagarForm({ conta }: { conta?: Conta }) {
           <label htmlFor={`vencimento${sufixo}`} className={labelCls}>
             Vencimento
           </label>
-          <input
+          <DateFieldBr
             id={`vencimento${sufixo}`}
             name="vencimento"
-            type="date"
             defaultValue={conta?.vencimento ?? ""}
             className={inputCls}
           />

@@ -3,11 +3,11 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, ListPlus, CalendarDays, Clock, ChevronDown } from "lucide-react";
-import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { criarPauta, listarReunioesDisponiveis, type CriarPautaState, type ReuniaoDisponivel } from "./pauta-actions";
 import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 import { rotuloStatusReuniao } from "./_lib/format-data";
+import DateFieldBr from "@/components/ui/date-field";
 
 const initialState: CriarPautaState = { ok: false, message: "" };
 
@@ -175,7 +175,7 @@ export default function PautaModal({ open, onOpenChange }: PautaModalProps) {
                   <CalendarDays size={16} className="text-[#2195B9]" /> Quando prefere? (opcional)
                 </span>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <input type="date" name="data_solicitada" min={format(new Date(), "yyyy-MM-dd")} className={`${inputClass} sm:flex-1`} />
+                  <DateFieldBr name="data_solicitada" className={`${inputClass} sm:flex-1`} />
                   <div className="flex items-center gap-2">
                     <Clock size={16} className="text-zinc-400" />
                     <input type="time" name="horario_solicitado" step={900} defaultValue="19:00" className={`${inputClass} sm:w-36`} />
