@@ -11,6 +11,7 @@
 import { revalidatePath } from "next/cache";
 import { uploadDriveFile } from "@/lib/google/drive";
 import { requireUsuario } from "@/lib/role-gates";
+import { sanitizeSearch } from "@/lib/utils";
 import { arquivarContratoNoDrive } from "@/lib/contratos/geracao";
 import { enviarContratoParaAssinatura } from "@/lib/contratos/assinatura";
 import {
@@ -43,6 +44,37 @@ function prazoPadrao(): string {
 }
 
 // ── Contratos ──────────────────────────────────────────────────────────
+
+export type AlunoLoja = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  courses: string[] | null;
+};
+
+/**
+ * Busca de aluno na base do WooCommerce sem recarregar a página — a busca
+ * por navegação (?busca=) zerava modelo, evento e campos já preenchidos.
+ */
+export async function buscarAlunosLoja(termo: string): Promise<AlunoLoja[]> {
+  const { supabase } = await requireCoordenador();
+  const busca = sanitizeSearch(termo.trim());
+  if (!busca) return [];
+  const { data } = await supabase
+    .from("wp_customers")
+    .select("wp_customer_id, first_name, last_name, email, courses")
+    .or(`first_name.ilike.%${busca}%,last_name.ilike.%${busca}%,email.ilike.%${busca}%`)
+    .order("total_spent", { ascending: false })
+    .limit(20);
+  return (data ?? []).map((c) => ({
+    id: c.wp_customer_id,
+    first_name: c.first_name,
+    last_name: c.last_name,
+    email: c.email,
+    courses: c.courses,
+  }));
+}
 
 export async function criarContrato(
   _prev: ContratoActionState,

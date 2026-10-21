@@ -4,7 +4,7 @@
 // digitado manualmente — ambos alimentam os campos de variáveis.
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -13,7 +13,7 @@ import {
   contratoSchema,
   type ContratoFormValues,
 } from "./contrato-schema";
-import { criarContrato, type ContratoActionState } from "./actions";
+import { buscarAlunosLoja, criarContrato, type ContratoActionState } from "./actions";
 
 export type ContratoFormOption = {
   id: number;
@@ -62,6 +62,32 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
       valor: "",
     },
   });
+
+  // Busca no próprio formulário (server action), sem navegar: recarregar a
+  // página apagava modelo, evento e dados já digitados.
+  const [termo, setTermo] = useState(busca);
+  const [alunos, setAlunos] = useState<ContratoFormAluno[]>(alunosIniciais);
+  const [termoBuscado, setTermoBuscado] = useState(busca);
+  const [erroBusca, setErroBusca] = useState("");
+  const [buscando, startBusca] = useTransition();
+
+  function buscar() {
+    const t = termo.trim();
+    setErroBusca("");
+    if (!t) {
+      setAlunos([]);
+      setTermoBuscado("");
+      return;
+    }
+    startBusca(async () => {
+      try {
+        setAlunos(await buscarAlunosLoja(t));
+        setTermoBuscado(t);
+      } catch {
+        setErroBusca("Não foi possível buscar agora. Tente novamente.");
+      }
+    });
+  }
 
   function selecionarAluno(aluno: ContratoFormAluno) {
     setValue("alunoNome", [aluno.first_name, aluno.last_name].filter(Boolean).join(" "), {
@@ -145,28 +171,35 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
             />
             <input
               type="text"
-              name="busca"
-              defaultValue={busca}
+              value={termo}
+              onChange={(e) => setTermo(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter busca o aluno em vez de enviar o contrato.
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  buscar();
+                }
+              }}
+              aria-label="Buscar aluno na loja"
               placeholder="Buscar aluno na loja (nome ou e-mail)..."
               className="w-full min-h-14 rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-lg text-zinc-900 placeholder:text-zinc-400 focus:border-[#2195B9] focus:outline-none focus:ring-2 focus:ring-[#2195B9]/30"
             />
           </div>
           <button
             type="button"
-            className="min-h-14 rounded-xl border border-zinc-300 bg-white px-5 text-lg font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-            onClick={() => {
-              const input = document.querySelector<HTMLInputElement>('input[name="busca"]');
-              const termo = (input?.value ?? "").trim();
-              window.location.href = `/utilidades/contratos/novo${termo ? `?busca=${encodeURIComponent(termo)}` : ""}`;
-            }}
+            disabled={buscando}
+            className="min-h-14 rounded-xl border border-zinc-300 bg-white px-5 text-lg font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60"
+            onClick={buscar}
           >
-            Buscar
+            {buscando ? "Buscando..." : "Buscar"}
           </button>
         </div>
 
-        {alunosIniciais.length > 0 && (
+        {erroBusca && <p className="text-base text-red-700">{erroBusca}</p>}
+
+        {alunos.length > 0 && (
           <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-xl border border-zinc-200 p-2">
-            {alunosIniciais.map((aluno) => (
+            {alunos.map((aluno) => (
               <button
                 key={aluno.id}
                 type="button"
@@ -182,7 +215,7 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
             ))}
           </div>
         )}
-        {busca && alunosIniciais.length === 0 && (
+        {termoBuscado && !buscando && !erroBusca && alunos.length === 0 && (
           <p className="text-base text-zinc-500">
             Nenhum aluno encontrado na loja — preencha os dados manualmente abaixo.
           </p>
