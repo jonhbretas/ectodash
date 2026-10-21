@@ -16,7 +16,11 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const canRun = Boolean(supabaseUrl && anonKey && serviceRoleKey);
 
 describe.skipIf(!canRun)("pautas votação + RLS (live Supabase project)", () => {
-  const admin: SupabaseClient = createClient(supabaseUrl!, serviceRoleKey!);
+  // describe.skipIf ainda executa o corpo para coletar testes: só cria o
+  // cliente quando as credenciais existem.
+  const admin: SupabaseClient = canRun
+    ? createClient(supabaseUrl!, serviceRoleKey!)
+    : (null as unknown as SupabaseClient);
   const createdUserIds: string[] = [];
   const createdPautaIds: number[] = [];
   let fixtureCounter = 0;
