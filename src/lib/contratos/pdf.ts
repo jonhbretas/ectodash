@@ -382,14 +382,15 @@ export async function buildContratoPdf(
     bloco(linhas);
   }
 
-  // Local e data
+  // Data de emissão — sem cidade: a assinatura é online, cada parte onde
+  // estiver (data/hora/IP de cada assinatura ficam no certificado da Assinafy).
   ensureSpace(40);
   doc.y += 8;
   doc
     .font("Helvetica")
     .fontSize(BODY_SIZE)
     .fillColor(TEXT_DARK)
-    .text(`Foz do Iguaçu, ${input.emissao}.`, MARGIN, doc.y, {
+    .text(`Emitido em ${input.emissao}.`, MARGIN, doc.y, {
       width: contentWidth,
       align: "right",
     });
