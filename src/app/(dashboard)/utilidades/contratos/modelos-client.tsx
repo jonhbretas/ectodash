@@ -89,6 +89,33 @@ function CampoVariaveis({
   );
 }
 
+/** Pré-visualização em PDF de um modelo (salvo ou ainda no editor),
+ *  preenchido com aluno e evento de exemplo. */
+function usePreviewModelo() {
+  const [pdf, setPdf] = useState<PdfAberto | null>(null);
+  const [erro, setErro] = useState("");
+  const [pending, startPreview] = useTransition();
+
+  function abrir(modelo: { titulo: string; categoria: string; conteudo: string }) {
+    setErro("");
+    startPreview(async () => {
+      const r = await previsualizarModelo(modelo);
+      if (!r.ok) {
+        setErro(r.message);
+        return;
+      }
+      const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
+      if (pdf) URL.revokeObjectURL(pdf.url);
+      setPdf({
+        url: URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })),
+        filename: r.filename,
+      });
+    });
+  }
+
+  return { pdf, fechar: () => setPdf(null), erro, pending, abrir };
+}
+
 function ModeloForm({
   defaultValues,
   action,
@@ -102,9 +129,7 @@ function ModeloForm({
   onCancel?: () => void;
   submitLabel: string;
 }) {
-  const [pdf, setPdf] = useState<PdfAberto | null>(null);
-  const [previewErro, setPreviewErro] = useState("");
-  const [previewPending, startPreview] = useTransition();
+  const preview = usePreviewModelo();
   const { register, handleSubmit, setValue, getValues } = useForm<ContratoModeloFormValues>({
     resolver: zodResolver(contratoModeloSchema),
     defaultValues: {
@@ -116,24 +141,10 @@ function ModeloForm({
     },
   });
 
-  // Gera o PDF com o texto como está no editor (mesmo sem salvar), preenchido
-  // com um aluno e um evento de exemplo.
+  // Gera o PDF com o texto como está no editor (mesmo sem salvar).
   function previsualizar() {
-    setPreviewErro("");
     const { titulo, categoria, conteudo } = getValues();
-    startPreview(async () => {
-      const r = await previsualizarModelo({ titulo, categoria, conteudo });
-      if (!r.ok) {
-        setPreviewErro(r.message);
-        return;
-      }
-      const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
-      if (pdf) URL.revokeObjectURL(pdf.url);
-      setPdf({
-        url: URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })),
-        filename: r.filename,
-      });
-    });
+    preview.abrir({ titulo, categoria, conteudo });
   }
 
   function onValid(values: ContratoModeloFormValues) {
@@ -221,10 +232,10 @@ function ModeloForm({
         <button
           type="button"
           onClick={previsualizar}
-          disabled={previewPending}
+          disabled={preview.pending}
           className="flex min-h-14 items-center gap-2 rounded-xl border border-[#2195B9]/40 bg-white px-6 text-lg font-medium text-[#2195B9] transition-colors hover:bg-[#e8f4f8] disabled:opacity-60"
         >
-          {previewPending ? (
+          {preview.pending ? (
             <Loader2 size={20} className="animate-spin" aria-hidden="true" />
           ) : (
             <Eye size={20} aria-hidden="true" />
@@ -244,12 +255,12 @@ function ModeloForm({
       <p className="text-base text-zinc-500">
         A pré-visualização usa o texto atual (mesmo sem salvar) com um aluno e um evento de exemplo.
       </p>
-      {previewErro && (
+      {preview.erro && (
         <p className="text-base text-red-700" role="status">
-          {previewErro}
+          {preview.erro}
         </p>
       )}
-      <PdfPreviewDialog pdf={pdf} onClose={() => setPdf(null)} />
+      <PdfPreviewDialog pdf={preview.pdf} onClose={preview.fechar} />
     </form>
   );
 }
@@ -377,6 +388,7 @@ function ModeloCard({
     toggleModeloAtivo.bind(null, modelo.id),
     initial
   );
+  const preview = usePreviewModelo();
 
   const tokensUsados = (modelo.conteudo.match(/\{\{[^}]+\}\}/g) ?? []).filter(
     (v, i, arr) => arr.indexOf(v) === i
@@ -426,7 +438,26 @@ function ModeloCard({
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              preview.abrir({
+                titulo: modelo.titulo,
+                categoria: modelo.categoria,
+                conteudo: modelo.conteudo,
+              })
+            }
+            disabled={preview.pending}
+            className="flex min-h-11 items-center gap-1.5 rounded-xl border border-[#2195B9]/40 bg-white px-3.5 text-base font-medium text-[#2195B9] transition-colors hover:bg-[#e8f4f8] disabled:opacity-60"
+          >
+            {preview.pending ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Eye size={16} aria-hidden="true" />
+            )}
+            Pré-visualizar
+          </button>
           <button
             type="button"
             onClick={onToggleEdicao}
@@ -447,6 +478,13 @@ function ModeloCard({
           </form>
         </div>
       </div>
+
+      {preview.erro && (
+        <p className="text-base text-red-700" role="status">
+          {preview.erro}
+        </p>
+      )}
+      <PdfPreviewDialog pdf={preview.pdf} onClose={preview.fechar} />
 
       {modelo.descricao && <p className="text-base text-zinc-600">{modelo.descricao}</p>}
 
