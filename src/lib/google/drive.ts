@@ -87,3 +87,81 @@ export async function uploadDriveFile(
   }
   return data as { id: string; name: string; webViewLink?: string };
 }
+
+// ---------------------------------------------------------------------------
+// Anexos de pauta (quick 261021-g5r)
+// ---------------------------------------------------------------------------
+
+export type DriveFileDetails = {
+  id: string;
+  name?: string;
+  mimeType?: string;
+  size?: string;
+  parents?: string[];
+  webViewLink?: string;
+  trashed?: boolean;
+};
+
+/** Detalhes de um arquivo (pais, tamanho, lixeira) para validação de segurança. */
+export async function getDriveFileDetails(fileId: string) {
+  return googleApiRequest(
+    `${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,parents,webViewLink,trashed`
+  ) as Promise<DriveFileDetails>;
+}
+
+/** Procura uma subpasta pelo nome dentro de parentId; cria se não existir. */
+export async function findOrCreateChildFolder(parentId: string, name: string) {
+  const nomeEscapado = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const q = encodeURIComponent(
+    `'${parentId}' in parents and name = '${nomeEscapado}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+  );
+  const res = await googleApiRequest(`${DRIVE_API}/files?q=${q}&fields=files(id,name)&pageSize=1`);
+  const existente = (res.files ?? [])[0] as { id: string } | undefined;
+  if (existente?.id) return { id: existente.id };
+  return createDriveFolder(name, parentId);
+}
+
+/** Move um arquivo para a lixeira do Drive (recuperável). */
+export async function trashDriveFile(fileId: string) {
+  return googleApiRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ trashed: true }),
+  });
+}
+
+/**
+ * Abre uma sessão de upload resumável e devolve a URL (header Location).
+ * O Google só envia cabeçalhos CORS para a URL da sessão se ela foi aberta com
+ * o Origin do navegador; por isso repassamos `origin`. Os bytes do arquivo vão
+ * direto do navegador ao Google — nunca passam pelo servidor.
+ */
+export async function createResumableUploadSession(input: {
+  parentFolderId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  origin: string;
+}) {
+  const token = await getGoogleAccessToken();
+  const response = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Type": input.mimeType,
+        "X-Upload-Content-Length": String(input.size),
+        Origin: input.origin,
+      },
+      body: JSON.stringify({ name: input.fileName, parents: [input.parentFolderId] }),
+    }
+  );
+  if (!response.ok) {
+    const texto = await response.text().catch(() => "");
+    throw new Error(`Não foi possível iniciar o envio ao Google Drive (${response.status}). ${texto.slice(0, 200)}`);
+  }
+  const location = response.headers.get("location");
+  if (!location) throw new Error("O Google Drive não devolveu a URL de envio.");
+  return location;
+}

@@ -1,40 +1,49 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+// "Pedir pauta" em 6 etapas (D-01): assunto+contexto, reunião, prioridade,
+// tipo, anexo opcional e revisão. Um único <form> com useActionState(criarPauta)
+// mantém a ligação com a server action; Enter avança nas etapas 1-5 e só a
+// etapa 6 envia. O anexo (D-02) é enviado ao Drive depois que a pauta existe.
+import { useActionState, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2, ListPlus, CalendarDays, Clock, ChevronDown } from "lucide-react";
+import { Loader2, ListPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { criarPauta, listarReunioesDisponiveis, type CriarPautaState, type ReuniaoDisponivel } from "./pauta-actions";
-import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
-import { rotuloStatusReuniao } from "./_lib/format-data";
-import DateFieldBr from "@/components/ui/date-field";
+import {
+  buscarPautasSimilares,
+  criarPauta,
+  listarReunioesDisponiveis,
+  type CriarPautaState,
+  type PautaSimilar,
+  type ReuniaoDisponivel,
+} from "./pauta-actions";
+import { validarAnexo } from "@/lib/pautas/anexo";
+import type { PautaPrioridade, PautaTipo } from "@/lib/pautas/regras";
+import { enviarAnexoPauta } from "./_lib/enviar-anexo";
+import {
+  EtapaAnexo,
+  EtapaAssunto,
+  EtapaPrioridade,
+  EtapaReuniao,
+  EtapaRevisao,
+  EtapaTipo,
+  NOMES_ETAPAS,
+  formatMeetingLabel,
+  proximaLabel,
+} from "./_components/pauta-wizard-etapas";
 
 const initialState: CriarPautaState = { ok: false, message: "" };
+const TOTAL_ETAPAS = NOMES_ETAPAS.length;
 
-const WEEKDAY_ABBR = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-const MONTH_ABBR = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const botaoPrimario =
+  "flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#1d6f8d] px-6 text-lg font-semibold text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:opacity-60";
+const botaoSecundario =
+  "flex min-h-14 items-center justify-center rounded-xl border-2 border-zinc-400 bg-white px-6 text-lg font-semibold text-zinc-800 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
-function formatMeetingLabel(m: ReuniaoDisponivel): string {
-  const d = new Date(`${m.data_reuniao}T00:00:00`);
-  const base = `${WEEKDAY_ABBR[d.getDay()]}, ${d.getDate()} ${MONTH_ABBR[d.getMonth()]} · ${m.horario ? m.horario.slice(0, 5).replace(":", "h") : "19h00"} — ${m.titulo}`;
-  return m.status !== null && m.status !== "realizada" ? `${base} (${rotuloStatusReuniao(m.status)})` : base;
-}
-
-function proximaLabel(): string {
-  const p = proximaTerca();
-  const wd = WEEKDAY_ABBR[p.getDay()];
-  return `${wd}, ${String(p.getDate()).padStart(2, "0")} ${MONTH_ABBR[p.getMonth()]} · ${HORARIO_REUNIAO.replace(":", "h")}`;
-}
-
-function SubmitButton() {
+function BotaoEnviar() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-base font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:opacity-60"
-    >
-      {pending ? <Loader2 size={18} className="animate-spin" /> : <ListPlus size={18} />}
+    <button type="submit" disabled={pending} className={botaoPrimario}>
+      {pending ? <Loader2 size={22} className="animate-spin" aria-hidden="true" /> : <ListPlus size={22} aria-hidden="true" />}
       {pending ? "Enviando..." : "Enviar pauta"}
     </button>
   );
@@ -47,154 +56,322 @@ type PautaModalProps = {
 
 export default function PautaModal({ open, onOpenChange }: PautaModalProps) {
   const [state, formAction] = useActionState(criarPauta, initialState);
-  const formRef = useRef<HTMLFormElement>(null);
-  const [reunioes, setReunioes] = useState<ReuniaoDisponivel[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [etapa, setEtapa] = useState(1);
+  const [titulo, setTitulo] = useState("");
+  const [contexto, setContexto] = useState("");
   const [reuniaoSel, setReuniaoSel] = useState("");
   const [showHorario, setShowHorario] = useState(false);
-  const [tituloLen, setTituloLen] = useState(0);
+  const [dataSolicitada, setDataSolicitada] = useState("");
+  const [horarioSolicitado, setHorarioSolicitado] = useState("19:00");
+  const [prioridade, setPrioridade] = useState<PautaPrioridade>("media");
+  const [tipo, setTipo] = useState<PautaTipo>("informativa");
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [erroEtapa, setErroEtapa] = useState<string | null>(null);
+
+  const [reunioesCarregadas, setReunioesCarregadas] = useState<ReuniaoDisponivel[] | null>(null);
+  const reunioes = reunioesCarregadas ?? [];
+  const loading = reunioesCarregadas === null;
+  const [similares, setSimilares] = useState<PautaSimilar[]>([]);
+  const [erroDispensado, setErroDispensado] = useState(false);
+
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  const [progresso, setProgresso] = useState(0);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const tituloEtapaRef = useRef<HTMLHeadingElement>(null);
+  const etapaAnteriorRef = useRef(1);
+  const tratadoRef = useRef<number | null>(null);
+  const arquivoRef = useRef<File | null>(null);
+
+  useEffect(() => {
+    arquivoRef.current = arquivo;
+  }, [arquivo]);
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
+    let cancelado = false;
     listarReunioesDisponiveis().then((data) => {
-      setReunioes(data);
-      setLoading(false);
+      if (!cancelado) setReunioesCarregadas(data);
     });
+    return () => {
+      cancelado = true;
+    };
   }, [open]);
 
-  // toast simples
-  const [toast, setToast] = useState<string | null>(null);
+  // Foco no título da etapa a cada mudança (leitores de tela + teclado).
   useEffect(() => {
-    if (state.ok && state.message) {
-      setToast(state.message);
-      const t = setTimeout(() => setToast(null), 3000);
-      onOpenChange(false);
-      formRef.current?.reset();
-      setReuniaoSel("");
-      setTituloLen(0);
-      setShowHorario(false);
-      return () => clearTimeout(t);
+    if (etapaAnteriorRef.current !== etapa) {
+      tituloEtapaRef.current?.focus();
+      etapaAnteriorRef.current = etapa;
     }
-  }, [state, onOpenChange]);
+  }, [etapa]);
 
-  const inputClass = "min-h-12 w-full rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-base text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
+  // Ao chegar na revisão, avisa (sem bloquear) sobre pautas parecidas.
+  useEffect(() => {
+    if (etapa !== TOTAL_ETAPAS) return;
+    let cancelado = false;
+    buscarPautasSimilares(titulo).then((r) => {
+      if (!cancelado) setSimilares(r);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [etapa, titulo]);
+
+  const reiniciar = useCallback(() => {
+    setEtapa(1);
+    etapaAnteriorRef.current = 1;
+    setTitulo("");
+    setContexto("");
+    setReuniaoSel("");
+    setShowHorario(false);
+    setDataSolicitada("");
+    setHorarioSolicitado("19:00");
+    setPrioridade("media");
+    setTipo("informativa");
+    setArquivo(null);
+    setErroEtapa(null);
+    setSimilares([]);
+    setErroDispensado(true);
+    setEnviandoAnexo(false);
+    setProgresso(0);
+  }, []);
+
+  const fechar = useCallback(() => {
+    reiniciar();
+    onOpenChange(false);
+  }, [onOpenChange, reiniciar]);
+
+  const mostrarToast = useCallback((mensagem: string) => {
+    setToast(mensagem);
+    setTimeout(() => setToast(null), 5000);
+  }, []);
+
+  // Pauta criada: envia o anexo (se houver) e só então fecha o assistente.
+  useEffect(() => {
+    if (!state.ok || !state.pautaId) return;
+    if (tratadoRef.current === state.pautaId) return;
+    tratadoRef.current = state.pautaId;
+    const pautaId = state.pautaId;
+    const mensagem = state.message;
+    const arq = arquivoRef.current;
+
+    if (!arq) {
+      fechar();
+      mostrarToast(mensagem);
+      return;
+    }
+
+    setEnviandoAnexo(true);
+    setProgresso(0);
+    enviarAnexoPauta(pautaId, arq, setProgresso).then((r) => {
+      fechar();
+      mostrarToast(
+        r.ok
+          ? mensagem
+          : `Pauta enviada, mas o anexo não foi salvo: ${r.message} Você pode anexar depois pelo cartão da pauta.`
+      );
+    });
+  }, [state, fechar, mostrarToast]);
+
+  function validarEtapaAtual(): string | null {
+    if (etapa === 1) {
+      const t = titulo.trim();
+      if (t.length < 1) return "Descreva o assunto da pauta.";
+      if (t.length > 80) return "O assunto pode ter no máximo 80 letras.";
+      if (contexto.length > 3000) return "O contexto pode ter no máximo 3000 letras.";
+    }
+    if (etapa === 5 && arquivo) {
+      return validarAnexo({ nome: arquivo.name, tamanho: arquivo.size });
+    }
+    return null;
+  }
+
+  function avancar() {
+    const erro = validarEtapaAtual();
+    setErroEtapa(erro);
+    if (erro) return;
+    setEtapa((e) => Math.min(TOTAL_ETAPAS, e + 1));
+  }
+
+  function voltar() {
+    setErroEtapa(null);
+    setEtapa((e) => Math.max(1, e - 1));
+  }
+
+  function irParaEtapa(n: number) {
+    setErroEtapa(null);
+    setEtapa(n);
+  }
+
+  function aoEnviar(e: FormEvent<HTMLFormElement>) {
+    if (etapa < TOTAL_ETAPAS) {
+      e.preventDefault();
+      avancar();
+      return;
+    }
+    setErroDispensado(false);
+  }
+
+  const reuniaoSelecionada = reunioes.find((r) => String(r.id) === reuniaoSel);
+  const reuniaoRotulo =
+    reuniaoSel === "espera"
+      ? "Sem preferência — entra em espera"
+      : reuniaoSelecionada
+        ? formatMeetingLabel(reuniaoSelecionada)
+        : `Próxima reunião — ${proximaLabel()}`;
+  const dataHorarioRotulo =
+    showHorario && dataSolicitada
+      ? `Preferência: ${dataSolicitada.split("-").reverse().join("/")}${horarioSolicitado ? ` às ${horarioSolicitado}` : ""}`
+      : null;
 
   return (
     <>
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-zinc-900 px-4 py-3 text-sm font-medium text-white shadow-lg" role="status">
+        <div
+          className="fixed bottom-6 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-xl bg-zinc-900 px-5 py-4 text-base font-medium text-white shadow-lg"
+          role="status"
+        >
           {toast}
         </div>
       )}
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg bg-white p-0 sm:max-w-[560px]">
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          if (v) {
+            onOpenChange(true);
+            return;
+          }
+          if (enviandoAnexo) return; // não fecha no meio do envio do anexo
+          fechar();
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto bg-white p-0 sm:max-w-[620px]">
           <DialogHeader className="px-6 pt-6 text-left">
-            <DialogTitle className="text-xl font-semibold text-zinc-900">Pedir pauta</DialogTitle>
-            <DialogDescription className="text-base text-zinc-600">Sugira um assunto para a reunião de terça às 19h. Todos os voluntários podem pedir.</DialogDescription>
+            <DialogTitle className="text-2xl font-semibold text-zinc-900">Pedir pauta</DialogTitle>
+            <DialogDescription className="text-base text-zinc-700">
+              Sugira um assunto para a reunião de terça às 19h. Todos os voluntários podem pedir.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="mx-6 rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 px-4 py-2.5 text-sm leading-relaxed text-[#28627B]">
-            Pedidos até <strong>terça 19h</strong> valem para a reunião de hoje; após 19h entram automaticamente na próxima terça.
+          <div className="px-6">
+            <p className="text-base font-semibold text-zinc-900" aria-live="polite">
+              Etapa {etapa} de {TOTAL_ETAPAS} — {NOMES_ETAPAS[etapa - 1]}
+            </p>
+            <div
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={TOTAL_ETAPAS}
+              aria-valuenow={etapa}
+              aria-label={`Progresso do pedido de pauta: etapa ${etapa} de ${TOTAL_ETAPAS}`}
+              className="mt-2 h-3 w-full overflow-hidden rounded-full bg-zinc-200"
+            >
+              <div
+                className="h-full rounded-full bg-[#1d6f8d] transition-all"
+                style={{ width: `${(etapa / TOTAL_ETAPAS) * 100}%` }}
+              />
+            </div>
           </div>
 
-          <form
-            ref={formRef}
-            action={(fd) => formAction(fd)}
-            className="flex flex-col gap-4 px-6 pb-6"
-          >
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pauta-titulo-modal" className="text-sm font-medium text-zinc-900">
-                Assunto <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="pauta-titulo-modal"
-                name="titulo"
-                required
-                maxLength={80}
-                autoFocus
-                onChange={(e) => setTituloLen(e.target.value.length)}
-                placeholder="Sobre o que você quer conversar?"
-                className={inputClass}
-              />
-              <span className="text-right text-xs text-zinc-500">{tituloLen}/80</span>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pauta-contexto-modal" className="text-sm font-medium text-zinc-900">
-                Contexto (opcional)
-              </label>
-              <textarea
-                id="pauta-contexto-modal"
-                name="contexto"
-                rows={3}
-                maxLength={3000}
-                placeholder="Detalhe o assunto para quem for mediar a reunião"
-                className={`${inputClass} min-h-20 resize-y`}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pauta-reuniao-modal" className="text-sm font-medium text-zinc-900">
-                Reunião
-              </label>
-              {loading ? (
-                <div className="flex min-h-12 items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm text-zinc-500">
-                  <Loader2 size={16} className="animate-spin" /> Carregando...
-                </div>
-              ) : (
-                <div className="relative">
-                  <select
-                    id="pauta-reuniao-modal"
-                    name="reuniao_selecionada_id"
-                    value={reuniaoSel}
-                    onChange={(e) => setReuniaoSel(e.target.value)}
-                    className={`${inputClass} appearance-none pr-10`}
-                  >
-                    <option value="">Próxima reunião — {proximaLabel()}</option>
-                    {reunioes.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {formatMeetingLabel(r)}
-                      </option>
-                    ))}
-                    <option value="espera">Sem preferência — entrar em espera</option>
-                  </select>
-                  <ChevronDown size={18} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                </div>
-              )}
-              <p className="text-xs text-zinc-500">Pré-selecionada: próxima terça às 19h (pedidos até 19h de terça valem para hoje; após 19h vão para a próxima terça). Escolha “Sem preferência” para deixar em espera.</p>
-            </div>
-
-            {!showHorario ? (
-              <button type="button" onClick={() => setShowHorario(true)} className="self-start text-sm font-medium text-[#2195B9] hover:underline">
-                Definir preferência de horário
-              </button>
-            ) : (
-              <div className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                <span className="flex items-center gap-2 text-sm font-medium text-zinc-900">
-                  <CalendarDays size={16} className="text-[#2195B9]" /> Quando prefere? (opcional)
-                </span>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <DateFieldBr name="data_solicitada" className={`${inputClass} sm:flex-1`} />
-                  <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-zinc-400" />
-                    <input type="time" name="horario_solicitado" step={900} defaultValue="19:00" className={`${inputClass} sm:w-36`} />
-                  </div>
-                </div>
-                <button type="button" onClick={() => setShowHorario(false)} className="self-start text-xs text-zinc-500 hover:text-zinc-700">
-                  Ocultar
-                </button>
-              </div>
+          <form action={(fd) => formAction(fd)} onSubmit={aoEnviar} className="flex flex-col gap-6 px-6 pb-6">
+            <input type="hidden" name="titulo" value={titulo.trim()} />
+            <input type="hidden" name="contexto" value={contexto.trim()} />
+            <input type="hidden" name="reuniao_selecionada_id" value={reuniaoSel} />
+            <input type="hidden" name="prioridade" value={prioridade} />
+            <input type="hidden" name="tipo" value={tipo} />
+            {showHorario && dataSolicitada && <input type="hidden" name="data_solicitada" value={dataSolicitada} />}
+            {showHorario && horarioSolicitado && (
+              <input type="hidden" name="horario_solicitado" value={horarioSolicitado} />
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button type="button" onClick={() => onOpenChange(false)} className="min-h-12 rounded-xl border border-zinc-300 bg-white px-5 text-base font-medium text-zinc-700 hover:bg-zinc-50">
-                Cancelar
-              </button>
-              <SubmitButton />
-            </div>
+            {enviandoAnexo ? (
+              <div className="flex flex-col gap-3 py-6" role="status" aria-live="polite">
+                <p className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
+                  <Loader2 size={22} className="animate-spin" aria-hidden="true" />
+                  Enviando anexo… {progresso}%
+                </p>
+                <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200">
+                  <div className="h-full rounded-full bg-[#1d6f8d] transition-all" style={{ width: `${progresso}%` }} />
+                </div>
+                <p className="text-base text-zinc-700">Sua pauta já foi criada. Aguarde só mais um instante.</p>
+              </div>
+            ) : (
+              <>
+                <h3
+                  ref={tituloEtapaRef}
+                  tabIndex={-1}
+                  className="text-xl font-semibold text-zinc-900 outline-none"
+                >
+                  {NOMES_ETAPAS[etapa - 1]}
+                </h3>
 
-            {!state.ok && state.message && <p className="text-sm text-red-600" role="alert">{state.message}</p>}
+                {etapa === 1 && (
+                  <EtapaAssunto
+                    titulo={titulo}
+                    setTitulo={setTitulo}
+                    contexto={contexto}
+                    setContexto={setContexto}
+                    erro={erroEtapa}
+                  />
+                )}
+                {etapa === 2 && (
+                  <EtapaReuniao
+                    loading={loading}
+                    reunioes={reunioes}
+                    reuniaoSel={reuniaoSel}
+                    setReuniaoSel={setReuniaoSel}
+                    showHorario={showHorario}
+                    setShowHorario={setShowHorario}
+                    dataSolicitada={dataSolicitada}
+                    setDataSolicitada={setDataSolicitada}
+                    horarioSolicitado={horarioSolicitado}
+                    setHorarioSolicitado={setHorarioSolicitado}
+                  />
+                )}
+                {etapa === 3 && <EtapaPrioridade valor={prioridade} setValor={setPrioridade} />}
+                {etapa === 4 && <EtapaTipo valor={tipo} setValor={setTipo} />}
+                {etapa === 5 && <EtapaAnexo arquivo={arquivo} setArquivo={(f) => { setArquivo(f); setErroEtapa(null); }} erro={erroEtapa} />}
+                {etapa === 6 && (
+                  <EtapaRevisao
+                    titulo={titulo.trim()}
+                    contexto={contexto}
+                    reuniaoRotulo={reuniaoRotulo}
+                    dataHorarioRotulo={dataHorarioRotulo}
+                    prioridade={prioridade}
+                    tipo={tipo}
+                    arquivo={arquivo}
+                    similares={similares}
+                    onEditar={irParaEtapa}
+                  />
+                )}
+
+                {etapa === TOTAL_ETAPAS && !erroDispensado && !state.ok && state.message && (
+                  <p className="flex items-center gap-2 text-base font-medium text-red-700" role="alert">
+                    {state.message}
+                  </p>
+                )}
+
+                <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                  {etapa === 1 ? (
+                    <button key="cancelar" type="button" onClick={fechar} className={botaoSecundario}>
+                      Cancelar
+                    </button>
+                  ) : (
+                    <button key="voltar" type="button" onClick={voltar} className={botaoSecundario}>
+                      Voltar
+                    </button>
+                  )}
+                  {etapa < TOTAL_ETAPAS ? (
+                    <button key="avancar" type="submit" className={botaoPrimario}>
+                      Avançar
+                    </button>
+                  ) : (
+                    <BotaoEnviar key="enviar" />
+                  )}
+                </div>
+              </>
+            )}
           </form>
         </DialogContent>
       </Dialog>

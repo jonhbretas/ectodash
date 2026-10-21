@@ -21,6 +21,7 @@ import {
   HORARIO_REUNIAO,
 } from "@/lib/proxima-reuniao";
 import { pautasSimilares } from "@/lib/pautas/regras";
+import { trashDriveFile } from "@/lib/google/drive";
 
 export type CriarPautaState = {
   ok: boolean;
@@ -412,10 +413,30 @@ export async function excluirPauta(pautaId: number): Promise<PautaAcaoResult> {
     return { ok: false, message: "Pauta inválida." };
   }
 
-  const { error } = await supabase.from("pautas").delete().eq("id", id);
+  const { data: atual } = await supabase
+    .from("pautas")
+    .select("anexo_drive_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  const { data: removidas, error } = await supabase
+    .from("pautas")
+    .delete()
+    .eq("id", id)
+    .select("id");
   if (error) {
     console.error("excluirPauta: delete failed", error);
     return { ok: false, message: "Não foi possível excluir a pauta." };
+  }
+
+  // Anexo no Drive vai para a lixeira (best-effort: nunca falha a exclusão).
+  const anexoId = atual?.anexo_drive_id as string | null | undefined;
+  if (removidas && removidas.length > 0 && anexoId) {
+    try {
+      await trashDriveFile(anexoId);
+    } catch (e) {
+      console.error("excluirPauta: trash anexo failed", e);
+    }
   }
 
   revalidatePath("/reunioes");
