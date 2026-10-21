@@ -17,6 +17,7 @@ import { enviarContratoParaAssinatura } from "@/lib/contratos/assinatura";
 import {
   assinafyBaixarDocumento,
   assinafyGarantirWebhook,
+  assinafyStatusDocumento,
 } from "@/lib/assinafy";
 import { contratoSchema, contratoModeloSchema } from "./contrato-schema";
 
@@ -240,6 +241,17 @@ export async function sincronizarAssinado(
       .single();
     if (error || !contrato?.assinafy_document_id) {
       return { ok: false, message: "Contrato sem documento na Assinafy." };
+    }
+
+    const statusAssinafy = await assinafyStatusDocumento(contrato.assinafy_document_id);
+    if (statusAssinafy !== "certificated") {
+      return {
+        ok: false,
+        message:
+          statusAssinafy === "certificating"
+            ? "A Assinafy ainda está certificando o documento. Tente de novo em alguns minutos."
+            : "Ainda falta assinatura neste contrato na Assinafy.",
+      };
     }
 
     const buffer = await assinafyBaixarDocumento(contrato.assinafy_document_id, "certificated");

@@ -129,6 +129,13 @@ export async function assinafyCriarAssignment(
   return envelope.data as AssinafyAssignment;
 }
 
+/** Status atual do documento na Assinafy (ex.: pending_signature,
+ *  certificating, certificated, rejected_by_signer, expired). */
+export async function assinafyStatusDocumento(documentId: string): Promise<string> {
+  const envelope = await assinafyRequest(`/v1/documents/${documentId}`);
+  return String((envelope.data as AssinafyDocument | undefined)?.status ?? "");
+}
+
 /** Baixa o artefato do documento (original | certificated | certificate-page | bundle). */
 export async function assinafyBaixarDocumento(
   documentId: string,
@@ -163,10 +170,22 @@ export async function assinafyConfigurarWebhook(
   return envelope.data as { events: string[]; is_active: boolean; url: string };
 }
 
-/** Cria (ou atualiza) a subscription de webhook apontando para este sistema. */
+/** Segredo que autentica as chamadas do webhook. */
+export function assinafyWebhookSecret(): string {
+  return process.env.ASSINAFY_WEBHOOK_SECRET?.trim() || apiKey();
+}
+
+/** Cria (ou atualiza) a subscription de webhook apontando para este sistema.
+ *  A subscription da Assinafy não permite headers customizados, então o
+ *  segredo vai na query string (?key=). A URL devolvida para a tela é a
+ *  pública, sem o segredo. */
 export async function assinafyGarantirWebhook(siteUrl: string): Promise<{ url: string }> {
   const url = `${siteUrl}/api/contratos/webhook`;
+  const secret = assinafyWebhookSecret();
+  if (!secret) {
+    throw new Error("Defina ASSINAFY_WEBHOOK_SECRET para configurar o webhook.");
+  }
   const email = notificationEmail() || "contato@ectolab.org";
-  await assinafyConfigurarWebhook(url, email);
+  await assinafyConfigurarWebhook(`${url}?key=${encodeURIComponent(secret)}`, email);
   return { url };
 }

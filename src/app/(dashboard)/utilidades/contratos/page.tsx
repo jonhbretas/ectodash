@@ -24,6 +24,7 @@ import {
   type ContratoRow,
 } from "@/lib/contratos/render";
 import ContratoCard from "./contrato-card";
+import { agruparEventosPorMes, diaMes } from "@/lib/contratos/eventos-por-mes";
 
 export const metadata = { title: "Contratos — EctoDash" };
 
@@ -261,11 +262,15 @@ export default async function ContratosPage({
         >
           <option value="">Todos os eventos</option>
           <option value="avulsos">Sem evento vinculado</option>
-          {(eventosResult.data ?? []).map((evento) => (
-            <option key={evento.id} value={String(evento.id)}>
-              {evento.titulo}
-              {evento.data_evento ? ` — ${formatarDataBR(evento.data_evento)}` : ""}
-            </option>
+          {agruparEventosPorMes(eventosResult.data ?? []).map((grupo) => (
+            <optgroup key={grupo.chave} label={grupo.label}>
+              {grupo.eventos.map((evento) => (
+                <option key={evento.id} value={String(evento.id)}>
+                  {evento.data_evento ? `${diaMes(evento.data_evento)} — ` : ""}
+                  {evento.titulo}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <select

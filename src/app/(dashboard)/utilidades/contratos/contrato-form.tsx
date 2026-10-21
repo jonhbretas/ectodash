@@ -14,6 +14,7 @@ import {
   type ContratoFormValues,
 } from "./contrato-schema";
 import { buscarAlunosLoja, criarContrato, type ContratoActionState } from "./actions";
+import { agruparEventosPorMes, diaMes } from "@/lib/contratos/eventos-por-mes";
 
 export type ContratoFormOption = {
   id: number;
@@ -148,13 +149,15 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
         </label>
         <select id="evento" {...register("eventoId")} className={INPUT_CLASS}>
           <option value="">Sem evento vinculado</option>
-          {eventos.map((evento) => (
-            <option key={evento.id} value={String(evento.id)}>
-              {evento.titulo}
-              {evento.data_evento
-                ? ` — ${new Date(`${evento.data_evento.slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR")}`
-                : ""}
-            </option>
+          {agruparEventosPorMes(eventos).map((grupo) => (
+            <optgroup key={grupo.chave} label={grupo.label}>
+              {grupo.eventos.map((evento) => (
+                <option key={evento.id} value={String(evento.id)}>
+                  {evento.data_evento ? `${diaMes(evento.data_evento)} — ` : ""}
+                  {evento.titulo}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>

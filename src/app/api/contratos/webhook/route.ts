@@ -10,13 +10,16 @@
 // A API da Assinafy NÃO assina o payload (não há HMAC/secret — ver spec em
 // api.assinafy.com.br/v1/docs). Auditoria 0063 (webhook spoofável): a
 // verificação agora é de 3 camadas, todas fail-closed:
-//   1) segredo compartilhado: o header X-Assinafy-Key (ou x-api-key) precisa
-//      bater com ASSINAFY_WEBHOOK_SECRET (ou ASSINAFY_API_KEY). Sem segredo
-//      configurado, TODOS os eventos são rejeitados (401);
+//   1) segredo compartilhado: a query ?key= (a subscription da Assinafy não
+//      aceita headers customizados) ou o header X-Assinafy-Key/x-api-key
+//      precisa bater com ASSINAFY_WEBHOOK_SECRET (ou ASSINAFY_API_KEY). Sem
+//      segredo configurado, TODOS os eventos são rejeitados (401);
 //   2) account_id OBRIGATÓRIO no payload e igual a ASSINAFY_ACCOUNT_ID (403);
 //   3) dedup pelo id do evento em contrato_webhook_log (PK) — eventos
 //      repetidos recebem 200 imediato e não processam de novo.
-// Além disso, transições de estado só acontecem sobre um contrato existente
+// Além disso, o status do documento é confirmado direto na API da Assinafy
+// antes de marcar assinado/recusado — o payload nunca é a fonte da verdade.
+// Transições de estado só acontecem sobre um contrato existente
 // e no estado esperado (document_ready exige status 'assinando'), e o id do
 // documento é sempre validado contra a tabela contratos antes de qualquer
 // efeito colateral (Drive/Assinafy).
@@ -26,7 +29,11 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { uploadDriveFile } from "@/lib/google/drive";
-import { assinafyBaixarDocumento } from "@/lib/assinafy";
+import {
+  assinafyBaixarDocumento,
+  assinafyStatusDocumento,
+  assinafyWebhookSecret,
+} from "@/lib/assinafy";
 
 export const runtime = "nodejs";
 
@@ -50,9 +57,7 @@ export async function POST(request: Request) {
   // nenhum evento é aceito). O provedor pode ser configurado para enviar um
   // header customizado na subscription de webhook; x-api-key é aceito como
   // fallback caso o provedor ecoe a chave da conta.
-  const webhookSecret = process.env.ASSINAFY_WEBHOOK_SECRET?.trim();
-  const apiKey = process.env.ASSINAFY_API_KEY?.trim();
-  const expected = webhookSecret || apiKey;
+  const expected = assinafyWebhookSecret();
   if (!expected) {
     console.error(
       "contratos webhook: ASSINAFY_WEBHOOK_SECRET não configurado — eventos rejeitados (fail-closed)."
@@ -61,7 +66,9 @@ export async function POST(request: Request) {
   }
 
   const presented =
-    request.headers.get("x-assinafy-key") ?? request.headers.get("x-api-key");
+    new URL(request.url).searchParams.get("key") ??
+    request.headers.get("x-assinafy-key") ??
+    request.headers.get("x-api-key");
   if (!presented || !constantTimeEqual(presented, expected)) {
     return new Response("unauthorized", { status: 401 });
   }
@@ -136,6 +143,10 @@ export async function POST(request: Request) {
       return new Response("estado inválido", { status: 409 });
     }
     try {
+      const status = await assinafyStatusDocumento(documentId);
+      if (status !== "certificated") {
+        return new Response("documento ainda não certificado", { status: 409 });
+      }
       const buffer = await assinafyBaixarDocumento(documentId, "certificated");
       const update: Record<string, unknown> = { status: "assinado" };
       if (contrato.drive_pasta_id) {
@@ -158,6 +169,10 @@ export async function POST(request: Request) {
   }
 
   if (event === "signer_rejected_document") {
+    const status = await assinafyStatusDocumento(documentId).catch(() => "");
+    if (!status.startsWith("rejected")) {
+      return new Response("documento não recusado", { status: 409 });
+    }
     await admin
       .from("contratos")
       .update({ status: "recusado", updated_at: new Date().toISOString() })
