@@ -35,7 +35,7 @@ v2 (gestão por evento, 2026-08-10, user decision): cada evento ganha /eventos/[
 Phase: 09 (Google Sheets Sync) — code shipped, AWAITING HUMAN SETUP
 Plan: 09-01 — executed lean (no PLAN/SUMMARY ceremony per user decision to accelerate)
 Status: Waiting on human: Google service account creation, spreadsheet share (Viewer), and GOOGLE_SERVICE_ACCOUNT_JSON/SPREADSHEET_ID env vars in Vercel + .env.local
-Last activity: 2026-08-04 — Phases 9+10 code shipped; migration 0006 applied to live Supabase
+Last activity: 2026-10-21 - Completed quick task 261021-g5r: pedido de pauta em etapas + Drive + votação
 
 Phase: 10 (Financial Dashboard) — /financeiro SHIPPED
 Plan: 10-01 — executed lean (no PLAN/SUMMARY ceremony per user decision to accelerate)
@@ -157,6 +157,12 @@ None yet.
 - Research flag: Phase 8 (AI extraction) needs prompt/schema design work for relative-date resolution — plan with extra care.
 - Research flag: Phase 9 (Sheets sync) — actual spreadsheet layout unknown until inspected; start planning with a discovery step against the live sheet.
 - Research flag: re-verify current Supabase pause window, Vercel cron cap, and Resend quota numbers at Phase 1/7 start (free-tier limits drift over time).
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261021-g5r | Pedido de pauta em etapas + anexo no Drive + votação prévia | 2026-10-21 | 5a93b17 | [261021-g5r-pauta-wizard-drive-votacao](./quick/261021-g5r-pauta-wizard-drive-votacao/) |
 - **RESOLVED (2026-08-03):** All prior 01-03 blockers (invite-email 500 error, admin.createUser bypass, missing SUMMARY, email-rate-limit block) are now closed. Sequence: SMTP fixed via Resend + verified `ectolab.org` domain -> bypass account deleted with `public.profiles` cascade confirmed -> Auth email-send rate limit raised (2/hour -> 30/hour) by the user in Dashboard -> Authentication -> Rate Limits -> real `admin.inviteUserByEmail` invite succeeded -> `public.profiles` row confirmed -> duplicate-invite rejection confirmed (post-confirmation) -> human confirmed the invite link signs in cleanly on production with no credential screen. See `01-03-SUMMARY.md` for full detail. Plan 01-03 and Phase 1 are both complete.
 - **[Voluntariado, 2026-08-04]** User decision: volunteers self-register by the magic link (`shouldCreateUser: true` — replaces D-02's invite-only mode; Supabase instance signup re-enabled via Management API `disable_signup=false`), then link their account to their name in the institutional roster at /vincular ("escolhem um usuário pelo nome do que já consta no sistema"; not finding themselves, they type name+sobrenome and a new roster entry is created).
 - **[Voluntariado, 2026-08-04]** Institutional roster decoupled from auth: new `public.voluntarios` table (migrations 0016-0019) holds nome/codigo_pf/unidade/org_depto/funcao/data_inicio/data_saida/obs/area_atuacao + intended role/areas_lideradas. 90 real volunteers seeded via `npm run seed:voluntarios` (no auth accounts created). `profiles.voluntario_id` links; `vincular_pendente` flags new accounts until linked. Writes go through SECURITY DEFINER functions (never RLS write policies) so voluntariado/coordenador_area can manage data but never roles; role changes stay coordenador_geral-only.
