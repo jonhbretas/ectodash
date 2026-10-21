@@ -5,12 +5,12 @@
 // Hierarquia: título → selos → contexto/anexo (o conteúdo) à esquerda; a
 // votação ocupa uma coluna própria à direita em telas largas; as ações de
 // gestão ficam num rodapé discreto, separadas do conteúdo.
-import { Paperclip } from "lucide-react";
 import type { PautaRow } from "../_lib/get-reunioes-data";
 import PautaItemActions from "../pauta-item-actions";
 import { PrioridadeBadge, ResultadoVotacaoBadge, TipoBadge } from "./pauta-badges";
 import VotacaoPainel from "./votacao-painel";
 import AnexoPautaButton from "./anexo-pauta-button";
+import AnexoPreview from "./anexo-preview";
 
 type AtaOption = { id: number; titulo: string; data_reuniao: string };
 
@@ -72,15 +72,7 @@ export default function PautaCard({
           )}
 
           {pauta.anexoUrl && (
-            <a
-              href={pauta.anexoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex min-h-12 w-fit max-w-full items-center gap-2 rounded-xl bg-[#2195B9]/10 px-4 text-base font-semibold text-[#1d6f8d] hover:bg-[#2195B9]/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-            >
-              <Paperclip size={18} aria-hidden="true" className="shrink-0" />
-              <span className="truncate">{pauta.anexoNome ?? "Ver anexo"}</span>
-            </a>
+            <AnexoPreview driveId={pauta.anexoDriveId} url={pauta.anexoUrl} nome={pauta.anexoNome} />
           )}
         </div>
 

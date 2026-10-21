@@ -21,12 +21,12 @@ import {
   trashDriveFile,
   uploadDriveFile,
 } from "@/lib/google/drive";
-import { ensurePautaSubfolder } from "@/lib/pautas/drive-folders";
+import { ensurePautaSubfolder, pastaDeAnexoValida } from "@/lib/pautas/drive-folders";
 import { sanitizarNome } from "@/lib/contratos/drive-folders";
 import {
   ANEXO_DIRETO_MAX_BYTES,
-  ANEXO_MAX_BYTES,
   extensaoDoAnexo,
+  maxBytesDoAnexo,
   mimeDoAnexo,
   validarAnexo,
 } from "@/lib/pautas/anexo";
@@ -95,25 +95,23 @@ async function carregarPautaAutorizada(
   };
 }
 
-/** Subpasta do Drive: "Em espera", data da reunião escolhida ou próxima terça. */
-async function pastaEsperada(pauta: PautaAutorizada): Promise<FolderRef> {
-  let nome: string;
-  if (pauta.stand_by) {
-    nome = "Em espera";
-  } else {
-    let data: string | null = null;
-    if (pauta.reuniao_selecionada_id) {
-      const supabase = await createClient();
-      const { data: reuniao } = await supabase
-        .from("reunioes")
-        .select("data_reuniao")
-        .eq("id", pauta.reuniao_selecionada_id)
-        .maybeSingle();
-      data = reuniao?.data_reuniao ? String(reuniao.data_reuniao).slice(0, 10) : null;
-    }
-    nome = data ?? formatarDataISO(proximaTerca());
+/** Nome da subpasta do Drive: "Em espera", data da reunião escolhida ou próxima terça. */
+async function nomeDaSubpasta(pauta: PautaAutorizada): Promise<string> {
+  if (pauta.stand_by) return "Em espera";
+  if (pauta.reuniao_selecionada_id) {
+    const supabase = await createClient();
+    const { data: reuniao } = await supabase
+      .from("reunioes")
+      .select("data_reuniao")
+      .eq("id", pauta.reuniao_selecionada_id)
+      .maybeSingle();
+    if (reuniao?.data_reuniao) return String(reuniao.data_reuniao).slice(0, 10);
   }
-  return ensurePautaSubfolder(nome);
+  return formatarDataISO(proximaTerca());
+}
+
+async function pastaEsperada(pauta: PautaAutorizada): Promise<FolderRef> {
+  return ensurePautaSubfolder(await nomeDaSubpasta(pauta));
 }
 
 function nomeArquivoDrive(pautaId: number, nomeOriginal: string): string {
@@ -125,14 +123,16 @@ function nomeArquivoDrive(pautaId: number, nomeOriginal: string): string {
 async function vincularAnexo(
   pauta: PautaAutorizada,
   fileId: string,
-  nomeOriginal: string,
-  pasta: FolderRef
+  nomeOriginal: string
 ): Promise<{ ok: true } | Falha> {
   const detalhes = await getDriveFileDetails(fileId);
   const tamanho = Number(detalhes.size ?? 0);
-  const naPasta = Array.isArray(detalhes.parents) && detalhes.parents.includes(pasta.id);
+  // Não busca a pasta por nome de novo (a busca do Drive pode ainda não ver
+  // uma pasta recém-criada): confere o caminho subindo pelos pais do arquivo.
+  const paiId = detalhes.parents?.length === 1 ? detalhes.parents[0] : null;
+  const naPasta = paiId ? await pastaDeAnexoValida(paiId, await nomeDaSubpasta(pauta)) : false;
 
-  if (!naPasta || detalhes.trashed || tamanho > ANEXO_MAX_BYTES) {
+  if (!naPasta || detalhes.trashed || tamanho > maxBytesDoAnexo(nomeOriginal)) {
     // Só descartamos o arquivo se ele está na pasta esperada (foi criado por
     // este fluxo); nunca mexemos em arquivo de outra pasta.
     if (naPasta) await trashDriveFile(fileId).catch(() => undefined);
@@ -228,8 +228,7 @@ export async function finalizarAnexo(
     if (!DRIVE_ID_RE.test(String(driveFileId ?? ""))) {
       return { ok: false, message: "Arquivo inválido." };
     }
-    const pasta = await pastaEsperada(auth.pauta);
-    return await vincularAnexo(auth.pauta, driveFileId, String(nomeOriginal ?? "anexo"), pasta);
+    return await vincularAnexo(auth.pauta, driveFileId, String(nomeOriginal ?? "anexo"));
   } catch (e) {
     console.error("finalizarAnexo failed", e);
     return { ok: false, message: mensagemDeErro(e, "Não foi possível salvar o anexo.") };
@@ -258,7 +257,7 @@ export async function enviarAnexoDireto(
     const pasta = await pastaEsperada(auth.pauta);
     const buffer = Buffer.from(await arquivo.arrayBuffer());
     const criado = await uploadDriveFile(pasta.id, nomeArquivoDrive(auth.pauta.id, arquivo.name), buffer, mime);
-    return await vincularAnexo(auth.pauta, criado.id, arquivo.name, pasta);
+    return await vincularAnexo(auth.pauta, criado.id, arquivo.name);
   } catch (e) {
     console.error("enviarAnexoDireto failed", e);
     return { ok: false, message: mensagemDeErro(e, "Não foi possível enviar o anexo.") };

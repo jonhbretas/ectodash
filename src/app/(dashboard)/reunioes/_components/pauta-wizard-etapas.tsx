@@ -424,7 +424,7 @@ export function EtapaAnexo(props: {
           <Paperclip size={20} aria-hidden="true" /> Escolher arquivo
         </button>
         <p className="text-base text-zinc-700">
-          Opcional. Até 25 MB: PDF, Word, Excel, PowerPoint, imagem ou texto.
+          Opcional. Documentos e imagens até 25 MB (PDF, Word, Excel, PowerPoint, imagem ou texto). Vídeos até 300 MB.
         </p>
       </div>
 

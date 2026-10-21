@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PautaRow } from "../_lib/get-reunioes-data";
 import { PrioridadeBadge, ResultadoVotacaoBadge, TipoBadge } from "./pauta-badges";
 import VotacaoPainel from "./votacao-painel";
+import AnexoPreview from "./anexo-preview";
 
 type Props = { pautas: PautaRow[]; meuUserId: string; isCoordenador: boolean };
 
@@ -43,10 +44,7 @@ function Drawer({
         </div>
         {pauta.contexto && <p className="whitespace-pre-wrap text-base text-zinc-700">{pauta.contexto}</p>}
         {pauta.anexoUrl && (
-          <a href={pauta.anexoUrl} target="_blank" rel="noopener noreferrer" className="flex min-h-12 w-fit max-w-full items-center gap-2 rounded-xl border border-zinc-400 bg-white px-4 text-base font-semibold text-[#1d6f8d] hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]">
-            <Paperclip size={18} aria-hidden="true" className="shrink-0" />
-            <span className="truncate">Ver anexo: {pauta.anexoNome ?? "arquivo"}</span>
-          </a>
+          <AnexoPreview driveId={pauta.anexoDriveId} url={pauta.anexoUrl} nome={pauta.anexoNome} />
         )}
         {pauta.tipo === "deliberativa" && pauta.votacaoStatus && (
           <VotacaoPainel

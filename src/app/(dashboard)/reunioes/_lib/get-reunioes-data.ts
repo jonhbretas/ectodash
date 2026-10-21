@@ -43,6 +43,7 @@ export type PautaRow = {
   createdAt: string;
   prioridade: PautaPrioridade;
   tipo: PautaTipo;
+  anexoDriveId: string | null;
   anexoUrl: string | null;
   anexoNome: string | null;
   votacaoStatus: VotacaoStatus | null;
@@ -55,7 +56,7 @@ export type PautaRow = {
 /** Colunas de pautas lidas pela área de reuniões. ATENÇÃO: pautas tem 2 FKs
  * para profiles — todo embed usa o hint explícito (PGRST201 se ambíguo). */
 export const PAUTAS_SELECT =
-  "id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, data_solicitada, horario_solicitado, reuniao_selecionada_id, criado_por, created_at, updated_at, prioridade, tipo, anexo_url, anexo_nome, quorum_minimo, votacao_status, votacao_encerrada_em, profiles!pautas_criado_por_fkey(full_name, email), encerrador:profiles!pautas_votacao_encerrada_por_fkey(full_name, email)";
+  "id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, data_solicitada, horario_solicitado, reuniao_selecionada_id, criado_por, created_at, updated_at, prioridade, tipo, anexo_drive_id, anexo_url, anexo_nome, quorum_minimo, votacao_status, votacao_encerrada_em, profiles!pautas_criado_por_fkey(full_name, email), encerrador:profiles!pautas_votacao_encerrada_por_fkey(full_name, email)";
 
 export const PAUTA_VOTOS_SELECT =
   "pauta_id, user_id, voto, comentario, updated_at, profiles!pauta_votos_user_id_fkey(full_name, email)";
@@ -80,6 +81,7 @@ type PautaDbRow = {
   created_at: string;
   prioridade: PautaPrioridade;
   tipo: PautaTipo;
+  anexo_drive_id: string | null;
   anexo_url: string | null;
   anexo_nome: string | null;
   quorum_minimo: number;
@@ -148,6 +150,7 @@ export function mapearPautas(
       createdAt: row.created_at,
       prioridade: row.prioridade,
       tipo: row.tipo,
+      anexoDriveId: row.anexo_drive_id,
       anexoUrl: row.anexo_url,
       anexoNome: row.anexo_nome,
       votacaoStatus: row.votacao_status,
