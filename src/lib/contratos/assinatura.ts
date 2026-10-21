@@ -36,7 +36,8 @@ async function semCota(supabase: SupabaseClient): Promise<EnvioAssinaturaResult 
 
 export async function enviarContratoParaAssinatura(
   supabase: SupabaseClient,
-  contratoId: number
+  contratoId: number,
+  opcoes: { enviadoPor?: string } = {}
 ): Promise<EnvioAssinaturaResult> {
   try {
     const bloqueio = await semCota(supabase);
@@ -46,7 +47,12 @@ export async function enviarContratoParaAssinatura(
     const { buffer, filename } = await renderizarContratoPdf(completo);
 
     const documento = await assinafyUploadDocumento(buffer, filename);
-    await registrarEnvio(supabase, { contratoId, documentId: documento.id, teste: false });
+    await registrarEnvio(supabase, {
+      contratoId,
+      documentId: documento.id,
+      teste: false,
+      enviadoPor: opcoes.enviadoPor,
+    });
     const signer = await assinafyCriarSignatario(
       completo.contrato.aluno_nome,
       completo.contrato.aluno_email,
@@ -66,6 +72,7 @@ export async function enviarContratoParaAssinatura(
         status: "assinando",
         assinafy_document_id: documento.id,
         assinafy_assignment_id: assignment.id,
+        assinafy_signer_id: signer.id,
       })
       .eq("id", contratoId);
     if (error) throw new Error("Não foi possível atualizar o contrato.");

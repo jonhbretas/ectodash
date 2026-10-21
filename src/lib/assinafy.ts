@@ -136,6 +136,19 @@ export async function assinafyStatusDocumento(documentId: string): Promise<strin
   return String((envelope.data as AssinafyDocument | undefined)?.status ?? "");
 }
 
+/** Reenvia o e-mail de solicitação de assinatura ao signatário — não cria
+ *  documento novo (não consome a cota de documentos). */
+export async function assinafyReenviarSolicitacao(
+  documentId: string,
+  assignmentId: string,
+  signerId: string
+): Promise<void> {
+  await assinafyRequest(
+    `/v1/documents/${documentId}/assignments/${assignmentId}/signers/${signerId}/resend`,
+    { method: "PUT" }
+  );
+}
+
 /** Baixa o artefato do documento (original | certificated | certificate-page | bundle). */
 export async function assinafyBaixarDocumento(
   documentId: string,

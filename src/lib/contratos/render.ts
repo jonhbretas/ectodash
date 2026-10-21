@@ -154,7 +154,12 @@ export type DadosPdfContrato = {
   /** aaaa-mm-dd */
   emissaoIso: string;
   teste?: boolean;
+  /** Substitui a faixa padrão de teste (ex.: prévia para o aluno conferir). */
+  aviso?: string;
 };
+
+const AVISO_TESTE =
+  "DOCUMENTO DE TESTE — sem validade jurídica. Confira layout e dados antes do envio real.";
 
 function opcional(valor: string): string | null {
   return valor.trim() ? valor.trim() : null;
@@ -217,7 +222,7 @@ export async function gerarPdfContrato(
         }
       : null,
     emissao,
-    teste: dados.teste,
+    aviso: dados.aviso ?? (dados.teste ? AVISO_TESTE : null),
   });
 
   const filename = `${dados.teste ? "TESTE - " : ""}${sanitizarNome(modelo.titulo)} - ${sanitizarNome(aluno.nome)}.pdf`;

@@ -13,6 +13,7 @@ import {
   FolderOpen,
   CalendarDays,
   Users,
+  ClipboardList,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -243,6 +244,13 @@ export default async function ContratosPage({
           >
             <Settings2 size={22} aria-hidden="true" />
             Modelos
+          </Link>
+          <Link
+            href="/utilidades/contratos/formularios"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          >
+            <ClipboardList size={22} aria-hidden="true" />
+            Formulários
           </Link>
           <Link
             href="/utilidades/contratos/lote"

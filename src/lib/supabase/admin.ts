@@ -9,6 +9,8 @@
 //   • src/app/api/wp/debug/orders   (debug endpoint — production-gated)
 //   • src/app/api/proep/import-from-store (PROEP import — role-gated)
 //   • src/app/(auth)/cadastro/actions.ts (signUp — duplicate-email precheck)
+//   • src/app/contrato/[token]/* (formulário público de contrato — sem
+//     sessão; travas em src/lib/contratos/formulario.ts)
 //   • src/app/(dashboard)/voluntarios/actions.ts (coordenador_geral resetting a
 //     volunteer's password via admin.auth.updateUserById — role-gated)
 //
@@ -28,6 +30,7 @@ const ALLOWED_PREFIXES = [
   "/api/wp/debug/",
   "/api/proep/import-from-store",
   "(auth)/cadastro/actions.ts",
+  "contrato/[token]",
   "(dashboard)/voluntarios/actions.ts",
   "(dashboard)/marketing/actions.ts",
   "(dashboard)/painel/acessos/actions.ts",

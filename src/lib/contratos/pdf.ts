@@ -46,8 +46,8 @@ export type ContratoPdfInput = {
   valor?: string | null;
   evento?: { titulo: string; data?: string | null; local?: string | null } | null;
   emissao: string;
-  /** Envio de teste / pré-visualização: faixa "DOCUMENTO DE TESTE". */
-  teste?: boolean;
+  /** Faixa de aviso no topo (teste, pré-visualização). Sem aviso = contrato real. */
+  aviso?: string | null;
 };
 
 const TOKEN_RE = /\{\{\s*[\w.]+\s*\}\}/g;
@@ -223,23 +223,18 @@ export async function buildContratoPdf(
   doc.x = MARGIN;
   doc.y = BAND_HEIGHT + 28;
 
-  if (input.teste) {
-    const avisoH = 30;
+  if (input.aviso) {
+    // Faixa de aviso que cresce com o texto (avisos longos quebram linha).
+    const avisoOpts = { width: contentWidth - 24, align: "center" as const };
+    doc.font("Helvetica-Bold").fontSize(10);
+    const avisoH = doc.heightOfString(input.aviso, avisoOpts) + 20;
+    const top = doc.y;
     doc.save();
-    doc.roundedRect(MARGIN, doc.y, contentWidth, avisoH, 6).fill("#fef3c7");
+    doc.roundedRect(MARGIN, top, contentWidth, avisoH, 6).fill("#fef3c7");
     doc.restore();
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .fillColor("#92400e")
-      .text(
-        "DOCUMENTO DE TESTE — sem validade jurídica. Confira layout e dados antes do envio real.",
-        MARGIN,
-        doc.y + 10,
-        { width: contentWidth, align: "center", lineBreak: false }
-      );
+    doc.fillColor("#92400e").text(input.aviso, MARGIN + 12, top + 10, avisoOpts);
     doc.x = MARGIN;
-    doc.y += avisoH - 10 + 18;
+    doc.y = top + avisoH + 18;
   }
 
   // ── Helpers de seção ──────────────────────────────────────────────

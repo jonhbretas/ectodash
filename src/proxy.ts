@@ -21,11 +21,15 @@ function isPublicPath(pathname: string): boolean {
   //
   // /descadastrar: página pública do opt-out (LGPD) — o lead nunca tem
   // conta; redirecionar para /login quebrava o descadastro.
+  //
+  // /contrato/<token>: formulário público em que o aluno preenche os dados
+  // do próprio contrato (sem conta); as travas ficam em lib/contratos/formulario.ts.
   return (
     pathname === "/login" ||
     pathname === "/cadastro" ||
     pathname === "/recuperar-senha" ||
     pathname === "/descadastrar" ||
+    pathname.startsWith("/contrato/") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api/cron") ||
     pathname === "/api/marketing/webhook"

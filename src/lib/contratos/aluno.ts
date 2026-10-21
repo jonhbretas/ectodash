@@ -104,6 +104,27 @@ export function isoParaBr(iso: string): string {
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 }
 
+const PARTICULAS = new Set(["da", "das", "de", "do", "dos", "e"]);
+
+/** "MARIA DA SILVA" / "maria da silva" → "Maria da Silva". Nomes já com
+ *  maiúsculas e minúsculas misturadas ficam como a pessoa escreveu. */
+export function normalizarNome(nome: string): string {
+  const limpo = nome.replace(/\s+/g, " ").trim();
+  if (limpo !== limpo.toUpperCase() && limpo !== limpo.toLowerCase()) return limpo;
+  return limpo
+    .toLowerCase()
+    .split(" ")
+    .map((p, i) => (i > 0 && PARTICULAS.has(p) ? p : p.charAt(0).toUpperCase() + p.slice(1)))
+    .join(" ");
+}
+
+/** "andre.pedretti@gmail.com" → "an***@gmail.com" */
+export function mascararEmail(email: string): string {
+  const [usuario, dominio] = email.trim().split("@");
+  if (!dominio) return email;
+  return `${usuario.slice(0, 2)}***@${dominio}`;
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function emailValido(valor: string): boolean {

@@ -32,12 +32,19 @@ export async function saldoCota(supabase: SupabaseClient): Promise<SaldoCota> {
 
 export async function registrarEnvio(
   supabase: SupabaseClient,
-  envio: { contratoId: number | null; documentId: string; teste: boolean }
+  envio: {
+    contratoId: number | null;
+    documentId: string;
+    teste: boolean;
+    /** Obrigatório sem sessão (formulário público): o criador do formulário. */
+    enviadoPor?: string;
+  }
 ): Promise<void> {
   const { error } = await supabase.from("contrato_envios").insert({
     contrato_id: envio.contratoId,
     assinafy_document_id: envio.documentId,
     teste: envio.teste,
+    ...(envio.enviadoPor ? { enviado_por: envio.enviadoPor } : {}),
   });
   if (error) console.error("[contratos/cota] registrarEnvio failed", error);
 }
