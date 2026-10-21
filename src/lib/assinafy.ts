@@ -181,7 +181,8 @@ export function assinafyWebhookSecret(): string {
  *  pública, sem o segredo. */
 export async function assinafyGarantirWebhook(siteUrl: string): Promise<{ url: string }> {
   const url = `${siteUrl}/api/contratos/webhook`;
-  const secret = assinafyWebhookSecret();
+  // Só o segredo dedicado vai na URL — nunca a API key da conta.
+  const secret = process.env.ASSINAFY_WEBHOOK_SECRET?.trim();
   if (!secret) {
     throw new Error("Defina ASSINAFY_WEBHOOK_SECRET para configurar o webhook.");
   }

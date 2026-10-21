@@ -60,6 +60,12 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
       alunoEmail: "",
       alunoDocumento: "",
       alunoTelefone: "",
+      alunoRg: "",
+      alunoNascimento: "",
+      alunoNacionalidade: "",
+      alunoEstadoCivil: "",
+      alunoProfissao: "",
+      alunoEndereco: "",
       valor: "",
     },
   });
@@ -107,6 +113,12 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
     if (values.alunoEmail) fd.set("alunoEmail", values.alunoEmail);
     if (values.alunoDocumento) fd.set("alunoDocumento", values.alunoDocumento);
     if (values.alunoTelefone) fd.set("alunoTelefone", values.alunoTelefone);
+    if (values.alunoRg) fd.set("alunoRg", values.alunoRg);
+    if (values.alunoNascimento) fd.set("alunoNascimento", values.alunoNascimento);
+    if (values.alunoNacionalidade) fd.set("alunoNacionalidade", values.alunoNacionalidade);
+    if (values.alunoEstadoCivil) fd.set("alunoEstadoCivil", values.alunoEstadoCivil);
+    if (values.alunoProfissao) fd.set("alunoProfissao", values.alunoProfissao);
+    if (values.alunoEndereco) fd.set("alunoEndereco", values.alunoEndereco);
     if (values.valor) fd.set("valor", values.valor);
     formAction(fd);
   }
@@ -282,6 +294,49 @@ export default function ContratoForm({ modelos, eventos, alunosIniciais, busca, 
             />
           </div>
         </div>
+        <details className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+          <summary className="cursor-pointer text-base font-medium text-zinc-700">
+            Mais dados do aluno (RG, nascimento, endereço, qualificação)
+          </summary>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="alunoRg" className="text-base font-medium text-zinc-800">
+                RG
+              </label>
+              <input id="alunoRg" {...register("alunoRg")} placeholder="ex.: 12.345.678-9" className={INPUT_CLASS} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="alunoNascimento" className="text-base font-medium text-zinc-800">
+                Data de nascimento
+              </label>
+              <input id="alunoNascimento" {...register("alunoNascimento")} placeholder="dd/mm/aaaa" className={INPUT_CLASS} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="alunoNacionalidade" className="text-base font-medium text-zinc-800">
+                Nacionalidade
+              </label>
+              <input id="alunoNacionalidade" {...register("alunoNacionalidade")} placeholder="ex.: brasileira" className={INPUT_CLASS} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="alunoEstadoCivil" className="text-base font-medium text-zinc-800">
+                Estado civil
+              </label>
+              <input id="alunoEstadoCivil" {...register("alunoEstadoCivil")} placeholder="ex.: solteira" className={INPUT_CLASS} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="alunoProfissao" className="text-base font-medium text-zinc-800">
+                Profissão
+              </label>
+              <input id="alunoProfissao" {...register("alunoProfissao")} placeholder="ex.: professora" className={INPUT_CLASS} />
+            </div>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <label htmlFor="alunoEndereco" className="text-base font-medium text-zinc-800">
+                Endereço completo
+              </label>
+              <input id="alunoEndereco" {...register("alunoEndereco")} placeholder="Rua, número, bairro, cidade/UF, CEP" className={INPUT_CLASS} />
+            </div>
+          </div>
+        </details>
       </fieldset>
 
       {state.message && (

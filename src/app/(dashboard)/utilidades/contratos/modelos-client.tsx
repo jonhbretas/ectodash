@@ -4,7 +4,7 @@
 // painel de configuração do webhook da Assinafy.
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -14,6 +14,8 @@ import {
   Power,
   Sparkles,
   Link2,
+  Eye,
+  Loader2,
 } from "lucide-react";
 import {
   CONTRATO_CATEGORIAS,
@@ -31,6 +33,8 @@ import {
   toggleModeloAtivo,
   type ContratoActionState,
 } from "./actions";
+import { previsualizarModelo } from "./lote-actions";
+import PdfPreviewDialog, { type PdfAberto } from "./pdf-preview-dialog";
 
 type ModeloRow = {
   id: number;
@@ -98,6 +102,9 @@ function ModeloForm({
   onCancel?: () => void;
   submitLabel: string;
 }) {
+  const [pdf, setPdf] = useState<PdfAberto | null>(null);
+  const [previewErro, setPreviewErro] = useState("");
+  const [previewPending, startPreview] = useTransition();
   const { register, handleSubmit, setValue, getValues } = useForm<ContratoModeloFormValues>({
     resolver: zodResolver(contratoModeloSchema),
     defaultValues: {
@@ -108,6 +115,26 @@ function ModeloForm({
       ...defaultValues,
     },
   });
+
+  // Gera o PDF com o texto como está no editor (mesmo sem salvar), preenchido
+  // com um aluno e um evento de exemplo.
+  function previsualizar() {
+    setPreviewErro("");
+    const { titulo, categoria, conteudo } = getValues();
+    startPreview(async () => {
+      const r = await previsualizarModelo({ titulo, categoria, conteudo });
+      if (!r.ok) {
+        setPreviewErro(r.message);
+        return;
+      }
+      const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
+      if (pdf) URL.revokeObjectURL(pdf.url);
+      setPdf({
+        url: URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })),
+        filename: r.filename,
+      });
+    });
+  }
 
   function onValid(values: ContratoModeloFormValues) {
     const fd = new FormData();
@@ -191,6 +218,19 @@ function ModeloForm({
         >
           {isPending ? "Salvando..." : submitLabel}
         </button>
+        <button
+          type="button"
+          onClick={previsualizar}
+          disabled={previewPending}
+          className="flex min-h-14 items-center gap-2 rounded-xl border border-[#2195B9]/40 bg-white px-6 text-lg font-medium text-[#2195B9] transition-colors hover:bg-[#e8f4f8] disabled:opacity-60"
+        >
+          {previewPending ? (
+            <Loader2 size={20} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Eye size={20} aria-hidden="true" />
+          )}
+          Pré-visualizar PDF
+        </button>
         {onCancel && (
           <button
             type="button"
@@ -201,6 +241,15 @@ function ModeloForm({
           </button>
         )}
       </div>
+      <p className="text-base text-zinc-500">
+        A pré-visualização usa o texto atual (mesmo sem salvar) com um aluno e um evento de exemplo.
+      </p>
+      {previewErro && (
+        <p className="text-base text-red-700" role="status">
+          {previewErro}
+        </p>
+      )}
+      <PdfPreviewDialog pdf={pdf} onClose={() => setPdf(null)} />
     </form>
   );
 }

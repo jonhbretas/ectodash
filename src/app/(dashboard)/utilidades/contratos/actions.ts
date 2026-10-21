@@ -20,6 +20,7 @@ import {
   assinafyStatusDocumento,
 } from "@/lib/assinafy";
 import { contratoSchema, contratoModeloSchema } from "./contrato-schema";
+import { dataParaIso } from "@/lib/contratos/aluno";
 
 export type ContratoActionState = {
   ok: boolean;
@@ -91,6 +92,12 @@ export async function criarContrato(
       alunoEmail: formData.get("alunoEmail") ?? "",
       alunoDocumento: formData.get("alunoDocumento") ?? "",
       alunoTelefone: formData.get("alunoTelefone") ?? "",
+      alunoRg: formData.get("alunoRg") ?? "",
+      alunoNascimento: formData.get("alunoNascimento") ?? "",
+      alunoNacionalidade: formData.get("alunoNacionalidade") ?? "",
+      alunoEstadoCivil: formData.get("alunoEstadoCivil") ?? "",
+      alunoProfissao: formData.get("alunoProfissao") ?? "",
+      alunoEndereco: formData.get("alunoEndereco") ?? "",
       valor: formData.get("valor") ?? "",
     });
     if (!parsed.success) {
@@ -99,6 +106,9 @@ export async function criarContrato(
     }
 
     const data = parsed.data;
+    if (data.alunoNascimento && !dataParaIso(data.alunoNascimento)) {
+      return { ok: false, message: "Data de nascimento inválida (use dd/mm/aaaa)." };
+    }
     const valor =
       data.valor && data.valor.trim()
         ? parseFloat(data.valor.replace(/\s/g, "").replace(/\./g, "").replace(",", "."))
@@ -116,6 +126,12 @@ export async function criarContrato(
         aluno_email: data.alunoEmail || null,
         aluno_documento: data.alunoDocumento || null,
         aluno_telefone: data.alunoTelefone || null,
+        aluno_rg: data.alunoRg || null,
+        aluno_nacionalidade: data.alunoNacionalidade || null,
+        aluno_estado_civil: data.alunoEstadoCivil || null,
+        aluno_profissao: data.alunoProfissao || null,
+        aluno_endereco: data.alunoEndereco || null,
+        aluno_nascimento: data.alunoNascimento ? dataParaIso(data.alunoNascimento) : null,
         valor,
         status: "gerado",
         expira_em: prazoPadrao(),
@@ -429,9 +445,13 @@ export async function configurarAssinafy(
     };
   } catch (error) {
     console.error("[contratos] configurarWebhookAssinafy failed", error);
+    const semSegredo =
+      error instanceof Error && error.message.includes("ASSINAFY_WEBHOOK_SECRET");
     return {
       ok: false,
-      message: "Erro ao configurar o webhook da Assinafy.",
+      message: semSegredo
+        ? "Falta a variável ASSINAFY_WEBHOOK_SECRET na Vercel (um texto aleatório longo). Cadastre, faça novo deploy e toque de novo."
+        : "Erro ao configurar o webhook da Assinafy.",
     };
   }
 }

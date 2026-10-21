@@ -18,30 +18,36 @@ export async function arquivarContratoNoDrive(
   contratoId: number,
   eventoId: number | null
 ): Promise<void> {
-  const { data: evento } = eventoId
-    ? await supabase
-        .from("eventos")
-        .select("titulo")
-        .eq("id", eventoId)
-        .single()
-    : { data: null };
-
-  const parent = eventoId
-    ? await ensureEventFolder(eventoId, evento?.titulo ?? `Evento ${eventoId}`)
-    : await ensureAvulsosFolder();
-
   const completo = await carregarContrato(supabase, contratoId);
-  const alunoFolder = await createAlunoFolder(parent.id, completo.contrato.aluno_nome);
-  await supabase
-    .from("contratos")
-    .update({
-      drive_pasta_id: alunoFolder.id,
-      drive_pasta_url: alunoFolder.url,
-    })
-    .eq("id", contratoId);
+
+  // Contrato atualizado (mesclagem no lote) já tem pasta: o PDF novo vai nela.
+  let pastaId = completo.contrato.drive_pasta_id;
+  if (!pastaId) {
+    const { data: evento } = eventoId
+      ? await supabase
+          .from("eventos")
+          .select("titulo")
+          .eq("id", eventoId)
+          .single()
+      : { data: null };
+
+    const parent = eventoId
+      ? await ensureEventFolder(eventoId, evento?.titulo ?? `Evento ${eventoId}`)
+      : await ensureAvulsosFolder();
+
+    const alunoFolder = await createAlunoFolder(parent.id, completo.contrato.aluno_nome);
+    await supabase
+      .from("contratos")
+      .update({
+        drive_pasta_id: alunoFolder.id,
+        drive_pasta_url: alunoFolder.url,
+      })
+      .eq("id", contratoId);
+    pastaId = alunoFolder.id;
+  }
 
   const { buffer, filename } = await renderizarContratoPdf(completo);
-  const arquivo = await uploadDriveFile(alunoFolder.id, filename, buffer);
+  const arquivo = await uploadDriveFile(pastaId, filename, buffer);
   await supabase
     .from("contratos")
     .update({

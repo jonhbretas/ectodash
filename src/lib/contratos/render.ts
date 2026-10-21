@@ -10,6 +10,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { aplicarVariaveis, categoriaLabel } from "./variables";
 import { buildContratoPdf } from "./pdf";
 import { sanitizarNome } from "./drive-folders";
+import {
+  ALUNO_VAZIO,
+  dataParaIso,
+  formatarCpf,
+  formatarTelefone,
+  isoParaBr,
+  type AlunoContrato,
+} from "./aluno";
 
 export { categoriaLabel } from "./variables";
 
@@ -28,6 +36,12 @@ export type ContratoRow = {
   aluno_email: string | null;
   aluno_documento: string | null;
   aluno_telefone: string | null;
+  aluno_rg?: string | null;
+  aluno_nascimento?: string | null;
+  aluno_endereco?: string | null;
+  aluno_nacionalidade?: string | null;
+  aluno_estado_civil?: string | null;
+  aluno_profissao?: string | null;
   valor: number | null;
   status: ContratoStatus;
   expira_em: string | null;
@@ -128,40 +142,72 @@ export async function carregarContrato(
   };
 }
 
-/** Renderiza o PDF completo do contrato (variáveis trocadas). */
-export async function renderizarContratoPdf(
-  completo: ContratoCompleto
-): Promise<{ buffer: Buffer; filename: string }> {
-  const { contrato, modelo, evento } = completo;
-  const emissao = formatarData(contrato.created_at);
-  const valor = formatarValor(contrato.valor);
+/** Dados mínimos para gerar o PDF — vêm de um contrato salvo ou, no envio
+ *  de teste / pré-visualização, direto da memória (sem linha no banco). */
+export type DadosPdfContrato = {
+  numero: string;
+  modelo: Pick<ContratoModeloRow, "titulo" | "categoria">;
+  conteudo: string;
+  evento: EventoContratoRow | null;
+  aluno: AlunoContrato;
+  valor: number | null;
+  /** aaaa-mm-dd */
+  emissaoIso: string;
+  teste?: boolean;
+};
 
-  const conteudo = aplicarVariaveis(
-    contrato.conteudo_utilizado ?? modelo.conteudo,
-    {
-      "{{aluno_nome}}": contrato.aluno_nome,
-      "{{aluno_email}}": contrato.aluno_email ?? "",
-      "{{aluno_documento}}": contrato.aluno_documento ?? "",
-      "{{aluno_telefone}}": contrato.aluno_telefone ?? "",
-      "{{evento_titulo}}": evento?.titulo ?? "",
-      "{{evento_data}}": evento?.data_evento ? formatarData(evento.data_evento) : "",
-      "{{evento_local}}": evento?.local ?? "",
-      "{{evento_descricao}}": evento?.descricao ?? "",
-      "{{valor}}": valor ?? "",
-      "{{data_emissao}}": emissao,
-      "{{modelo_titulo}}": modelo.titulo,
-    }
-  );
+function opcional(valor: string): string | null {
+  return valor.trim() ? valor.trim() : null;
+}
+
+export async function gerarPdfContrato(
+  dados: DadosPdfContrato
+): Promise<{ buffer: Buffer; filename: string }> {
+  const { modelo, evento, aluno } = dados;
+  const emissao = formatarData(dados.emissaoIso);
+  const valor = formatarValor(dados.valor);
+  const nascimentoIso = dataParaIso(aluno.nascimento);
+  const nascimento = nascimentoIso ? isoParaBr(nascimentoIso) : opcional(aluno.nascimento);
+  const documento = opcional(aluno.documento) ? formatarCpf(aluno.documento) : null;
+  const telefone = opcional(aluno.telefone) ? formatarTelefone(aluno.telefone) : null;
+
+  const conteudo = aplicarVariaveis(dados.conteudo, {
+    "{{aluno_nome}}": aluno.nome,
+    "{{aluno_email}}": aluno.email,
+    "{{aluno_documento}}": documento ?? "",
+    "{{aluno_telefone}}": telefone ?? "",
+    "{{aluno_rg}}": aluno.rg,
+    "{{aluno_nascimento}}": nascimento ?? "",
+    "{{aluno_endereco}}": aluno.endereco,
+    "{{aluno_nacionalidade}}": aluno.nacionalidade,
+    "{{aluno_estado_civil}}": aluno.estadoCivil,
+    "{{aluno_profissao}}": aluno.profissao,
+    "{{evento_titulo}}": evento?.titulo ?? "",
+    "{{evento_data}}": evento?.data_evento ? formatarData(evento.data_evento) : "",
+    "{{evento_local}}": evento?.local ?? "",
+    "{{evento_descricao}}": evento?.descricao ?? "",
+    "{{valor}}": valor ?? "",
+    "{{data_emissao}}": emissao,
+    "{{modelo_titulo}}": modelo.titulo,
+  });
 
   const buffer = await buildContratoPdf({
-    numero: String(contrato.id),
+    numero: dados.numero,
     modeloTitulo: modelo.titulo,
     categoriaLabel: categoriaLabel(modelo.categoria),
     conteudo,
-    alunoNome: contrato.aluno_nome,
-    alunoDocumento: contrato.aluno_documento,
-    alunoEmail: contrato.aluno_email,
-    alunoTelefone: contrato.aluno_telefone,
+    alunoNome: aluno.nome,
+    alunoDocumento: documento,
+    alunoRg: opcional(aluno.rg),
+    alunoNascimento: nascimento,
+    alunoEmail: opcional(aluno.email),
+    alunoTelefone: telefone,
+    alunoEndereco: opcional(aluno.endereco),
+    alunoQualificacao:
+      [aluno.nacionalidade, aluno.estadoCivil, aluno.profissao]
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .join(", ") || null,
     valor,
     evento: evento
       ? {
@@ -171,8 +217,41 @@ export async function renderizarContratoPdf(
         }
       : null,
     emissao,
+    teste: dados.teste,
   });
 
-  const filename = `${sanitizarNome(modelo.titulo)} - ${sanitizarNome(contrato.aluno_nome)}.pdf`;
+  const filename = `${dados.teste ? "TESTE - " : ""}${sanitizarNome(modelo.titulo)} - ${sanitizarNome(aluno.nome)}.pdf`;
   return { buffer, filename };
+}
+
+export function alunoDoContrato(contrato: ContratoRow): AlunoContrato {
+  return {
+    ...ALUNO_VAZIO,
+    nome: contrato.aluno_nome,
+    email: contrato.aluno_email ?? "",
+    documento: contrato.aluno_documento ?? "",
+    telefone: contrato.aluno_telefone ?? "",
+    rg: contrato.aluno_rg ?? "",
+    nascimento: contrato.aluno_nascimento ?? "",
+    endereco: contrato.aluno_endereco ?? "",
+    nacionalidade: contrato.aluno_nacionalidade ?? "",
+    estadoCivil: contrato.aluno_estado_civil ?? "",
+    profissao: contrato.aluno_profissao ?? "",
+  };
+}
+
+/** Renderiza o PDF completo do contrato (variáveis trocadas). */
+export async function renderizarContratoPdf(
+  completo: ContratoCompleto
+): Promise<{ buffer: Buffer; filename: string }> {
+  const { contrato, modelo, evento } = completo;
+  return gerarPdfContrato({
+    numero: String(contrato.id),
+    modelo,
+    conteudo: contrato.conteudo_utilizado ?? modelo.conteudo,
+    evento,
+    aluno: alunoDoContrato(contrato),
+    valor: contrato.valor,
+    emissaoIso: contrato.created_at,
+  });
 }

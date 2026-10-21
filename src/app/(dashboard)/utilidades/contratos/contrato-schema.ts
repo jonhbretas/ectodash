@@ -19,6 +19,12 @@ export const contratoSchema = z.object({
     .optional(),
   alunoDocumento: z.string().trim().optional(),
   alunoTelefone: z.string().trim().optional(),
+  alunoRg: z.string().trim().max(300).optional(),
+  alunoNascimento: z.string().trim().max(300).optional(),
+  alunoNacionalidade: z.string().trim().max(300).optional(),
+  alunoEstadoCivil: z.string().trim().max(300).optional(),
+  alunoProfissao: z.string().trim().max(300).optional(),
+  alunoEndereco: z.string().trim().max(300).optional(),
   valor: z.string().trim().optional(),
 });
 

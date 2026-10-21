@@ -36,11 +36,18 @@ export type ContratoPdfInput = {
   conteudo: string;
   alunoNome: string;
   alunoDocumento?: string | null;
+  alunoRg?: string | null;
+  alunoNascimento?: string | null;
   alunoEmail?: string | null;
   alunoTelefone?: string | null;
+  alunoEndereco?: string | null;
+  /** "brasileira, solteira, professora" */
+  alunoQualificacao?: string | null;
   valor?: string | null;
   evento?: { titulo: string; data?: string | null; local?: string | null } | null;
   emissao: string;
+  /** Envio de teste / pré-visualização: faixa "DOCUMENTO DE TESTE". */
+  teste?: boolean;
 };
 
 const TOKEN_RE = /\{\{\s*[\w.]+\s*\}\}/g;
@@ -216,6 +223,25 @@ export async function buildContratoPdf(
   doc.x = MARGIN;
   doc.y = BAND_HEIGHT + 28;
 
+  if (input.teste) {
+    const avisoH = 30;
+    doc.save();
+    doc.roundedRect(MARGIN, doc.y, contentWidth, avisoH, 6).fill("#fef3c7");
+    doc.restore();
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .fillColor("#92400e")
+      .text(
+        "DOCUMENTO DE TESTE — sem validade jurídica. Confira layout e dados antes do envio real.",
+        MARGIN,
+        doc.y + 10,
+        { width: contentWidth, align: "center", lineBreak: false }
+      );
+    doc.x = MARGIN;
+    doc.y += avisoH - 10 + 18;
+  }
+
   // ── Helpers de seção ──────────────────────────────────────────────
   function sectionHeader(title: string, espacoMinimo = 80) {
     ensureSpace(espacoMinimo);
@@ -266,9 +292,13 @@ export async function buildContratoPdf(
   // ── Card das partes ───────────────────────────────────────────────
   function infoCard() {
     const linhas: Array<[string, string]> = [["Aluno", input.alunoNome]];
-    if (input.alunoDocumento) linhas.push(["Documento", input.alunoDocumento]);
+    if (input.alunoDocumento) linhas.push(["CPF", input.alunoDocumento]);
+    if (input.alunoRg) linhas.push(["RG", input.alunoRg]);
+    if (input.alunoNascimento) linhas.push(["Nascimento", input.alunoNascimento]);
+    if (input.alunoQualificacao) linhas.push(["Qualificação", input.alunoQualificacao]);
     if (input.alunoEmail) linhas.push(["E-mail", input.alunoEmail]);
     if (input.alunoTelefone) linhas.push(["Telefone", input.alunoTelefone]);
+    if (input.alunoEndereco) linhas.push(["Endereço", input.alunoEndereco]);
     if (input.evento) {
       linhas.push(["Evento", input.evento.titulo]);
       if (input.evento.data) linhas.push(["Data do evento", input.evento.data]);
@@ -324,13 +354,14 @@ export async function buildContratoPdf(
 
   // ── Bloco de assinaturas (nunca dividido entre páginas) ───────────
   function signatureBlock() {
-    const BLOCO_H = 170;
+    // Título (~32) + espaço da assinatura (44) + nome/papel e nota (~70).
+    const BLOCO_H = 150;
     ensureSpace(BLOCO_H);
     sectionHeader("Assinaturas", 0);
 
     const gap = 48;
     const colWidth = (contentWidth - gap) / 2;
-    const lineY = doc.y + 52;
+    const lineY = doc.y + 44;
 
     const assinantes = [
       { x: MARGIN, nome: input.alunoNome, papel: "Aluno(a) · Outorgante" },
@@ -367,7 +398,7 @@ export async function buildContratoPdf(
       .text(
         "Assinatura eletrônica com validade jurídica (Assinafy / ICP-Brasil, MP 2.200-2/2001 e Lei 14.063/2020) ou assinatura manual do documento impresso.",
         MARGIN,
-        lineY + 52,
+        lineY + 46,
         { width: contentWidth, align: "center", lineGap: 2 }
       );
     doc.x = MARGIN;
@@ -394,7 +425,7 @@ export async function buildContratoPdf(
       width: contentWidth,
       align: "right",
     });
-  doc.y += 28;
+  doc.y += 20;
 
   signatureBlock();
 
