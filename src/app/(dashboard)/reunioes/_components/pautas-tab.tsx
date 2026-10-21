@@ -1,20 +1,65 @@
 "use client";
-import { useMemo, useState } from "react";
-import { Search, Clock, CheckCheck, FileText } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, Clock, CheckCheck, Paperclip } from "lucide-react";
 import Link from "next/link";
 import type { PautaRow } from "../_lib/get-reunioes-data";
+import { PrioridadeBadge, ResultadoVotacaoBadge, TipoBadge } from "./pauta-badges";
+import VotacaoPainel from "./votacao-painel";
 
-type Props = { pautas: PautaRow[] };
+type Props = { pautas: PautaRow[]; meuUserId: string; isCoordenador: boolean };
 
-function Drawer({ pauta, onClose }: { pauta: PautaRow | null; onClose: () => void }) {
+function Drawer({
+  pauta,
+  onClose,
+  meuUserId,
+  isCoordenador,
+}: {
+  pauta: PautaRow | null;
+  onClose: () => void;
+  meuUserId: string;
+  isCoordenador: boolean;
+}) {
+  const aberta = pauta !== null;
+  // Escape fecha o painel (teclado).
+  useEffect(() => {
+    if (!aberta) return;
+    const fechar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", fechar);
+    return () => document.removeEventListener("keydown", fechar);
+  }, [aberta, onClose]);
   if (!pauta) return null;
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
-      <div role="document" onClick={(e) => e.stopPropagation()} className="flex h-full w-full max-w-md flex-col gap-4 overflow-y-auto bg-white p-6 shadow-xl">
+    <div role="presentation" className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label={pauta.titulo} className="flex h-full w-full max-w-md flex-col gap-4 overflow-y-auto bg-white p-6 shadow-xl">
         <button onClick={onClose} className="self-end rounded-lg border border-zinc-300 px-3 py-1 text-sm">Fechar</button>
         <h3 className="text-xl font-semibold text-zinc-900">{pauta.titulo}</h3>
         <p className="text-sm text-zinc-600">por {pauta.autor} · {pauta.status} {pauta.standBy ? "· em espera" : ""}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <PrioridadeBadge prioridade={pauta.prioridade} />
+          <TipoBadge tipo={pauta.tipo} />
+          {pauta.votacaoStatus && pauta.votacaoStatus !== "aberta" && <ResultadoVotacaoBadge status={pauta.votacaoStatus} />}
+        </div>
         {pauta.contexto && <p className="whitespace-pre-wrap text-base text-zinc-700">{pauta.contexto}</p>}
+        {pauta.anexoUrl && (
+          <a href={pauta.anexoUrl} target="_blank" rel="noopener noreferrer" className="flex min-h-12 w-fit max-w-full items-center gap-2 rounded-xl border border-zinc-400 bg-white px-4 text-base font-semibold text-[#1d6f8d] hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]">
+            <Paperclip size={18} aria-hidden="true" className="shrink-0" />
+            <span className="truncate">Ver anexo: {pauta.anexoNome ?? "arquivo"}</span>
+          </a>
+        )}
+        {pauta.tipo === "deliberativa" && pauta.votacaoStatus && (
+          <VotacaoPainel
+            pautaId={pauta.id}
+            status={pauta.votacaoStatus}
+            quorumMinimo={pauta.quorumMinimo}
+            votos={pauta.votos}
+            meuUserId={meuUserId}
+            isCoordenador={isCoordenador}
+            encerradaEm={pauta.votacaoEncerradaEm}
+            encerradaPorNome={pauta.votacaoEncerradaPorNome}
+          />
+        )}
         {pauta.ataDiscutidaTitulo && <p className="text-sm text-zinc-500">Discutida em: {pauta.ataDiscutidaTitulo}</p>}
         {pauta.ataDiscutidaId && <Link href={`/reunioes/${pauta.ataDiscutidaId}`} className="text-sm font-medium text-[#2195B9] hover:underline">Ver ata</Link>}
       </div>
@@ -22,7 +67,7 @@ function Drawer({ pauta, onClose }: { pauta: PautaRow | null; onClose: () => voi
   );
 }
 
-export default function PautasTab({ pautas }: Props) {
+export default function PautasTab({ pautas, meuUserId, isCoordenador }: Props) {
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<"todos" | "pendente" | "discutida" | "espera">("todos");
   const [drawer, setDrawer] = useState<PautaRow | null>(null);
@@ -65,6 +110,7 @@ export default function PautasTab({ pautas }: Props) {
           <thead className="bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
             <tr>
               <th className="px-4 py-3">Assunto</th>
+              <th className="px-4 py-3">Prioridade / Tipo</th>
               <th className="px-4 py-3">Autor</th>
               <th className="px-4 py-3">Reunião</th>
               <th className="px-4 py-3">Status</th>
@@ -74,6 +120,14 @@ export default function PautasTab({ pautas }: Props) {
             {filtradas.map((p) => (
               <tr key={p.id} className="border-t border-zinc-100 hover:bg-zinc-50">
                 <td className="px-4 py-3 font-medium text-zinc-900"><button type="button" onClick={() => setDrawer(p)} className="text-left font-medium text-zinc-900 hover:text-[#2195B9] hover:underline">{p.titulo}</button></td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <PrioridadeBadge prioridade={p.prioridade} compact />
+                    <TipoBadge tipo={p.tipo} />
+                    {p.votacaoStatus && <ResultadoVotacaoBadge status={p.votacaoStatus} />}
+                    {p.anexoUrl && <Paperclip size={16} aria-label="Tem anexo" className="text-zinc-600" />}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-zinc-600">{p.autor}</td>
                 <td className="px-4 py-3 text-zinc-600">{p.ataDiscutidaTitulo ?? p.reuniaoSelecionadaTitulo ?? (p.dataSolicitada ? `Pref: ${p.dataSolicitada.split("-").reverse().join("/")}${p.horarioSolicitado ? ` ${p.horarioSolicitado.slice(0, 5)}` : ""}` : "Próxima")}</td>
                 <td className="px-4 py-3">
@@ -83,14 +137,14 @@ export default function PautasTab({ pautas }: Props) {
             ))}
             {filtradas.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-zinc-500">Nenhuma pauta encontrada.</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-zinc-500">Nenhuma pauta encontrada.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      <Drawer pauta={drawer} onClose={() => setDrawer(null)} />
+      <Drawer pauta={drawer} onClose={() => setDrawer(null)} meuUserId={meuUserId} isCoordenador={isCoordenador} />
     </div>
   );
 }

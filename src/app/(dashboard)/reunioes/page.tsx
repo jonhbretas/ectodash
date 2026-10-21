@@ -1,15 +1,18 @@
 import Link from "next/link";
-import { Clock, FileText, ListChecks, NotebookPen, PlusCircle, Sparkles, MoreHorizontal } from "lucide-react";
+import { Clock, FileText, ListChecks, Paperclip, NotebookPen, PlusCircle, Sparkles, MoreHorizontal } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
 import { proximaTerca, formatarDataISO, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 import PageContainer from "../page-container";
 import PautaItemActions from "./pauta-item-actions";
+import PautaCard from "./_components/pauta-card";
+import { PrioridadeBadge, TipoBadge, ResultadoVotacaoBadge } from "./_components/pauta-badges";
 import { PedirPautaTrigger } from "./pauta-modal";
 import FaixaProxima from "./_components/faixa-proxima";
 import PautasTab from "./_components/pautas-tab";
 import AtasTab from "./_components/atas-tab";
 import { formatarProximaLabel } from "./_lib/format-data";
+import { PAUTAS_SELECT, PAUTA_VOTOS_SELECT, agruparVotos, mapearPautas } from "./_lib/get-reunioes-data";
 
 type Props = { searchParams?: Promise<{ tab?: string }> };
 
@@ -21,10 +24,13 @@ export default async function ReunioesPage({ searchParams }: Props) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [atasResult, dipsResult, pautasResult, profileResult] = await Promise.all([
+  const [atasResult, dipsResult, pautasResult, votosResult, profileResult] = await Promise.all([
     supabase.from("reunioes").select("id, titulo, data_reuniao, horario, status, resumo, participantes, deliberacoes").order("data_reuniao", { ascending: false }),
     supabase.from("dips").select("ata_id"),
-    supabase.from("pautas").select("id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, data_solicitada, horario_solicitado, reuniao_selecionada_id, criado_por, created_at, updated_at, profiles!pautas_criado_por_fkey(full_name, email)").order("created_at", { ascending: true }),
+    // PAUTAS_SELECT usa profiles!pautas_criado_por_fkey e o encerrador:profiles!pautas_votacao_encerrada_por_fkey (pautas tem 2 FKs para profiles).
+    supabase.from("pautas").select(PAUTAS_SELECT).order("created_at", { ascending: true }),
+    // PAUTA_VOTOS_SELECT embute profiles!pauta_votos_user_id_fkey (nome de quem votou).
+    supabase.from("pauta_votos").select(PAUTA_VOTOS_SELECT).order("updated_at", { ascending: true }),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
   ]);
 
@@ -32,17 +38,17 @@ export default async function ReunioesPage({ searchParams }: Props) {
   for (const r of dipsResult.data ?? []) dipCountByAta.set(r.ata_id, (dipCountByAta.get(r.ata_id) ?? 0) + 1);
   const ataById = new Map<number, { titulo: string; data_reuniao: string }>();
   for (const r of atasResult.data ?? []) ataById.set(r.id, { titulo: r.titulo, data_reuniao: r.data_reuniao });
-  const ataTitulo = (id: number | null) => (id === null ? null : (ataById.get(id)?.titulo ?? null));
-
   const rows = (atasResult.data ?? []).map((r) => ({ id: r.id, titulo: r.titulo, data_reuniao: r.data_reuniao, horario: r.horario, status: (r as { status?: string | null }).status ?? null, resumo: r.resumo, participantes: r.participantes, deliberacoes: r.deliberacoes, dipCount: dipCountByAta.get(r.id) ?? 0 }));
   const canManagePauta = profileResult.data?.role === "coordenador_geral";
-  const pautas = (pautasResult.data ?? []).map((row: any) => {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    return { id: row.id, titulo: row.titulo, contexto: row.contexto, status: row.status, origem: row.origem, standBy: row.stand_by, ataId: row.ata_id, ataTitulo: ataTitulo(row.ata_id), ataDiscutidaId: row.ata_discutida_id, ataDiscutidaTitulo: ataTitulo(row.ata_discutida_id), ataDiscutidaData: row.ata_discutida_id ? (ataById.get(row.ata_discutida_id)?.data_reuniao ?? null) : null, dataSolicitada: row.data_solicitada, horarioSolicitado: row.horario_solicitado, reuniaoSelecionadaId: row.reuniao_selecionada_id, reuniaoSelecionadaTitulo: ataTitulo(row.reuniao_selecionada_id), criadoPor: row.criado_por, autor: displayName({ full_name: profile?.full_name ?? null, email: profile?.email ?? null }), createdAt: row.created_at };
-  });
+  const pautas = mapearPautas(
+    (pautasResult.data ?? []) as unknown as Parameters<typeof mapearPautas>[0],
+    agruparVotos((votosResult.data ?? []) as unknown as Parameters<typeof agruparVotos>[0]),
+    ataById
+  );
+  const atasDisponiveis = rows.map((r) => ({ id: r.id, titulo: r.titulo, data_reuniao: r.data_reuniao }));
 
-  const pendentes = pautas.filter((p: any) => p.status === "pendente" && !p.standBy);
-  const emEspera = pautas.filter((p: any) => p.status === "pendente" && p.standBy);
+  const pendentes = pautas.filter((p) => p.status === "pendente" && !p.standBy);
+  const emEspera = pautas.filter((p) => p.status === "pendente" && p.standBy);
   const proxima = proximaTerca();
   const proximaDataStr = formatarDataISO(proxima);
   const ataProxima = rows.find((r) => r.data_reuniao === proximaDataStr) ?? null;
@@ -107,19 +113,9 @@ export default async function ReunioesPage({ searchParams }: Props) {
                   <PedirPautaTrigger className="!min-h-10 !text-base" />
                 </div>
               ) : (
-                <ol className="mt-4 flex flex-col gap-2">
-                  {pendentes.map((p: any, i: number) => (
-                    <li key={p.id} className="flex flex-col gap-1.5 rounded-xl border border-zinc-200 p-4">
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E6E6E6] text-sm font-semibold text-[#28627B]">{i + 1}</span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-base font-semibold text-zinc-900">{p.titulo}</p>
-                          <p className="text-sm text-zinc-600">por {p.autor}</p>
-                        </div>
-                      </div>
-                      {p.contexto && <p className="whitespace-pre-wrap pl-10 text-sm leading-relaxed text-zinc-700">{p.contexto}</p>}
-                      {(canManagePauta || p.criadoPor === user.id) && <div className="pl-10"><PautaItemActions pautaId={p.id} status={p.status} standBy={p.standBy} atasDisponiveis={rows.map((r) => ({ id: r.id, titulo: r.titulo, data_reuniao: r.data_reuniao }))} /></div>}
-                    </li>
+                <ol className="mt-4 flex flex-col gap-3">
+                  {pendentes.map((p, i) => (
+                    <PautaCard key={p.id} pauta={p} numero={i + 1} meuUserId={user.id} isCoordenador={canManagePauta} atasDisponiveis={atasDisponiveis} />
                   ))}
                 </ol>
               )}
@@ -132,11 +128,23 @@ export default async function ReunioesPage({ searchParams }: Props) {
                 <span className="text-xs text-zinc-500">Expandir</span>
               </summary>
               <ul className="flex flex-col gap-1.5 border-t border-zinc-200 px-4 py-3">
-                {emEspera.length === 0 ? <li className="text-sm text-zinc-500">Nenhuma pauta em espera.</li> : emEspera.map((p: any) => (
-                  <li key={p.id} className="flex items-start gap-2 text-sm text-zinc-600">
-                    <Clock size={14} className="mt-1 shrink-0 text-zinc-400" />
-                    <span className="flex-1">{p.titulo} <span className="text-xs text-zinc-500">· por {p.autor}</span></span>
-                    {(canManagePauta || p.criadoPor === user.id) && <PautaItemActions pautaId={p.id} status={p.status} standBy={p.standBy} atasDisponiveis={rows.map((r) => ({ id: r.id, titulo: r.titulo, data_reuniao: r.data_reuniao }))} />}
+                {emEspera.length === 0 ? <li className="text-sm text-zinc-500">Nenhuma pauta em espera.</li> : emEspera.map((p) => (
+                  <li key={p.id} className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-700">
+                    <div className="flex items-start gap-2">
+                      <Clock size={14} className="mt-1 shrink-0 text-zinc-400" aria-hidden="true" />
+                      <span className="flex-1 text-base">{p.titulo} <span className="text-sm text-zinc-600">· por {p.autor}</span></span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pl-6">
+                      <PrioridadeBadge prioridade={p.prioridade} compact />
+                      <TipoBadge tipo={p.tipo} />
+                      {p.votacaoStatus && p.votacaoStatus !== "aberta" && <ResultadoVotacaoBadge status={p.votacaoStatus} />}
+                      {p.anexoUrl && (
+                        <a href={p.anexoUrl} target="_blank" rel="noopener noreferrer" aria-label={`Ver anexo: ${p.anexoNome ?? "arquivo"}`} className="inline-flex min-h-12 items-center gap-1.5 rounded-xl px-2 text-base font-semibold text-[#1d6f8d] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2195B9]">
+                          <Paperclip size={16} aria-hidden="true" /> Anexo
+                        </a>
+                      )}
+                    </div>
+                    {(canManagePauta || p.criadoPor === user.id) && <div className="pl-6"><PautaItemActions pautaId={p.id} status={p.status} standBy={p.standBy} atasDisponiveis={atasDisponiveis} /></div>}
                   </li>
                 ))}
               </ul>
@@ -144,7 +152,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
           </section>
         )}
 
-        {tab === "historico" && <PautasTab pautas={pautas} />}
+        {tab === "historico" && <PautasTab pautas={pautas} meuUserId={user.id} isCoordenador={canManagePauta} />}
         {tab === "atas" && <AtasTab atas={rows} />}
       </div>
 
