@@ -24,7 +24,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
   const [atasResult, dipsResult, pautasResult, profileResult] = await Promise.all([
     supabase.from("reunioes").select("id, titulo, data_reuniao, horario, status, resumo, participantes, deliberacoes").order("data_reuniao", { ascending: false }),
     supabase.from("dips").select("ata_id"),
-    supabase.from("pautas").select("id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, data_solicitada, horario_solicitado, reuniao_selecionada_id, criado_por, created_at, updated_at, profiles(full_name, email)").order("created_at", { ascending: true }),
+    supabase.from("pautas").select("id, titulo, contexto, status, origem, stand_by, ata_id, ata_discutida_id, data_solicitada, horario_solicitado, reuniao_selecionada_id, criado_por, created_at, updated_at, profiles!pautas_criado_por_fkey(full_name, email)").order("created_at", { ascending: true }),
     supabase.from("profiles").select("role").eq("id", user.id).single(),
   ]);
 

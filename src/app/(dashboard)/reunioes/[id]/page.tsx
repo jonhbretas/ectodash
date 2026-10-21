@@ -108,12 +108,12 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
       supabase.from("dip_localidades").select("localidade, pais").order("localidade"),
       supabase
         .from("pautas")
-        .select("id, titulo, contexto, criado_por, profiles(full_name, email)")
+        .select("id, titulo, contexto, criado_por, profiles!pautas_criado_por_fkey(full_name, email)")
         .eq("ata_discutida_id", id)
         .order("updated_at", { ascending: true }),
       supabase
         .from("pautas")
-        .select("id, titulo, contexto, criado_por, profiles(full_name, email)")
+        .select("id, titulo, contexto, criado_por, profiles!pautas_criado_por_fkey(full_name, email)")
         .eq("status", "pendente")
         .order("created_at", { ascending: true }),
       supabase
@@ -122,7 +122,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
         .order("data_reuniao", { ascending: false }),
       supabase
         .from("pautas")
-        .select("id, titulo, contexto, origem, status, criado_por, created_at, profiles(full_name, email)")
+        .select("id, titulo, contexto, origem, status, criado_por, created_at, profiles!pautas_criado_por_fkey(full_name, email)")
         .or(`ata_id.eq.${id},reuniao_selecionada_id.eq.${id}`)
         .order("created_at", { ascending: true }),
     ]);
