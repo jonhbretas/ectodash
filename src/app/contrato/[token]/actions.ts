@@ -8,7 +8,7 @@
 import { after } from "next/server";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALUNO_VAZIO, type AlunoContrato } from "@/lib/contratos/aluno";
+import { ALUNO_VAZIO, chaveDocumento, type AlunoContrato } from "@/lib/contratos/aluno";
 import {
   carregarFormularioPublico,
   registrarResposta,
@@ -100,7 +100,7 @@ export async function enviarFormularioContrato(
             .from("contrato_formulario_respostas")
             .select("contrato_id")
             .eq("formulario_id", formulario.id)
-            .eq("aluno_cpf", aluno.documento.replace(/\D/g, ""))
+            .eq("aluno_cpf", chaveDocumento(aluno.documento))
             .neq("status", "cancelado")
             .maybeSingle();
           if (data?.contrato_id) {

@@ -19,11 +19,11 @@ import { createHash, randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ALUNO_CAMPOS,
+  chaveDocumento,
   dataParaIso,
   formatarCpf,
   mascararEmail,
   normalizarNome,
-  somenteDigitos,
   validarAluno,
   type AlunoContrato,
 } from "./aluno";
@@ -35,6 +35,9 @@ import { assinafyReenviarSolicitacao } from "@/lib/assinafy";
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://painel.ectolab.org";
 const MAX_RESPOSTAS_POR_IP_HORA = 5;
 const REENVIO_INTERVALO_MIN = 30;
+
+export const MSG_EMAIL_DE_OUTRA_PESSOA =
+  "Este e-mail já foi usado por outra pessoa neste formulário. Cada aluno precisa preencher o próprio formulário, com o próprio e-mail — casais e familiares: cada um faz o seu.";
 
 export function gerarTokenFormulario(): string {
   return randomBytes(18).toString("base64url");
@@ -180,7 +183,7 @@ export function validarRespostaAluno(
   campos: Array<keyof AlunoContrato>
 ): string[] {
   const { erros } = validarAluno(aluno);
-  if (!aluno.documento.trim()) erros.push("Informe seu CPF");
+  if (!aluno.documento.trim()) erros.push("Informe seu CPF (ou seu documento, se for estrangeiro)");
   for (const campo of campos) {
     if (!aluno[campo].trim()) {
       const label = ALUNO_CAMPOS.find((c) => c.campo === campo)?.label ?? campo;
@@ -208,6 +211,7 @@ export type ResultadoResposta =
 type RespostaRow = {
   id: number;
   status: string;
+  aluno_cpf: string;
   aluno_email: string;
   contrato_id: number | null;
   reenviado_em: string | null;
@@ -221,10 +225,10 @@ async function respostaExistente(
 ): Promise<RespostaRow | null> {
   const { data } = await admin
     .from("contrato_formulario_respostas")
-    .select("id, status, aluno_email, contrato_id, reenviado_em")
+    .select("id, status, aluno_cpf, aluno_email, contrato_id, reenviado_em")
     .eq("formulario_id", formularioId)
     .neq("status", "cancelado")
-    .or(`aluno_cpf.eq.${cpf},aluno_email.eq."${email.replace(/["\\,()]/g, "")}"`)
+    .or(`aluno_cpf.eq."${cpf.replace(/[^A-Za-z0-9-]/g, "")}",aluno_email.eq."${email.replace(/["\\,()]/g, "")}"`)
     .limit(1)
     .maybeSingle();
   return (data as RespostaRow | null) ?? null;
@@ -260,11 +264,16 @@ export async function registrarResposta(
   const erros = validarRespostaAluno(aluno, formulario.campos);
   if (erros.length > 0) return { tipo: "erro", message: erros.join(". ") + "." };
 
-  const cpf = somenteDigitos(aluno.documento);
+  const cpf = chaveDocumento(aluno.documento);
 
-  // Trava 4 — já respondeu (mesmo CPF ou e-mail) neste formulário.
+  // Trava 4 — já respondeu (mesmo CPF/documento ou e-mail) neste formulário.
   const anterior = await respostaExistente(admin, formulario.id, cpf, aluno.email);
-  if (anterior) return duplicado(anterior, await statusContrato(admin, anterior.contrato_id));
+  if (anterior) {
+    // Mesmo e-mail com outro documento: é outra pessoa usando o e-mail de
+    // alguém (ex.: casal). Cada aluno precisa do próprio e-mail.
+    if (anterior.aluno_cpf !== cpf) return { tipo: "erro", message: MSG_EMAIL_DE_OUTRA_PESSOA };
+    return duplicado(anterior, await statusContrato(admin, anterior.contrato_id));
+  }
 
   // Trava 1 — limite de respostas.
   if (await formularioLotado(admin, formulario.id)) {
@@ -298,12 +307,16 @@ export async function registrarResposta(
       .limit(2000);
     q = formulario.evento ? q.eq("evento_id", formulario.evento.id) : q.is("evento_id", null);
     const { data } = await q;
-    const achado = (data ?? []).find(
-      (c) =>
-        somenteDigitos(c.aluno_documento ?? "") === cpf ||
-        (c.aluno_email ?? "").trim().toLowerCase() === aluno.email
+    const contratos = data ?? [];
+    const achado = contratos.find((c) => chaveDocumento(c.aluno_documento ?? "") === cpf);
+    const mesmoEmail = contratos.find(
+      (c) => (c.aluno_email ?? "").trim().toLowerCase() === aluno.email
     );
     if (achado) contratoExistente = { id: achado.id, status: achado.status };
+    else if (mesmoEmail && mesmoEmail.aluno_documento) {
+      // Contrato com este e-mail já é de outra pessoa (documento diferente).
+      return { tipo: "erro", message: MSG_EMAIL_DE_OUTRA_PESSOA };
+    } else if (mesmoEmail) contratoExistente = { id: mesmoEmail.id, status: mesmoEmail.status };
   }
   const contratoJaEnviado =
     contratoExistente && ["assinando", "assinado"].includes(contratoExistente.status);
@@ -327,6 +340,7 @@ export async function registrarResposta(
       formulario_id: formulario.id,
       ...colunasAluno,
       aluno_cpf: cpf,
+      aluno_documento: formatarCpf(aluno.documento),
       contrato_id: contratoExistente?.id ?? null,
       status: contratoJaEnviado ? "enviado" : "recebido",
       consentimento_em: new Date().toISOString(),
@@ -360,7 +374,7 @@ export async function registrarResposta(
     .slice(0, 10);
   const dadosContrato = {
     ...colunasAluno,
-    aluno_documento: formatarCpf(cpf),
+    aluno_documento: formatarCpf(aluno.documento),
     expira_em: expiraEm,
   };
   let contratoId: number;
@@ -443,7 +457,7 @@ export async function reenviarEmailResposta(
   formularioId: number,
   identificacao: { cpf: string; email: string }
 ): Promise<{ ok: boolean; message: string }> {
-  const cpf = somenteDigitos(identificacao.cpf);
+  const cpf = chaveDocumento(identificacao.cpf);
   const email = identificacao.email.trim().toLowerCase();
   const r = await respostaExistente(supabase, formularioId, cpf, email);
   if (!r || !r.contrato_id) return { ok: false, message: "Não encontramos seu envio. Fale com a organização." };

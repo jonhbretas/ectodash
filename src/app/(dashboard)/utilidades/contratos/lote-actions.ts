@@ -29,8 +29,8 @@ import {
   ALUNO_VAZIO,
   dataParaIso,
   emailValido,
+  chaveDocumento,
   formatarCpf,
-  somenteDigitos,
   validarAluno,
   type AlunoContrato,
 } from "@/lib/contratos/aluno";
@@ -128,11 +128,11 @@ export async function verificarDuplicadosLote(
   const existentes = data ?? [];
 
   return alunos.slice(0, MAX_LOTE).map((aluno) => {
-    const cpf = somenteDigitos(aluno.documento ?? "");
+    const cpf = chaveDocumento(aluno.documento ?? "");
     const email = (aluno.email ?? "").trim().toLowerCase();
     const achado = existentes.find(
       (c) =>
-        (cpf.length >= 11 && somenteDigitos(c.aluno_documento ?? "") === cpf) ||
+        (cpf.length >= 6 && chaveDocumento(c.aluno_documento ?? "") === cpf) ||
         (email && (c.aluno_email ?? "").trim().toLowerCase() === email)
     );
     return achado

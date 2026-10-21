@@ -5,7 +5,7 @@
 import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
 import { Check, Copy, Download, ExternalLink, Loader2, MessageCircle } from "lucide-react";
-import { formatarCpf, formatarTelefone } from "@/lib/contratos/aluno";
+import { formatarTelefone } from "@/lib/contratos/aluno";
 import type { SaldoCota } from "@/lib/contratos/cota";
 import {
   aprovarResposta,
@@ -23,6 +23,8 @@ export type RespostaLinha = {
   nome: string;
   email: string;
   cpf: string;
+  /** Como a pessoa informou: CPF formatado ou "Passaporte nº … (país)". */
+  documento: string;
   telefone: string | null;
   criadoEm: string;
   contratoId: number | null;
@@ -230,10 +232,10 @@ export default function FormularioDetalheClient({
                 type="button"
                 onClick={() =>
                   baixarCsv(`respostas-${formulario.id}.csv`, [
-                    ["Nome", "CPF", "E-mail", "Telefone", "Preenchido em", "Situação"],
+                    ["Nome", "CPF / documento", "E-mail", "Telefone", "Preenchido em", "Situação"],
                     ...respostas.map((r) => [
                       r.nome,
-                      formatarCpf(r.cpf),
+                      r.documento,
                       r.email,
                       r.telefone ? formatarTelefone(r.telefone) : "",
                       dataHora(r.criadoEm),
@@ -262,7 +264,7 @@ export default function FormularioDetalheClient({
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <p className="text-lg font-semibold text-zinc-900">{r.nome}</p>
                     <p className="break-all text-base text-zinc-600">
-                      CPF {formatarCpf(r.cpf)} · {r.email}
+                      {r.documento} · {r.email}
                       {r.telefone ? ` · ${formatarTelefone(r.telefone)}` : ""}
                     </p>
                     <p className="text-sm text-zinc-500">

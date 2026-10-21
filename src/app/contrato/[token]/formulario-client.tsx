@@ -4,9 +4,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { CheckCircle2, Eye, Loader2, Mail, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Eye, Loader2, Mail, AlertTriangle, Users } from "lucide-react";
 import {
   ALUNO_VAZIO,
+  TIPOS_DOCUMENTO_ESTRANGEIRO,
+  comporDocumentoEstrangeiro,
   dataParaIso,
   formatarCpf,
   formatarTelefone,
@@ -67,6 +69,14 @@ export default function FormularioContratoClient({
 }) {
   const [aluno, setAluno] = useState<AlunoContrato>({ ...ALUNO_VAZIO });
   const [emailConfirmacao, setEmailConfirmacao] = useState("");
+  // Estrangeiro sem CPF: documento composto em aluno.documento
+  // ("Passaporte nº AB123 (Itália)") a partir destes três campos.
+  const [estrangeiro, setEstrangeiro] = useState(false);
+  const [docEstrangeiro, setDocEstrangeiro] = useState({
+    tipo: TIPOS_DOCUMENTO_ESTRANGEIRO[0] as string,
+    numero: "",
+    pais: "",
+  });
   const [site, setSite] = useState("");
   const [etapa, setEtapa] = useState<"preencher" | "conferir" | "concluido">("preencher");
   const [erros, setErros] = useState<string[]>([]);
@@ -98,6 +108,22 @@ export default function FormularioContratoClient({
     setAluno((a) => ({ ...a, [campo]: valor }));
   }
 
+  function setDoc(parcial: Partial<typeof docEstrangeiro>) {
+    const novo = { ...docEstrangeiro, ...parcial };
+    setDocEstrangeiro(novo);
+    set("documento", novo.numero.trim() ? comporDocumentoEstrangeiro(novo.tipo, novo.numero, novo.pais) : "");
+  }
+
+  function trocarEstrangeiro(valor: boolean) {
+    setEstrangeiro(valor);
+    set(
+      "documento",
+      valor && docEstrangeiro.numero.trim()
+        ? comporDocumentoEstrangeiro(docEstrangeiro.tipo, docEstrangeiro.numero, docEstrangeiro.pais)
+        : ""
+    );
+  }
+
   function validarLocal(): string[] {
     const lista = [...validarAluno(aluno).erros];
     for (const { campo, label } of campos) {
@@ -105,7 +131,8 @@ export default function FormularioContratoClient({
         lista.push(`Preencha: ${label}`);
       }
     }
-    if (!aluno.documento.trim()) lista.push("Informe seu CPF");
+    if (!aluno.documento.trim()) lista.push(estrangeiro ? "Informe o número do seu documento" : "Informe seu CPF");
+    if (estrangeiro && !docEstrangeiro.pais.trim()) lista.push("Informe o país que emitiu o documento");
     if (emailConfirmacao.trim().toLowerCase() !== aluno.email.trim().toLowerCase()) {
       lista.push("Os dois e-mails não são iguais");
     }
@@ -208,8 +235,118 @@ export default function FormularioContratoClient({
             </p>
           </div>
 
+          <div className="flex gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200" role="note">
+            <Users size={26} className="mt-0.5 shrink-0 text-amber-700" aria-hidden="true" />
+            <p className="text-lg text-amber-900">
+              <strong>Cada pessoa preenche o seu.</strong> O contrato é individual: use os seus dados e o seu
+              próprio e-mail. Casais e familiares: cada um preenche o próprio formulário — não preencha pelo outro.
+            </p>
+          </div>
+
           {campos.map(({ campo, label }) => {
             const dica = DICAS[campo] ?? { placeholder: "" };
+            if (campo === "documento") {
+              return (
+                <fieldset key={campo} className="flex flex-col gap-3">
+                  <legend className="mb-1.5 text-lg font-medium text-zinc-800">Documento</legend>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { valor: false, texto: "Tenho CPF" },
+                      { valor: true, texto: "Sou estrangeiro(a), não tenho CPF" },
+                    ].map((op) => (
+                      <label
+                        key={op.texto}
+                        className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-4 text-lg ${
+                          estrangeiro === op.valor
+                            ? "border-[#2195B9] bg-[#e8f4f8] text-zinc-900"
+                            : "border-zinc-300 bg-white text-zinc-700"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="tipo-documento"
+                          checked={estrangeiro === op.valor}
+                          onChange={() => trocarEstrangeiro(op.valor)}
+                          className="h-5 w-5 accent-[#2195B9]"
+                        />
+                        {op.texto}
+                      </label>
+                    ))}
+                  </div>
+                  {!estrangeiro ? (
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="f-documento" className="text-base font-medium text-zinc-700">
+                        CPF
+                      </label>
+                      <input
+                        id="f-documento"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        value={aluno.documento}
+                        onChange={(e) => set("documento", e.target.value)}
+                        onBlur={() => {
+                          if (aluno.documento.replace(/\D/g, "").length === 11) {
+                            set("documento", formatarCpf(aluno.documento));
+                          }
+                        }}
+                        placeholder="000.000.000-00"
+                        className={INPUT}
+                        maxLength={20}
+                      />
+                      <p className="text-base text-zinc-500">Somente o CPF (11 números).</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="f-doc-tipo" className="text-base font-medium text-zinc-700">
+                          Tipo de documento
+                        </label>
+                        <select
+                          id="f-doc-tipo"
+                          value={docEstrangeiro.tipo}
+                          onChange={(e) => setDoc({ tipo: e.target.value })}
+                          className={INPUT}
+                        >
+                          {TIPOS_DOCUMENTO_ESTRANGEIRO.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="f-doc-numero" className="text-base font-medium text-zinc-700">
+                          Número do documento
+                        </label>
+                        <input
+                          id="f-doc-numero"
+                          autoComplete="off"
+                          value={docEstrangeiro.numero}
+                          onChange={(e) => setDoc({ numero: e.target.value })}
+                          placeholder="exatamente como está no documento"
+                          className={INPUT}
+                          maxLength={40}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="f-doc-pais" className="text-base font-medium text-zinc-700">
+                          País que emitiu
+                        </label>
+                        <input
+                          id="f-doc-pais"
+                          autoComplete="country-name"
+                          value={docEstrangeiro.pais}
+                          onChange={(e) => setDoc({ pais: e.target.value })}
+                          placeholder="ex.: Portugal, Argentina, Itália"
+                          className={INPUT}
+                          maxLength={60}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </fieldset>
+              );
+            }
             return (
               <div key={campo} className="flex flex-col gap-1.5">
                 <label htmlFor={`f-${campo}`} className="text-lg font-medium text-zinc-800">
@@ -223,9 +360,6 @@ export default function FormularioContratoClient({
                   value={aluno[campo]}
                   onChange={(e) => set(campo, campo === "nascimento" ? mascaraData(e.target.value) : e.target.value)}
                   onBlur={() => {
-                    if (campo === "documento" && aluno.documento.replace(/\D/g, "").length === 11) {
-                      set("documento", formatarCpf(aluno.documento));
-                    }
                     if (campo === "telefone") set("telefone", formatarTelefone(aluno.telefone));
                   }}
                   placeholder={dica.placeholder}
@@ -233,7 +367,11 @@ export default function FormularioContratoClient({
                   maxLength={campo === "endereco" ? 300 : 150}
                   required
                 />
-                {dica.ajuda && <p className="text-base text-zinc-500">{dica.ajuda}</p>}
+                {campo === "telefone" && estrangeiro ? (
+                  <p className="text-base text-zinc-500">Telefone fora do Brasil: inclua o código do país (ex.: +351 …).</p>
+                ) : (
+                  dica.ajuda && <p className="text-base text-zinc-500">{dica.ajuda}</p>
+                )}
                 {campo === "email" && (
                   <div className="mt-2 flex flex-col gap-1.5">
                     <label htmlFor="f-email2" className="text-lg font-medium text-zinc-800">
@@ -285,7 +423,9 @@ export default function FormularioContratoClient({
           <dl className="flex flex-col divide-y divide-zinc-100 rounded-2xl bg-zinc-50 px-5 ring-1 ring-zinc-200">
             {campos.map(({ campo, label }) => (
               <div key={campo} className="flex flex-col gap-0.5 py-3 sm:flex-row sm:gap-4">
-                <dt className="text-base font-semibold text-zinc-600 sm:w-40 sm:shrink-0">{label}</dt>
+                <dt className="text-base font-semibold text-zinc-600 sm:w-40 sm:shrink-0">
+                  {campo === "documento" ? (estrangeiro ? "Documento" : "CPF") : label}
+                </dt>
                 <dd className="break-words text-lg text-zinc-900">{valorExibido(campo)}</dd>
               </div>
             ))}

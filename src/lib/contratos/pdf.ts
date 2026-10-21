@@ -287,7 +287,11 @@ export async function buildContratoPdf(
   // ── Card das partes ───────────────────────────────────────────────
   function infoCard() {
     const linhas: Array<[string, string]> = [["Aluno", input.alunoNome]];
-    if (input.alunoDocumento) linhas.push(["CPF", input.alunoDocumento]);
+    if (input.alunoDocumento) {
+      // Estrangeiro sem CPF: o documento vem por extenso ("Passaporte nº …").
+      const ehCpf = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(input.alunoDocumento);
+      linhas.push([ehCpf ? "CPF" : "Documento", input.alunoDocumento]);
+    }
     if (input.alunoRg) linhas.push(["RG", input.alunoRg]);
     if (input.alunoNascimento) linhas.push(["Nascimento", input.alunoNascimento]);
     if (input.alunoQualificacao) linhas.push(["Qualificação", input.alunoQualificacao]);

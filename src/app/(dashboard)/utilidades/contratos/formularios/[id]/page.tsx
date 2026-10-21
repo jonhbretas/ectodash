@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { linkFormulario } from "@/lib/contratos/formulario";
 import { saldoCota } from "@/lib/contratos/cota";
+import { formatarCpf } from "@/lib/contratos/aluno";
 import PageContainer from "../../../../page-container";
 import FormularioDetalheClient, { type RespostaLinha } from "./formulario-detalhe-client";
 
@@ -45,7 +46,7 @@ export default async function FormularioDetalhePage({ params }: { params: Promis
     supabase
       .from("contrato_formulario_respostas")
       .select(
-        "id, status, erro, aluno_nome, aluno_email, aluno_cpf, aluno_telefone, created_at, reenviado_em, contrato:contratos(id, status)"
+        "id, status, erro, aluno_nome, aluno_email, aluno_cpf, aluno_documento, aluno_telefone, created_at, reenviado_em, contrato:contratos(id, status)"
       )
       .eq("formulario_id", id)
       .order("created_at", { ascending: false }),
@@ -61,6 +62,7 @@ export default async function FormularioDetalhePage({ params }: { params: Promis
       nome: r.aluno_nome,
       email: r.aluno_email,
       cpf: r.aluno_cpf,
+      documento: r.aluno_documento ?? formatarCpf(r.aluno_cpf),
       telefone: r.aluno_telefone,
       criadoEm: r.created_at,
       contratoId: contrato?.id ?? null,
