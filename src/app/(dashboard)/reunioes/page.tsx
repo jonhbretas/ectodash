@@ -60,7 +60,7 @@ export default async function ReunioesPage({ searchParams }: Props) {
 
   return (
     <PageContainer>
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-4">
+      <div className="flex w-full flex-col gap-5">
         {/* Header */}
         <header className="flex w-full flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
