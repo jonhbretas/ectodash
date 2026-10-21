@@ -20,10 +20,13 @@ import {
   formatarDataISO,
   HORARIO_REUNIAO,
 } from "@/lib/proxima-reuniao";
+import { pautasSimilares } from "@/lib/pautas/regras";
 
 export type CriarPautaState = {
   ok: boolean;
   message: string;
+  /** Id da pauta criada (usado pelo wizard para anexar o arquivo em seguida). */
+  pautaId?: number;
 };
 
 export type ReuniaoDisponivel = {
@@ -66,6 +69,8 @@ const criarPautaSchema = z.object({
   data_solicitada: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
   horario_solicitado: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
   reuniao_selecionada_id: z.number().int().positive().optional(),
+  prioridade: z.enum(["baixa", "media", "alta"]).default("media"),
+  tipo: z.enum(["informativa", "deliberativa"]).default("informativa"),
 });
 
 export async function criarPauta(
@@ -91,6 +96,8 @@ export async function criarPauta(
     data_solicitada: formData.get("data_solicitada") ?? "",
     horario_solicitado: formData.get("horario_solicitado") ?? "",
     reuniao_selecionada_id: reuniaoIdNum,
+    prioridade: formData.get("prioridade") || undefined,
+    tipo: formData.get("tipo") || undefined,
   });
 
   if (!parsed.success) {
@@ -135,7 +142,11 @@ export async function criarPauta(
 
   // criado_por is never set from client input — the column default derives
   // it from the session (same anti-spoofing discipline as createDemanda).
-  const { error } = await supabase.from("pautas").insert({
+  // votacao_status é definido pelo trigger pautas_guard_votacao (deliberativa
+  // abre a votação sozinha) — nunca enviado pelo cliente.
+  const { data: criada, error } = await supabase
+    .from("pautas")
+    .insert({
     titulo: parsed.data.titulo,
     contexto: parsed.data.contexto || null,
     origem: "manual",
@@ -145,9 +156,13 @@ export async function criarPauta(
     data_solicitada: parsed.data.data_solicitada || null,
     horario_solicitado: parsed.data.horario_solicitado || null,
     reuniao_selecionada_id: reuniaoAlvoId,
-  });
+    prioridade: parsed.data.prioridade,
+    tipo: parsed.data.tipo,
+  })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !criada) {
     console.error("criarPauta: insert failed", error);
     return {
       ok: false,
@@ -158,11 +173,20 @@ export async function criarPauta(
   revalidatePath("/reunioes");
   revalidatePath("/reunioes/pautas");
   revalidatePath("/reunioes/atas");
+  const votacaoAviso = parsed.data.tipo === "deliberativa" ? " A votação prévia já está aberta." : "";
   if (isEspera) {
-    return { ok: true, message: "Pauta enviada. Ela aparece em \"Em espera\" até o coordenador incluí-la." };
+    return {
+      ok: true,
+      pautaId: criada.id,
+      message: `Pauta enviada. Ela aparece em "Em espera" até o coordenador incluí-la.${votacaoAviso}`,
+    };
   }
   const rotulo = formatarRotuloReuniao(proxima);
-  return { ok: true, message: `Pauta adicionada para a reunião de ${rotulo}. Pedidos até terça 19h valem para hoje; após 19h vão para a próxima terça.` };
+  return {
+    ok: true,
+    pautaId: criada.id,
+    message: `Pauta adicionada para a reunião de ${rotulo}. Pedidos até terça 19h valem para hoje; após 19h vão para a próxima terça.${votacaoAviso}`,
+  };
 }
 
 const DIAS_ABBR = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -396,4 +420,39 @@ export async function excluirPauta(pautaId: number): Promise<PautaAcaoResult> {
 
   revalidatePath("/reunioes");
   return { ok: true };
+}
+
+export type PautaSimilar = { id: number; titulo: string; emEspera: boolean };
+
+/**
+ * Aviso leve de duplicidade (AGENTS.md): lista pautas pendentes parecidas com
+ * o título digitado. Apenas informativo — nunca bloqueia o envio.
+ */
+export async function buscarPautasSimilares(titulo: string): Promise<PautaSimilar[]> {
+  const texto = String(titulo ?? "").trim();
+  if (texto.length < 4) return [];
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("pautas")
+    .select("id, titulo, stand_by")
+    .eq("status", "pendente")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error || !data) {
+    if (error) console.error("buscarPautasSimilares: query failed", error);
+    return [];
+  }
+
+  const mapa = new Map(data.map((p) => [p.id as number, Boolean(p.stand_by)]));
+  return pautasSimilares(
+    texto,
+    data.map((p) => ({ id: p.id as number, titulo: String(p.titulo) }))
+  ).map((p) => ({ id: p.id, titulo: p.titulo, emEspera: mapa.get(p.id) ?? false }));
 }
