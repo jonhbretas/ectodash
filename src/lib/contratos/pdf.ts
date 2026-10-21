@@ -1,23 +1,33 @@
 // src/lib/contratos/pdf.ts
-// Geração do PDF do contrato com pdfkit, layout profissional com logo,
-// bandas de destaque, tipografia clara e assinatura eletrônica.
+// Geração do PDF do contrato com pdfkit: cabeçalho com logo, card das partes,
+// cláusulas preservando a estrutura do modelo, bloco de assinaturas que nunca
+// é quebrado entre páginas e rodapé "Página X de N" em todas as páginas.
+//
+// Todo texto é posicionado com x/width explícitos — o pdfkit herda o doc.x da
+// última chamada, o que antes deslocava seções inteiras para a direita.
 
 import PDFDocument from "pdfkit";
 import fs from "node:fs";
 import path from "node:path";
 
 const ACCENT = "#2195B9";
-const ACCENT_LIGHT = "#e8f4f8";
 const ACCENT_DARK = "#1a7a94";
+const ACCENT_SOFT = "#d4ecf4";
 const TEXT_DARK = "#18181b";
 const TEXT_MID = "#52525b";
-const TEXT_MUTED = "#a1a1aa";
+const TEXT_MUTED = "#71717a";
 const RULE = "#e4e4e7";
 const RULE_DARK = "#d4d4d8";
-const BG_LIGHT = "#fafafa";
+const BG_LIGHT = "#f7f9fa";
 const WHITE = "#ffffff";
 
-const MARGIN = 48;
+const MARGIN = 56;
+const MARGIN_TOP = 56;
+/** Espaço reservado no pé da página para o rodapé (e o carimbo da Assinafy). */
+const MARGIN_BOTTOM = 72;
+
+const BODY_SIZE = 10.5;
+const BODY_GAP = 3.5;
 
 export type ContratoPdfInput = {
   numero: string;
@@ -33,18 +43,63 @@ export type ContratoPdfInput = {
   emissao: string;
 };
 
-/** Divide o texto do modelo em parágrafos (linhas em branco separam blocos). */
-function paragrafos(texto: string): string[] {
+const TOKEN_RE = /\{\{\s*[\w.]+\s*\}\}/g;
+
+/** Variável que ficou sem valor (ex.: contrato sem evento): a linha que só
+ *  tinha variáveis some; no meio do texto vira um campo em branco. */
+function limparVariaveisVazias(linha: string): string {
+  if (!TOKEN_RE.test(linha)) return linha;
+  const semTokens = linha.replace(TOKEN_RE, "");
+  if (!/[\p{L}\p{N}]/u.test(semTokens)) return "";
+  return linha.replace(TOKEN_RE, "____________").replace(/\s+/g, " ").trim();
+}
+
+/** Divide o texto do modelo em blocos (linhas em branco separam blocos) e
+ *  mantém as quebras de linha simples dentro de cada bloco. */
+function blocosDoModelo(texto: string): string[][] {
   return texto
-    .split(/\n{2,}/)
-    .map((bloco) =>
-      bloco
+    .replace(/\r\n?/g, "\n")
+    .split(/\n\s*\n/)
+    .map((bloco) => {
+      const originais = bloco
         .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .join(" ")
-    )
-    .filter(Boolean);
+        .map((l) => l.replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+      const linhas = originais.map(limparVariaveisVazias).filter(Boolean);
+      // Bloco que perdeu todas as variáveis e sobrou só o rótulo (ex.:
+      // "Evento" num contrato sem evento) sai inteiro.
+      if (
+        linhas.length === 1 &&
+        originais.length > 1 &&
+        linhas[0].length <= 30
+      ) {
+        return [];
+      }
+      return linhas;
+    })
+    .filter((linhas) => linhas.length > 0);
+}
+
+/** Linhas que funcionam como título dentro das cláusulas: "CLÁUSULA 1ª…",
+ *  linhas curtas todas em maiúsculas ou rótulos curtos terminados em ":". */
+function ehTituloDeClausula(linha: string): boolean {
+  if (/^(cl[áa]usula|par[áa]grafo)\b/i.test(linha) && linha.length <= 90) {
+    return true;
+  }
+  // Maiúsculas só contam como título se a linha for quase só letras — e-mail,
+  // CNPJ ou telefone em caixa alta são dados, não títulos.
+  const letras = linha.replace(/[^\p{L}]/gu, "");
+  const visiveis = linha.replace(/\s/g, "");
+  if (
+    !linha.includes("@") &&
+    letras.length >= 4 &&
+    letras.length / visiveis.length >= 0.8 &&
+    linha.length <= 70 &&
+    letras === letras.toUpperCase()
+  ) {
+    return true;
+  }
+  return linha.length <= 50 && linha.endsWith(":");
 }
 
 /** Caminho absoluto para a logo em public/. */
@@ -62,302 +117,260 @@ function logoExists(): boolean {
 export async function buildContratoPdf(
   input: ContratoPdfInput
 ): Promise<Buffer> {
-  const doc = new PDFDocument({ size: "A4", margin: MARGIN });
+  const doc = new PDFDocument({
+    size: "A4",
+    bufferPages: true,
+    margins: {
+      top: MARGIN_TOP,
+      bottom: MARGIN_BOTTOM,
+      left: MARGIN,
+      right: MARGIN,
+    },
+    info: {
+      Title: input.modeloTitulo,
+      Author: "Ectolab",
+      Subject: `${input.categoriaLabel} · ${input.alunoNome}`,
+    },
+  });
   const chunks: Buffer[] = [];
   doc.on("data", (chunk: Buffer) => chunks.push(chunk));
   const done = new Promise<void>((resolve) => doc.on("end", () => resolve()));
 
-  const contentWidth = doc.page.width - MARGIN * 2;
+  const pageWidth = doc.page.width;
+  const contentWidth = pageWidth - MARGIN * 2;
+  const bottomLimit = () => doc.page.height - MARGIN_BOTTOM;
 
-  // ── Rodapé ─────────────────────────────────────────────────────────
-  function drawFooter() {
-    const page = doc.page;
-    const y = page.height - 34;
-    const footerOpts = { height: 20, lineBreak: false };
-
-    const state = doc as unknown as {
-      x: number;
-      y: number;
-      _fontSource: string;
-      _fontFamily: string | null;
-      _fontSize: number;
-      _fillColor: [string, number | undefined];
-    };
-    const prev = {
-      x: doc.x,
-      y: doc.y,
-      fontSource: state._fontSource,
-      fontFamily: state._fontFamily,
-      fontSize: state._fontSize,
-      fillColor: state._fillColor,
-    };
-
-    // Linha separadora do rodapé
-    doc
-      .moveTo(MARGIN, y - 8)
-      .lineTo(page.width - MARGIN, y - 8)
-      .lineWidth(0.5)
-      .strokeColor(RULE)
-      .stroke();
-
-    doc
-      .font("Helvetica")
-      .fontSize(8)
-      .fillColor(TEXT_MUTED)
-      .text("Ectolab · Contratos", MARGIN, y, footerOpts);
-    doc.text(
-      `Página ${doc.bufferedPageRange().start + doc.bufferedPageRange().count}`,
-      page.width - page.margins.right - 120,
-      y,
-      { ...footerOpts, width: 120, align: "right" }
-    );
-
-    const fontSource = prev.fontSource;
-    if (fontSource) {
-      if (prev.fontFamily) {
-        doc.font(fontSource, prev.fontFamily);
-      } else {
-        doc.font(fontSource);
-      }
+  /** Garante `altura` pontos livres na página atual; senão, quebra a página. */
+  function ensureSpace(altura: number) {
+    if (doc.y + altura > bottomLimit()) {
+      doc.addPage();
+      doc.x = MARGIN;
+      doc.y = MARGIN_TOP;
     }
-    doc.fontSize(prev.fontSize);
-    doc.fillColor(prev.fillColor[0], prev.fillColor[1]);
-    doc.x = prev.x;
-    doc.y = prev.y;
   }
 
-  doc.on("pageAdded", drawFooter);
-
-  // ── Banda do cabeçalho com logo ───────────────────────────────────
-  const BAND_HEIGHT = 110;
-  doc.save();
-  // Fundo da banda
-  doc.rect(0, 0, doc.page.width, BAND_HEIGHT).fill(ACCENT);
-  // Barra decorativa inferior da banda
-  doc.rect(0, BAND_HEIGHT - 4, doc.page.width, 4).fill(ACCENT_DARK);
-  doc.restore();
-
-  // Logo (se existir)
+  // ── Cabeçalho ─────────────────────────────────────────────────────
   const hasLogo = logoExists();
-  const logoW = hasLogo ? 40 : 0;
-  const logoH = hasLogo ? 40 : 0;
-  const logoX = MARGIN + 8;
-  const logoY = 18;
+  const LOGO_BOX_W = 112;
+  const LOGO_BOX_H = 46;
+  const headerPadTop = 26;
+  const titleX = hasLogo ? MARGIN + LOGO_BOX_W + 18 : MARGIN;
+  const titleWidth = pageWidth - MARGIN - titleX;
 
-  if (hasLogo) {
-    try {
-      doc.image(LOGO_PATH, logoX, logoY, {
-        width: logoW,
-        height: logoH,
-        fit: [logoW, logoH],
-      });
-    } catch {
-      // Ignora erro de logo
-    }
-  }
-
-  // Título ao lado da logo ou centralizado
-  const titleX = hasLogo ? logoX + logoW + 12 : MARGIN;
-  const titleWidth = hasLogo ? contentWidth - logoW - 12 : contentWidth;
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(20)
-    .fillColor(WHITE)
-    .text(input.modeloTitulo, titleX, 26, {
-      width: titleWidth,
-      align: hasLogo ? "left" : "center",
-    });
-
-  // Linha de metadata abaixo do título
   const metaLinha = [
     input.categoriaLabel,
     input.numero ? `Contrato nº ${input.numero}` : "",
     `Emissão: ${input.emissao}`,
   ]
     .filter(Boolean)
-    .join("  ·  ");
+    .join("   ·   ");
+
+  // Mede título e metadata antes de desenhar, para a banda crescer com o
+  // texto em vez de o título (2 linhas) atropelar a linha de metadata.
+  doc.font("Helvetica-Bold").fontSize(18);
+  const titleOpts = { width: titleWidth, lineGap: 2 };
+  const titleH = doc.heightOfString(input.modeloTitulo, titleOpts);
+  doc.font("Helvetica").fontSize(9.5);
+  const metaOpts = { width: titleWidth };
+  const metaH = doc.heightOfString(metaLinha, metaOpts);
+  const textBlockH = titleH + 8 + metaH;
+  const BAND_HEIGHT = Math.max(
+    headerPadTop * 2 + textBlockH,
+    headerPadTop * 2 + LOGO_BOX_H
+  );
+
+  doc.save();
+  doc.rect(0, 0, pageWidth, BAND_HEIGHT).fill(ACCENT);
+  doc.rect(0, BAND_HEIGHT - 4, pageWidth, 4).fill(ACCENT_DARK);
+  doc.restore();
+
+  if (hasLogo) {
+    // A logo tem texto escuro: fica sobre um selo branco para manter contraste.
+    const boxY = (BAND_HEIGHT - 4 - LOGO_BOX_H) / 2;
+    doc.save();
+    doc.roundedRect(MARGIN, boxY, LOGO_BOX_W, LOGO_BOX_H, 6).fill(WHITE);
+    doc.restore();
+    try {
+      doc.image(LOGO_PATH, MARGIN + 8, boxY + 6, {
+        fit: [LOGO_BOX_W - 16, LOGO_BOX_H - 12],
+        align: "center",
+        valign: "center",
+      });
+    } catch {
+      // Ignora erro de logo
+    }
+  }
+
+  const textTop = (BAND_HEIGHT - 4 - textBlockH) / 2;
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(18)
+    .fillColor(WHITE)
+    .text(input.modeloTitulo, titleX, textTop, titleOpts);
   doc
     .font("Helvetica")
-    .fontSize(10)
-    .fillColor("#c7e6f0")
-    .text(metaLinha, titleX, 56, {
-      width: titleWidth,
-      align: hasLogo ? "left" : "center",
-    });
+    .fontSize(9.5)
+    .fillColor(ACCENT_SOFT)
+    .text(metaLinha, titleX, textTop + titleH + 8, metaOpts);
 
-  // ── Posição inicial do conteúdo ────────────────────────────────────
-  doc.y = BAND_HEIGHT + 16;
+  doc.x = MARGIN;
+  doc.y = BAND_HEIGHT + 28;
 
   // ── Helpers de seção ──────────────────────────────────────────────
-  function sectionHeader(title: string) {
-    if (doc.y + 60 > doc.page.height - doc.page.margins.bottom - 20) {
-      doc.addPage();
-    }
-    doc.moveDown(0.5);
+  function sectionHeader(title: string, espacoMinimo = 80) {
+    ensureSpace(espacoMinimo);
+    const y = doc.y;
 
-    // Barra lateral de destaque
-    const accentY = doc.y + 2;
     doc.save();
-    doc.roundedRect(doc.x, accentY, 4, 15, 2).fill(ACCENT);
+    doc.roundedRect(MARGIN, y + 1, 4, 14, 2).fill(ACCENT);
     doc.restore();
 
-    // Título da seção
     doc
       .font("Helvetica-Bold")
-      .fontSize(14)
+      .fontSize(13)
       .fillColor(TEXT_DARK)
-      .text(title, { indent: 14 });
+      .text(title, MARGIN + 12, y, { width: contentWidth - 12 });
 
-    doc.moveDown(0.15);
-
-    // Linha separadora
+    const ruleY = doc.y + 4;
     doc
-      .moveTo(MARGIN, doc.y)
-      .lineTo(doc.page.width - MARGIN, doc.y)
+      .moveTo(MARGIN, ruleY)
+      .lineTo(pageWidth - MARGIN, ruleY)
       .lineWidth(0.8)
       .strokeColor(RULE_DARK)
       .stroke();
-    doc.moveDown(0.5);
+
+    doc.x = MARGIN;
+    doc.y = ruleY + 12;
   }
 
-  function paragraph(text: string) {
-    doc
-      .font("Helvetica")
-      .fontSize(11)
-      .fillColor(TEXT_DARK)
-      .text(text, { lineGap: 5, align: "justify" });
-    doc.moveDown(0.45);
+  function bloco(linhas: string[]) {
+    for (const linha of linhas) {
+      const titulo = ehTituloDeClausula(linha);
+      doc.font(titulo ? "Helvetica-Bold" : "Helvetica").fontSize(BODY_SIZE);
+      // Evita linha órfã: pelo menos um título + duas linhas de texto juntos.
+      const lineH = doc.currentLineHeight(true) + BODY_GAP;
+      ensureSpace(titulo ? lineH * 3 : lineH * 2);
+      if (titulo && doc.y > MARGIN_TOP) doc.y += 4;
+      doc
+        .fillColor(TEXT_DARK)
+        .text(linha, MARGIN, doc.y, {
+          width: contentWidth,
+          lineGap: BODY_GAP,
+          align: titulo ? "left" : "justify",
+        });
+      if (titulo) doc.y += 2;
+    }
+    doc.y += 9;
   }
 
-  // ── Card de informações ────────────────────────────────────────────
+  // ── Card das partes ───────────────────────────────────────────────
   function infoCard() {
-    const linhas: Array<[string, string]> = [
-      ["Aluno", input.alunoNome],
-      ...(input.alunoDocumento
-        ? [["Documento", input.alunoDocumento] as [string, string]]
-        : []),
-      ...(input.alunoEmail
-        ? [["E-mail", input.alunoEmail] as [string, string]]
-        : []),
-      ...(input.alunoTelefone
-        ? [["Telefone", input.alunoTelefone] as [string, string]]
-        : []),
-      ...(input.evento
-        ? [
-            ["Evento", input.evento.titulo] as [string, string],
-            ...(input.evento.data
-              ? [["Data do evento", input.evento.data] as [string, string]]
-              : []),
-            ...(input.evento.local
-              ? [["Local", input.evento.local] as [string, string]]
-              : []),
-          ]
-        : []),
-      ...(input.valor ? [["Valor", input.valor] as [string, string]] : []),
-    ];
+    const linhas: Array<[string, string]> = [["Aluno", input.alunoNome]];
+    if (input.alunoDocumento) linhas.push(["Documento", input.alunoDocumento]);
+    if (input.alunoEmail) linhas.push(["E-mail", input.alunoEmail]);
+    if (input.alunoTelefone) linhas.push(["Telefone", input.alunoTelefone]);
+    if (input.evento) {
+      linhas.push(["Evento", input.evento.titulo]);
+      if (input.evento.data) linhas.push(["Data do evento", input.evento.data]);
+      if (input.evento.local) linhas.push(["Local", input.evento.local]);
+    }
+    if (input.valor) linhas.push(["Valor", input.valor]);
 
-    const pad = 14;
-    const innerWidth = contentWidth - pad * 2;
-    const labelWidth = innerWidth * 0.35;
-    const valueWidth = innerWidth * 0.65;
+    const padX = 20;
+    const padY = 14;
+    const rowGap = 7;
+    const labelWidth = 110;
+    const valueX = MARGIN + padX + labelWidth;
+    const valueWidth = contentWidth - padX * 2 - labelWidth;
 
-    // Calcular alturas das linhas
-    doc.font("Helvetica-Bold").fontSize(10.5);
-    const heights = linhas.map(([rotulo, valor]) =>
-      Math.max(
-        doc.heightOfString(rotulo, { width: labelWidth }),
-        doc.heightOfString(valor, { width: valueWidth })
-      )
+    doc.font("Helvetica").fontSize(BODY_SIZE);
+    const heights = linhas.map(([, valor]) =>
+      doc.heightOfString(valor, { width: valueWidth })
     );
-    const totalRowsHeight = heights.reduce((a, b) => a + b, 0);
-    const cardH = pad * 2 + totalRowsHeight + (linhas.length - 1) * 8;
+    const cardH =
+      padY * 2 +
+      heights.reduce((a, b) => a + b, 0) +
+      (linhas.length - 1) * rowGap;
 
-    // Fundo do card
-    doc.roundedRect(MARGIN, doc.y, contentWidth, cardH, 6).fillAndStroke(
-      BG_LIGHT,
-      RULE
-    );
+    ensureSpace(cardH + 8);
+    const top = doc.y;
 
-    // Borda esquerda colorida do card
     doc.save();
-    doc.roundedRect(MARGIN, doc.y, 4, cardH, 2).fill(ACCENT);
+    doc
+      .roundedRect(MARGIN, top, contentWidth, cardH, 6)
+      .lineWidth(0.8)
+      .fillAndStroke(BG_LIGHT, RULE);
+    doc.rect(MARGIN, top + 6, 3, cardH - 12).fill(ACCENT);
     doc.restore();
 
-    const textX = MARGIN + pad + 4;
-    let textY = doc.y + pad;
-
-    for (let i = 0; i < linhas.length; i++) {
-      const [rotulo, valor] = linhas[i];
-
-      // Rótulo (negrito)
+    let y = top + padY;
+    linhas.forEach(([rotulo, valor], i) => {
       doc
         .font("Helvetica-Bold")
-        .fontSize(10.5)
+        .fontSize(BODY_SIZE)
         .fillColor(TEXT_DARK)
-        .text(rotulo, textX, textY, { width: labelWidth });
-
-      // Valor (regular)
+        .text(rotulo, MARGIN + padX, y, { width: labelWidth - 8 });
       doc
         .font("Helvetica")
-        .fontSize(10.5)
+        .fontSize(BODY_SIZE)
         .fillColor(TEXT_MID)
-        .text(valor, textX + labelWidth + 8, textY, { width: valueWidth });
+        .text(valor, valueX, y, { width: valueWidth });
+      y += heights[i] + rowGap;
+    });
 
-      textY += heights[i] + 8;
-    }
-
-    doc.y = doc.y + cardH + 12;
+    doc.x = MARGIN;
+    doc.y = top + cardH + 26;
   }
 
-  // ── Bloco de assinaturas ──────────────────────────────────────────
+  // ── Bloco de assinaturas (nunca dividido entre páginas) ───────────
   function signatureBlock() {
-    if (doc.y + 200 > doc.page.height - doc.page.margins.bottom - 20) {
-      doc.addPage();
-    }
-    sectionHeader("Assinaturas");
+    const BLOCO_H = 170;
+    ensureSpace(BLOCO_H);
+    sectionHeader("Assinaturas", 0);
 
-    doc.moveDown(1.5);
-    const halfWidth = (contentWidth - 60) / 2;
-    const lineY = doc.y;
+    const gap = 48;
+    const colWidth = (contentWidth - gap) / 2;
+    const lineY = doc.y + 52;
 
-    const signatures = [
-      [MARGIN, "Assinatura do aluno"],
-      [MARGIN + halfWidth + 60, "Assinatura da instituição"],
-    ] as const;
+    const assinantes = [
+      { x: MARGIN, nome: input.alunoNome, papel: "Aluno(a) · Outorgante" },
+      {
+        x: MARGIN + colWidth + gap,
+        nome: "Ectolab",
+        papel: "Instituição · Outorgada",
+      },
+    ];
 
-    for (const [x, quem] of signatures) {
-      // Linha de assinatura
+    for (const { x, nome, papel } of assinantes) {
       doc
         .moveTo(x, lineY)
-        .lineTo(x + halfWidth, lineY)
-        .lineWidth(1.2)
+        .lineTo(x + colWidth, lineY)
+        .lineWidth(1)
         .strokeColor(TEXT_DARK)
         .stroke();
-
-      // Texto abaixo da linha
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .fillColor(TEXT_DARK)
+        .text(nome, x, lineY + 8, { width: colWidth, align: "center" });
       doc
         .font("Helvetica")
-        .fontSize(10)
-        .fillColor(TEXT_MID)
-        .text(quem, x, lineY + 10, {
-          width: halfWidth,
-          align: "center",
-        });
+        .fontSize(9)
+        .fillColor(TEXT_MUTED)
+        .text(papel, x, lineY + 23, { width: colWidth, align: "center" });
     }
 
-    doc.y = lineY + 40;
-
-    // Nota sobre assinatura eletrônica
-    doc.moveDown(1.5);
     doc
-      .font("Helvetica")
-      .fontSize(9)
+      .font("Helvetica-Oblique")
+      .fontSize(8.5)
       .fillColor(TEXT_MUTED)
       .text(
-        "Assinatura eletrônica com validade jurídica (Assinafy / ICP-Brasil) ou assinatura manual do documento impresso.",
+        "Assinatura eletrônica com validade jurídica (Assinafy / ICP-Brasil, MP 2.200-2/2001 e Lei 14.063/2020) ou assinatura manual do documento impresso.",
+        MARGIN,
+        lineY + 52,
         { width: contentWidth, align: "center", lineGap: 2 }
       );
-    doc.moveDown(0.5);
+    doc.x = MARGIN;
   }
 
   // ── Conteúdo do contrato ──────────────────────────────────────────
@@ -365,23 +378,63 @@ export async function buildContratoPdf(
   infoCard();
 
   sectionHeader("Cláusulas");
-  const blocos = paragrafos(input.conteudo);
-  for (const bloco of blocos) {
-    paragraph(bloco);
+  for (const linhas of blocosDoModelo(input.conteudo)) {
+    bloco(linhas);
   }
 
   // Local e data
-  doc.moveDown(1.5);
+  ensureSpace(40);
+  doc.y += 8;
   doc
     .font("Helvetica")
-    .fontSize(10.5)
+    .fontSize(BODY_SIZE)
     .fillColor(TEXT_DARK)
-    .text(`Ectolab — ${input.emissao}`, { align: "right" });
-  doc.moveDown(2);
+    .text(`Foz do Iguaçu, ${input.emissao}.`, MARGIN, doc.y, {
+      width: contentWidth,
+      align: "right",
+    });
+  doc.y += 28;
 
   signatureBlock();
 
-  drawFooter();
+  // ── Rodapé em todas as páginas ────────────────────────────────────
+  const range = doc.bufferedPageRange();
+  for (let i = range.start; i < range.start + range.count; i++) {
+    doc.switchToPage(i);
+    const page = doc.page;
+    // Zera a margem inferior para escrever no rodapé sem disparar nova página.
+    const margemOriginal = page.margins.bottom;
+    page.margins.bottom = 0;
+
+    const y = page.height - 46;
+    doc
+      .moveTo(MARGIN, y - 8)
+      .lineTo(page.width - MARGIN, y - 8)
+      .lineWidth(0.5)
+      .strokeColor(RULE)
+      .stroke();
+
+    const rodapeOpts = { lineBreak: false, height: 12 } as const;
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor(TEXT_MUTED)
+      .text(
+        `Ectolab · ${input.modeloTitulo}`.slice(0, 90),
+        MARGIN,
+        y,
+        { ...rodapeOpts, width: contentWidth - 90 }
+      );
+    doc.text(
+      `Página ${i - range.start + 1} de ${range.count}`,
+      page.width - MARGIN - 90,
+      y,
+      { ...rodapeOpts, width: 90, align: "right" }
+    );
+
+    page.margins.bottom = margemOriginal;
+  }
+
   doc.end();
   await done;
 
