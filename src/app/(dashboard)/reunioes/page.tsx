@@ -5,7 +5,7 @@ import { displayName } from "@/lib/display-name";
 import { proximaTerca, formatarDataISO, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 import PageContainer from "../page-container";
 import PautaItemActions from "./pauta-item-actions";
-import PautaCard from "./_components/pauta-card";
+import PautasLista from "./_components/pautas-lista";
 import { PrioridadeBadge, TipoBadge, ResultadoVotacaoBadge } from "./_components/pauta-badges";
 import { PedirPautaTrigger } from "./pauta-modal";
 import FaixaProxima from "./_components/faixa-proxima";
@@ -65,13 +65,13 @@ export default async function ReunioesPage({ searchParams }: Props) {
         <header className="flex w-full flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900"><NotebookPen size={28} /> {sp.tab === "pautas" ? "Pedidos de pauta" : "Reuniões"}</h1>
-            <p className="text-base text-zinc-600">Veja os assuntos para a próxima reunião e sugira uma pauta. Consulte os pedidos anteriores no histórico de pautas.</p>
+            <p className="max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base">Sugira um assunto, consulte os materiais anexados e participe das decisões. Acompanhe o que está pendente ou consulte as pautas já discutidas.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <PedirPautaTrigger />
             <Link href="/reunioes/nova" className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 text-base font-medium text-zinc-900 hover:bg-zinc-50"> <PlusCircle size={18} /> Registrar ata</Link>
             <details className="relative">
-              <summary className="flex size-10 cursor-pointer list-none items-center justify-center rounded-xl border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden"><MoreHorizontal size={18} /></summary>
+              <summary aria-label="Mais opções de reuniões" className="flex size-11 cursor-pointer list-none items-center justify-center rounded-xl border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden"><MoreHorizontal size={18} /></summary>
               <div className="absolute right-0 top-full z-20 mt-2 flex w-56 flex-col rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
                 <Link href="/reunioes/nova" className="px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50">Registrar ata</Link>
                 <Link href="/analisar" className="flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50"><Sparkles size={14} /> Analisar por IA</Link>
@@ -113,19 +113,15 @@ export default async function ReunioesPage({ searchParams }: Props) {
                   <PedirPautaTrigger className="!min-h-10 !text-base" />
                 </div>
               ) : (
-                <ol className="mt-4 flex flex-col gap-3">
-                  {pendentes.map((p, i) => (
-                    <PautaCard key={p.id} pauta={p} numero={i + 1} meuUserId={user.id} isCoordenador={canManagePauta} atasDisponiveis={atasDisponiveis} />
-                  ))}
-                </ol>
+                <PautasLista pautas={pendentes} meuUserId={user.id} isCoordenador={canManagePauta} atasDisponiveis={atasDisponiveis} />
               )}
             </div>
 
             {/* Bloco B - Em espera */}
-            <details className="rounded-xl border border-zinc-200 bg-zinc-50/60" open={emEspera.length > 0 && pendentes.length === 0}>
+            <details className="group rounded-xl border border-zinc-200 bg-zinc-50/60" open={emEspera.length > 0 && pendentes.length === 0}>
               <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-zinc-700 [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center gap-2"><Clock size={16} className="text-zinc-500" /> Em espera ({emEspera.length})</span>
-                <span className="text-xs text-zinc-500">Expandir</span>
+                <span className="text-xs text-zinc-500"><span className="group-open:hidden">Ver pautas</span><span className="hidden group-open:inline">Recolher</span></span>
               </summary>
               <ul className="flex flex-col gap-1.5 border-t border-zinc-200 px-4 py-3">
                 {emEspera.length === 0 ? <li className="text-sm text-zinc-500">Nenhuma pauta em espera.</li> : emEspera.map((p) => (

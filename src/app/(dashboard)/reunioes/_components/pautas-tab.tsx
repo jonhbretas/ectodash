@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, Clock, CheckCheck, Paperclip } from "lucide-react";
 import Link from "next/link";
 import type { PautaRow } from "../_lib/get-reunioes-data";
 import { PrioridadeBadge, ResultadoVotacaoBadge, TipoBadge } from "./pauta-badges";
 import VotacaoPainel from "./votacao-painel";
 import AnexoPreview from "./anexo-preview";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 type Props = { pautas: PautaRow[]; meuUserId: string; isCoordenador: boolean };
 
@@ -20,23 +21,13 @@ function Drawer({
   meuUserId: string;
   isCoordenador: boolean;
 }) {
-  const aberta = pauta !== null;
-  // Escape fecha o painel (teclado).
-  useEffect(() => {
-    if (!aberta) return;
-    const fechar = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", fechar);
-    return () => document.removeEventListener("keydown", fechar);
-  }, [aberta, onClose]);
   if (!pauta) return null;
   return (
-    <div role="presentation" className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={pauta.titulo} className="flex h-full w-full max-w-md flex-col gap-4 overflow-y-auto bg-white p-6 shadow-xl">
-        <button onClick={onClose} className="self-end rounded-lg border border-zinc-300 px-3 py-1 text-sm">Fechar</button>
-        <h3 className="text-xl font-semibold text-zinc-900">{pauta.titulo}</h3>
-        <p className="text-sm text-zinc-600">por {pauta.autor} · {pauta.status} {pauta.standBy ? "· em espera" : ""}</p>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="top-0 right-0 bottom-0 left-auto flex h-dvh w-full max-w-lg translate-x-0 translate-y-0 flex-col gap-4 overflow-y-auto rounded-none p-5 sm:max-w-lg sm:p-6">
+        <p className="pr-10 text-xs font-bold uppercase tracking-wider text-[#28627B]">Detalhes da pauta</p>
+        <DialogTitle className="break-words pr-8 text-xl font-semibold text-zinc-900">{pauta.titulo}</DialogTitle>
+        <DialogDescription>Solicitada por {pauta.autor} · {pauta.status === "discutida" ? "Já discutida" : pauta.standBy ? "Em espera" : "Aguardando discussão"}</DialogDescription>
         <div className="flex flex-wrap items-center gap-2">
           <PrioridadeBadge prioridade={pauta.prioridade} />
           <TipoBadge tipo={pauta.tipo} />
@@ -44,7 +35,7 @@ function Drawer({
         </div>
         {pauta.contexto && <p className="whitespace-pre-wrap text-base text-zinc-700">{pauta.contexto}</p>}
         {pauta.anexoUrl && (
-          <AnexoPreview driveId={pauta.anexoDriveId} url={pauta.anexoUrl} nome={pauta.anexoNome} />
+          <AnexoPreview pautaId={pauta.id} driveId={pauta.anexoDriveId} url={pauta.anexoUrl} nome={pauta.anexoNome} />
         )}
         {pauta.tipo === "deliberativa" && pauta.votacaoStatus && (
           <VotacaoPainel
@@ -60,8 +51,8 @@ function Drawer({
         )}
         {pauta.ataDiscutidaTitulo && <p className="text-sm text-zinc-500">Discutida em: {pauta.ataDiscutidaTitulo}</p>}
         {pauta.ataDiscutidaId && <Link href={`/reunioes/${pauta.ataDiscutidaId}`} className="text-sm font-medium text-[#2195B9] hover:underline">Ver ata</Link>}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -72,17 +63,18 @@ export default function PautasTab({ pautas, meuUserId, isCoordenador }: Props) {
 
   const filtradas = useMemo(() => {
     return pautas.filter((p) => {
-      const hitBusca = !busca || p.titulo.toLowerCase().includes(busca.toLowerCase()) || p.autor.toLowerCase().includes(busca.toLowerCase());
+      const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const hitBusca = !busca.trim() || normalize(`${p.titulo} ${p.autor} ${p.contexto ?? ""}`).includes(normalize(busca.trim()));
       if (!hitBusca) return false;
       if (status === "pendente") return p.status === "pendente" && !p.standBy;
-      if (status === "espera") return p.standBy;
+      if (status === "espera") return p.status === "pendente" && p.standBy;
       if (status === "discutida") return p.status === "discutida";
       return true;
     });
   }, [pautas, busca, status]);
 
   const chip = (label: string, value: typeof status) => (
-    <button onClick={() => setStatus(value)} className={`rounded-full px-3 py-1 text-sm font-medium ${status === value ? "bg-[#2195B9] text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}>
+    <button type="button" aria-pressed={status === value} onClick={() => setStatus(value)} className={`min-h-11 rounded-full px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${status === value ? "bg-[#2195B9] text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}>
       {label}
     </button>
   );
@@ -92,7 +84,7 @@ export default function PautasTab({ pautas, meuUserId, isCoordenador }: Props) {
       <div className="flex flex-col gap-3">
         <div className="relative">
           <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por título ou autor" className="w-full rounded-xl border border-zinc-300 bg-white py-2.5 pl-10 pr-4 text-base text-zinc-900 placeholder:text-zinc-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]" />
+          <input aria-label="Buscar no histórico de pautas" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar assunto, autor ou contexto" className="w-full rounded-xl border border-zinc-300 bg-white py-2.5 pl-10 pr-4 text-base text-zinc-900 placeholder:text-zinc-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]" />
         </div>
         <div className="flex flex-wrap gap-2">
           {chip("Todos", "todos")}
@@ -101,6 +93,7 @@ export default function PautasTab({ pautas, meuUserId, isCoordenador }: Props) {
           {chip("Discutidas", "discutida")}
         </div>
         <p className="text-sm text-zinc-600">{filtradas.length} {filtradas.length === 1 ? "pauta" : "pautas"} · Todas as pautas já solicitadas. Use a busca para encontrar um assunto.</p>
+        {(busca || status !== "todos") && <button type="button" onClick={() => { setBusca(""); setStatus("todos"); }} className="min-h-10 self-start rounded-lg px-2 text-sm font-semibold text-[#28627B] hover:underline">Limpar filtros</button>}
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">

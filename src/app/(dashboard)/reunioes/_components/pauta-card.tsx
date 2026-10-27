@@ -42,7 +42,7 @@ export default function PautaCard({
       className={`overflow-hidden rounded-2xl border border-l-4 border-zinc-200 bg-white ${FAIXA[pauta.prioridade]}`}
     >
       <div
-        className={`grid gap-5 p-5 ${temVotacao ? "lg:grid-cols-[minmax(0,1fr)_minmax(340px,440px)]" : ""}`}
+        className={`grid gap-5 p-4 sm:p-5 ${temVotacao ? "xl:grid-cols-[minmax(0,1fr)_minmax(300px,400px)]" : ""}`}
       >
         {/* Conteúdo */}
         <div className="flex min-w-0 flex-col gap-3">
@@ -54,7 +54,7 @@ export default function PautaCard({
               {numero}
             </span>
             <div className="min-w-0 flex-1">
-              <h3 className="text-xl font-semibold leading-snug text-zinc-900">{pauta.titulo}</h3>
+              <h3 className="break-words text-lg font-semibold leading-snug text-zinc-900 sm:text-xl">{pauta.titulo}</h3>
               <p className="mt-0.5 text-base text-zinc-600">por {pauta.autor}</p>
             </div>
           </div>
@@ -72,7 +72,7 @@ export default function PautaCard({
           )}
 
           {pauta.anexoUrl && (
-            <AnexoPreview driveId={pauta.anexoDriveId} url={pauta.anexoUrl} nome={pauta.anexoNome} />
+            <AnexoPreview pautaId={pauta.id} driveId={pauta.anexoDriveId} url={pauta.anexoUrl} nome={pauta.anexoNome} />
           )}
         </div>
 

@@ -1,16 +1,14 @@
 "use client";
 
-// Anexo de pauta com pré-visualização dentro do sistema. O arquivo está no
-// Drive compartilhado "qualquer pessoa com o link" (leitor), então o próprio
-// visualizador do Drive (/preview) abre imagens, vídeos, PDFs e documentos
-// num iframe. Imagens e vídeos mostram miniatura no cartão; se o Drive ainda
-// não gerou a miniatura (vídeo recém-enviado), cai num bloco com ícone.
+// Miniaturas passam pela rota autenticada do Ectodash; o visualizador do
+// Drive (/preview) continua disponível para abrir o arquivo completo.
 import { useState } from "react";
-import { ExternalLink, FileText, ImageIcon, Paperclip, Play } from "lucide-react";
+import { ExternalLink, FileText, ImageIcon, Loader2, Maximize2, Paperclip, Play } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { tipoDoAnexo } from "@/lib/pautas/anexo";
 
 type Props = {
+  pautaId: number;
   driveId: string | null;
   url: string;
   nome: string | null;
@@ -19,9 +17,10 @@ type Props = {
 const foco =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
-export default function AnexoPreview({ driveId, url, nome }: Props) {
+export default function AnexoPreview({ pautaId, driveId, url, nome }: Props) {
   const [aberto, setAberto] = useState(false);
-  const [semMiniatura, setSemMiniatura] = useState(false);
+  const [erroSrc, setErroSrc] = useState<string | null>(null);
+  const [carregadaSrc, setCarregadaSrc] = useState<string | null>(null);
   const nomeArquivo = nome ?? "Anexo";
   const tipo = tipoDoAnexo(nomeArquivo);
   const visual = tipo === "imagem" || tipo === "video";
@@ -42,7 +41,9 @@ export default function AnexoPreview({ driveId, url, nome }: Props) {
   }
 
   const id = encodeURIComponent(driveId);
-  const miniatura = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+  const miniatura = `/api/pautas/${pautaId}/anexo/preview?v=${id}`;
+  const semMiniatura = erroSrc === miniatura;
+  const carregada = carregadaSrc === miniatura;
   const preview = `https://drive.google.com/file/d/${id}/preview`;
   const rotuloAcao = tipo === "video" ? "Assistir" : "Visualizar";
 
@@ -53,31 +54,39 @@ export default function AnexoPreview({ driveId, url, nome }: Props) {
           type="button"
           onClick={() => setAberto(true)}
           aria-label={`${rotuloAcao}: ${nomeArquivo}`}
-          className={`group relative flex aspect-video w-full max-w-sm items-center justify-center overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-zinc-200 ${foco}`}
+          className={`group flex w-full max-w-md flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white text-left shadow-sm transition-shadow hover:shadow-md ${foco}`}
         >
+          <span className={`relative flex w-full items-center justify-center overflow-hidden bg-slate-50 ${semMiniatura ? "min-h-28" : "aspect-video"}`}>
+          {!semMiniatura && !carregada && (
+            <span role="status" className="absolute flex items-center gap-2 text-sm text-slate-500"><Loader2 size={18} className="animate-spin" aria-hidden="true" /> Carregando prévia…</span>
+          )}
           {!semMiniatura ? (
-            // eslint-disable-next-line @next/next/no-img-element -- miniatura externa do Drive, sem otimização do Next
+            // eslint-disable-next-line @next/next/no-img-element -- rota autenticada, sem cache compartilhado do otimizador
             <img
               src={miniatura}
               alt=""
               loading="lazy"
               referrerPolicy="no-referrer"
-              onError={() => setSemMiniatura(true)}
-              className="size-full object-cover transition-transform group-hover:scale-[1.02]"
+              onLoad={() => setCarregadaSrc(miniatura)}
+              onError={() => setErroSrc(miniatura)}
+              className={`absolute inset-0 size-full object-contain transition-opacity ${carregada ? "opacity-100" : "opacity-0"}`}
             />
           ) : (
             <span className="flex flex-col items-center gap-2 text-zinc-600">
               {tipo === "video" ? <Play size={32} aria-hidden="true" /> : <ImageIcon size={32} aria-hidden="true" />}
-              <span className="text-sm">{tipo === "video" ? "Vídeo" : "Imagem"}</span>
+              <span className="text-sm font-medium">Prévia indisponível</span>
+              <span className="text-xs">Clique para abrir {tipo === "video" ? "o vídeo" : "a imagem"}</span>
             </span>
           )}
-          {tipo === "video" && !semMiniatura && (
+          {tipo === "video" && carregada && !semMiniatura && (
             <span aria-hidden="true" className="absolute flex size-14 items-center justify-center rounded-full bg-black/60 text-white">
               <Play size={26} className="ml-1" />
             </span>
           )}
-          <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-6 text-left text-sm font-medium text-white">
-            {nomeArquivo}
+          </span>
+          <span className="flex w-full items-center gap-3 border-t border-zinc-100 px-3 py-3">
+            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-slate-800" title={nomeArquivo}>{nomeArquivo}</span><span className="mt-0.5 block text-xs text-slate-500">{tipo === "video" ? "Vídeo anexado · assistir" : "Imagem anexada · ampliar"}</span></span>
+            <Maximize2 size={17} className="shrink-0 text-[#2195B9]" aria-hidden="true" />
           </span>
         </button>
       ) : (
