@@ -13,6 +13,7 @@ import { parseXlsx } from "@/lib/financeiro/parse-file";
 import { sanitizeSearch } from "@/lib/utils";
 import { applyGlossary } from "@/lib/glossary";
 import { listarTermosGlossario } from "@/lib/glossary-db";
+import { dipLocalizacaoShape } from "@/lib/ai/dip-localizacao";
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -50,8 +51,7 @@ const ataEntrySchema = z.object({
 }).passthrough();
 
 const dipEntrySchema = z.object({
-  localidade: z.string().trim().min(1).max(200),
-  pais: z.string().trim().min(1).max(100).optional(),
+  ...dipLocalizacaoShape,
   data: z.string().regex(dataRegex, "data_dip deve ser yyyy-MM-dd").optional().or(z.literal("")),
   participantes: z.union([z.number().int().nonnegative(), z.literal("")]).optional().nullable(),
   epicons: z.number().int().nonnegative().nullable().optional(),
@@ -554,7 +554,7 @@ export async function analisarComIA(
         ? (data.dips as any[]).map((dip: any) => {
             const key = crypto.randomUUID();
             const localidade = String(dip.localidade ?? "").trim();
-            const pais = String(dip.pais ?? dip.localidade?.includes?.("Portugal") ? "Portugal" : "Brasil").trim() || "Brasil";
+            const pais = String(dip.pais ?? "").trim();
             const dipData = String(dip.data ?? "").trim() || null;
             const normLocalidade = normalizeTexto(localidade);
             const normPais = normalizeTexto(pais);

@@ -17,6 +17,7 @@
 //                semana que vem sobre X"), one record per topic, that feed
 //                the Reuniões hub's pauta list.
 import { z } from "zod";
+import { dipLocalizacaoShape } from "@/lib/ai/dip-localizacao";
 
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -101,8 +102,7 @@ export const ataAnaliseSchema = z.object({
         // Incomplete locations/countries stay visible for human review rather
         // than rejecting the entire analysis. The save flow skips incomplete
         // DIPs until both fields are supplied.
-        localidade: z.string().trim().max(200),
-        pais: z.string().trim().max(100),
+        ...dipLocalizacaoShape,
         data: z
           .string()
           .regex(dataRegex, "data_dip deve ser yyyy-MM-dd")

@@ -130,6 +130,25 @@ describe("ataAnaliseSchema demandas", () => {
     expect(result.dips[1].localidade).toBe("");
   });
 
+  it("aceita localização ausente ou nula sem descartar as outras partes da análise", () => {
+    const result = ataAnaliseSchema.parse({
+      ata: baseAta, demandas: [], eventos: [], atualizacoes: [], pautas: [],
+      dips: [{ participantes: 12 }, { localidade: null, pais: null }, { localidade: "  Lisboa  ", pais: "  Portugal  " }],
+    });
+    expect(result.ata.titulo).toBe(baseAta.titulo);
+    expect(result.dips[0]).toMatchObject({ localidade: "", pais: "", participantes: 12 });
+    expect(result.dips[1]).toMatchObject({ localidade: "", pais: "" });
+    expect(result.dips[2]).toMatchObject({ localidade: "Lisboa", pais: "Portugal" });
+  });
+
+  it.each([{ localidade: 123 }, { pais: false }, { localidade: "a".repeat(201) }, { pais: "a".repeat(101) }])(
+    "mantém a validação de tipo e tamanho da localização: %j", (dip) => {
+      expect(ataAnaliseSchema.safeParse({
+        ata: baseAta, demandas: [], eventos: [], atualizacoes: [], pautas: [], dips: [dip],
+      }).success).toBe(false);
+    }
+  );
+
   it("envelope JSON-mode continua exigindo a chave analise", () => {
     const ok = ataAnaliseEnvelopeSchema.safeParse({
       analise: {

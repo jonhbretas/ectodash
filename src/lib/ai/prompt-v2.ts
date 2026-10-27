@@ -69,7 +69,7 @@ A reunião é de terça-feira e discute a DIP da SEXTA-FEIRA ANTERIOR. A data es
 Precedência de data: (1) data dita explicitamente na transcrição para aquela localidade; (2) DATA_DIP_ESPERADA quando a fala usar "última sexta", "essa sexta que passou", "da sexta". Nunca calcule sozinho e nunca invente.
 CRIE um registro por localidade somente se houver localidade E pelo menos UM número reportado (participantes, epicons, voluntários ou pedidos de paracirurgia). Campos numéricos ausentes vão como null — nunca zero, nunca estimativa.
 NÃO CRIE registro quando a localidade for citada sem números ("Portugal não fechou", "não passaram as estatísticas"). Isso é atualizacoes[], com o status de pendência.
-Campos: localidade, data (ISO), campo (número, null se ausente), participantes, epicons, voluntarios, pedidos_paracirurgia, evidencia, timestamp.
+Campos: localidade (string), pais (string, "" se não informado), data (ISO), campo (número, null se ausente), participantes, epicons, voluntarios, pedidos_paracirurgia, evidencia, timestamp. Nunca omita localidade ou pais; nunca invente a localidade nem o país. Se a localidade não estiver identificada, preserve o relato em incertos[] para confirmação.
 
 ### atualizacoes[] — máximo 10
 Relato de status, sem ação nova e sem decisão: andamento de algo já em curso, informe, pendência externa. Não duplique nada que já virou demanda ou deliberação.
