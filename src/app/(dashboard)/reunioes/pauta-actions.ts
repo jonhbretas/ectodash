@@ -278,17 +278,24 @@ export async function marcarPautaDiscutida(
   }
 
   // status = 'discutida' e o vínculo com a ata andam juntos (CHECK 0077).
-  const { error } = await supabase
+  const { data: atualizada, error } = await supabase
     .from("pautas")
     .update({ status: "discutida", ata_discutida_id: aId })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     console.error("marcarPautaDiscutida: update failed", error);
     return { ok: false, message: "Não foi possível atualizar a pauta." };
   }
 
+  if (!atualizada) {
+    return { ok: false, message: "Pauta não encontrada ou você não tem permissão para alterá-la." };
+  }
+
   revalidatePath("/reunioes");
+  revalidatePath("/reunioes/pautas");
   revalidatePath(`/reunioes/${aId}`);
   return { ok: true };
 }

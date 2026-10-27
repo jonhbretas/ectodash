@@ -39,7 +39,7 @@ export default function PautaCard({
 
   return (
     <li
-      className={`overflow-hidden rounded-2xl border border-l-4 border-zinc-200 bg-white ${FAIXA[pauta.prioridade]}`}
+      className={`rounded-2xl border border-l-4 border-zinc-200 bg-white ${FAIXA[pauta.prioridade]}`}
     >
       <div
         className={`grid gap-5 p-4 sm:p-5 ${temVotacao ? "xl:grid-cols-[minmax(0,1fr)_minmax(300px,400px)]" : ""}`}
@@ -93,7 +93,7 @@ export default function PautaCard({
 
       {/* Gestão */}
       {podeGerenciar && (
-        <div className="flex flex-wrap items-start gap-2 border-t border-zinc-100 bg-zinc-50/70 px-5 py-3">
+        <div className="flex flex-wrap items-start gap-2 rounded-b-2xl border-t border-zinc-100 bg-zinc-50/70 px-5 py-3">
           <PautaItemActions
             pautaId={pauta.id}
             status={pauta.status}

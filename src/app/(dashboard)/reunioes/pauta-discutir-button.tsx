@@ -85,7 +85,7 @@ export default function PautaDiscutirButton({
     startTransition(async () => {
       const result = await marcarPautaDiscutida(
         pautaId,
-        selectedAtaId ?? ataId,
+        selectedAtaId ?? undefined,
         dataReuniao
       );
       if (!result.ok && result.message) setMensagem(result.message);
