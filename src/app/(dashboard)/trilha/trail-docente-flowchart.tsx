@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   BookOpen,
   MonitorPlay,
@@ -13,6 +12,8 @@ import {
   Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTrailSelection } from "./use-trail-selection";
+import JourneyStepButton from "./journey-step-button";
 
 type DocenteStep = {
   id: string;
@@ -118,11 +119,18 @@ const FOLLOW_PATHS: DocentePath[] = [
   },
 ];
 
-export default function TrailDocenteFlowchart() {
-  const [activeBase, setActiveBase] = useState(0);
-  const [activePath, setActivePath] = useState<number | null>(null);
+export default function TrailDocenteFlowchart({ completedIds }: { completedIds?: string[] }) {
+  const allIds = [...BASE_STEPS, ...FOLLOW_PATHS].map((step) => step.id);
+  const [selected, setSelected] = useTrailSelection("docente", allIds);
+  const activeBase = Math.min(selected, BASE_STEPS.length - 1);
+  const activePath = selected >= BASE_STEPS.length ? selected - BASE_STEPS.length : null;
+  const setActiveBase = setSelected;
+  const setActivePath = (index: number | null) => setSelected(index === null ? 0 : index + BASE_STEPS.length);
 
   const step = BASE_STEPS[activeBase];
+  const detail = activePath === null ? step : FOLLOW_PATHS[activePath];
+  const categories: DocenteStep["categorias"] = activePath === null
+    ? step.categorias : [{ nome: FOLLOW_PATHS[activePath].detalhe, concluido: false }];
 
   return (
     <section className="relative w-full">
@@ -141,14 +149,14 @@ export default function TrailDocenteFlowchart() {
         </div>
 
         {/* Base steps */}
-        <div className="relative mb-4">
+        <div className="relative mb-4 overflow-x-auto pb-1">
           <p className="mb-4 text-center text-sm font-semibold uppercase tracking-widest text-[#2195B9]">
             Caminho Formativo
           </p>
           <div className="flex min-w-[480px] items-start justify-between gap-2 overflow-x-auto sm:gap-4">
             {BASE_STEPS.map((s, i) => {
               const SIcon = STEP_ICONS[s.icone];
-              const isActive = i === activeBase;
+              const isActive = activePath === null && i === activeBase;
               const isDone = s.categorias.every((c) => c.concluido);
 
               return (
@@ -217,15 +225,15 @@ export default function TrailDocenteFlowchart() {
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
-                  Etapa {activeBase + 1}
+                  {activePath === null ? `Etapa ${activeBase + 1}` : "Possibilidade de atuação"}
                 </span>
-                <h3 className="text-xl font-bold text-zinc-900">{step.titulo}</h3>
-                <p className="text-sm text-zinc-500">{step.descricao}</p>
+                <h3 className="text-xl font-bold text-zinc-900">{detail.titulo}</h3>
+                <p className="text-sm text-zinc-500">{detail.descricao}</p>
               </div>
             </div>
 
             <div className="mt-4 flex flex-col gap-1.5 border-t border-zinc-100 pt-4">
-              {step.categorias.map((cat, i) => (
+              {categories.map((cat, i) => (
                 <div
                   key={i}
                   className={cn(
@@ -255,6 +263,8 @@ export default function TrailDocenteFlowchart() {
             </div>
           </div>
         </div>
+
+        {completedIds && <JourneyStepButton key={allIds[selected]} stepId={`docente:${allIds[selected]}`} completedIds={completedIds} />}
 
         {/* Divider — paths after base steps */}
         <div className="relative mb-6 flex flex-col items-center gap-2">

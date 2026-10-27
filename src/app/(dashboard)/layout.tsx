@@ -12,6 +12,7 @@ import AtalhosAjuda from "@/components/atalhos/atalhos-ajuda";
 import Sidebar from "./sidebar";
 import type { ViewAsOption } from "./view-as-selector";
 import AccountFloatingMenu from "./account-floating-menu";
+import JourneyVisit from "./journey-visit";
 
 export default async function DashboardLayout({
   children,
@@ -214,6 +215,7 @@ export default async function DashboardLayout({
           isCoordenador={isCoordenadorGeral}
         />
         {children}
+        <JourneyVisit userId={user.id} />
       </div>
       <AtalhosAjuda voluntarioId={profile?.voluntario_id ?? null} />
       <FeedbackButton />

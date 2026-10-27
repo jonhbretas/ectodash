@@ -18,6 +18,7 @@ import { podeAcessar, type Acesso, type ModuloAcesso } from "@/lib/acesso";
 import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 import PageContainer from "./page-container";
 import PagamentosHome from "./pagamentos-home";
+import HomeJourney from "./home-journey";
 
 type HubCard = {
   href: string;
@@ -65,10 +66,15 @@ export default async function InicioPage() {
   const nome = displayName(profile ?? { email: user.email ?? "" });
   const primeiroNome = nome.split(" ")[0] || nome;
 
-  const { data: cargosRaw } = await supabase.rpc("meus_cargos");
+  const [{ data: cargosRaw }, { data: flags }, journeyResult] = await Promise.all([
+    supabase.rpc("meus_cargos"),
+    supabase.from("system_module_flags").select("modulo").eq("ativo", false),
+    supabase.from("jornada_exploracao").select("etapa_id").eq("profile_id", user.id),
+  ]);
   const acesso: Acesso = {
     role: (profile?.role as Acesso["role"]) ?? null,
     cargos: (cargosRaw ?? []) as Acesso["cargos"],
+    modulosDesativados: (flags ?? []).map((flag) => String(flag.modulo)),
   };
   const pode = (modulo?: ModuloAcesso) =>
     !modulo || podeAcessar(acesso, modulo) !== false;
@@ -228,9 +234,58 @@ export default async function InicioPage() {
         <p className="text-base text-slate-500 sm:text-lg">
           {podeAcessar(acesso, "financeiro") !== false
             ? "Sua visão de coordenação e finanças para hoje."
-            : "Veja suas demandas, eventos e próximos compromissos."}
+            : "Explore o sistema e dê o próximo passo na sua jornada."}
         </p>
       </header>
+
+      <div className="grid w-full items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        {/* ── Cardzinhos de ação ── */}
+        <section aria-label="O que você quer fazer" className="flex w-full flex-col gap-3">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Seus atalhos rápidos
+          </h2>
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+            {cards.map(({ href, titulo, descricao, Icon, cor }) => (
+              <Link
+                key={titulo + href}
+                href={href}
+                className="group flex min-h-24 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-[#2195B9]/30 hover:bg-[#2195B9]/5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] active:scale-[0.99] sm:p-4"
+              >
+                <span
+                  className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm sm:size-12 ${cor}`}
+                  aria-hidden="true"
+                >
+                  <Icon size={23} strokeWidth={1.75} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-base font-semibold leading-tight text-zinc-900 group-hover:text-[#2195B9]">
+                    {titulo}
+                  </span>
+                  <span className="text-sm leading-snug text-zinc-500">
+                    {descricao}
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-400 transition-colors group-hover:bg-[#2195B9] group-hover:text-white"
+                >
+                  ›
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+        <HomeJourney
+          completedIds={(journeyResult.data ?? []).map((row) => String(row.etapa_id))}
+          availableSystemIds={[
+            "sistema:perfil",
+            ...(pode("eventos") ? ["sistema:eventos"] : []),
+            ...(pode("utilidades") ? ["sistema:utilidades"] : []),
+          ]}
+          canViewTrails={pode("voluntarios")}
+          unavailable={Boolean(journeyResult.error)}
+        />
+      </div>
 
       {/* ── Hoje pra você: caixa de entrada resumida ── */}
       <section
@@ -351,42 +406,6 @@ export default async function InicioPage() {
         </Link>
       )}
 
-      {/* ── Cardzinhos de ação ── */}
-      <section aria-label="O que você quer fazer" className="flex w-full flex-col gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">
-          Escolha por onde começar
-        </h2>
-        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {cards.map(({ href, titulo, descricao, Icon, cor }) => (
-            <Link
-              key={titulo + href}
-              href={href}
-              className="group flex min-h-24 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-[#2195B9]/30 hover:bg-[#2195B9]/5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] active:scale-[0.99] sm:min-h-28 sm:p-5"
-            >
-              <span
-                className={`flex size-14 shrink-0 items-center justify-center rounded-xl text-white shadow-sm sm:size-16 ${cor}`}
-                aria-hidden="true"
-              >
-                <Icon size={28} strokeWidth={1.75} />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-xl font-semibold leading-tight text-zinc-900 group-hover:text-[#2195B9]">
-                  {titulo}
-                </span>
-                <span className="text-base leading-snug text-zinc-500">
-                  {descricao}
-                </span>
-              </span>
-              <span
-                aria-hidden="true"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-400 transition-colors group-hover:bg-[#2195B9] group-hover:text-white"
-              >
-                ›
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
     </PageContainer>
   );
 }

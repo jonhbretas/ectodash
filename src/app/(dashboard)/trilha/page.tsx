@@ -4,6 +4,7 @@ import PageContainer from "../page-container";
 import TrailFlowchart from "./trail-flowchart";
 import TrailDocenteFlowchart from "./trail-docente-flowchart";
 import TrailTabs from "./trail-tabs";
+import { journeySteps, journeySummary } from "@/lib/journey";
 
 type TrailStage = {
   id: string;
@@ -18,7 +19,7 @@ type TrailStage = {
   }[];
 };
 
-function buildTrail(voluntarioId: number | null): TrailStage[] {
+function buildTrail(): TrailStage[] {
   return [
     {
       id: "boas-vindas",
@@ -27,10 +28,10 @@ function buildTrail(voluntarioId: number | null): TrailStage[] {
       icone: "book",
       cor: "from-[#2195B9] to-[#1a7a99]",
       categorias: [
-        { nome: "Carta de Boas-vindas", concluido: true, detalhe: "Recebida" },
-        { nome: "Apresentação da Instituição", concluido: true, detalhe: "15/03/2025" },
-        { nome: "Tour pelas Áreas", concluido: true, detalhe: "Concluído" },
-        { nome: "Cadastro no Sistema", concluido: true, detalhe: "Ativo" },
+        { nome: "Carta de Boas-vindas", concluido: false },
+        { nome: "Apresentação da Instituição", concluido: false },
+        { nome: "Tour pelas Áreas", concluido: false },
+        { nome: "Cadastro no Sistema", concluido: false },
       ],
     },
     {
@@ -40,9 +41,9 @@ function buildTrail(voluntarioId: number | null): TrailStage[] {
       icone: "award",
       cor: "from-[#28627B] to-[#1e4d5e]",
       categorias: [
-        { nome: "Ética e Valores Institucionais", concluido: true, detalhe: "40h" },
-        { nome: "Metodologias de Trabalho", concluido: true, detalhe: "30h" },
-        { nome: "Comunicação Assertiva", concluido: true, detalhe: "20h" },
+        { nome: "Ética e Valores Institucionais", concluido: false },
+        { nome: "Metodologias de Trabalho", concluido: false },
+        { nome: "Comunicação Assertiva", concluido: false },
         { nome: "Primeiros Socorros", concluido: false },
         { nome: "Gestão de Tempo", concluido: false },
       ],
@@ -54,8 +55,8 @@ function buildTrail(voluntarioId: number | null): TrailStage[] {
       icone: "lightbulb",
       cor: "from-[#FDBA2F] to-[#e5a520]",
       categorias: [
-        { nome: "Oficina Prática I", concluido: true, detalhe: "12h" },
-        { nome: "Acompanhamento de Projeto", concluido: true, detalhe: "Em andamento" },
+        { nome: "Oficina Prática I", concluido: false },
+        { nome: "Acompanhamento de Projeto", concluido: false },
         { nome: "Diário de Reflexão", concluido: false },
         { nome: "Mentoria com Coordenador", concluido: false },
       ],
@@ -126,18 +127,19 @@ export default async function TrilhaPage({
     if (vol?.nome) nomeVoluntario = vol.nome.split(" ")[0];
   }
 
-  const trail = buildTrail(selectedId ?? null);
+  const trail = buildTrail();
+  const viewingOwnTrail = !params.voluntario || selectedId === profile?.voluntario_id;
+  const progressResult = viewingOwnTrail
+    ? await supabase.from("jornada_exploracao").select("etapa_id").eq("profile_id", user.id)
+    : { data: [], error: null };
+  const completedIds = (progressResult.data ?? []).map((row) => String(row.etapa_id));
+  const volunteerSteps = journeySteps.filter((step) => step.track === "voluntario");
+  const summary = journeySummary(completedIds, volunteerSteps);
 
-  const totalItens = trail.reduce((acc, s) => acc + s.categorias.length, 0);
-  const concluidos = trail.reduce(
-    (acc, s) => acc + s.categorias.filter((c) => c.concluido).length,
-    0
-  );
-  const percentual = totalItens > 0 ? Math.round((concluidos / totalItens) * 100) : 0;
-
-  const etapaAtual = trail.findIndex((s) =>
-    s.categorias.some((c) => !c.concluido)
-  );
+  const totalItens = summary.total;
+  const concluidos = summary.done;
+  const percentual = summary.percent;
+  const etapaAtual = trail.findIndex((stage) => !completedIds.includes(`voluntario:${stage.id}`));
   const etapaIndex = etapaAtual === -1 ? trail.length - 1 : etapaAtual;
 
   return (
@@ -154,6 +156,13 @@ export default async function TrilhaPage({
         </div>
       </header>
 
+      <p className="rounded-xl border border-[#2195B9]/20 bg-[#2195B9]/5 p-4 text-sm text-slate-700">
+        {viewingOwnTrail
+          ? "Explore o roteiro e confirme a leitura de cada etapa para avançar na sua jornada e ganhar XP. Este progresso registra exploração; a conclusão de cursos e os requisitos da formação são acompanhados separadamente."
+          : "Você está consultando o roteiro de formação. O progresso de exploração é pessoal e aparece somente na própria conta."}
+        {progressResult.error && " Seu progresso está temporariamente indisponível. Tente novamente mais tarde."}
+      </p>
+
       <TrailTabs
         tabs={[
           { id: "voluntario", label: "Trilha Voluntário", icon: "users" },
@@ -165,39 +174,39 @@ export default async function TrilhaPage({
             <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
               <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#2195B9] to-[#FDBA2F]" />
               <div className="flex flex-col gap-1 p-5">
-                <span className="text-sm font-medium text-slate-500">Progresso Geral</span>
-                <span className="text-2xl font-bold tracking-tight text-slate-900">{percentual}%</span>
+                <span className="text-sm font-medium text-slate-500">Roteiro explorado</span>
+                <span className="text-2xl font-bold tracking-tight text-slate-900">{viewingOwnTrail && !progressResult.error ? `${percentual}%` : "—"}</span>
               </div>
             </div>
             <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
               <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#16a34a] to-[#059669]" />
               <div className="flex flex-col gap-1 p-5">
-                <span className="text-sm font-medium text-slate-500">Itens Concluídos</span>
-                <span className="text-2xl font-bold tracking-tight text-slate-900">{concluidos}/{totalItens}</span>
+                <span className="text-sm font-medium text-slate-500">Etapas exploradas</span>
+                <span className="text-2xl font-bold tracking-tight text-slate-900">{viewingOwnTrail && !progressResult.error ? `${concluidos}/${totalItens}` : "—"}</span>
               </div>
             </div>
             <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
               <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed]" />
               <div className="flex flex-col gap-1 p-5">
-                <span className="text-sm font-medium text-slate-500">Etapa Atual</span>
+                <span className="text-sm font-medium text-slate-500">Etapas do roteiro</span>
                 <span className="text-2xl font-bold tracking-tight text-slate-900">
-                  {etapaIndex + 1}/{trail.length}
+                  {trail.length}
                 </span>
               </div>
             </div>
             <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(33,149,185,0.04)] ring-1 ring-zinc-200/60">
               <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-[#FDBA2F] to-[#e5a520]" />
               <div className="flex flex-col gap-1 p-5">
-                <span className="text-sm font-medium text-slate-500">Próximo Marco</span>
+                <span className="text-sm font-medium text-slate-500">Próxima descoberta</span>
                 <span className="text-lg font-bold tracking-tight text-slate-900">
-                  {trail[etapaIndex]?.titulo ?? "Trilha Completa"}
+                  {viewingOwnTrail && !progressResult.error ? summary.next?.title ?? "Roteiro explorado!" : "Conheça as etapas"}
                 </span>
               </div>
             </div>
           </div>
-          <TrailFlowchart stages={trail} etapaAtual={etapaIndex} />
+          <TrailFlowchart stages={trail} etapaAtual={etapaIndex} completedIds={viewingOwnTrail ? completedIds : undefined} />
         </div>
-        <TrailDocenteFlowchart />
+        <TrailDocenteFlowchart completedIds={viewingOwnTrail ? completedIds : undefined} />
       </TrailTabs>
     </PageContainer>
   );

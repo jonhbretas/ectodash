@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useTrailSelection } from "./use-trail-selection";
+import JourneyStepButton from "./journey-step-button";
 import {
   BookOpen,
   Award,
@@ -8,7 +9,6 @@ import {
   Users,
   Trophy,
   Check,
-  Lock,
   Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,18 +39,18 @@ const ICON_MAP = {
 export default function TrailFlowchart({
   stages,
   etapaAtual,
+  completedIds,
 }: {
   stages: TrailStage[];
   etapaAtual: number;
+  completedIds?: string[];
 }) {
-  const [active, setActive] = useState(etapaAtual);
+  const [active, setActive] = useTrailSelection("voluntario", stages.map((stage) => stage.id), etapaAtual);
 
   const stage = stages[active];
   const Icon = ICON_MAP[stage.icone];
-  const concluidos = stage.categorias.filter((c) => c.concluido).length;
-  const total = stage.categorias.length;
-  const isComplete = concluidos === total;
-  const isCurrent = active === etapaAtual;
+  const isComplete = completedIds?.includes(`voluntario:${stage.id}`) ?? false;
+  const isCurrent = active === etapaAtual && !isComplete;
 
   return (
     <section className="relative w-full">
@@ -76,8 +76,8 @@ export default function TrailFlowchart({
           <div className="flex min-w-[560px] items-start justify-between gap-2 sm:gap-4">
             {stages.map((s, i) => {
               const SIcon = ICON_MAP[s.icone];
-              const sDone = s.categorias.every((c) => c.concluido);
-              const sCurrent = i === etapaAtual;
+              const sDone = completedIds?.includes(`voluntario:${s.id}`) ?? false;
+              const sCurrent = i === etapaAtual && !sDone;
               const isActive = i === active;
 
               return (
@@ -177,12 +177,12 @@ export default function TrailFlowchart({
                   </span>
                   {isComplete && (
                     <span className="rounded-full bg-[#16a34a]/10 px-2 py-0.5 text-xs font-semibold text-[#16a34a]">
-                      Concluída
+                      Explorada
                     </span>
                   )}
                   {isCurrent && (
                     <span className="rounded-full bg-[#FDBA2F]/15 px-2 py-0.5 text-xs font-semibold text-[#e5a520]">
-                      Em andamento
+                      Próxima descoberta
                     </span>
                   )}
                 </div>
@@ -190,23 +190,6 @@ export default function TrailFlowchart({
                 <p className="text-sm text-zinc-500">{stage.descricao}</p>
               </div>
 
-              <div className="flex shrink-0 flex-col items-end gap-1">
-                {/* Progress mini-bar */}
-                <span className="text-xs font-semibold text-zinc-500">
-                  {concluidos}/{total}
-                </span>
-                <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-100">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-500",
-                      isComplete
-                        ? "bg-gradient-to-r from-[#16a34a] to-[#059669]"
-                        : "bg-gradient-to-r from-[#2195B9] to-[#FDBA2F]"
-                    )}
-                    style={{ width: `${total > 0 ? (concluidos / total) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
             </div>
 
             {/* Categories */}
@@ -234,7 +217,7 @@ export default function TrailFlowchart({
                       strokeWidth={1.5}
                     />
                   ) : (
-                    <Lock size={16} className="shrink-0 text-zinc-300" />
+                    <Circle size={24} className="shrink-0 text-zinc-300" strokeWidth={1.5} />
                   )}
                   <div className="flex flex-1 items-center justify-between">
                     <span
@@ -259,6 +242,7 @@ export default function TrailFlowchart({
                 </div>
               ))}
             </div>
+            {completedIds && <JourneyStepButton key={stage.id} stepId={`voluntario:${stage.id}`} completedIds={completedIds} />}
           </div>
 
           {/* End node */}
@@ -269,7 +253,7 @@ export default function TrailFlowchart({
             </div>
             <div className="w-full rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/50 p-5 text-center">
               <p className="text-sm font-medium text-zinc-400 italic">
-                Continue trilhando para desbloquear todas as etapas...
+                Cada descoberta é um passo. Explore todas as etapas no seu ritmo.
               </p>
             </div>
           </div>

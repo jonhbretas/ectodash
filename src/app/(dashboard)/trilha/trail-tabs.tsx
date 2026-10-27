@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { GraduationCap, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,15 @@ export default function TrailTabs({
   tabs: TrailTab[];
   children: ReactNode[];
 }) {
-  const [activeId, setActiveId] = useState(tabs[0]?.id ?? "");
+  const params = useSearchParams();
+  const router = useRouter();
+  const activeId = params.get("tab") ?? tabs[0]?.id ?? "";
+  function setActiveId(id: string) {
+    const next = new URLSearchParams(params.toString());
+    next.set("tab", id);
+    next.delete("etapa");
+    router.replace(`/trilha?${next.toString()}`, { scroll: false });
+  }
   const activeIndex = tabs.findIndex((t) => t.id === activeId);
   const active = tabs[activeIndex] ?? tabs[0];
 
@@ -67,6 +75,7 @@ export default function TrailTabs({
           key={tab.id}
           id={`trail-tab-panel-${tab.id}`}
           role="tabpanel"
+          hidden={tab.id !== active.id}
           aria-labelledby={`trail-tab-trigger-${tab.id}`}
           className={cn(
             "flex w-full flex-col gap-8",
