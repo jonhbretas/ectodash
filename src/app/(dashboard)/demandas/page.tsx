@@ -10,6 +10,7 @@ import DemandaViewToggle, {
 import KanbanArea from "./kanban-area";
 import CalendarioView from "./calendario-view";
 import PageContainer from "../page-container";
+import CoordenacaoBanner from "./coordenacao-banner";
 import { FilterX, Plus, UserCheck } from "lucide-react";
 import { parseDemandaFilters } from "./demanda-filter-schema";
 import { cn } from "@/lib/utils";
@@ -315,6 +316,7 @@ export default async function DemandasPage({
 
   return (
     <PageContainer>
+      {demandasDaCoordenacao && <CoordenacaoBanner />}
       <header className="flex w-full flex-col gap-4">
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-col gap-0.5">

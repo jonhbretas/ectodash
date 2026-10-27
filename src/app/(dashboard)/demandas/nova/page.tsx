@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft } from "lucide-react";
 import DemandaForm from "../demanda-form";
 import PageContainer from "../../page-container";
+import CoordenacaoBanner from "../coordenacao-banner";
 
 export default async function NovaDemandaPage({
   searchParams,
@@ -52,6 +53,7 @@ export default async function NovaDemandaPage({
 
   return (
     <PageContainer>
+      {demandaDaCoordenacao && <CoordenacaoBanner />}
       <div className="flex w-full flex-col gap-8">
         <Link
           href={demandaDaCoordenacao ? "/demandas?coordenacao=1" : "/demandas"}

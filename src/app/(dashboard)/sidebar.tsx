@@ -7,6 +7,7 @@ import {
   filterEntries,
   filterCoordinatorEntries,
   isGroupActive,
+  isNavItemActive,
   navEntries,
   coordinatorEntries,
   type NavGroup,
@@ -65,26 +66,27 @@ function SidebarLinks({
   const defaultExpanded = useMemo(() => {
     const set = new Set<string>();
     for (const entry of [...main, ...coord]) {
-      if (entry.type === "group" && isGroupActive(entry, pathname)) {
+      if (entry.type === "group" && isGroupActive(entry, pathname, searchParams)) {
         set.add(entry.label);
       }
     }
     return set;
-  }, [main, coord, pathname]);
+  }, [main, coord, pathname, searchParams]);
 
   const [expanded, setExpanded] = useState<Set<string>>(defaultExpanded);
 
-  // Keep auto-expansion in sync when pathname changes (e.g. navigating
+  // Keep auto-expansion in sync when the route changes (e.g. navigating
   // between children). Adjusting state during render (not in an effect)
   // is the React-sanctioned pattern — no extra commit, no render loop.
-  const [prevPathname, setPrevPathname] = useState(pathname);
-  if (prevPathname !== pathname) {
-    setPrevPathname(pathname);
+  const route = `${pathname}?${searchParams.toString()}`;
+  const [prevRoute, setPrevRoute] = useState(route);
+  if (prevRoute !== route) {
+    setPrevRoute(route);
     setExpanded((prev) => {
       let changed = false;
       const next = new Set(prev);
       for (const entry of [...main, ...coord]) {
-        if (entry.type === "group" && isGroupActive(entry, pathname) && !next.has(entry.label)) {
+        if (entry.type === "group" && isGroupActive(entry, pathname, searchParams) && !next.has(entry.label)) {
           next.add(entry.label);
           changed = true;
         }
@@ -103,21 +105,17 @@ function SidebarLinks({
   }
 
   const linkClassName = (href: string) => {
-    const [targetPath, targetQuery] = href.split("?");
-    const active = targetQuery
-      ? pathname === targetPath && searchParams.toString() === targetQuery
-      : href === "/"
-        ? pathname === "/"
-        : href === "/reunioes"
-          ? pathname === href && !searchParams.get("tab")
-          : pathname.startsWith(href);
+    const active = isNavItemActive(href, pathname, searchParams);
+    const coordenacao = href === "/demandas?coordenacao=1";
     return `flex min-h-11 w-full items-center rounded-xl font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${
       collapsed
         ? "flex-col justify-center gap-0.5 px-0 text-center"
         : `gap-3 text-sm px-3`
     } ${
       active
-        ? "bg-[#2195B9] text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)]"
+        ? coordenacao
+          ? "bg-violet-700 text-white shadow-md shadow-violet-200"
+          : "bg-[#2195B9] text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)]"
         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
     }`;
   };
@@ -153,6 +151,7 @@ function SidebarLinks({
         href={item.href}
         onClick={(e) => handleNavClick(e, item.href)}
         className={linkClassName(item.href)}
+        aria-current={isNavItemActive(item.href, pathname, searchParams) ? "page" : undefined}
         title={collapsed ? item.label : undefined}
       >
         <span className="relative flex items-center">
@@ -179,7 +178,7 @@ function SidebarLinks({
 
   const renderGroup = (group: NavGroup) => {
     const open = expanded.has(group.label);
-    const active = isGroupActive(group, pathname);
+    const active = isGroupActive(group, pathname, searchParams);
 
     if (collapsed) {
       return (

@@ -212,18 +212,43 @@ export function filterEntries(
     .filter((e) => e.type !== "group" || e.children.length > 0);
 }
 
-/** Check if any child in the group is currently active */
-export function isGroupActive(group: NavGroup, pathname: string): boolean {
-  if (group.href) {
-    const active =
-      group.href === "/" ? pathname === "/" : pathname.startsWith(group.href);
-    if (active) return true;
+export function isNavItemActive(
+  href: string,
+  pathname: string,
+  searchParams: Pick<URLSearchParams, "get"> = new URLSearchParams()
+): boolean {
+  const [targetPath, targetQuery] = href.split("?");
+  const matchesPath = targetPath === "/"
+    ? pathname === "/"
+    : pathname === targetPath || pathname.startsWith(`${targetPath}/`);
+
+  if (!matchesPath) return false;
+
+  if (targetPath === "/demandas") {
+    const coordenacao = searchParams.get("coordenacao") === "1";
+    return coordenacao === (new URLSearchParams(targetQuery).get("coordenacao") === "1");
   }
-  return group.children.some((child) => {
-    const active =
-      child.href === "/" ? pathname === "/" : pathname.startsWith(child.href);
-    return active;
-  });
+
+  if (targetQuery) {
+    return pathname === targetPath && Array.from(new URLSearchParams(targetQuery))
+      .every(([key, value]) => searchParams.get(key) === value);
+  }
+
+  if (targetPath === "/reunioes") {
+    return pathname === targetPath && !searchParams.get("tab");
+  }
+
+  return true;
+}
+
+/** Check if any child in the group is currently active. */
+export function isGroupActive(
+  group: NavGroup,
+  pathname: string,
+  searchParams: Pick<URLSearchParams, "get"> = new URLSearchParams()
+): boolean {
+  return Boolean(group.href && isNavItemActive(group.href, pathname, searchParams)) ||
+    group.children.some((child) => isNavItemActive(child.href, pathname, searchParams));
 }
 
 /** Seção exclusiva do coordenador_geral (painel) — o resto da sidebar usa
