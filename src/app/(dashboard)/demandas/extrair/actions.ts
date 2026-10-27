@@ -42,7 +42,7 @@ const pasteSchema = z.object({
 // opening/decisions).
 const MEETING_TEXT_MAX = 60000;
 
-// Provider: OpenAI Responses API (gpt-5.4-mini por padrão).
+// Provider: OpenAI Responses API (gpt-6-luna por padrão).
 // Shared client in src/lib/ai/ai-client.ts.
 
 // OpenAI JSON mode requires a top-level JSON OBJECT (never a bare

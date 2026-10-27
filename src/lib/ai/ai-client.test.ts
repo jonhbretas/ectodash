@@ -19,14 +19,22 @@ describe("configuração OpenAI", () => {
     vi.stubEnv("AI_MODEL", "muse-spark-1.3-contributor");
     vi.stubEnv("AI_PROVIDER", "opencode-go");
     vi.stubEnv("AI_API_URL", "https://opencode.ai/zen/go/v1/responses");
-    expect(aiConfig()).toMatchObject({ provider: "openai", model: "gpt-5.4-mini", url: "https://api.openai.com/v1/responses" });
+    expect(aiConfig()).toMatchObject({ provider: "openai", model: "gpt-6-luna", url: "https://api.openai.com/v1/responses" });
   });
   it("ignora a seleção legada do banco", async () => {
-    expect(await getEffectiveAIConfig(database({ modelo: "muse-spark-1.3-contributor", provider: "opencode-go" }))).toMatchObject({ provider: "openai", model: "gpt-5.4-mini", source: "env" });
+    expect(await getEffectiveAIConfig(database({ modelo: "muse-spark-1.3-contributor", provider: "opencode-go" }))).toMatchObject({ provider: "openai", model: "gpt-6-luna", source: "env" });
   });
   it("prioriza a escolha OpenAI salva sobre o modelo de ambiente", async () => {
     vi.stubEnv("AI_MODEL", "gpt-5.4-mini");
     expect(await getEffectiveAIConfig(database({ modelo: "gpt-5.4", provider: "openai" }))).toMatchObject({ model: "gpt-5.4", source: "db" });
+  });
+  it("usa Luna salvo mesmo quando o ambiente ainda aponta para o mini", async () => {
+    vi.stubEnv("AI_MODEL", "gpt-5.4-mini");
+    expect(await getEffectiveAIConfig(database({ modelo: "gpt-6-luna", provider: "openai" })))
+      .toMatchObject({ model: "gpt-6-luna", source: "db" });
+  });
+  it("mantém o mini disponível como escolha explícita", () => {
+    expect(aiConfig("gpt-5.4-mini").model).toBe("gpt-5.4-mini");
   });
   it("preserva modelo e origem mesmo quando a chave está ausente", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
@@ -54,7 +62,7 @@ describe("contrato Responses API", () => {
     const [url, request] = fetchMock.mock.calls[0];
     expect(url).toBe("https://api.openai.com/v1/responses");
     expect(request.headers).toEqual({ "Content-Type": "application/json", Authorization: "Bearer test-openai-key" });
-    expect(JSON.parse(request.body)).toEqual({ model: "gpt-5.4-mini", instructions: "Responda JSON", input: `${user}\n\nResponda somente em JSON.`, store: false, reasoning: { effort: "low" }, text: { format: { type: "json_object" } } });
+    expect(JSON.parse(request.body)).toEqual({ model: "gpt-6-luna", instructions: "Responda JSON", input: `${user}\n\nResponda somente em JSON.`, store: false, reasoning: { effort: "low" }, text: { format: { type: "json_object" } } });
   });
   it("não faz requisição quando falta chave", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");

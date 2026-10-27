@@ -26,9 +26,9 @@ describe("configuração e teste OpenAI", () => {
   });
   it("salva o modelo no registro único existente", async () => {
     const form = new FormData();
-    form.set("modelo", "gpt-5.4-mini");
+    form.set("modelo", "gpt-6-luna");
     expect((await setAIModel(form)).ok).toBe(true);
-    expect(mocks.upsert).toHaveBeenCalledWith({ id: 1, modelo: "gpt-5.4-mini", provider: "openai", updated_by: "coordinator-1" }, { onConflict: "id" });
+    expect(mocks.upsert).toHaveBeenCalledWith({ id: 1, modelo: "gpt-6-luna", provider: "openai", updated_by: "coordinator-1" }, { onConflict: "id" });
   });
   it("recusa um modelo legado antes de gravar", async () => {
     const form = new FormData();
@@ -52,6 +52,14 @@ describe("configuração e teste OpenAI", () => {
   it("não indica sucesso para um HTTP 200 sem texto", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "completed", output: [] }))));
     expect((await testAIModel("gpt-5.4-mini")).ok).toBe(false);
+  });
+  it("testa Luna com o mesmo contrato JSON das análises e raciocínio baixo", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: '{"ok":true}' }] }] })));
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await testAIModel("gpt-6-luna")).ok).toBe(true);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      model: "gpt-6-luna", reasoning: { effort: "low" }, text: { format: { type: "json_object" } },
+    });
   });
   it("não chama a API quando falta a chave", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
