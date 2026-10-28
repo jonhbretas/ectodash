@@ -40,6 +40,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { updateDemandaStatus } from "./actions";
+import QuickCreate, { type QuickCreateDefaults } from "./quick-create";
 import OverdueBadge from "./overdue-badge";
 import { useStoredPreference } from "@/lib/use-stored-preference";
 import type { DemandaStatus } from "./status-badge";
@@ -58,6 +59,8 @@ export type KanbanDemanda = {
 };
 
 export type KanbanBoardProps = {
+  quickCreate?: boolean;
+  quickDefaults?: QuickCreateDefaults;
   demandas: KanbanDemanda[];
   // Bulk-selection mode, controlled by the parent KanbanArea — the board
   // stays presentational: it only renders the per-card checkbox overlay
@@ -105,9 +108,9 @@ function KanbanCard({
   const currentIndex = STATUS_ORDER.indexOf(demanda.status);
   const canMoveLeft = currentIndex > 0;
   const canMoveRight = currentIndex < STATUS_ORDER.length - 1;
-  const prazoFormatada = format(new Date(`${demanda.prazo}T00:00:00`), "dd/MM/yyyy", {
+  const prazoFormatada = demanda.prazo ? format(new Date(`${demanda.prazo}T00:00:00`), "dd/MM/yyyy", {
     locale: ptBR,
-  });
+  }) : "Sem prazo";
 
   const checklistTotal = demanda.checklistTotal ?? 0;
   const checklistFeitos = demanda.checklistFeitos ?? 0;
@@ -261,6 +264,8 @@ function KanbanCard({
 }
 
 export default function KanbanBoard({
+  quickCreate = false,
+  quickDefaults,
   demandas,
   selectionMode = false,
   selectedIds,
@@ -407,9 +412,10 @@ export default function KanbanBoard({
                 </div>
               </div>
 
+              {quickCreate && !selectionMode && <QuickCreate status={column.status} {...quickDefaults} />}
               {items.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-zinc-300 p-4 text-center text-base text-zinc-400">
-                  Nenhuma demanda aqui
+                  {quickCreate ? "Adicione uma tarefa só com o nome" : "Nenhuma demanda aqui"}
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2 lg:min-h-[calc(100dvh-13rem)]">
@@ -432,13 +438,13 @@ export default function KanbanBoard({
           );
         })}
 
-        <Link
+        {quickCreate ? <div className="lg:hidden"><QuickCreate dialog /></div> : <Link
           href="/demandas/nova"
           className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-xl font-medium text-zinc-700 ring-1 ring-zinc-200/60 transition-all duration-200 hover:bg-white hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] lg:hidden"
         >
           <PlusCircle size={22} aria-hidden="true" />
           Criar
-        </Link>
+        </Link>}
     </div>
   );
 }

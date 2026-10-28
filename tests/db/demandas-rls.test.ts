@@ -35,7 +35,8 @@ describe.skipIf(!canRun)(
     const createdLiderAreaKeys: Array<{ lider_id: string; area: string }> = [];
     let fixtureCounter = 0;
 
-    admin = createClient(supabaseUrl!, serviceRoleKey!);
+    // Skipped suites still execute their definition callback.
+    admin = canRun ? createClient(supabaseUrl!, serviceRoleKey!) : null!;
 
     // Mints a unique disposable @example.invalid fixture profile. Uses the
     // admin create call so the suite dispatches no real messages and burns
@@ -115,6 +116,50 @@ describe.skipIf(!canRun)(
 
       return client;
     }
+
+    it("private quick tasks stay hidden from assigned people and cannot be published or merged into public tasks", async () => {
+      const coordinator = await createFixtureWithRole("coordenador_geral");
+      const assigned = await createFixtureUser();
+      const coordClient = await signInAs(coordinator);
+      const assignedClient = await signInAs(assigned);
+      const { data: task, error } = await coordClient.from("demandas").insert({
+        titulo: `Tarefa privada de teste ${Date.now()}`,
+        restrita_coordenacao_geral: true,
+      }).select("id, prazo, status").single();
+      expect(error).toBeNull();
+      expect(task?.prazo).toBeNull();
+      expect(task?.status).toBe("pendente");
+      if (!task) throw new Error("Missing private fixture");
+      createdDemandaIds.push(task.id);
+      for (const table of ["demanda_responsaveis", "demanda_membros"]) {
+        const { error: linkError } = await coordClient.from(table).insert({ demanda_id: task.id, profile_id: assigned.id });
+        expect(linkError).toBeNull();
+      }
+      expect((await coordClient.from("demanda_checklist").insert({ demanda_id: task.id, item: "Item confidencial" })).error).toBeNull();
+      expect((await coordClient.from("demanda_comentarios").insert({ demanda_id: task.id, conteudo: "Comentário confidencial" })).error).toBeNull();
+      for (const table of ["demandas", "demandas_com_status", "demanda_responsaveis", "demanda_membros", "demanda_checklist", "demanda_comentarios"]) {
+        const { data, error: readError } = await assignedClient.from(table).select("*").eq(table.startsWith("demanda_") ? "demanda_id" : "id", task.id);
+        expect(readError).toBeNull();
+        expect(data).toEqual([]);
+      }
+      const { data: changed } = await assignedClient.from("demandas").update({ titulo: "Ataque" }).eq("id", task.id).select("id");
+      expect(changed).toEqual([]);
+      expect((await assignedClient.from("demanda_comentarios").insert({ demanda_id: task.id, conteudo: "Sem acesso" })).error).not.toBeNull();
+      expect((await coordClient.from("demandas").update({ restrita_coordenacao_geral: false, prazo: "2027-01-15" }).eq("id", task.id)).error).not.toBeNull();
+      const { data: publicTask, error: publicError } = await coordClient.from("demandas").insert({ titulo: "Tarefa pública de teste", prazo: "2027-01-15" }).select("id").single();
+      expect(publicError).toBeNull();
+      if (!publicTask) throw new Error("Missing public fixture");
+      createdDemandaIds.push(publicTask.id);
+      const { data: merged, error: mergeError } = await coordClient.rpc("mesclar_demandas", { p_manter_id: publicTask.id, p_remover_ids: [task.id] });
+      expect(mergeError).toBeNull();
+      expect(merged).toBe("escopos_diferentes");
+      const outsiderMerge = await assignedClient.rpc("mesclar_demandas", { p_manter_id: publicTask.id, p_remover_ids: [task.id] });
+      expect(outsiderMerge.data).not.toBe("ok");
+      const { data: stillPrivate } = await coordClient.from("demandas").select("restrita_coordenacao_geral").eq("id", task.id).single();
+      expect(stillPrivate?.restrita_coordenacao_geral).toBe(true);
+      expect((await assignedClient.from("demandas").insert({ titulo: "Sem prazo" })).error).not.toBeNull();
+      expect((await assignedClient.from("demandas").insert({ titulo: "Privada sem permissão", restrita_coordenacao_geral: true })).error).not.toBeNull();
+    });
 
     afterAll(async () => {
       // Demandas first — `on delete cascade` from demanda_responsaveis means

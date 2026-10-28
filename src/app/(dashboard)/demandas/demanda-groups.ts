@@ -33,7 +33,7 @@ export function compareDemandas(
   if (a.atrasada !== b.atrasada) {
     return a.atrasada ? -1 : 1;
   }
-  return a.prazo.localeCompare(b.prazo);
+  return (a.prazo || "9999-12-31").localeCompare(b.prazo || "9999-12-31");
 }
 
 // One section per distinct group value. A demanda with multiple

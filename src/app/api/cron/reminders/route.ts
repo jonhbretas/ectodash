@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
     const { data: demandas, error: demandasError } = await supabase
       .from("demandas_com_status")
       .select("id, titulo, prazo, status, atrasada")
+      .eq("restrita_coordenacao_geral", false)
       .neq("status", "concluida")
       .or(`atrasada.eq.true,prazo.lte.${windowEndISO}`);
 

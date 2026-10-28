@@ -810,12 +810,16 @@ export async function corrigirDemandaComIa(
 
   const { data: demanda } = await supabase
     .from("demandas_com_status")
-    .select("id, titulo, prazo, area, projeto, evento_id, etiqueta_id")
+    .select("id, titulo, prazo, area, projeto, evento_id, etiqueta_id, restrita_coordenacao_geral")
     .eq("id", demandaId)
     .single();
 
   if (!demanda) {
     return { ok: false, message: "Demanda não encontrada.", sugestao: null };
+  }
+
+  if (demanda.restrita_coordenacao_geral) {
+    return { ok: false, message: "Demandas privadas não são enviadas para serviços de IA.", sugestao: null };
   }
 
   const [comentariosRows, responsaveisRows, perfisRows, voluntariosRows, eventosRows, areasRows, projetosRows] =
@@ -1284,6 +1288,7 @@ export async function mesclarDemandas(
 
   if (resultado !== "ok") {
     const mensagens: Record<string, string> = {
+      escopos_diferentes: "Demandas privadas só podem ser mescladas com outras demandas privadas.",
       sem_permissao:
         "Você não tem permissão para mesclar uma ou mais demandas selecionadas.",
       mesma_demanda: "A demanda mantida não pode estar entre as absorvidas.",

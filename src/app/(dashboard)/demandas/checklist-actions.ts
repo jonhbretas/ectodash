@@ -196,7 +196,7 @@ export async function comentarDemanda(
 
   const { data: demanda, error: demandaError } = await supabase
     .from("demandas")
-    .select("titulo")
+    .select("titulo, restrita_coordenacao_geral")
     .eq("id", demandaId)
     .single();
 
@@ -216,6 +216,12 @@ export async function comentarDemanda(
       ...comentarioInitial,
       message: "Não foi possível publicar o comentário.",
     };
+  }
+
+  // Private comments never resolve recipients or reach the email provider.
+  if (demanda.restrita_coordenacao_geral) {
+    revalidatePath(`/demandas/${demandaId}/editar`);
+    return { ok: true, message: "" };
   }
 
   // @mention emails — best effort: a send failure never fails the comment

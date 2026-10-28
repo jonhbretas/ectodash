@@ -86,11 +86,11 @@ export default function DemandaTable({
       </TableHeader>
       <TableBody>
         {demandas.map((demanda) => {
-          const prazoFormatada = format(
+          const prazoFormatada = demanda.prazo ? format(
             new Date(`${demanda.prazo}T00:00:00`),
             "dd/MM/yyyy",
             { locale: ptBR }
-          );
+          ) : "Sem prazo";
 
           const selected = selectionActive
             ? selectedIds?.has(demanda.id) ?? false

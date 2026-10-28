@@ -468,11 +468,11 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                             demanda.atrasada ? "text-red-700" : "text-zinc-700"
                           }`}
                         >
-                          {format(
+                          {demanda.prazo ? format(
                             new Date(`${demanda.prazo}T00:00:00`),
                             "dd/MM/yyyy",
                             { locale: ptBR }
-                          )}
+                          ) : "Sem prazo"}
                         </span>
                         {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
                       </span>
@@ -497,11 +497,11 @@ export default async function VoluntarioPage({ params }: VoluntarioPageProps) {
                       <span className="text-xl text-zinc-900">{demanda.titulo}</span>
                       <span className="text-base text-zinc-700">
                         Concluída — prazo{" "}
-                        {format(
+                        {demanda.prazo ? format(
                           new Date(`${demanda.prazo}T00:00:00`),
                           "dd/MM/yyyy",
                           { locale: ptBR }
-                        )}
+                        ) : "Sem prazo"}
                       </span>
                     </Link>
                   ))}

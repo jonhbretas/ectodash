@@ -18,6 +18,7 @@ export type Comentario = {
 };
 
 export type DemandaComentariosProps = {
+  privada?: boolean;
   demandaId: string;
   comentarios: Comentario[];
 };
@@ -38,6 +39,7 @@ function ComentarButton() {
 }
 
 export default function DemandaComentarios({
+  privada = false,
   demandaId,
   comentarios,
 }: DemandaComentariosProps) {
@@ -96,7 +98,7 @@ export default function DemandaComentarios({
           name="conteudo"
           rows={3}
           required
-          placeholder='Mencione alguém com "@nome" para avisar por e-mail...'
+          placeholder={privada ? "Comentário interno. Menções não enviam e-mail nem concedem acesso." : 'Mencione alguém com "@nome" para avisar por e-mail...'}
           className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-lg text-zinc-900 transition-all duration-200 hover:border-zinc-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         />
         <ComentarButton />

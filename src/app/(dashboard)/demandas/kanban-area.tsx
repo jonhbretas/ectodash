@@ -21,6 +21,7 @@ import { excluirDemandas, mesclarDemandas } from "./actions";
 import { groupDemandas } from "./demanda-groups";
 
 export type KanbanAreaProps = {
+  quickCreate?: boolean;
   demandas: KanbanDemanda[];
   // Role gate for the "Selecionar" button (coordenador_geral or
   // coordenador_area), same shape as DemandaList's canExcluir. RLS and the
@@ -33,6 +34,7 @@ export type KanbanAreaProps = {
 };
 
 export default function KanbanArea({
+  quickCreate = false,
   demandas,
   canGerir = false,
   agrupar = null,
@@ -231,7 +233,7 @@ export default function KanbanArea({
                 <span className="flex min-w-0 flex-1 flex-col gap-1 text-base font-semibold leading-snug text-zinc-900">
                   {demanda.titulo}
                   <span className="flex flex-wrap items-center gap-1.5 text-base font-normal text-zinc-500">
-                    {format(new Date(`${demanda.prazo}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}
+                    {demanda.prazo ? format(new Date(`${demanda.prazo}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }) : "Sem prazo"}
                     <StatusBadge status={demanda.status} />
                     {demanda.atrasada && <OverdueBadge prazo={demanda.prazo} />}
                   </span>
@@ -301,7 +303,7 @@ export default function KanbanArea({
         </p>
       )}
 
-      {grouped ? (
+      {grouped?.length ? (
         <div className="flex w-full flex-col gap-8">
           {grouped.map((group) => (
             <div key={group.label} className="flex w-full flex-col gap-4">
@@ -316,6 +318,8 @@ export default function KanbanArea({
                 </span>
               </div>
               <KanbanBoard
+                quickCreate={quickCreate}
+                quickDefaults={agrupar === "area" && group.items[0]?.area ? { area: group.items[0].area } : agrupar === "projeto" && group.items[0]?.projeto ? { projeto: group.items[0].projeto } : undefined}
                 key={`grupo-${group.label}`}
                 demandas={group.items}
                 {...selectionProps}
@@ -324,7 +328,7 @@ export default function KanbanArea({
           ))}
         </div>
       ) : (
-        <KanbanBoard demandas={demandas} {...selectionProps} />
+        <KanbanBoard demandas={demandas} quickCreate={quickCreate} {...selectionProps} />
       )}
     </div>
   );

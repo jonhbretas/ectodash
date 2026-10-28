@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import QuickCreate from "./quick-create";
 import { useRef, useState, useTransition } from "react";
 import {
   FilterX,
@@ -36,6 +37,7 @@ import type { DemandaFilters } from "./demanda-filter-schema";
 export type Demanda = DemandaGroupable;
 
 export type DemandaListProps = {
+  quickCreate?: boolean;
   demandas: Demanda[];
   // currentFilters: the same parsed searchParams page.tsx passes to
   // DemandaFilters — needed here so the inline grouping control
@@ -69,6 +71,7 @@ export type DemandaListProps = {
 };
 
 export default function DemandaList({
+  quickCreate = false,
   demandas,
   currentFilters,
   groupBy,
@@ -308,6 +311,7 @@ export default function DemandaList({
         onSucesso={aoEditar}
       />
 
+      {quickCreate && !selectionMode && (count > 0 || filtersActive) && <QuickCreate />}
       {count === 0 && filtersActive ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <FilterX size={48} className="text-zinc-300" aria-hidden="true" />
@@ -319,7 +323,7 @@ export default function DemandaList({
             &quot;Limpar filtros&quot; para ver todas as demandas.
           </p>
           <Link
-            href="/demandas"
+            href={quickCreate ? "/demandas?coordenacao=1" : "/demandas"}
             className="flex min-h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-3 text-xl font-medium text-zinc-900 transition-all duration-200 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Limpar filtros
@@ -335,12 +339,12 @@ export default function DemandaList({
             Quando alguém criar uma demanda, ela vai aparecer aqui. Toque em
             &quot;Criar&quot; para começar.
           </p>
-          <Link
+          {quickCreate ? <div className="w-full max-w-md"><QuickCreate /></div> : <Link
             href="/demandas/nova"
             className="flex min-h-14 items-center justify-center rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white transition-all duration-200 hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
           >
             Criar
-          </Link>
+          </Link>}
         </div>
       ) : grouped ? (
         <div className="flex flex-col gap-8">

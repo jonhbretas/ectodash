@@ -8,6 +8,7 @@ import DemandaChecklist from "../../demanda-checklist";
 import DemandaComentarios from "../../demanda-comentarios";
 import ExcluirDemandaButton from "../../excluir-demanda-button";
 import PageContainer from "../../../page-container";
+import CoordenacaoBanner from "../../coordenacao-banner";
 
 // corrigirDemandaComIa's AI call may run past the default 10s function
 // budget — give the page's server actions room.
@@ -47,7 +48,7 @@ export default async function EditarDemandaPage({
 
   const { data: demanda } = await supabase
     .from("demandas_com_status")
-    .select("id, titulo, prazo, status, area, projeto, evento_id, etiqueta_id, atrasada")
+    .select("id, titulo, prazo, status, area, projeto, evento_id, etiqueta_id, atrasada, restrita_coordenacao_geral")
     .eq("id", id)
     .single();
 
@@ -164,20 +165,22 @@ export default async function EditarDemandaPage({
     <PageContainer>
       <div className="flex w-full flex-col gap-8">
         <Link
-          href="/demandas"
+          href={demanda.restrita_coordenacao_geral ? "/demandas?coordenacao=1" : "/demandas"}
           className="inline-flex w-fit items-center gap-1.5 text-base font-medium text-zinc-400 transition-colors hover:text-zinc-600"
         >
           <ArrowLeft size={16} aria-hidden="true" />
           Voltar para a lista
         </Link>
 
+        {demanda.restrita_coordenacao_geral && <CoordenacaoBanner />}
         <DemandaInlineEditor
+          privada={demanda.restrita_coordenacao_geral}
           demanda={{
             id: demanda.id,
             titulo: demanda.titulo,
-            prazo: demanda.prazo,
+            prazo: demanda.prazo ?? "",
             status: demanda.status,
-            atrasada: demanda.atrasada,
+            atrasada: Boolean(demanda.atrasada),
             area: demanda.area,
             projeto: demanda.projeto,
             eventoId: demanda.evento_id ?? null,
@@ -223,6 +226,7 @@ export default async function EditarDemandaPage({
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
               <DemandaComentarios
+                privada={demanda.restrita_coordenacao_geral}
                 demandaId={String(id)}
                 comentarios={comentarios}
               />

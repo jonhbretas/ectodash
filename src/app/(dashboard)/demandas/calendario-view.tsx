@@ -21,8 +21,10 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { KanbanDemanda } from "./kanban-board";
+import QuickCreate from "./quick-create";
 
 export type CalendarioViewProps = {
+  quickCreate?: boolean;
   demandas: KanbanDemanda[];
 };
 
@@ -37,7 +39,7 @@ const STATUS_CHIP: Record<
   concluida: { className: "bg-green-100 text-green-900", label: "Concluída" },
 };
 
-export default function CalendarioView({ demandas }: CalendarioViewProps) {
+export default function CalendarioView({ demandas, quickCreate = false }: CalendarioViewProps) {
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
 
   const monthStart = startOfMonth(cursor);
@@ -48,6 +50,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
   const byDate = useMemo(() => {
     const map = new Map<string, KanbanDemanda[]>();
     for (const demanda of demandas) {
+      if (!demanda.prazo) continue;
       const date = format(parseISO(demanda.prazo), "yyyy-MM-dd");
       const bucket = map.get(date) ?? [];
       bucket.push(demanda);
@@ -159,6 +162,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
                       );
                     })}
                   </div>
+                  {quickCreate && <QuickCreate compact prazo={dateKey} />}
                 </div>
               );
             })}
@@ -166,6 +170,7 @@ export default function CalendarioView({ demandas }: CalendarioViewProps) {
         ))}
       </div>
 
+      {quickCreate && demandas.some((d) => !d.prazo) && <div className="flex flex-wrap gap-2 rounded-xl border border-zinc-200 bg-white p-3"><span className="text-sm font-medium text-zinc-600">Sem prazo:</span>{demandas.filter((d) => !d.prazo).map((d) => <Link key={d.id} className="rounded-lg bg-violet-50 px-2 py-1 text-sm text-violet-900 hover:underline" href={`/demandas/${d.id}/editar`}>{d.titulo}</Link>)}</div>}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base text-zinc-700">
         <span className="font-semibold text-zinc-900">Legenda:</span>
         {(["pendente", "em_andamento", "concluida"] as const).map((status) => {

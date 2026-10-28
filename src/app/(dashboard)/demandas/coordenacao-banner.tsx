@@ -12,6 +12,7 @@ export default function CoordenacaoBanner() {
         </p>
         <p className="mt-1 text-sm font-medium text-violet-950">
           Demandas privadas, visíveis somente para coordenadores gerais.
+          {" "}Atribuições e menções não concedem acesso nem enviam e-mails.
         </p>
       </div>
       <span className="hidden shrink-0 rounded-full bg-violet-700 px-3 py-1 text-xs font-semibold text-white sm:inline-flex">

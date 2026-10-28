@@ -47,9 +47,9 @@ export default function DemandaCard({
   onToggle,
   onConclude,
 }: DemandaCardProps) {
-  const prazoFormatada = format(new Date(`${prazo}T00:00:00`), "dd/MM/yyyy", {
+  const prazoFormatada = prazo ? format(new Date(`${prazo}T00:00:00`), "dd/MM/yyyy", {
     locale: ptBR,
-  });
+  }) : "Sem prazo";
 
   const selected = selectionActive ? selectedIds?.has(id) ?? false : false;
 

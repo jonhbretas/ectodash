@@ -11,6 +11,7 @@ import KanbanArea from "./kanban-area";
 import CalendarioView from "./calendario-view";
 import PageContainer from "../page-container";
 import CoordenacaoBanner from "./coordenacao-banner";
+import QuickCreate from "./quick-create";
 import { FilterX, Plus, UserCheck } from "lucide-react";
 import { parseDemandaFilters } from "./demanda-filter-schema";
 import { cn } from "@/lib/utils";
@@ -268,11 +269,11 @@ export default async function DemandasPage({
     return {
       id: demanda.id,
       titulo: demanda.titulo,
-      prazo: demanda.prazo,
+      prazo: demanda.prazo ?? "",
       status: demanda.status,
       area: demanda.area,
       projeto: demanda.projeto,
-      atrasada: demanda.atrasada,
+      atrasada: Boolean(demanda.atrasada),
       eventoNome: demanda.evento_id
         ? (eventoById.get(demanda.evento_id) ?? null)
         : null,
@@ -378,13 +379,13 @@ export default async function DemandasPage({
                   )}
                 </Link>
               )}
-              <Link
-                href={demandasDaCoordenacao ? "/demandas/nova?coordenacao=1" : "/demandas/nova"}
+              {demandasDaCoordenacao ? <div className="min-w-0 flex-1 sm:flex-initial"><QuickCreate dialog /></div> : <Link
+                href="/demandas/nova"
                 className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#2195B9] to-[#FDBA2F] px-3 text-sm font-medium text-white shadow-[0_2px_8px_rgba(33,149,185,0.25)] transition-all duration-200 hover:from-[#28627B] hover:to-[#2195B9] hover:shadow-[0_4px_12px_rgba(33,149,185,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:flex-initial sm:px-5"
               >
                 <Plus size={18} aria-hidden="true" />
                 Criar
-              </Link>
+              </Link>}
             </div>
           </div>
         </div>
@@ -405,6 +406,7 @@ export default async function DemandasPage({
 
         {view === "kanban" ? (
           <KanbanArea
+            quickCreate={demandasDaCoordenacao}
             key={boardKey}
             demandas={demandaList}
             canGerir={
@@ -414,9 +416,10 @@ export default async function DemandasPage({
             agruparFilter={<DemandaAgruparFilter currentFilters={filters} />}
           />
         ) : view === "calendario" ? (
-          <CalendarioView demandas={demandaList} />
+          <CalendarioView demandas={demandaList} quickCreate={demandasDaCoordenacao} />
         ) : (
           <DemandaList
+            quickCreate={demandasDaCoordenacao}
             demandas={demandaList}
             currentFilters={filters}
             groupBy={filters.agrupar}

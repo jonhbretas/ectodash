@@ -85,6 +85,7 @@ export type InlineDemanda = {
 };
 
 export type InlineEditorProps = {
+  privada?: boolean;
   demanda: InlineDemanda;
   responsaveis: InlinePessoa[];
   membros: InlinePessoa[];
@@ -274,6 +275,7 @@ function PersonPicker({
 
 
 export default function DemandaInlineEditor({
+  privada = false,
   demanda,
   responsaveis,
   membros,
@@ -785,7 +787,7 @@ export default function DemandaInlineEditor({
         )}
 
         {/* Preenche campos faltantes com IA */}
-        <button
+        {!privada && <button
           type="button"
           onClick={corrigirComIa}
           disabled={corrigindoIa}
@@ -794,7 +796,7 @@ export default function DemandaInlineEditor({
         >
           <Sparkles size={15} aria-hidden="true" />
           {corrigindoIa ? "Corrigindo..." : "Preencher com IA"}
-        </button>
+        </button>}
       </div>
 
       {corrigiuMensagem && (
