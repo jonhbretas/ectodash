@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { GitMerge, Merge, Search } from "lucide-react";
 import { mesclarEventosEmMassa } from "./actions";
 import { FormSelect } from "@/components/ui/form-select";
+import { SelectGroup, SelectItem, SelectLabel } from "@/components/ui/select";
+import { agruparEventosPorMes } from "@/lib/contratos/eventos-por-mes";
 
 export type EventoMergeOpcao = {
   id: number;
@@ -20,9 +22,9 @@ export type EventoMergeOpcao = {
 };
 
 function rotuloEvento(e: EventoMergeOpcao): string {
-  const [ano, mes, dia] = e.data_evento.split("-");
-  const data = `${dia}/${mes}/${ano}`;
-  return e.local ? `${e.titulo} — ${data} · ${e.local}` : `${e.titulo} — ${data}`;
+  const [ano, mes, dia] = e.data_evento.slice(0, 10).split("-");
+  const data = e.data_evento ? `${dia}/${mes}/${ano}` : "Sem data";
+  return `${data} — ${e.titulo.trim().replace(/\s+/g, " ")}`;
 }
 
 function normalizar(texto: string): string {
@@ -45,10 +47,7 @@ export default function MergeEventosSection({
   const [executando, setExecutando] = useState(false);
   const [, startTransition] = useTransition();
 
-  const opcoes = eventos.map((e) => ({
-    value: String(e.id),
-    label: rotuloEvento(e),
-  }));
+  const grupos = useMemo(() => agruparEventosPorMes(eventos), [eventos]);
 
   const buscaLimpa = busca.trim();
   const candidatos = useMemo(() => {
@@ -58,7 +57,7 @@ export default function MergeEventosSection({
     if (!buscaLimpa) return semDefinitivo;
     const alvo = normalizar(buscaLimpa);
     return semDefinitivo.filter((e) =>
-      normalizar(`${e.titulo} ${e.local ?? ""} ${e.data_evento}`).includes(alvo)
+      normalizar(`${rotuloEvento(e)} ${e.local ?? ""} ${e.data_evento}`).includes(alvo)
     );
   }, [eventos, manterId, buscaLimpa]);
 
@@ -145,8 +144,29 @@ export default function MergeEventosSection({
           onValueChange={aoTrocarDefinitivo}
           placeholder="Escolha o evento que fica"
           ariaLabel="Escolha o evento definitivo"
-          options={opcoes}
-        />
+          className="text-left data-[size=default]:h-auto [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal"
+        >
+          {grupos.map((grupo) => (
+            <SelectGroup key={grupo.chave} className="max-w-[calc(100vw-2rem)]">
+              <SelectLabel className="border-b border-zinc-100 px-3 py-2 text-base font-semibold text-[#28627B]">
+                {grupo.label}
+              </SelectLabel>
+              {grupo.eventos.map((evento) => (
+                <SelectItem
+                  key={evento.id}
+                  value={String(evento.id)}
+                  textValue={rotuloEvento(evento)}
+                  className="rounded-lg px-3 py-2.5 text-base data-[highlighted]:bg-zinc-100"
+                >
+                  <span className="flex min-w-0 flex-col gap-0.5 whitespace-normal break-words text-left">
+                    <span className="font-medium">{rotuloEvento(evento)}</span>
+                    {evento.local && <span className="text-sm text-zinc-500">{evento.local}</span>}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))}
+        </FormSelect>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -205,6 +225,7 @@ export default function MergeEventosSection({
                 />
                 <span className="min-w-0 flex-1 text-base text-zinc-800">
                   {rotuloEvento(e)}
+                  {e.local && <span className="block text-sm text-zinc-500">{e.local}</span>}
                 </span>
               </label>
             ))}
