@@ -54,6 +54,10 @@ export default function AtasTab({ atas }: { atas: AtaRow[] }) {
         <Link href="/reunioes/nova" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-zinc-300 bg-white px-5 text-base font-medium text-zinc-900 hover:bg-zinc-50">
           Registrar ata
         </Link>
+        <Link href="/analisar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-base font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]">
+          <Sparkles size={18} aria-hidden="true" />
+          Adicionar com IA
+        </Link>
       </div>
 
       {filtradas.length === 0 ? (

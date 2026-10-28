@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../../page-container";
 import AtaForm from "../ata-form";
@@ -29,7 +31,13 @@ export default async function NovaAtaPage() {
 
   return (
     <PageContainer>
-      <h1 className="text-2xl font-semibold text-zinc-900">Registrar ata</h1>
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold text-zinc-900">Registrar ata</h1>
+        <Link href="/analisar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-base font-medium text-white transition-colors hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]">
+          <Sparkles size={18} aria-hidden="true" />
+          Adicionar com IA
+        </Link>
+      </header>
       <AtaForm voluntarios={voluntarios} />
     </PageContainer>
   );

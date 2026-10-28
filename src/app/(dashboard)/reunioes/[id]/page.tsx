@@ -258,6 +258,13 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/analisar"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-xl border border-[#2195B9] bg-white px-5 text-xl font-medium text-[#2195B9] transition-colors hover:bg-[#2195B9]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+          >
+            <Sparkles size={22} aria-hidden="true" />
+            Adicionar com IA
+          </Link>
           <a
             href={`/api/atas/${id}/pdf`}
             className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#2195B9] px-5 text-xl font-medium text-white shadow-[0_1px_3px_rgba(33,149,185,0.25)] transition-all duration-200 hover:bg-[#28627B] hover:shadow-[0_2px_6px_rgba(33,149,185,0.3)] active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
