@@ -24,6 +24,8 @@ import { listarTermosGlossario } from "@/lib/glossary-db";
 import { obterTranscricao } from "@/lib/meetings";
 import { parseArquivoFonte, ArquivoNaoSuportadoError, ArquivoVazioError } from "@/lib/atas/parse-file";
 import { sanitizeSearch } from "@/lib/utils";
+import { detectarEventosDuplicadosNaAta } from "@/lib/eventos/duplicados-ata";
+import { listarEventosParaConferencia, salvarEventoDaAta } from "@/lib/eventos/salvar-evento-ata";
 import {
   ataAnaliseEnvelopeSchema,
   type AtaAnalise,
@@ -348,6 +350,13 @@ async function analisarTranscricaoImpl(
       // continuidade é best-effort — falha não bloqueia a análise
     }
     const analise = await extractWithAi(texto, contextoAtaAnterior, tipoFonte);
+    const { data: cadastrados, error: erroEventos } = await listarEventosParaConferencia(supabase);
+    if (erroEventos) return { ...initialState, message: "Não foi possível conferir os eventos existentes. Tente novamente." };
+    const conferencia = await detectarEventosDuplicadosNaAta(analise.eventos.map((evento, index) => ({
+      key: String(index), titulo: evento.titulo, data: evento.data ?? "",
+      local: evento.local || null, descricao: evento.descricao || null,
+    })), cadastrados ?? []);
+    analise.eventos = analise.eventos.map((evento, index) => ({ ...evento, duplicado: conferencia.duplicados[String(index)] }));
     if (!analise.ata.resumo && analise.ata.titulo.trim().length === 0) {
       return {
         ...initialState,
@@ -359,7 +368,7 @@ async function analisarTranscricaoImpl(
     }
     return {
       ok: true,
-      message: "",
+      message: conferencia.aviso ?? "",
       analise,
       arquivoNome,
       texto: texto.slice(0, MEETING_TEXT_MAX + 60000),
@@ -452,6 +461,8 @@ const salvarEventosSchema = z
       data: z.string().regex(dataRegex).nullable(),
       local: z.string().trim().max(300).nullable(),
       descricao: z.string().trim().max(3000).nullable(),
+      eventoId: z.number().int().positive().nullable().optional(),
+      acao: z.enum(["incrementar", "criar"]).optional(),
     })
   )
   .max(50);
@@ -670,23 +681,20 @@ export async function salvarAtaAnalise(
     (evento) => evento.titulo.trim() && evento.data
   );
   const novoEventoIdPorIndice = new Map<number, number>();
+  const errosEventos: string[] = [];
   for (const [indice, evento] of eventosRevisados.entries()) {
-    const { data: criado, error: eventoError } = await supabase
-      .from("eventos")
-      .insert({
-        titulo: evento.titulo,
-        data_evento: evento.data,
-        local: evento.local || null,
-        descricao: evento.descricao || null,
-        origem_ata_id: ataId,
-      })
-      .select("id")
-      .single();
-    if (eventoError || !criado) {
+    try {
+      if (evento.acao === "incrementar" && !evento.eventoId) throw new Error("Escolha o evento a mesclar.");
+      const resultado = await salvarEventoDaAta(supabase, { ...evento, data: evento.data! }, {
+        eventoId: evento.acao === "incrementar" ? evento.eventoId : null,
+        criarMesmoAssim: evento.acao === "criar" && Boolean(evento.eventoId),
+        ataId, fonte: tituloReferencia,
+      });
+      novoEventoIdPorIndice.set(indice, resultado.id);
+    } catch (eventoError) {
       console.error("salvarAtaAnalise: evento insert failed", eventoError);
-      continue;
+      errosEventos.push(evento.titulo);
     }
-    novoEventoIdPorIndice.set(indice, criado.id);
   }
 
   function resolverEventoId(eventoRef: string | null): number | null {
@@ -817,8 +825,8 @@ export async function salvarAtaAnalise(
   revalidatePath("/");
 
   return {
-    ok: true,
-    message: "Ata salva com sucesso.",
+    ok: errosEventos.length === 0,
+    message: errosEventos.length ? `A ata já foi salva, mas estes eventos precisam de conferência na agenda: ${errosEventos.join(", ")}.` : "Ata salva com sucesso.",
     ataId,
   };
 }

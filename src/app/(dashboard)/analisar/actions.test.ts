@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ completion: vi.fn(), gate: vi.fn(), write: vi.fn() }));
-vi.mock("@/lib/ai/ai-client", () => ({ chatCompletion: mocks.completion }));
+const mocks = vi.hoisted(() => ({ completion: vi.fn(), gate: vi.fn(), write: vi.fn(), eventos: [] as Array<{ id: number; titulo: string; data_evento: string; local: string | null; descricao: string | null }> }));
+vi.mock("@/lib/ai/ai-client", () => ({ chatCompletion: mocks.completion, wrapUserContent: (texto: string) => texto }));
 vi.mock("@/lib/role-gates", () => ({ requireAnaliseComIA: mocks.gate }));
 vi.mock("@/lib/glossary-db", () => ({ listarTermosGlossario: async () => [] }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -24,16 +24,38 @@ function payload(dip: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.completion.mockReset();
+  mocks.eventos = [];
   mocks.gate.mockResolvedValue({ supabase: {
     from: (table: string) => {
       const chain = {
-        data: table === "dips" ? [knownDip] : [], error: null,
-        select: () => chain, eq: () => chain, not: () => chain,
+        data: table === "dips" ? [knownDip] : table === "eventos" ? mocks.eventos : [], error: null,
+        select: () => chain, eq: () => chain, not: () => chain, order: () => chain, range: () => chain,
         insert: mocks.write, upsert: mocks.write, update: mocks.write,
       };
       return chain;
     },
   } });
+});
+
+describe("conferência de eventos ao subir ata", () => {
+  it("executa a comparação após extrair a ata e oferece mesclagem sem escrever antes da revisão", async () => {
+    mocks.eventos = [{ id: 12, titulo: "Escola de Paraambulatóriologia", data_evento: "2026-11-15", local: "Online", descricao: "Inscrições abertas." }];
+    const extraido = JSON.parse(payload({ localidade: "Curitiba", pais: "Brasil" }));
+    extraido.eventos = [{ titulo: "Escola Paraambulatório", data: "2026-11-15", descricao: "Divulgação aprovada.", evidencia: source }];
+    mocks.completion.mockResolvedValueOnce(JSON.stringify(extraido)).mockImplementationOnce(async (_system: string, conteudo: string) => {
+      const chave = conteudo.match(/"key":"([^"]+)"/)?.[1];
+      return JSON.stringify({ correspondencias: [{ key: chave, eventoId: 12, confianca: "alta", justificativa: "Mesma edição e data." }] });
+    });
+    const form = new FormData();
+    form.set("texto", source);
+    const result = await analisarComIA({} as AnalisarState, form);
+    expect(result.ok).toBe(true);
+    expect(mocks.completion).toHaveBeenCalledTimes(2);
+    const evento = result.eventos![0];
+    expect(result.duplicados.eventos[evento.key]).toMatchObject({ id: 12, justificativa: "Mesma edição e data." });
+    expect(mocks.write).not.toHaveBeenCalled();
+  });
 });
 afterEach(() => vi.restoreAllMocks());
 

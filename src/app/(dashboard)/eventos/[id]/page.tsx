@@ -151,7 +151,7 @@ export default async function EventoPage({ params }: EventoPageProps) {
             )}
           </div>
           {evento.descricao && (
-            <p className="max-w-3xl text-xl leading-relaxed text-zinc-600">
+              <p className="max-w-3xl whitespace-pre-wrap text-xl leading-relaxed text-zinc-600">
               {evento.descricao}
             </p>
           )}

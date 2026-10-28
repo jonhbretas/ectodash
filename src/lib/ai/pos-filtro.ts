@@ -291,6 +291,25 @@ export function filtrarResultado(
   for (const lista of dedupListas) {
     const arr = lista === 'deliberacoes' ? (out.ata as any)?.deliberacoes : out[lista];
     if (!Array.isArray(arr)) continue;
+    if (lista === 'eventos') {
+      // Cursos recorrentes ficam separados por data/local. Duas menções
+      // ao mesmo acontecimento acumulam as descrições, sem descartar detalhes.
+      const eventos = new Map<string, ItemBase>();
+      for (const item of arr as ItemBase[]) {
+        const evento = item as Record<string, unknown>;
+        const titulo = normalizeTexto(String(evento.titulo ?? evento.nome ?? ''));
+        const chave = `${titulo}|${String(evento.data ?? '')}|${normalizeTexto(String(evento.local ?? ''))}`;
+        const anterior = eventos.get(chave);
+        if (!anterior) {
+          eventos.set(chave, { ...item });
+          continue;
+        }
+        const trechos = [anterior.descricao, item.descricao].filter((texto): texto is string => typeof texto === 'string' && texto.trim().length > 0);
+        anterior.descricao = [...new Set(trechos)].join('\n\n');
+      }
+      out[lista] = [...eventos.values()];
+      continue;
+    }
     const vistos = new Set<string>();
     const filtrado = (arr as ItemBase[]).filter((item) => {
       const chave = normalizeTexto(String((item as any).titulo ?? (item as any).nome ?? item.descricao ?? JSON.stringify(item)));

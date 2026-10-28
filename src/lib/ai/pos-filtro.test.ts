@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizarDatasEHorarios, normalizarHorario, removerNulos } from "./pos-filtro";
+import { filtrarResultado, normalizarDatasEHorarios, normalizarHorario, removerNulos } from "./pos-filtro";
 
 describe("normalizarHorario", () => {
   it.each([
@@ -43,5 +43,18 @@ describe("removerNulos", () => {
       zero: 0,
       vazio: "",
     });
+  });
+});
+
+describe("eventos recorrentes e informações complementares na ata", () => {
+  it("preserva datas diferentes e junta as descrições das menções ao mesmo evento", () => {
+    const evidencia = "O curso terá duas edições, com inscrições e divulgação organizadas pela equipe.";
+    const { resultado } = filtrarResultado({ eventos: [
+      { titulo: "Curso de Ectoplasmia", data: "2026-11-01", descricao: "Inscrição R$ 400.", evidencia },
+      { titulo: "Curso de Ectoplasmia", data: "2026-11-01", descricao: "Divulgação pela equipe.", evidencia },
+      { titulo: "Curso de Ectoplasmia", data: "2026-12-01", descricao: "Outra edição.", evidencia },
+    ] }, evidencia);
+    expect(resultado.eventos).toHaveLength(2);
+    expect((resultado.eventos as Array<{ descricao: string }>)[0].descricao).toBe("Inscrição R$ 400.\n\nDivulgação pela equipe.");
   });
 });

@@ -14,6 +14,8 @@ import { sanitizeSearch } from "@/lib/utils";
 import { applyGlossary } from "@/lib/glossary";
 import { listarTermosGlossario } from "@/lib/glossary-db";
 import { dipLocalizacaoShape } from "@/lib/ai/dip-localizacao";
+import { detectarEventosDuplicadosNaAta, type SugestaoEvento } from "@/lib/eventos/duplicados-ata";
+import { listarEventosParaConferencia, salvarEventoDaAta } from "@/lib/eventos/salvar-evento-ata";
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -170,7 +172,7 @@ export type AnalisarState = {
   // what to do with each one (pular / mesclar / criar mesmo assim).
   duplicados: {
     demandas: Record<string, { id: number; titulo: string }>;
-    eventos: Record<string, { id: number; titulo: string }>;
+    eventos: Record<string, { id: number; titulo: string } & Partial<Omit<SugestaoEvento, "id" | "titulo">>>;
     dips: Record<string, { id: number; localidade: string; data: string | null }>;
   };
   // Account list for the responsável selects on the review screen. The
@@ -369,7 +371,7 @@ export async function analisarComIA(
         .not("email", "ilike", "%example.invalid%"),
       supabase.from("voluntarios").select("id, nome"),
       supabase.from("demandas").select("id, titulo"),
-      supabase.from("eventos").select("id, titulo, data_evento"),
+      listarEventosParaConferencia(supabase),
       supabase.from("dips").select("id, localidade, pais, data_dip"),
     ]);
 
@@ -377,12 +379,6 @@ export async function analisarComIA(
     id: d.id,
     titulo: d.titulo,
     norm: normalizeTexto(d.titulo),
-  }));
-  const eventosExistentesRows = (eventosExistentes.data ?? []).map((e) => ({
-    id: e.id,
-    titulo: e.titulo,
-    norm: normalizeTexto(e.titulo),
-    data: e.data_evento,
   }));
   const dipsExistentesRows = (dipsExistentes.data ?? []).map((d) => ({
     id: d.id,
@@ -469,33 +465,26 @@ export async function analisarComIA(
       dips: {},
     };
 
+    const eventos = data.eventos?.map((e: Record<string, unknown>) => ({
+      key: crypto.randomUUID(),
+      titulo: String(e.titulo ?? e.nome ?? "").trim(),
+      data: String(e.data ?? "").trim(),
+      local: e.local ? String(e.local) : null,
+      descricao: e.descricao ? String(e.descricao) : null,
+    })) ?? null;
+    if (eventosExistentes.error) {
+      return erroState("Não foi possível consultar os eventos existentes para conferir duplicados. Tente novamente.");
+    }
+    const conferencia = await detectarEventosDuplicadosNaAta(eventos ?? [], eventosExistentes.data ?? []);
+    duplicados.eventos = conferencia.duplicados;
+
     return {
       ok: true,
-      message: "",
+      message: conferencia.aviso ?? "",
       tipo: data.tipo,
       titulo: data.titulo,
       resumo: data.resumo,
-      eventos: data.eventos
-        ? data.eventos.map((e: any) => {
-            const titulo = String(e.titulo ?? e.nome ?? "").trim();
-            const dataEv = String(e.data ?? "").trim();
-            const local = e.local ?? null;
-            const descricao = e.descricao ?? null;
-            const key = crypto.randomUUID();
-            const norm = normalizeTexto(titulo);
-            const match = eventosExistentesRows.find(
-              (existing) =>
-                existing.data === dataEv &&
-                (existing.norm === norm ||
-                  (norm.length >= 6 &&
-                    (existing.norm.includes(norm) || norm.includes(existing.norm))))
-            );
-            if (match) {
-              duplicados.eventos[key] = { id: match.id, titulo: match.titulo };
-            }
-            return { key, titulo, data: dataEv, local: local ? String(local) : null, descricao: descricao ? String(descricao) : null };
-          })
-        : null,
+      eventos,
       demandas: data.demandas
         ? await Promise.all(
             (data.demandas as any[]).map(async (d: any) => {
@@ -977,53 +966,32 @@ async function salvarPautas(
 
 async function salvarEventos(
   supabase: SupabaseClient,
-  events: SalvarTudoInput["eventos"]
+  events: SalvarTudoInput["eventos"],
+  fonte: string,
+  ataId: number | null,
 ): Promise<{ salvos: number; ignorados: number; atualizados: number; erros: string[] }> {
   if (!events || events.length === 0) return { salvos: 0, ignorados: 0, atualizados: 0, erros: [] };
 
   const ignorados = events.filter((e) => e.acao === "pular").length;
-  const aCriar = events.filter((e) => e.acao !== "pular" && e.acao !== "incrementar");
-  const aIncrementar = events.filter((e) => e.acao === "incrementar" && e.eventoId);
 
   let salvos = 0;
   let atualizados = 0;
   const erros: string[] = [];
 
-  if (aCriar.length > 0) {
-    const { error } = await supabase.from("eventos").insert(
-      aCriar.map((e) => ({
-        titulo: e.titulo,
-        data_evento: e.data,
-        local: e.local ?? null,
-        descricao: e.descricao ?? null,
-      }))
-    );
-    if (error) {
-      console.error("salvarTudoDaAnalise: eventos failed", error);
-      erros.push(`eventos (${error.message})`);
-    } else {
-      salvos = aCriar.length;
-    }
-  }
-
-  for (const e of aIncrementar) {
-    // Incrementa o evento existente: atualiza local/descrição/data e
-    // título com as novas informações da transcrição. O evento mantém
-    // seu id e vínculos com demandas; nada se perde.
-    const { error } = await supabase
-      .from("eventos")
-      .update({
-        titulo: e.titulo,
-        data_evento: e.data,
-        local: e.local ?? null,
-        descricao: e.descricao ?? null,
-      })
-      .eq("id", e.eventoId!);
-    if (error) {
-      console.error("salvarTudoDaAnalise: evento increment update failed", error);
-      erros.push(`${e.titulo} (${e.data})`);
-    } else {
-      atualizados++;
+  // Sequencial: duas menções ao mesmo evento no lote acumulam informações.
+  for (const e of events.filter((evento) => evento.acao !== "pular")) {
+    try {
+      if (e.acao === "incrementar" && !e.eventoId) throw new Error("Escolha o evento a mesclar.");
+      const resultado = await salvarEventoDaAta(supabase, e, {
+        eventoId: e.acao === "incrementar" ? e.eventoId : null,
+        criarMesmoAssim: e.acao === "criar" && Boolean(e.eventoId),
+        fonte, ataId,
+      });
+      if (resultado.atualizado) atualizados++;
+      else salvos++;
+    } catch (error) {
+      console.error("salvarTudoDaAnalise: evento failed", error);
+      erros.push(`${e.titulo} (${e.data}) — ${error instanceof Error ? error.message : "falha ao salvar"}`);
     }
   }
 
@@ -1282,7 +1250,7 @@ export async function salvarTudoDaAnalise(
 
   const [eventos, demandas, dips, atualizacoes, pautas] =
     await Promise.all([
-      salvarEventos(supabase, input.eventos),
+      salvarEventos(supabase, input.eventos, input.ata ? `${input.ata.titulo} (${input.ata.data})` : "análise de IA", ata.ataId),
       salvarDemandas(supabase, input.demandas),
       ata.ataId === null
         ? Promise.resolve({ salvos: 0, ignorados: 0, atualizados: 0, erros: [] as string[] })

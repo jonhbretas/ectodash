@@ -651,6 +651,7 @@ function ResultsScreen({
               Icon={CalendarDays}
               count={eventoEdits.length}
             >
+              {state.message && <p role="status" className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{state.message}</p>}
               {eventoEdits.length > 0 ? (
                 <div className="flex flex-col gap-3">
                   {eventoEdits.map((e) => {
@@ -685,9 +686,10 @@ function ResultsScreen({
                           </button>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                          <label className="flex flex-col gap-1">
+                          <label htmlFor={`evento-data-${e.key}`} className="flex flex-col gap-1">
                             <span className="text-xs font-medium text-slate-700">Data</span>
                             <DateInput
+                              id={`evento-data-${e.key}`}
                               value={e.data}
                               onChange={(ev) => setEventoEdits((prev) => prev.map((it) => (it.key === e.key ? { ...it, data: ev.target.value } : it)))}
                               className={fieldClassName}
@@ -721,7 +723,7 @@ function ResultsScreen({
                           <div className="flex flex-col gap-1 border-t border-amber-200 pt-2">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-xs font-medium text-amber-800">
-                                Possivel duplicado: &quot;{dup.titulo}&quot; ja cadastrado.
+                                Evento já cadastrado: &quot;{dup.titulo}&quot;{dup.data ? ` (${dup.data.split("-").reverse().join("/")})` : ""}.
                               </span>
                               <label className="flex items-center gap-1.5 text-xs text-slate-600">
                                 Acao
@@ -735,15 +737,16 @@ function ResultsScreen({
                                   }
                                   className="min-h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"
                                 >
-                                  <option value="incrementar">Atualizar evento — acrescentar novas infos</option>
+                                  <option value="incrementar">Mesclar — manter um evento e juntar informações</option>
                                   <option value="pular">Pular (ja existe)</option>
                                   <option value="criar">Criar mesmo assim (duplicar)</option>
                                 </select>
                               </label>
                             </div>
+                            {dup.justificativa && <p className="text-xs text-amber-800">{dup.justificativa} {dup.confianca ? `Confiança ${dup.confianca}.` : ""}</p>}
                             <p className="text-xs text-zinc-600">
                               {eventoAcoes[e.key] === "incrementar"
-                                ? "O evento existente será atualizado com local/descrição/data vindos da transcrição. Nada se perde e não duplica."
+                                ? "O mesmo card será atualizado. A descrição anterior e as novas informações serão preservadas, com referência à ata."
                                 : eventoAcoes[e.key] === "pular"
                                   ? "O evento existente não será alterado."
                                   : "Um novo evento será criado mesmo havendo um registro parecido."}

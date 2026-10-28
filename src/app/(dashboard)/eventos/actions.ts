@@ -40,7 +40,7 @@ const editarEventoSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha uma data válida."),
   local: z.string().trim().max(200).optional().or(z.literal("")),
-  descricao: z.string().trim().max(2000).optional().or(z.literal("")),
+  descricao: z.string().trim().max(100000).optional().or(z.literal("")),
 });
 
 // Corrects an existing event's data (the pre-registration events have no

@@ -121,6 +121,7 @@ export default function AnaliseForm({
       <ReviewScreen
         key={resetKey}
         analise={analise}
+        avisoEventos={analiseState.message}
         arquivoNome={analiseState.arquivoNome}
         texto={analiseState.texto ?? ""}
         voluntarios={voluntarios}
@@ -175,9 +176,12 @@ export default function AnaliseForm({
           </legend>
           <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
             <label
+              htmlFor="fonte-transcricao"
+              aria-label="Transcrição bruta"
               className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${tipoFonte === "transcricao" ? "border-[#2195B9] bg-sky-50/60" : "border-zinc-300 bg-white hover:bg-zinc-50"}`}
             >
               <input
+                id="fonte-transcricao"
                 type="radio"
                 name="tipoFonte"
                 value="transcricao"
@@ -195,9 +199,12 @@ export default function AnaliseForm({
               </span>
             </label>
             <label
+              htmlFor="fonte-ata-pronta"
+              aria-label="Ata pronta"
               className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${tipoFonte === "ata_pronta" ? "border-[#2195B9] bg-sky-50/60" : "border-zinc-300 bg-white hover:bg-zinc-50"}`}
             >
               <input
+                id="fonte-ata-pronta"
                 type="radio"
                 name="tipoFonte"
                 value="ata_pronta"
@@ -364,6 +371,7 @@ function PendingHint() {
 
 type ReviewScreenProps = {
   analise: NonNullable<AnalisarTranscricaoState["analise"]>;
+  avisoEventos?: string;
   arquivoNome: string | null;
   texto: string;
   voluntarios: VoluntarioOption[];
@@ -407,6 +415,8 @@ type EventoReview = {
   data: string;
   local: string;
   descricao: string;
+  duplicado?: NonNullable<AnalisarTranscricaoState["analise"]>["eventos"][number]["duplicado"];
+  acao: "incrementar" | "criar";
 };
 
 type PautaReview = {
@@ -422,6 +432,7 @@ const labelClassName = "text-lg font-medium text-zinc-900";
 
 function ReviewScreen({
   analise,
+  avisoEventos,
   arquivoNome,
   texto,
   voluntarios,
@@ -527,6 +538,8 @@ function ReviewScreen({
       data: evento.data || "",
       local: evento.local || "",
       descricao: evento.descricao || "",
+      duplicado: evento.duplicado,
+      acao: evento.duplicado ? "incrementar" : "criar",
     }))
   );
   const [pautas, setPautas] = useState<PautaReview[]>(() =>
@@ -570,6 +583,8 @@ function ReviewScreen({
       data: e.data || null,
       local: e.local || null,
       descricao: e.descricao || null,
+      eventoId: e.duplicado?.id ?? null,
+      acao: e.acao,
     }));
 
   const salvarPautas = pautas
@@ -1069,6 +1084,7 @@ function ReviewScreen({
               {salvarEventos.length} {salvarEventos.length === 1 ? "evento" : "eventos"}
             </span>
           </div>
+          {avisoEventos && <p role="status" className="rounded-xl bg-amber-50 p-3 text-base text-amber-800">{avisoEventos}</p>}
           {eventos.length === 0 ? (
             <p className="text-lg text-zinc-600">
               Nenhum evento institucional identificado.
@@ -1084,6 +1100,26 @@ function ReviewScreen({
                       : "border-zinc-200 bg-zinc-50/60 grayscale-[30%]"
                   }`}
                 >
+                  {evento.duplicado && (
+                    <div className="flex flex-col gap-2 rounded-xl bg-amber-50 p-3 text-base text-amber-900">
+                      <p>Evento já cadastrado: <strong>{evento.duplicado.titulo}</strong> ({evento.duplicado.data.split("-").reverse().join("/")}).</p>
+                      <p>{evento.duplicado.justificativa} Confiança {evento.duplicado.confianca}.</p>
+                      <label className="flex flex-col gap-1">
+                        Como salvar este evento
+                        <select
+                          aria-label={`Ação para o evento ${evento.id + 1}`}
+                          value={evento.acao}
+                          disabled={!evento.incluido}
+                          onChange={(e) => setEventos((prev) => prev.map((item) => item.id === evento.id ? { ...item, acao: e.target.value as "incrementar" | "criar" } : item))}
+                          className={fieldClassName}
+                        >
+                          <option value="incrementar">Mesclar — manter um evento e juntar informações</option>
+                          <option value="criar">Criar separado (outra turma ou edição)</option>
+                        </select>
+                      </label>
+                      <p>A descrição anterior e as novas informações ficam no mesmo card, com referência à ata.</p>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3">
                     <input
                       id={`evento-incluido-${evento.id}`}

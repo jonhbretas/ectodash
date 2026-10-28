@@ -85,6 +85,10 @@ export const ataAnaliseSchema = z.object({
           .or(z.literal("")),
         local: z.string().trim().max(300).optional().or(z.literal("")),
         descricao: z.string().trim().max(3000).optional().or(z.literal("")),
+        duplicado: z.object({
+          id: z.number().int().positive(), titulo: z.string(), data: z.string(),
+          justificativa: z.string(), confianca: z.enum(["alta", "media"]),
+        }).optional(),
       })
     )
     .max(50),
@@ -172,6 +176,8 @@ export type AtaSalvarEvento = {
   data: string | null;
   local: string | null;
   descricao: string | null;
+  eventoId?: number | null;
+  acao?: "incrementar" | "criar";
 };
 
 export type AtaSalvarPauta = {
