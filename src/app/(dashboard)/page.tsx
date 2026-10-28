@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Clock,
   LayoutDashboard,
-  Map,
   MessageSquarePlus,
   NotebookPen,
   Wrench,
@@ -18,7 +17,6 @@ import { podeAcessar, type Acesso, type ModuloAcesso } from "@/lib/acesso";
 import { proximaTerca, HORARIO_REUNIAO } from "@/lib/proxima-reuniao";
 import PageContainer from "./page-container";
 import PagamentosHome from "./pagamentos-home";
-import HomeJourney from "./home-journey";
 
 type HubCard = {
   href: string;
@@ -66,10 +64,9 @@ export default async function InicioPage() {
   const nome = displayName(profile ?? { email: user.email ?? "" });
   const primeiroNome = nome.split(" ")[0] || nome;
 
-  const [{ data: cargosRaw }, { data: flags }, journeyResult] = await Promise.all([
+  const [{ data: cargosRaw }, { data: flags }] = await Promise.all([
     supabase.rpc("meus_cargos"),
     supabase.from("system_module_flags").select("modulo").eq("ativo", false),
-    supabase.from("jornada_exploracao").select("etapa_id").eq("profile_id", user.id),
   ]);
   const acesso: Acesso = {
     role: (profile?.role as Acesso["role"]) ?? null,
@@ -200,14 +197,6 @@ export default async function InicioPage() {
       modulo: "reunioes" as ModuloAcesso,
     },
     {
-      href: "/trilha",
-      titulo: "Trilha dos Saberes",
-      descricao: "Sua progressão de conhecimento",
-      Icon: Map,
-      cor: "bg-[#16a34a]",
-      modulo: "voluntarios" as ModuloAcesso,
-    },
-    {
       href: "/utilidades",
       titulo: "Materiais e utilidades",
       descricao: "Documentos, logos, fichas e links úteis",
@@ -238,13 +227,13 @@ export default async function InicioPage() {
         </p>
       </header>
 
-      <div className="grid w-full items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="w-full">
         {/* ── Cardzinhos de ação ── */}
         <section aria-label="O que você quer fazer" className="flex w-full flex-col gap-3">
           <h2 className="text-lg font-semibold text-slate-900">
             Seus atalhos rápidos
           </h2>
-          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {cards.map(({ href, titulo, descricao, Icon, cor }) => (
               <Link
                 key={titulo + href}
@@ -275,16 +264,6 @@ export default async function InicioPage() {
             ))}
           </div>
         </section>
-        <HomeJourney
-          completedIds={(journeyResult.data ?? []).map((row) => String(row.etapa_id))}
-          availableSystemIds={[
-            "sistema:perfil",
-            ...(pode("eventos") ? ["sistema:eventos"] : []),
-            ...(pode("utilidades") ? ["sistema:utilidades"] : []),
-          ]}
-          canViewTrails={pode("voluntarios")}
-          unavailable={Boolean(journeyResult.error)}
-        />
       </div>
 
       {/* ── Hoje pra você: caixa de entrada resumida ── */}
