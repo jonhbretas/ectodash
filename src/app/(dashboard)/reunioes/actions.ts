@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { salvarReuniaoPorData } from "@/lib/reunioes/salvar-por-data";
 
 export type CriarAtaState = {
   ok: boolean;
@@ -43,80 +44,16 @@ export async function criarAta(
     return { ok: false, message: "Verifique os campos destacados." };
   }
 
-  // A reunião existe antes da ata: se já houver uma reunião "agendada" para
-  // esta data (criada automaticamente ao pedir pauta), a ata preenche essa
-  // linha em vez de duplicar — a pauta vinculada aparece no Log da reunião.
-  const { data: agendada } = await supabase
-    .from("reunioes")
-    .select("id")
-    .eq("data_reuniao", parsed.data.data_reuniao)
-    .eq("status", "agendada")
-    .limit(1)
-    .maybeSingle();
-
-  if (agendada) {
-    const { error: updateError } = await supabase
-      .from("reunioes")
-      .update({
-        titulo: parsed.data.titulo,
-        resumo: parsed.data.resumo || null,
-        status: "realizada",
-      })
-      .eq("id", agendada.id);
-
-    if (updateError) {
-      console.error("criarAta: fill agendada failed", updateError);
-      return {
-        ok: false,
-        message:
-          "Não foi possível salvar a ata agora. Verifique sua internet e tente de novo.",
-      };
-    }
-
-    const voluntarioIds = (formData.getAll("voluntarioIds") as string[])
-      .map((raw) => Number(raw))
-      .filter((id) => Number.isInteger(id) && id > 0);
-
-    if (voluntarioIds.length > 0) {
-      const { error: linkError } = await supabase
-        .from("ata_participantes")
-        .insert(voluntarioIds.map((voluntario_id) => ({ ata_id: agendada.id, voluntario_id })));
-
-      if (linkError) {
-        console.error("criarAta: ata_participantes insert failed", linkError);
-        return {
-          ok: false,
-          message:
-            "A ata foi salva, mas não foi possível vincular os participantes. Tente editar depois.",
-        };
-      }
-    }
-
-    revalidatePath("/reunioes");
-    return { ok: true, message: "Ata registrada com sucesso." };
-  }
-
-  // criado_por is never set from client input — the column default
-  // derives it from the session, same anti-spoofing discipline as
-  // createDemanda (RESEARCH.md Pitfall 4).
-  const { data: novaAta, error } = await supabase
-    .from("reunioes")
-    .insert({
+  let novaAta: { id: number };
+  try {
+    novaAta = await salvarReuniaoPorData(supabase, {
       titulo: parsed.data.titulo,
       data_reuniao: parsed.data.data_reuniao,
       resumo: parsed.data.resumo || null,
       status: "realizada",
-    })
-    .select("id")
-    .single();
-
-  if (error || !novaAta) {
-    console.error("criarAta: insert failed", error);
-    return {
-      ok: false,
-      message:
-        "Não foi possível salvar a ata agora. Verifique sua internet e tente de novo.",
-    };
+    });
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Não foi possível salvar a ata." };
   }
 
   // Participantes vinculados ao roster (voluntarios.id) — batched insert,
@@ -129,7 +66,7 @@ export async function criarAta(
   if (voluntarioIds.length > 0) {
     const { error: linkError } = await supabase
       .from("ata_participantes")
-      .insert(voluntarioIds.map((voluntario_id) => ({ ata_id: novaAta.id, voluntario_id })));
+      .upsert([...new Set(voluntarioIds)].map((voluntario_id) => ({ ata_id: novaAta.id, voluntario_id })), { onConflict: "ata_id,voluntario_id", ignoreDuplicates: true });
 
     if (linkError) {
       console.error("criarAta: ata_participantes insert failed", linkError);
@@ -142,7 +79,7 @@ export async function criarAta(
   }
 
   revalidatePath("/reunioes");
-  return { ok: true, message: "Ata registrada com sucesso." };
+  return { ok: true, message: "Ata salva. Informações da mesma data foram reunidas em uma única reunião." };
 }
 
 export type EditarAtaResult = { ok: boolean; message: string };
@@ -215,6 +152,7 @@ export async function editarAta(formData: FormData): Promise<EditarAtaResult> {
 
   if (updateError) {
     console.error("editarAta: update failed", updateError);
+    if (updateError.code === "23505") return { ok: false, message: "Já existe uma reunião nesta data. Registre ou importe a ata para juntar as informações à reunião existente." };
     return { ok: false, message: "Não foi possível salvar as alterações." };
   }
 

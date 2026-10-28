@@ -22,6 +22,7 @@ import {
 } from "@/lib/proxima-reuniao";
 import { pautasSimilares } from "@/lib/pautas/regras";
 import { trashDriveFile } from "@/lib/google/drive";
+import { salvarReuniaoPorData } from "@/lib/reunioes/salvar-por-data";
 
 export type CriarPautaState = {
   ok: boolean;
@@ -126,17 +127,17 @@ export async function criarPauta(
     if (reuniaoAlvo) {
       reuniaoAlvoId = reuniaoAlvo.id;
     } else {
-      const { data: novaReuniao } = await supabase
-        .from("reunioes")
-        .insert({
+      try {
+        const novaReuniao = await salvarReuniaoPorData(supabase, {
           titulo: `Reunião ${alvoStr.split("-").reverse().join("/")}`,
           data_reuniao: alvoStr,
           horario: HORARIO_REUNIAO,
           status: "agendada",
-        })
-        .select("id")
-        .single();
-      if (novaReuniao) reuniaoAlvoId = novaReuniao.id;
+        });
+        reuniaoAlvoId = novaReuniao.id;
+      } catch (error) {
+        console.error("criarPauta: garantir reunião failed", error);
+      }
       // Se a criação falhar (RLS/erro), segue com null = "próxima".
     }
   }
@@ -234,21 +235,18 @@ export async function marcarPautaDiscutida(
       .limit(1)
       .maybeSingle();
     if (existente) return existente.id;
-    const { data: nova, error: erroCriacao } = await supabase
-      .from("reunioes")
-      .insert({
+    try {
+      const nova = await salvarReuniaoPorData(supabase, {
         titulo: `Reunião ${dataStr.split("-").reverse().join("/")}`,
         data_reuniao: dataStr,
         horario: HORARIO_REUNIAO,
         status: "agendada",
-      })
-      .select("id")
-      .single();
-    if (erroCriacao || !nova) {
+      });
+      return nova.id;
+    } catch (erroCriacao) {
       console.error("marcarPautaDiscutida: auto-create reuniao failed", erroCriacao);
       return null;
     }
-    return nova.id;
   }
 
   // Se ataId não foi informado, mas dataReuniao foi, buscar ou criar a reuniao

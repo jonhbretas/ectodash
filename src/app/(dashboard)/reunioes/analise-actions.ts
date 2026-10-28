@@ -26,6 +26,7 @@ import { parseArquivoFonte, ArquivoNaoSuportadoError, ArquivoVazioError } from "
 import { sanitizeSearch } from "@/lib/utils";
 import { detectarEventosDuplicadosNaAta } from "@/lib/eventos/duplicados-ata";
 import { listarEventosParaConferencia, salvarEventoDaAta } from "@/lib/eventos/salvar-evento-ata";
+import { salvarReuniaoPorData } from "@/lib/reunioes/salvar-por-data";
 import {
   ataAnaliseEnvelopeSchema,
   type AtaAnalise,
@@ -573,48 +574,11 @@ export async function salvarAtaAnalise(
     status: "realizada",
   };
 
-  // A reunião existe antes da ata: se já houver uma reunião "agendada" para
-  // esta data (criada ao pedir pauta), a análise preenche essa linha em vez
-  // de duplicar — as pautas vinculadas aparecem no Log da reunião.
-  const { data: agendada } = await supabase
-    .from("reunioes")
-    .select("id")
-    .eq("data_reuniao", ata.data.data_reuniao)
-    .eq("status", "agendada")
-    .limit(1)
-    .maybeSingle();
-
-  let ataId: number | null = null;
-  if (agendada) {
-    const { error: ataError } = await supabase
-      .from("reunioes")
-      .update(ataCampos)
-      .eq("id", agendada.id);
-    if (ataError) {
-      console.error("salvarAtaAnalise: agendada update failed", ataError);
-      return {
-        ok: false,
-        message: "Não foi possível salvar a ata agora. Tente novamente.",
-        ataId: null,
-      };
-    }
-    ataId = agendada.id;
-  } else {
-    const { data: novaAta, error: ataError } = await supabase
-      .from("reunioes")
-      .insert(ataCampos)
-      .select("id")
-      .single();
-
-    if (ataError || !novaAta) {
-      console.error("salvarAtaAnalise: reunioes insert failed", ataError);
-      return {
-        ok: false,
-        message: "Não foi possível salvar a ata agora. Tente novamente.",
-        ataId: null,
-      };
-    }
-    ataId = novaAta.id;
+  let ataId: number;
+  try {
+    ataId = (await salvarReuniaoPorData(supabase, ataCampos)).id;
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Não foi possível salvar a ata.", ataId: null };
   }
   const tituloReferencia = `${ata.data.titulo} (${ata.data.data_reuniao})`;
 
@@ -664,7 +628,7 @@ export async function salvarAtaAnalise(
     if (vinculos.length > 0) {
       const { error: vinculoError } = await supabase
         .from("ata_participantes")
-        .insert(vinculos);
+        .upsert(vinculos, { onConflict: "ata_id,voluntario_id", ignoreDuplicates: true });
       if (vinculoError) {
         console.error(
           "salvarAtaAnalise: ata_participantes auto-link failed",

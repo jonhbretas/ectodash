@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ completion: vi.fn(), gate: vi.fn(), write: vi.fn(), eventos: [] as Array<{ id: number; titulo: string; data_evento: string; local: string | null; descricao: string | null }> }));
+const mocks = vi.hoisted(() => ({ completion: vi.fn(), gate: vi.fn(), write: vi.fn(), rpc: vi.fn(), eventos: [] as Array<{ id: number; titulo: string; data_evento: string; local: string | null; descricao: string | null }> }));
 vi.mock("@/lib/ai/ai-client", () => ({ chatCompletion: mocks.completion, wrapUserContent: (texto: string) => texto }));
 vi.mock("@/lib/role-gates", () => ({ requireAnaliseComIA: mocks.gate }));
 vi.mock("@/lib/glossary-db", () => ({ listarTermosGlossario: async () => [] }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-import { analisarComIA, type AnalisarState } from "./actions";
+import { analisarComIA, salvarTudoDaAnalise, type AnalisarState } from "./actions";
 
 const source = "Na sexta-feira foram registrados doze participantes na dinâmica e o relatório será revisado na próxima reunião.";
 const knownDip = { id: 7, localidade: "Curitiba", pais: "Brasil", data_dip: "2026-10-23" };
@@ -25,8 +25,10 @@ function payload(dip: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.completion.mockReset();
+  mocks.rpc.mockReset().mockResolvedValue({ data: 104, error: null });
   mocks.eventos = [];
   mocks.gate.mockResolvedValue({ supabase: {
+    rpc: mocks.rpc,
     from: (table: string) => {
       const chain = {
         data: table === "dips" ? [knownDip] : table === "eventos" ? mocks.eventos : [], error: null,
@@ -58,6 +60,24 @@ describe("conferência de eventos ao subir ata", () => {
   });
 });
 afterEach(() => vi.restoreAllMocks());
+
+describe("ata da mesma data na análise unificada", () => {
+  it("usa a mesclagem por data em vez de inserir outra ata", async () => {
+    const ata = { titulo: "Ata de reunião", data: "2026-10-27", horario: "18:56", resumo: "Nova informação", participantes: "", pontos_principais: "", deliberacoes: "" };
+    const resultado = await salvarTudoDaAnalise({ ata });
+    expect(resultado).toMatchObject({ ok: true, ataId: 104 });
+    expect(mocks.rpc).toHaveBeenCalledWith("salvar_reuniao_por_data", { p_dados: expect.objectContaining({ data_reuniao: "2026-10-27", horario: "18:56", status: "realizada" }) });
+    expect(mocks.write).not.toHaveBeenCalled();
+  });
+
+  it("interrompe os demais salvamentos se a ata existente não puder ser mesclada", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: "42501" } });
+    const resultado = await salvarTudoDaAnalise({ ata: { titulo: "Ata", data: "2026-10-27", horario: "18:56", resumo: "", participantes: "", pontos_principais: "", deliberacoes: "" }, eventos: [{ titulo: "Curso", data: "2026-11-01", local: null, descricao: null }] });
+    expect(resultado.ok).toBe(false);
+    expect(mocks.write).not.toHaveBeenCalled();
+  });
+});
 
 async function analyze(dip: Record<string, unknown>) {
   mocks.completion.mockResolvedValue(payload(dip));

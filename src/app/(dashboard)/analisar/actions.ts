@@ -16,6 +16,7 @@ import { listarTermosGlossario } from "@/lib/glossary-db";
 import { dipLocalizacaoShape } from "@/lib/ai/dip-localizacao";
 import { detectarEventosDuplicadosNaAta, type SugestaoEvento } from "@/lib/eventos/duplicados-ata";
 import { listarEventosParaConferencia, salvarEventoDaAta } from "@/lib/eventos/salvar-evento-ata";
+import { salvarReuniaoPorData } from "@/lib/reunioes/salvar-por-data";
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -733,9 +734,9 @@ async function salvarAta(
     return { ataId: null, erro: "ata (dados inválidos)" };
   }
 
-  const { data: novaAta, error } = await supabase
-    .from("reunioes")
-    .insert({
+  let novaAta: { id: number };
+  try {
+    novaAta = await salvarReuniaoPorData(supabase, {
       titulo: parsed.data.titulo,
       data_reuniao: parsed.data.data,
       horario: parsed.data.horario || null,
@@ -743,13 +744,11 @@ async function salvarAta(
       participantes: parsed.data.participantes || null,
       pontos_principais: parsed.data.pontos_principais || null,
       deliberacoes: parsed.data.deliberacoes || null,
-    })
-    .select("id")
-    .single();
-
-  if (error || !novaAta) {
-    console.error("salvarTudoDaAnalise: reunioes insert failed", error);
-    return { ataId: null, erro: "ata" };
+      status: "realizada",
+    });
+  } catch (error) {
+    console.error("salvarTudoDaAnalise: reunioes merge failed", error);
+    return { ataId: null, erro: error instanceof Error ? error.message : "ata" };
   }
 
   // Auto-vínculo de participantes ao roster — mesma regra do fluxo
@@ -800,7 +799,7 @@ async function salvarAta(
     if (vinculos.length > 0) {
       const { error: vinculoError } = await supabase
         .from("ata_participantes")
-        .insert(vinculos);
+        .upsert(vinculos, { onConflict: "ata_id,voluntario_id", ignoreDuplicates: true });
       if (vinculoError) {
         console.error(
           "salvarTudoDaAnalise: ata_participantes auto-link failed",
@@ -1247,6 +1246,7 @@ export async function salvarTudoDaAnalise(
   // The ata must be inserted FIRST — DIPs and update comments reference its
   // id. Everything else is independent and runs in parallel.
   const ata = await salvarAta(supabase, input.ata);
+  if (ata.erro) return { ok: false, message: ata.erro, ataId: null };
 
   const [eventos, demandas, dips, atualizacoes, pautas] =
     await Promise.all([
