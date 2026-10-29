@@ -125,7 +125,10 @@ export const navEntries: SidebarEntry[] = [
     href: "/financeiro",
     modulo: "financeiro",
     children: [
-      { href: "/financeiro", label: "Visão geral", Icon: Wallet, modulo: "financeiro" },
+      { href: "/financeiro", label: "Início", Icon: Wallet, modulo: "financeiro" },
+      { href: "/financeiro/importar", label: "Subir arquivos", Icon: Receipt, modulo: "financeiro" },
+      { href: "/financeiro/analise", label: "Análise", Icon: ChartNoAxesColumn, modulo: "financeiro" },
+      { href: "/financeiro/conferencia", label: "Conferência", Icon: ClipboardList, modulo: "financeiro" },
       { href: "/financeiro/lancamentos", label: "Lançamentos", Icon: Receipt, modulo: "financeiro" },
       { href: "/financeiro/propostas", label: "Propostas", Icon: FileText, modulo: "financeiro" },
       { href: "/financeiro/pagar", label: "A pagar", Icon: DollarSign, modulo: "financeiro" },

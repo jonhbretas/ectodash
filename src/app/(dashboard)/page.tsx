@@ -227,45 +227,6 @@ export default async function InicioPage() {
         </p>
       </header>
 
-      <div className="w-full">
-        {/* ── Cardzinhos de ação ── */}
-        <section aria-label="O que você quer fazer" className="flex w-full flex-col gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Seus atalhos rápidos
-          </h2>
-          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {cards.map(({ href, titulo, descricao, Icon, cor }) => (
-              <Link
-                key={titulo + href}
-                href={href}
-                className="group flex min-h-24 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-[#2195B9]/30 hover:bg-[#2195B9]/5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] active:scale-[0.99] sm:p-4"
-              >
-                <span
-                  className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm sm:size-12 ${cor}`}
-                  aria-hidden="true"
-                >
-                  <Icon size={23} strokeWidth={1.75} />
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-base font-semibold leading-tight text-zinc-900 group-hover:text-[#2195B9]">
-                    {titulo}
-                  </span>
-                  <span className="text-sm leading-snug text-zinc-500">
-                    {descricao}
-                  </span>
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-400 transition-colors group-hover:bg-[#2195B9] group-hover:text-white"
-                >
-                  ›
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      </div>
-
       {/* ── Hoje pra você: caixa de entrada resumida ── */}
       <section
         aria-label="Hoje pra você"
@@ -359,6 +320,19 @@ export default async function InicioPage() {
               : `${pautasCount} pauta${pautasCount === 1 ? "" : "s"} na fila`}
           </span>
         </Link>
+      </section>
+
+      <section aria-label="O que você quer fazer" className="flex w-full flex-col gap-3">
+        <h2 className="text-lg font-semibold text-slate-900">Atalhos rápidos</h2>
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {cards.map(({ href, titulo, descricao, Icon, cor }) => (
+            <Link key={titulo + href} href={href} className="group flex min-h-20 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-[#2195B9]/30 hover:bg-[#2195B9]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]">
+              <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg text-white ${cor}`} aria-hidden="true"><Icon size={19} strokeWidth={1.75}/></span>
+              <span className="flex min-w-0 flex-1 flex-col"><span className="text-sm font-semibold leading-tight text-zinc-900 group-hover:text-[#2195B9]">{titulo}</span><span className="text-xs leading-snug text-zinc-500">{descricao}</span></span>
+              <span aria-hidden="true" className="text-lg text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-[#2195B9]">›</span>
+            </Link>
+          ))}
+        </div>
       </section>
 
       {/* ── Pagamentos e cobranças (só financeiro/coordenador_geral) ── */}
