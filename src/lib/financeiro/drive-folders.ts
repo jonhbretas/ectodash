@@ -1,6 +1,6 @@
 import { findOrCreateChildFolder } from "@/lib/google/drive";
 
-const ROOT = process.env.FINANCEIRO_DRIVE_ROOT_ID || "1MTu30ZaMYb-x_8cNyAX22pOFCn97fZSb";
+const ROOT = process.env.FINANCEIRO_DRIVE_ROOT_ID || "1xMXwtl7xp3zM4nt-p5qoShHxhcEcPnbG";
 
 export const FINANCE_FOLDER_LABELS: Record<string, string> = {
   nota_fiscal: "01 - Notas fiscais",
