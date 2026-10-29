@@ -27,11 +27,12 @@ export default async function FinanceiroHome() {
       <ActionCard href="/financeiro/importar" title="Subir arquivos" description="Enviar extratos, notas, faturas e comprovantes. O sistema guarda os originais e prepara os dados para conferência." Icon={Upload} action="Começar envio" tone="cyan" />
       <ActionCard href="/financeiro/analise" title="Analisar dados" description="Consultar o fluxo financeiro, comparar períodos e abrir os lançamentos já registrados." Icon={BarChart3} action="Abrir análise" tone="navy" />
     </section>
-    <section className="grid w-full gap-3 sm:grid-cols-2">
+    <section className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-3">
       <Link href="/financeiro/conferencia" className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4 transition hover:border-amber-300 hover:bg-amber-100"><span><span className="block font-semibold text-zinc-900">Conferência humana</span><span className="text-sm text-zinc-600">Corrigir leituras incertas antes de fechar o mês</span></span><span className="flex size-9 items-center justify-center rounded-full bg-white font-semibold text-amber-800">{pendentes ?? 0}</span></Link>
       <Link href="/financeiro/lancamentos" className="flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-cyan-200 hover:bg-cyan-50"><span><span className="block font-semibold text-zinc-900">Lançamentos</span><span className="text-sm text-zinc-600">Ver os registros detalhados do financeiro</span></span><span className="flex items-center gap-2 text-sm font-medium text-cyan-800">{importacoes ?? 0} arquivos <ArrowRight size={16}/></span></Link>
+      <Link href="/financeiro/fechamento" className="flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-cyan-200 hover:bg-cyan-50"><span><span className="block font-semibold text-zinc-900">Fechar o mês</span><span className="text-sm text-zinc-600">Checklist final e registro de aprovação</span></span><span className="text-sm font-medium text-cyan-800">Abrir <ArrowRight size={16} className="inline"/></span></Link>
     </section>
-    <p className="text-sm text-zinc-500">Fluxo recomendado: enviar arquivos → validar os dados → revisar pendências → consultar a análise.</p>
+    <p className="text-sm text-zinc-500">Fluxo recomendado: enviar arquivos → validar e conciliar → revisar pendências → fechar o mês → consultar a análise.</p>
   </PageContainer>;
 }
 

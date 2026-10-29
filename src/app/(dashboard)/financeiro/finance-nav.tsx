@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ScanSearch, UploadCloud, Home } from "lucide-react";
+import { BarChart3, ScanSearch, UploadCloud, Home, ListChecks, ArrowLeftRight, LockKeyhole } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/financeiro", label: "Início", description: "Ações principais", Icon: Home },
   { href: "/financeiro/importar", label: "Subir arquivos", description: "Envio e validação", Icon: UploadCloud },
+  { href: "/financeiro/lancamentos", label: "Lançamentos", description: "Dados extraídos", Icon: ListChecks },
+  { href: "/financeiro/conciliacao", label: "Conciliação", description: "Venda e depósito", Icon: ArrowLeftRight },
   { href: "/financeiro/analise", label: "Análise", description: "Resumo e períodos", Icon: BarChart3 },
   { href: "/financeiro/conferencia", label: "Conferência", description: "Revisão manual", Icon: ScanSearch },
+  { href: "/financeiro/fechamento", label: "Fechamento", description: "Validar e fechar mês", Icon: LockKeyhole },
 ] as const;
 
 export default function FinanceNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Navegação do financeiro" className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+    <nav aria-label="Navegação do financeiro" className="grid w-full grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
       {items.map(({ href, label, description, Icon }) => {
         const active = href === "/financeiro" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 

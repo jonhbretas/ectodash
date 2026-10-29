@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Check, CheckCircle2, ClipboardCheck, RefreshCw, ScanSearch, UploadCloud } from "lucide-react";
 
-type ImportResult = { file?: string; status: string; uncertain?: number; warnings?: string[]; error?: string };
+type ImportResult = { file?: string; status: string; uncertain?: number; warnings?: string[]; error?: string; provider?: string | null; sourceType?: string };
 
 export default function FinancialAutomationPanel() {
   const router = useRouter();
@@ -22,11 +22,13 @@ export default function FinancialAutomationPanel() {
       const results = result.results as ImportResult[];
       const processed = results.filter((item) => item.status === "PROCESSED" || item.status === "PARTIAL").length;
       const errors = results.filter((item) => item.status === "FAILED").length;
-      const review = results.some((item) => (item.uncertain ?? 0) > 0 || (item.warnings?.length ?? 0) > 0);
+      const review = results.some((item) => (item.uncertain ?? 0) > 0 || (item.warnings?.length ?? 0) > 0 || item.status === "PARTIAL");
       setHasReview(review);
       setStage(errors ? 1 : review ? 3 : 4);
       const errorDetails = results.filter((item) => item.status === "FAILED").map((item) => `${item.file ?? "Arquivo"}: ${item.error ?? "falha no processamento"}`).join(" · ");
-      setMessage(`${processed} arquivo(s) enviados e lidos. ${errors ? `${errors} arquivo(s) tiveram erro: ${errorDetails}.` : ""}${review ? " Há itens para conferir manualmente." : errors ? " Corrija os erros e tente novamente." : " Os dados estão disponíveis para análise."}`);
+      const sources = [...new Set(results.map((item) => item.provider).filter(Boolean))];
+      const warnings = results.flatMap((item) => (item.warnings ?? []).map((warning) => `${item.file}: ${warning}`));
+      setMessage(`${processed} arquivo(s) arquivados e processados. ${sources.length ? `Fontes reconhecidas: ${sources.join(", ")}. ` : ""}${errors ? `${errors} arquivo(s) tiveram erro: ${errorDetails}. ` : ""}${review ? `Há itens para conferência. ${warnings.slice(0, 3).join(" · ")}` : errors ? "Corrija os erros e tente novamente." : "Os dados estão disponíveis para análise."}`);
       router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Falha no envio. Verifique os arquivos e tente novamente."); }
     finally { setPending(false); }
@@ -49,7 +51,7 @@ export default function FinancialAutomationPanel() {
       </div>
       <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 p-5 text-center transition hover:border-cyan-500 hover:bg-cyan-50/50">
         <UploadCloud size={26} className="text-cyan-800"/><span className="font-medium text-zinc-800">Escolha ou arraste os arquivos aqui</span><span className="text-xs text-zinc-500">OFX, PDF, CSV ou Excel · até 10 MB cada</span>
-        <input name="files" type="file" multiple accept=".csv,.xlsx,.xls,.ofx,.pdf" required className="mt-1 max-w-full text-sm text-zinc-700 file:mr-3 file:rounded-md file:border-0 file:bg-cyan-800 file:px-3 file:py-2 file:font-medium file:text-white" />
+        <input name="files" type="file" multiple accept=".csv,.xlsx,.xls,.ofx,.pdf,.jpg,.jpeg,.png,.webp,.heic" required className="mt-1 max-w-full text-sm text-zinc-700 file:mr-3 file:rounded-md file:border-0 file:bg-cyan-800 file:px-3 file:py-2 file:font-medium file:text-white" />
       </label>
       <button disabled={pending} className="flex min-h-12 items-center justify-center gap-2 self-start rounded-lg bg-cyan-800 px-5 font-semibold text-white transition hover:bg-cyan-900 disabled:opacity-60">{pending ? <RefreshCw className="animate-spin" size={18}/> : <UploadCloud size={18}/>} {pending ? "Enviando e lendo arquivos…" : "Enviar e validar arquivos"}</button>
     </form>

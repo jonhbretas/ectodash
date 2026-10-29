@@ -18,7 +18,7 @@ export default async function ConferenciaPage() {
     const metadata = exception.import_id ? importsById.get(exception.import_id)?.metadata as { drive_url?: string | null } | undefined : undefined;
     const linked = (exception.ledger_ids ?? []).map((id) => ledgerById.get(id)).filter((row): row is LedgerRow => Boolean(row));
     const source = linked.length ? linked : [null];
-    return source.map((row) => ({ id: row?.id ?? null, exceptionId: exception.id, problem: exception.problem, recommendation: exception.recommendation, movement_date: row?.movement_date ?? new Date().toISOString().slice(0, 10), original_description: row?.original_description ?? "", net_amount: row?.net_amount ?? 0, drive_url: metadata?.drive_url ?? null, type: row?.type ?? "DESPESA", manual: !row }));
+    return source.map((row) => ({ id: row?.id ?? null, exceptionId: exception.id, problem: exception.problem, recommendation: exception.recommendation, movement_date: row?.movement_date ?? new Date().toISOString().slice(0, 10), original_description: row?.original_description ?? "", net_amount: row?.net_amount ?? 0, drive_url: metadata?.drive_url ?? null, type: row?.type ?? "DESPESA", manual: !row, resolveOnly: exception.problem.startsWith("Período fora da competência") }));
   });
   return <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-8"><header><h1 className="text-2xl font-semibold text-zinc-900">Conferência humana</h1><p className="mt-1 text-zinc-600">Revise os lançamentos incertos lado a lado com o documento original. Cada correção fica registrada no histórico.</p></header><ReviewList rows={rows} /></main>;
 }

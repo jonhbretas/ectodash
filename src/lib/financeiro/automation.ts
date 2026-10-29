@@ -10,6 +10,9 @@ export type NormalizedFinancialRow = {
   sheet?: string;
   externalId?: string;
   date: string;
+  saleDate?: string;
+  settlementDate?: string;
+  expectedDate?: string;
   description: string;
   normalizedDescription: string;
   type: FinancialType;

@@ -7,12 +7,20 @@ export async function PATCH(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  const body = await request.json().catch(() => null) as { exceptionId?: string; ledgerId?: string | null; date?: string; description?: string; amount?: number; type?: string } | null;
+  const body = await request.json().catch(() => null) as { exceptionId?: string; ledgerId?: string | null; date?: string; description?: string; amount?: number; type?: string; resolveOnly?: boolean } | null;
   const types = ["RECEITA_FATURADA", "RECEITA_RECEBIDA", "DESPESA", "TRANSFERENCIA_INTERNA", "APLICACAO", "RESGATE", "RENDIMENTO_FINANCEIRO", "ESTORNO", "CHARGEBACK", "TARIFA", "AJUSTE", "SALDO_INICIAL", "SALDO_FINAL"];
-  if (!body?.exceptionId || !body.date || !/^\d{4}-\d{2}-\d{2}$/.test(body.date) || !body.description?.trim() || !Number.isFinite(body.amount) || Number(body.amount) < 0 || !types.includes(body.type || "")) return NextResponse.json({ error: "Preencha data, descrição, tipo e valor válido." }, { status: 400 });
-  const entryType = body.type as string;
-  const { data: exception } = await supabase.from("finance_exceptions").select("id,import_id,ledger_ids,status").eq("id", body.exceptionId).single();
+  if (!body?.exceptionId) return NextResponse.json({ error: "Conferência não encontrada." }, { status: 400 });
+  const { data: exception } = await supabase.from("finance_exceptions").select("id,import_id,ledger_ids,status,problem").eq("id", body.exceptionId).single();
   if (!exception) return NextResponse.json({ error: "Conferência não encontrada." }, { status: 404 });
+  if (body.resolveOnly) {
+    if (exception.status !== "OPEN" || (exception.ledger_ids ?? []).length || !exception.problem.startsWith("Período fora da competência")) return NextResponse.json({ error: "Esta conferência exige revisão de um lançamento." }, { status: 409 });
+    const { error } = await supabase.from("finance_exceptions").update({ status: "RESOLVED", resolved_by: user.id, resolved_at: new Date().toISOString() }).eq("id", exception.id);
+    if (error) return NextResponse.json({ error: "Não foi possível registrar a conferência." }, { status: 400 });
+    await supabase.from("finance_audit_log").insert({ import_id: exception.import_id, action: "PERIOD_CONFIRMED", after_data: { exception_id: exception.id }, actor: user.id });
+    return NextResponse.json({ ok: true });
+  }
+  if (!body.date || !/^\d{4}-\d{2}-\d{2}$/.test(body.date) || !body.description?.trim() || !Number.isFinite(body.amount) || Number(body.amount) < 0 || !types.includes(body.type || "")) return NextResponse.json({ error: "Preencha data, descrição, tipo e valor válido." }, { status: 400 });
+  const entryType = body.type as string;
   if (exception.status !== "OPEN" || (body.ledgerId && !(exception.ledger_ids ?? []).includes(body.ledgerId))) return NextResponse.json({ error: "Este lançamento não pertence a uma conferência aberta." }, { status: 409 });
   let oldRow: Record<string, unknown> = {};
   let ledgerId = body.ledgerId;
