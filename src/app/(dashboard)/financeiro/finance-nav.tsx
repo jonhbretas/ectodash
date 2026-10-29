@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardList, ReceiptText, WalletCards } from "lucide-react";
+import { BarChart3, ClipboardList, ReceiptText, WalletCards, ScanSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -10,6 +10,7 @@ const items = [
   { href: "/financeiro/lancamentos", label: "Lançamentos", description: "Livro financeiro", Icon: ClipboardList },
   { href: "/financeiro/pagar", label: "A pagar", description: "Despesas e prazos", Icon: WalletCards },
   { href: "/financeiro/propostas", label: "Propostas", description: "Recebimentos", Icon: ReceiptText },
+  { href: "/financeiro/conferencia", label: "Conferência", description: "Revisão manual", Icon: ScanSearch },
 ] as const;
 
 export default function FinanceNavigation() {
