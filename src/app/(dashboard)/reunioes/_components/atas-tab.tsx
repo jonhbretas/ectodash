@@ -38,6 +38,9 @@ export default function AtasTab({ atas }: { atas: AtaRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <Link href="/reunioes/consulta" className="inline-flex min-h-12 items-center justify-center gap-2 self-start rounded-xl bg-[#2195B9] px-5 text-base font-medium text-white hover:bg-[#28627B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]">
+        <Search size={18} aria-hidden="true" /> Consultar atas
+      </Link>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
