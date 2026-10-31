@@ -38,7 +38,7 @@ export default function ConsultaAtas({ atas, areas = [], meuNome = "" }: { atas:
   const [consulta, setConsulta] = useState<Filtros | null>(null);
   const [porPeriodo, setPorPeriodo] = useState(false);
   const [pagina, setPagina] = useState(1);
-  const modo = tipo === "pessoa" ? "pessoa" : "palavras";
+  const modo = tipo === "pessoa" ? "pessoa" : "expressao";
   const resultados = useMemo(() => consulta ? consultarAtas(atas, consulta.busca, consulta.data || consulta.inicio, consulta.data || consulta.fim, consulta.campo, modo) : [], [atas, consulta, modo]);
   const nomes = useMemo(() => [...new Set(atas.flatMap((ata) => (ata.participantes ?? "").split(/[\n,;]/).map((nome) => nome.replace(/^\s*[-*•\d.)]+\s*/, "").trim()).filter(Boolean)))].sort((a, b) => a.localeCompare(b, "pt-BR")), [atas]);
   const datas = useMemo(() => [...new Set(atas.map((ata) => ata.data_reuniao))].sort().reverse().slice(0, 3), [atas]);
@@ -96,7 +96,7 @@ export default function ConsultaAtas({ atas, areas = [], meuNome = "" }: { atas:
             ) : (
               <>
                 <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">{tipo === "pessoa" ? "Nome da pessoa" : tipo === "area" ? "Nome da área" : "Assunto"}
-                  <input type="search" value={filtros.busca} onChange={(e) => atualizar({ busca: e.target.value })} placeholder={tipo === "pessoa" ? "Ex.: João Silva" : tipo === "area" ? "Ex.: Financeiro" : "Ex.: orçamento da formação"} className={controle} aria-describedby={tipo === "pessoa" ? "ajuda-pessoa" : undefined} />
+                  <input type="search" value={filtros.busca} onChange={(e) => atualizar({ busca: e.target.value })} placeholder={tipo === "pessoa" ? "Ex.: João Silva" : tipo === "area" ? "Ex.: Financeiro" : "Ex.: estudo de caso"} className={controle} aria-describedby={tipo === "pessoa" ? "ajuda-pessoa" : undefined} />
                 </label>
                 {tipo === "pessoa" && <p id="ajuda-pessoa" className="text-sm text-zinc-500">Veja onde esse nome aparece nas atas.</p>}
                 {(tipo === "pessoa" || tipo === "area") && <div className="flex flex-wrap gap-2" aria-label="Sugestões para buscar">

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ConsultaAtas from "./consulta-atas";
-import { CAMPOS_CONSULTA, consultarAtas, mapearAtaConsulta, trechoConsulta, type AtaConsulta } from "../_lib/consulta-atas";
+import { CAMPOS_CONSULTA, consultarAtas, mapearAtaConsulta, trechosConsulta, trechoConsulta, type AtaConsulta } from "../_lib/consulta-atas";
 
 afterEach(cleanup);
 
@@ -73,12 +73,12 @@ describe("consulta das atas sem IA", () => {
   it("localiza deliberações sem acentos, destaca o trecho e mantém o link da fonte", async () => {
     render(<ConsultaAtas atas={atas} />);
     await userEvent.click(screen.getByRole("button", { name: "Assunto" }));
-    await userEvent.type(screen.getByRole("searchbox"), "joao orcamento");
+    await userEvent.type(screen.getByRole("searchbox"), "orcamento aprovado");
     expect(screen.queryByRole("article")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
     expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
     expect(screen.getByRole("heading", { name: "Deliberações" })).toBeTruthy();
-    expect(screen.getByText("João").tagName).toBe("MARK");
+    expect(screen.getByText("orçamento aprovado").tagName).toBe("MARK");
     expect(screen.getByRole("link", { name: "Ver ata completa" }).getAttribute("href")).toBe("/reunioes/1");
   });
 
@@ -171,5 +171,35 @@ describe("consulta das atas sem IA", () => {
     const registros = [ata(1, { texto: "João Silva revisará o documento." }), ata(2, { texto: "João falará com Maria Silva." }), ata(3, { texto: "Mariana revisará o documento." })];
     expect(consultarAtas(registros, "joao silva", "", "", "todos", "pessoa").map((r) => r.ata.id)).toEqual([1]);
     expect(consultarAtas(registros, "Ana", "", "", "todos", "pessoa")).toHaveLength(0);
+  });
+
+  it("busca e destaca a expressão inteira, sem retornar palavras soltas", async () => {
+    render(<ConsultaAtas atas={[
+      ata(1, { resumo: "O prazo de entrega será definido.", texto: `${"Informes de rotina. ".repeat(40)}Foi aprovado o estudo de caso com a equipe.` }),
+      ata(2, { texto: "O estudo foi discutido. O prazo de entrega depende de cada caso." }),
+      ata(3, { resumo: "Discussão sobre estudo", observacoes: "de caso" }),
+    ]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Assunto" }));
+    await userEvent.type(screen.getByRole("searchbox"), "estudo de caso");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
+    expect(screen.getByText("estudo de caso").tagName).toBe("MARK");
+    expect(screen.getByRole("heading", { name: "Texto original" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Resumo" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Ata 2" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Ata 3" })).toBeNull();
+  });
+
+  it("mantém a expressão com acentos e quebras de linha e rejeita palavras parciais", () => {
+    const registros = [
+      ata(1, { texto: "A FORMAÇÃO   DE\nPROFESSORES começa em novembro." }),
+      ata(2, { texto: "A formação foi aprovada. Convocar os professores." }),
+      ata(3, { texto: "Formação de professoresiniciantes." }),
+    ];
+    expect(consultarAtas(registros, "formacao de professores", "", "", "todos", "expressao").map((r) => r.ata.id)).toEqual([1]);
+    const trechos = trechosConsulta(`${"Informes de rotina. ".repeat(40)}Estudo de caso aprovado.`, "estudo de caso", "expressao");
+    expect(trechos).toHaveLength(1);
+    expect(trechos[0]).toContain("Estudo de caso aprovado");
+    expect(consultarAtas(atas, "15/10/2026", "", "", "todos", "expressao").map((r) => r.ata.id)).toEqual([1]);
   });
 });

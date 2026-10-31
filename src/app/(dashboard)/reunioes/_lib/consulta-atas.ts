@@ -44,18 +44,18 @@ export function termosConsulta(busca: string) {
   return normalizarConsulta(busca).trim().split(/\s+/).filter(Boolean);
 }
 
-export type ModoCorrespondencia = "palavras" | "pessoa";
+export type ModoCorrespondencia = "palavras" | "pessoa" | "expressao";
 
 export function posicoesConsulta(texto: string, busca: string, modo: ModoCorrespondencia = "palavras") {
   const normalizado = normalizarConsulta(texto);
-  const termos = modo === "pessoa" ? [normalizarConsulta(busca).trim().replace(/\s+/g, " ")].filter(Boolean) : termosConsulta(busca);
+  const termos = modo !== "palavras" ? [normalizarConsulta(busca).trim().replace(/\s+/g, " ")].filter(Boolean) : termosConsulta(busca);
   const posicoes: { inicio: number; fim: number }[] = [];
   for (const termo of termos) {
     let inicio = normalizado.indexOf(termo);
     while (inicio >= 0) {
       const fim = inicio + termo.length;
       const letra = /[\p{L}\p{N}_]/u;
-      if (modo !== "pessoa" || (!letra.test(normalizado[inicio - 1] ?? "") && !letra.test(normalizado[fim] ?? ""))) posicoes.push({ inicio, fim });
+      if (modo === "palavras" || (!letra.test(normalizado[inicio - 1] ?? "") && !letra.test(normalizado[fim] ?? ""))) posicoes.push({ inicio, fim });
       inicio = normalizado.indexOf(termo, fim);
     }
   }
@@ -85,8 +85,10 @@ export function consultarAtas(atas: AtaConsulta[], busca: string, inicio: string
     const dataBR = ata.data_reuniao.split("-").reverse().join("/");
     const secoes = campos.map((chave) => ({ campo: chave, texto: ata[chave] ?? "" }));
     const textoCompleto = normalizarConsulta([ata.data_reuniao, dataBR, ...secoes.map((s) => s.texto)].join(" "));
-    if (modo === "pessoa" && termos.length) {
-      if (!secoes.some((s) => posicoesConsulta(s.texto.replace(/\s+/g, " "), busca, modo).length)) return [];
+    if (modo !== "palavras" && termos.length) {
+      const textos = secoes.map((s) => s.texto);
+      if (modo === "expressao") textos.push(ata.data_reuniao, dataBR);
+      if (!textos.some((texto) => posicoesConsulta(texto.replace(/\s+/g, " "), busca, modo).length)) return [];
     } else if (!termos.every((termo) => textoCompleto.includes(termo))) return [];
     const correspondencias = secoes.filter((s) => s.texto.trim() && posicoesConsulta(s.texto.replace(/\s+/g, " "), busca, modo).length);
     return [{ ata, correspondencias: termos.length ? correspondencias : secoes.filter((s) => s.texto.trim() && s.campo !== "titulo").slice(0, 2) }];
