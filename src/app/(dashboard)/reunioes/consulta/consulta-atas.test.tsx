@@ -21,7 +21,7 @@ const atas = [
 describe("consulta das atas sem IA", () => {
   it("começa pela escolha do tipo de pesquisa", () => {
     render(<ConsultaAtas atas={atas} />);
-    expect(screen.getByRole("heading", { name: "1. Como você quer buscar?" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Como você quer buscar?" })).toBeTruthy();
     expect(screen.queryByRole("searchbox")).toBeNull();
     expect(screen.queryByRole("article")).toBeNull();
   });
@@ -37,7 +37,7 @@ describe("consulta das atas sem IA", () => {
     await userEvent.click(screen.getByRole("button", { name: "Buscar meu nome" }));
     expect(screen.getByLabelText("Nome da pessoa").getAttribute("value")).toBe("Ana");
     expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
-    const expandir = screen.getByText("Ver mais 1 trecho em Texto original");
+    const expandir = screen.getByText("Ver mais trechos (1)");
     await userEvent.click(expandir);
     expect(expandir.closest("details")?.open).toBe(true);
     expect(screen.getByText(/confirmou o prazo final/)).toBeTruthy();
@@ -48,6 +48,7 @@ describe("consulta das atas sem IA", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Pessoa/ }));
     await userEvent.click(screen.getByRole("button", { name: "João" }));
     expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
+    await userEvent.click(screen.getByRole("button", { name: "Trocar busca" }));
     await userEvent.click(screen.getByRole("button", { name: /^Área/ }));
     expect(screen.getByLabelText("Nome da área").getAttribute("value")).toBe("");
     await userEvent.click(screen.getByRole("button", { name: "Financeiro" }));
@@ -61,15 +62,20 @@ describe("consulta das atas sem IA", () => {
     await userEvent.click(screen.getByRole("button", { name: "15/10/2026" }));
     expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
     expect(screen.getByRole("heading", { name: "Ata 1" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Buscar por período" }));
+    expect(screen.queryByLabelText("Data da reunião")).toBeNull();
+    expect(screen.queryByRole("article")).toBeNull();
     fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-09-01" } });
-    expect(screen.getByLabelText("Data da reunião").getAttribute("value")).toBe("");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
     expect(screen.getByRole("status").textContent).toBe("2 atas encontradas");
   });
 
   it("localiza deliberações sem acentos, destaca o trecho e mantém o link da fonte", async () => {
     render(<ConsultaAtas atas={atas} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Palavra-chave/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Assunto" }));
     await userEvent.type(screen.getByRole("searchbox"), "joao orcamento");
+    expect(screen.queryByRole("article")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
     expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
     expect(screen.getByRole("heading", { name: "Deliberações" })).toBeTruthy();
     expect(screen.getByText("João").tagName).toBe("MARK");
@@ -78,35 +84,69 @@ describe("consulta das atas sem IA", () => {
 
   it("combina campo e período, valida datas invertidas e limpa os filtros", async () => {
     render(<ConsultaAtas atas={atas} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Palavra-chave/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Assunto" }));
     await userEvent.type(screen.getByRole("searchbox"), "orcamento");
+    await userEvent.click(screen.getByText("Mais opções"));
     fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-10-15" } });
     fireEvent.change(screen.getByLabelText("Data final"), { target: { value: "2026-10-15" } });
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
     expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
     await userEvent.selectOptions(screen.getByLabelText("Onde buscar"), "decisoes");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
     expect(screen.getByRole("status").textContent).toBe("0 atas encontradas");
     fireEvent.change(screen.getByLabelText("Data final"), { target: { value: "2026-09-01" } });
     expect(screen.getByRole("alert").textContent).toContain("data inicial");
     await userEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
-    expect(screen.getByRole("status").textContent).toBe("2 atas encontradas");
+    expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("pagina os resultados e volta à primeira página ao filtrar", async () => {
-    render(<ConsultaAtas atas={Array.from({ length: 21 }, (_, i) => ata(i + 1))} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Palavra-chave/ }));
-    expect(screen.getAllByRole("article")).toHaveLength(20);
+    render(<ConsultaAtas atas={Array.from({ length: 11 }, (_, i) => ata(i + 1))} />);
+    await userEvent.click(screen.getByRole("button", { name: "Assunto" }));
+    await userEvent.type(screen.getByRole("searchbox"), "Ata");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    expect(screen.getAllByRole("article")).toHaveLength(10);
     await userEvent.click(screen.getByRole("button", { name: "Próxima" }));
     expect(screen.getAllByRole("article")).toHaveLength(1);
-    expect(screen.getByRole("heading", { name: "Ata 21" })).toBeTruthy();
-    await userEvent.type(screen.getByRole("searchbox"), "Ata 1");
+    expect(screen.getByRole("heading", { name: "Ata 11" })).toBeTruthy();
+    await userEvent.type(screen.getByRole("searchbox"), " 1");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
     expect(screen.getByRole("heading", { name: "Ata 1" })).toBeTruthy();
   });
 
   it("informa quando não há atas disponíveis", async () => {
     render(<ConsultaAtas atas={[]} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Palavra-chave/ }));
     expect(screen.getByText("Nenhuma ata disponível para consulta.")).toBeTruthy();
+  });
+
+  it("mostra só o tipo escolhido e mantém opções extras recolhidas", async () => {
+    render(<ConsultaAtas atas={atas} />);
+    await userEvent.click(screen.getByRole("button", { name: "Pessoa" }));
+    expect(screen.queryByRole("button", { name: "Área" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Data da reunião" })).toBeNull();
+    expect(screen.getByText("Mais opções").closest("details")?.open).toBe(false);
+    expect(screen.getByRole("button", { name: "Buscar" }).hasAttribute("disabled")).toBe(true);
+    await userEvent.type(screen.getByRole("searchbox"), "João");
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
+    await userEvent.click(screen.getByRole("button", { name: "Trocar busca" }));
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.getByRole("button", { name: "Área" })).toBeTruthy();
+  });
+
+  it("recolhe os trechos adicionais para deixar o resultado compacto", async () => {
+    render(<ConsultaAtas atas={[ata(1, { participantes: "João", deliberacoes: "João enviará a proposta.", observacoes: "João confirmou presença." })]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Pessoa" }));
+    await userEvent.type(screen.getByRole("searchbox"), "João");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    const expandir = screen.getByText("Ver mais trechos (2)");
+    expect(expandir.closest("details")?.open).toBe(false);
+    expect(screen.getByRole("heading", { name: "Deliberações" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Observações" }).closest("details")?.open).toBe(false);
+    await userEvent.click(expandir);
+    expect(screen.getByRole("heading", { name: "Observações" })).toBeTruthy();
   });
 
   it("busca também em texto original longo, em datas e nos demais campos", () => {
