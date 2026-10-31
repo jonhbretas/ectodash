@@ -44,7 +44,39 @@ export function termosConsulta(busca: string) {
   return normalizarConsulta(busca).trim().split(/\s+/).filter(Boolean);
 }
 
-export function consultarAtas(atas: AtaConsulta[], busca: string, inicio: string, fim: string, campo: CampoConsulta | "todos") {
+export type ModoCorrespondencia = "palavras" | "pessoa";
+
+export function posicoesConsulta(texto: string, busca: string, modo: ModoCorrespondencia = "palavras") {
+  const normalizado = normalizarConsulta(texto);
+  const termos = modo === "pessoa" ? [normalizarConsulta(busca).trim().replace(/\s+/g, " ")].filter(Boolean) : termosConsulta(busca);
+  const posicoes: { inicio: number; fim: number }[] = [];
+  for (const termo of termos) {
+    let inicio = normalizado.indexOf(termo);
+    while (inicio >= 0) {
+      const fim = inicio + termo.length;
+      const letra = /[\p{L}\p{N}_]/u;
+      if (modo !== "pessoa" || (!letra.test(normalizado[inicio - 1] ?? "") && !letra.test(normalizado[fim] ?? ""))) posicoes.push({ inicio, fim });
+      inicio = normalizado.indexOf(termo, fim);
+    }
+  }
+  return posicoes.sort((a, b) => a.inicio - b.inicio || b.fim - a.fim);
+}
+
+export function trechosConsulta(texto: string, busca: string, modo: ModoCorrespondencia = "palavras") {
+  const limpo = texto.normalize("NFC").replace(/\s+/g, " ").trim();
+  const posicoes = posicoesConsulta(limpo, busca, modo);
+  const janelas: { inicio: number; fim: number }[] = [];
+  for (const posicao of posicoes) {
+    const inicio = Math.max(0, posicao.inicio - 80);
+    const fim = Math.min(limpo.length, posicao.fim + 180);
+    const anterior = janelas.at(-1);
+    if (anterior && inicio <= anterior.fim) anterior.fim = Math.max(anterior.fim, fim);
+    else janelas.push({ inicio, fim });
+  }
+  return janelas.map(({ inicio, fim }) => `${inicio ? "…" : ""}${limpo.slice(inicio, fim)}${fim < limpo.length ? "…" : ""}`);
+}
+
+export function consultarAtas(atas: AtaConsulta[], busca: string, inicio: string, fim: string, campo: CampoConsulta | "todos", modo: ModoCorrespondencia = "palavras") {
   const termos = termosConsulta(busca);
   if (inicio && fim && inicio > fim) return [];
   const campos = campo === "todos" ? Object.keys(CAMPOS_CONSULTA) as CampoConsulta[] : [campo];
@@ -53,8 +85,10 @@ export function consultarAtas(atas: AtaConsulta[], busca: string, inicio: string
     const dataBR = ata.data_reuniao.split("-").reverse().join("/");
     const secoes = campos.map((chave) => ({ campo: chave, texto: ata[chave] ?? "" }));
     const textoCompleto = normalizarConsulta([ata.data_reuniao, dataBR, ...secoes.map((s) => s.texto)].join(" "));
-    if (!termos.every((termo) => textoCompleto.includes(termo))) return [];
-    const correspondencias = secoes.filter((s) => s.texto.trim() && termos.some((termo) => normalizarConsulta(s.texto).includes(termo)));
+    if (modo === "pessoa" && termos.length) {
+      if (!secoes.some((s) => posicoesConsulta(s.texto.replace(/\s+/g, " "), busca, modo).length)) return [];
+    } else if (!termos.every((termo) => textoCompleto.includes(termo))) return [];
+    const correspondencias = secoes.filter((s) => s.texto.trim() && posicoesConsulta(s.texto.replace(/\s+/g, " "), busca, modo).length);
     return [{ ata, correspondencias: termos.length ? correspondencias : secoes.filter((s) => s.texto.trim() && s.campo !== "titulo").slice(0, 2) }];
   });
 }

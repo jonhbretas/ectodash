@@ -5,7 +5,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 const { getUser, range, consulta } = vi.hoisted(() => ({ getUser: vi.fn(), range: vi.fn(), consulta: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({
   auth: { getUser },
-  from: () => ({ select: () => ({ order: () => ({ order: () => ({ range }) }) }) }),
+  from: (tabela: string) => {
+    if (tabela === "areas_institucionais") return { select: () => ({ order: async () => ({ data: [{ nome: "Financeiro" }] }) }) };
+    if (tabela === "profiles") return { select: () => ({ eq: () => ({ single: async () => ({ data: { full_name: "João" } }) }) }) };
+    return { select: () => ({ order: () => ({ order: () => ({ range }) }) }) };
+  },
 }) }));
 vi.mock("../../page-container", () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("./consulta-atas", () => ({ default: (props: unknown) => { consulta(props); return <div>Resultados</div>; } }));
@@ -26,6 +30,8 @@ it("carrega todas as páginas acessíveis antes de disponibilizar a busca", asyn
   render(await ConsultaAtasPage());
   expect(range.mock.calls).toEqual([[0, 499], [500, 999]]);
   expect(consulta.mock.calls[0][0].atas).toHaveLength(501);
+  expect(consulta.mock.calls[0][0].areas).toEqual(["Financeiro"]);
+  expect(consulta.mock.calls[0][0].meuNome).toBe("João");
 });
 
 it("exibe erro em vez de apresentar resultados incompletos", async () => {

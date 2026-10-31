@@ -19,8 +19,56 @@ const atas = [
 ];
 
 describe("consulta das atas sem IA", () => {
+  it("começa pela escolha do tipo de pesquisa", () => {
+    render(<ConsultaAtas atas={atas} />);
+    expect(screen.getByRole("heading", { name: "1. Como você quer buscar?" })).toBeTruthy();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("article")).toBeNull();
+  });
+
+  it("busca uma pessoa além da lista de participantes e permite expandir todas as menções", async () => {
+    const texto = `Ana vai revisar a proposta. ${"Contexto sem nomes. ".repeat(40)}Ana confirmou o prazo final.`;
+    render(<ConsultaAtas atas={[
+      ata(1, { participantes: "Pedro\nJoão", texto }),
+      ata(2, { participantes: "Mariana", texto: "Mariana fará a revisão." }),
+    ]} meuNome="Ana" />);
+    await userEvent.click(screen.getByRole("button", { name: /^Pessoa/ }));
+    expect(screen.queryByRole("article")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Buscar meu nome" }));
+    expect(screen.getByLabelText("Nome da pessoa").getAttribute("value")).toBe("Ana");
+    expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
+    const expandir = screen.getByText("Ver mais 1 trecho em Texto original");
+    await userEvent.click(expandir);
+    expect(expandir.closest("details")?.open).toBe(true);
+    expect(screen.getByText(/confirmou o prazo final/)).toBeTruthy();
+  });
+
+  it("oferece nomes das atas e áreas cadastradas como atalhos", async () => {
+    render(<ConsultaAtas atas={[ata(1, { participantes: "- João\nAna", decisoes: "Financeiro revisará os custos." })]} areas={["Financeiro", "Ensino"]} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Pessoa/ }));
+    await userEvent.click(screen.getByRole("button", { name: "João" }));
+    expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
+    await userEvent.click(screen.getByRole("button", { name: /^Área/ }));
+    expect(screen.getByLabelText("Nome da área").getAttribute("value")).toBe("");
+    await userEvent.click(screen.getByRole("button", { name: "Financeiro" }));
+    expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
+    expect(screen.getByRole("heading", { name: "Decisões" })).toBeTruthy();
+  });
+
+  it("seleciona uma data pelo atalho e permite substituí-la por um período", async () => {
+    render(<ConsultaAtas atas={atas} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Data da reunião/ }));
+    await userEvent.click(screen.getByRole("button", { name: "15/10/2026" }));
+    expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
+    expect(screen.getByRole("heading", { name: "Ata 1" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-09-01" } });
+    expect(screen.getByLabelText("Data da reunião").getAttribute("value")).toBe("");
+    expect(screen.getByRole("status").textContent).toBe("2 atas encontradas");
+  });
+
   it("localiza deliberações sem acentos, destaca o trecho e mantém o link da fonte", async () => {
     render(<ConsultaAtas atas={atas} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Palavra-chave/ }));
     await userEvent.type(screen.getByRole("searchbox"), "joao orcamento");
     expect(screen.getByRole("status").textContent).toBe("1 ata encontrada");
     expect(screen.getByRole("heading", { name: "Deliberações" })).toBeTruthy();
@@ -30,6 +78,7 @@ describe("consulta das atas sem IA", () => {
 
   it("combina campo e período, valida datas invertidas e limpa os filtros", async () => {
     render(<ConsultaAtas atas={atas} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Palavra-chave/ }));
     await userEvent.type(screen.getByRole("searchbox"), "orcamento");
     fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-10-15" } });
     fireEvent.change(screen.getByLabelText("Data final"), { target: { value: "2026-10-15" } });
@@ -45,6 +94,7 @@ describe("consulta das atas sem IA", () => {
 
   it("pagina os resultados e volta à primeira página ao filtrar", async () => {
     render(<ConsultaAtas atas={Array.from({ length: 21 }, (_, i) => ata(i + 1))} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Palavra-chave/ }));
     expect(screen.getAllByRole("article")).toHaveLength(20);
     await userEvent.click(screen.getByRole("button", { name: "Próxima" }));
     expect(screen.getAllByRole("article")).toHaveLength(1);
@@ -53,8 +103,9 @@ describe("consulta das atas sem IA", () => {
     expect(screen.getByRole("heading", { name: "Ata 1" })).toBeTruthy();
   });
 
-  it("informa quando não há atas disponíveis", () => {
+  it("informa quando não há atas disponíveis", async () => {
     render(<ConsultaAtas atas={[]} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Palavra-chave/ }));
     expect(screen.getByText("Nenhuma ata disponível para consulta.")).toBeTruthy();
   });
 
@@ -74,5 +125,11 @@ describe("consulta das atas sem IA", () => {
     expect(resultado).toHaveLength(1);
     expect(resultado[0].correspondencias[0].texto).toContain("Orçamento · João · 05/11/2026");
     expect(consultarAtas([registro], "formacao", "", "", "calendario")).toHaveLength(1);
+  });
+
+  it("procura o nome junto e respeita os limites das palavras", () => {
+    const registros = [ata(1, { texto: "João Silva revisará o documento." }), ata(2, { texto: "João falará com Maria Silva." }), ata(3, { texto: "Mariana revisará o documento." })];
+    expect(consultarAtas(registros, "joao silva", "", "", "todos", "pessoa").map((r) => r.ata.id)).toEqual([1]);
+    expect(consultarAtas(registros, "Ana", "", "", "todos", "pessoa")).toHaveLength(0);
   });
 });

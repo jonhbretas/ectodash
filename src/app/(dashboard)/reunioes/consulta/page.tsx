@@ -12,6 +12,11 @@ export default async function ConsultaAtasPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  const opcoesPromise = Promise.all([
+    supabase.from("areas_institucionais").select("nome").order("nome"),
+    supabase.from("profiles").select("full_name").eq("id", user.id).single(),
+  ]);
+
   // Load all accessible rows, including beyond the API's default row limit.
   // The session client applies the same RLS permissions as the ata detail page.
   const atas: AtaConsulta[] = [];
@@ -28,6 +33,9 @@ export default async function ConsultaAtasPage() {
     atas.push(...pagina.map(mapearAtaConsulta));
     if (pagina.length < tamanhoPagina) break;
   }
+  const [areasResult, perfilResult] = await opcoesPromise;
+  const areas = (areasResult.data ?? []).map((area) => String(area.nome));
+  const meuNome = typeof perfilResult.data?.full_name === "string" ? perfilResult.data.full_name : "";
 
   return (
     <PageContainer>
@@ -35,11 +43,11 @@ export default async function ConsultaAtasPage() {
         <Link href="/reunioes?tab=atas" className="inline-flex min-h-11 items-center gap-2 self-start text-base font-medium text-[#28627B] hover:underline"><ArrowLeft size={18} aria-hidden="true" /> Voltar para atas</Link>
         <header className="space-y-2">
           <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900"><Search size={28} aria-hidden="true" /> Consultar atas</h1>
-          <p className="max-w-3xl text-base text-zinc-600">Localize datas, assuntos, participantes e decisões no conteúdo registrado das atas. Busque por palavras, com ou sem acentos, e combine com um período.</p>
+          <p className="max-w-3xl text-base text-zinc-600">Escolha como buscar e siga as etapas para encontrar reuniões, menções a pessoas, áreas e assuntos nas atas.</p>
         </header>
         {falha ? (
           <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800">Não foi possível carregar as atas. Recarregue a página para tentar novamente.</div>
-        ) : <ConsultaAtas atas={atas} />}
+        ) : <ConsultaAtas atas={atas} areas={areas} meuNome={meuNome} />}
       </div>
     </PageContainer>
   );
