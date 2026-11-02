@@ -247,15 +247,15 @@ export default function PautaModal({ open, onOpenChange }: PautaModalProps) {
           fechar();
         }}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto bg-white p-0 sm:max-w-[620px]">
-          <DialogHeader className="px-6 pt-6 text-left">
+        <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden bg-white p-0 sm:max-w-[620px]">
+          <DialogHeader className="shrink-0 px-6 pt-6 text-left">
             <DialogTitle className="text-2xl font-semibold text-zinc-900">Pedir pauta</DialogTitle>
             <DialogDescription className="text-base text-zinc-700">
               Sugira um assunto para a reunião de terça às 19h. Todos os voluntários podem pedir.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="px-6">
+          <div className="shrink-0 px-6">
             <p className="text-base font-semibold text-zinc-900" aria-live="polite">
               Etapa {etapa} de {TOTAL_ETAPAS} — {NOMES_ETAPAS[etapa - 1]}
             </p>
@@ -274,7 +274,7 @@ export default function PautaModal({ open, onOpenChange }: PautaModalProps) {
             </div>
           </div>
 
-          <form action={(fd) => formAction(fd)} onSubmit={aoEnviar} className="flex flex-col gap-6 px-6 pb-6">
+          <form action={(fd) => formAction(fd)} onSubmit={aoEnviar} className="flex min-h-0 flex-col overflow-hidden">
             <input type="hidden" name="titulo" value={titulo.trim()} />
             <input type="hidden" name="contexto" value={contexto.trim()} />
             <input type="hidden" name="reuniao_selecionada_id" value={reuniaoSel} />
@@ -286,7 +286,7 @@ export default function PautaModal({ open, onOpenChange }: PautaModalProps) {
             )}
 
             {enviandoAnexo ? (
-              <div className="flex flex-col gap-3 py-6" role="status" aria-live="polite">
+              <div className="flex flex-col gap-3 overflow-y-auto px-6 py-6" role="status" aria-live="polite">
                 <p className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                   <Loader2 size={22} className="animate-spin" aria-hidden="true" />
                   Enviando anexo… {progresso}%
@@ -298,61 +298,63 @@ export default function PautaModal({ open, onOpenChange }: PautaModalProps) {
               </div>
             ) : (
               <>
-                <h3
-                  ref={tituloEtapaRef}
-                  tabIndex={-1}
-                  className="text-xl font-semibold text-zinc-900 outline-none"
-                >
-                  {NOMES_ETAPAS[etapa - 1]}
-                </h3>
+                <div className="flex min-h-0 flex-col gap-6 overflow-y-auto px-6 pb-6">
+                  <h3
+                    ref={tituloEtapaRef}
+                    tabIndex={-1}
+                    className="text-xl font-semibold text-zinc-900 outline-none"
+                  >
+                    {NOMES_ETAPAS[etapa - 1]}
+                  </h3>
 
-                {etapa === 1 && (
-                  <EtapaAssunto
-                    titulo={titulo}
-                    setTitulo={setTitulo}
-                    contexto={contexto}
-                    setContexto={setContexto}
-                    erro={erroEtapa}
-                  />
-                )}
-                {etapa === 2 && (
-                  <EtapaReuniao
-                    loading={loading}
-                    reunioes={reunioes}
-                    reuniaoSel={reuniaoSel}
-                    setReuniaoSel={setReuniaoSel}
-                    showHorario={showHorario}
-                    setShowHorario={setShowHorario}
-                    dataSolicitada={dataSolicitada}
-                    setDataSolicitada={setDataSolicitada}
-                    horarioSolicitado={horarioSolicitado}
-                    setHorarioSolicitado={setHorarioSolicitado}
-                  />
-                )}
-                {etapa === 3 && <EtapaPrioridade valor={prioridade} setValor={setPrioridade} />}
-                {etapa === 4 && <EtapaTipo valor={tipo} setValor={setTipo} />}
-                {etapa === 5 && <EtapaAnexo arquivo={arquivo} setArquivo={(f) => { setArquivo(f); setErroEtapa(null); }} erro={erroEtapa} />}
-                {etapa === 6 && (
-                  <EtapaRevisao
-                    titulo={titulo.trim()}
-                    contexto={contexto}
-                    reuniaoRotulo={reuniaoRotulo}
-                    dataHorarioRotulo={dataHorarioRotulo}
-                    prioridade={prioridade}
-                    tipo={tipo}
-                    arquivo={arquivo}
-                    similares={similares}
-                    onEditar={irParaEtapa}
-                  />
-                )}
+                  {etapa === 1 && (
+                    <EtapaAssunto
+                      titulo={titulo}
+                      setTitulo={setTitulo}
+                      contexto={contexto}
+                      setContexto={setContexto}
+                      erro={erroEtapa}
+                    />
+                  )}
+                  {etapa === 2 && (
+                    <EtapaReuniao
+                      loading={loading}
+                      reunioes={reunioes}
+                      reuniaoSel={reuniaoSel}
+                      setReuniaoSel={setReuniaoSel}
+                      showHorario={showHorario}
+                      setShowHorario={setShowHorario}
+                      dataSolicitada={dataSolicitada}
+                      setDataSolicitada={setDataSolicitada}
+                      horarioSolicitado={horarioSolicitado}
+                      setHorarioSolicitado={setHorarioSolicitado}
+                    />
+                  )}
+                  {etapa === 3 && <EtapaPrioridade valor={prioridade} setValor={setPrioridade} />}
+                  {etapa === 4 && <EtapaTipo valor={tipo} setValor={setTipo} />}
+                  {etapa === 5 && <EtapaAnexo arquivo={arquivo} setArquivo={(f) => { setArquivo(f); setErroEtapa(null); }} erro={erroEtapa} />}
+                  {etapa === 6 && (
+                    <EtapaRevisao
+                      titulo={titulo.trim()}
+                      contexto={contexto}
+                      reuniaoRotulo={reuniaoRotulo}
+                      dataHorarioRotulo={dataHorarioRotulo}
+                      prioridade={prioridade}
+                      tipo={tipo}
+                      arquivo={arquivo}
+                      similares={similares}
+                      onEditar={irParaEtapa}
+                    />
+                  )}
 
-                {etapa === TOTAL_ETAPAS && !erroDispensado && !state.ok && state.message && (
-                  <p className="flex items-center gap-2 text-base font-medium text-red-700" role="alert">
-                    {state.message}
-                  </p>
-                )}
+                  {etapa === TOTAL_ETAPAS && !erroDispensado && !state.ok && state.message && (
+                    <p className="flex items-center gap-2 text-base font-medium text-red-700" role="alert">
+                      {state.message}
+                    </p>
+                  )}
+                </div>
 
-                <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-zinc-200 bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                   {etapa === 1 ? (
                     <button key="cancelar" type="button" onClick={fechar} className={botaoSecundario}>
                       Cancelar
