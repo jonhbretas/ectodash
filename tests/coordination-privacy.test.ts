@@ -11,9 +11,11 @@ const state = vi.hoisted(() => ({
   user: { id: "coord-1" } as { id: string } | null,
   send: vi.fn(),
   ai: vi.fn(),
+  after: [] as Array<() => Promise<void>>,
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/server", () => ({ after: (callback: () => Promise<void>) => state.after.push(callback) }));
 vi.mock("@/lib/notifications/send-comment-email", () => ({ sendCommentEmail: state.send }));
 vi.mock("@/lib/ai/ai-client", () => ({ chatCompletion: state.ai, wrapUserContent: vi.fn() }));
 vi.mock("resend", () => ({ Resend: vi.fn(function () { return { emails: { send: state.send } }; }) }));
@@ -59,6 +61,7 @@ beforeEach(() => {
   state.duplicates = [];
   state.writes = []; state.reads = []; state.filters = [];
   state.searchError = false;
+  state.after = [];
   vi.clearAllMocks();
 });
 
@@ -99,6 +102,28 @@ describe("closed coordination workspace", () => {
     expect(state.writes[0].table).toBe("demanda_comentarios");
     expect(state.reads).not.toContain("profiles");
     expect(state.send).not.toHaveBeenCalled();
+    expect(state.after).toHaveLength(0);
+  });
+
+  it("saves public comments without querying recipients when there are no mentions", async () => {
+    state.private = false;
+    const form = new FormData(); form.set("conteudo", "Comentário sem menções");
+    expect((await comentarDemanda(42, { ok: false, message: "" }, form)).ok).toBe(true);
+    expect(state.writes[0].table).toBe("demanda_comentarios");
+    expect(state.reads).not.toContain("profiles");
+    expect(state.after).toHaveLength(0);
+  });
+
+  it("acknowledges the saved comment before resolving mention recipients", async () => {
+    state.private = false;
+    const form = new FormData(); form.set("conteudo", "@maria confira esta tarefa");
+    expect((await comentarDemanda(42, { ok: false, message: "" }, form)).ok).toBe(true);
+    expect(state.writes[0].table).toBe("demanda_comentarios");
+    expect(state.reads).not.toContain("profiles");
+    expect(state.send).not.toHaveBeenCalled();
+    expect(state.after).toHaveLength(1);
+    await state.after[0]();
+    expect(state.reads).toContain("profiles");
   });
 
   it("blocks sending private task content to an AI provider", async () => {

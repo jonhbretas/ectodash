@@ -25,7 +25,6 @@
 // destructive actions require an explicit confirmation panel.
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Calendar,
   Check,
@@ -271,12 +270,11 @@ export default function KanbanBoard({
   selectedIds,
   onToggle,
 }: KanbanBoardProps) {
-  const router = useRouter();
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
   // Local optimistic state — moving a card re-renders instantly; the
-  // server action + router.refresh() reconcile the real source of truth.
+  // server action revalidation reconciles the real source of truth.
   // The parent passes a `key` derived from the server rows (id+status), so
   // local state resets automatically whenever the server data changes.
   const [localDemandas, setLocalDemandas] = useState(demandas);
@@ -299,13 +297,26 @@ export default function KanbanBoard({
     setCollapsedRaw([...next].join(","));
   }
 
+  const [moveError, setMoveError] = useState<string | null>(null);
+
   function moveDemanda(id: number, status: DemandaStatus) {
+    const previous = localDemandas.find((item) => item.id === id);
+    if (!previous || pending || previous.status === status) return;
+    setMoveError(null);
     setLocalDemandas((current) =>
       current.map((d) => (d.id === id ? { ...d, status } : d))
     );
     startTransition(async () => {
-      await updateDemandaStatus(id, status);
-      router.refresh();
+      try {
+        const result = await updateDemandaStatus(id, status);
+        if (!result.ok) {
+          setLocalDemandas((current) => current.map((item) => item.id === id ? previous : item));
+          setMoveError(result.message);
+        }
+      } catch {
+        setLocalDemandas((current) => current.map((item) => item.id === id ? previous : item));
+        setMoveError("Não foi possível mover a demanda. Tente novamente.");
+      }
     });
   }
 
@@ -322,7 +333,9 @@ export default function KanbanBoard({
   }, [localDemandas]);
 
   return (
-    <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-stretch">
+    <div className="flex w-full flex-col gap-4">
+      {moveError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-red-700">{moveError}</p>}
+      <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-stretch">
       {COLUMNS.map((column) => {
           const items = byStatus[column.status];
           const total = localDemandas.length;
@@ -445,6 +458,7 @@ export default function KanbanBoard({
           <PlusCircle size={22} aria-hidden="true" />
           Criar
         </Link>}
+      </div>
     </div>
   );
 }

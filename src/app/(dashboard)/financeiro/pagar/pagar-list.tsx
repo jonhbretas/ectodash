@@ -4,7 +4,6 @@
 // Cards das contas a pagar da Ectolab: selo de situação, vencimento com
 // destaque de atraso, método + ações (dar baixa, editar, excluir).
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BadgeCheck, CheckCircle2, Pencil, Search, Trash2, Undo2 } from "lucide-react";
@@ -40,7 +39,6 @@ function rotuloMes(mes: string): string {
 }
 
 export default function PagarList({ contas }: { contas: Conta[] }) {
-  const router = useRouter();
   const meses = [...new Set(contas.map((conta) => mesDaConta(conta.vencimento)))].sort(
     (a, b) => {
       if (a === "sem-vencimento") return 1;
@@ -83,7 +81,6 @@ export default function PagarList({ contas }: { contas: Conta[] }) {
       const res = await fn();
       setAgindoId(null);
       setFeedback(res.message);
-      router.refresh();
     });
   }
 

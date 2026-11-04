@@ -10,7 +10,6 @@
 // "Cancelar"; both destructive actions require an explicit confirmation
 // panel. Selection spans every board below (grouped sections included).
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CheckSquare, ChevronDown, Square, Trash2, X } from "lucide-react";
@@ -40,7 +39,6 @@ export default function KanbanArea({
   agrupar = null,
   agruparFilter = null,
 }: KanbanAreaProps) {
-  const router = useRouter();
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [confirmingMerge, setConfirmingMerge] = useState(false);
@@ -98,7 +96,6 @@ export default function KanbanArea({
     setBusy(false);
     if (result.ok) {
       exitSelection();
-      router.refresh();
     } else {
       setMessage({ ok: false, text: result.message });
       setConfirmingMerge(false);
@@ -112,7 +109,6 @@ export default function KanbanArea({
     setBusy(false);
     if (result.ok) {
       exitSelection();
-      router.refresh();
     } else {
       setMessage({ ok: false, text: result.message });
       setConfirmingDelete(false);

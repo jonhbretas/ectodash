@@ -9,9 +9,8 @@
 // a barra de ações permite editar (local, data, tipo, descrição) ou
 // excluir os selecionados via excluir/editarEventosEmMassa (RLS 0008:
 // criador ou coordenador_geral).
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   GitMerge,
@@ -94,7 +93,6 @@ export default function EventosLista({
   tipos?: EventoTipoOpcao[];
   podeGerir?: boolean;
 }) {
-  const router = useRouter();
   const [termo, setTermo] = useState("");
   const termoLimpo = termo.trim();
 
@@ -103,7 +101,6 @@ export default function EventosLista({
   const [painel, setPainel] = useState<"editar" | "excluir" | null>(null);
   const [mensagem, setMensagem] = useState<{ ok: boolean; texto: string } | null>(null);
   const [executando, setExecutando] = useState(false);
-  const [, startTransition] = useTransition();
 
   // Campos da edição em massa — cada campo só é aplicado se o toggle estiver ligado.
   const [usarLocal, setUsarLocal] = useState(false);
@@ -170,7 +167,6 @@ export default function EventosLista({
     if (r.ok) {
       setSelecionados(new Set());
       setPainel(null);
-      startTransition(() => router.refresh());
     }
   }
 
@@ -204,7 +200,6 @@ export default function EventosLista({
     setMensagem({ ok: r.ok, texto: r.message });
     if (r.ok) {
       setPainel(null);
-      startTransition(() => router.refresh());
     }
   }
 

@@ -5,8 +5,7 @@
 // opens the form; save goes through editarEvento (RLS 0008: creator or
 // coordenador_geral). On success the panel refreshes so the header shows
 // the new values.
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useState } from "react";
 import { Pencil, X, Check } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { editarEvento, type EditarEventoState } from "./actions";
@@ -21,22 +20,11 @@ export default function EditarEventoPanel({
 }: {
   evento: { id: number; titulo: string; data_evento: string; local: string | null; descricao: string | null };
 }) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [state, formAction] = useActionState<EditarEventoState, FormData>(
     editarEvento,
     editarEventoInitialState
   );
-  const [, startTransition] = useTransition();
-
-  // After a successful save the header re-reads the new values via
-  // router.refresh(); the form stays open showing the success message.
-  useEffect(() => {
-    if (state.ok && editing) {
-      startTransition(() => router.refresh());
-    }
-  }, [state.ok, editing, router]);
-
   if (!editing) {
     return (
       <button

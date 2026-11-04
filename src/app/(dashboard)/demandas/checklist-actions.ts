@@ -4,6 +4,7 @@
 // 0012). All writes are RLS-gated by the parent demanda's edit/visibility
 // predicates — the actions themselves only validate and pass through.
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
@@ -224,42 +225,52 @@ export async function comentarDemanda(
     return { ok: true, message: "" };
   }
 
-  // @mention emails — best effort: a send failure never fails the comment
-  // (the comment is already persisted). Resolved server-side against the
-  // same RLS-scoped profiles read the responsável select uses.
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email, full_name")
-    .eq("ativo", true)
-    .not("email", "ilike", "%example.invalid%");
+  // Delivery is best effort and must not hold up the saved comment.
+  if (conteudo.data.includes("@")) {
+    after(async () => {
+      try {
+        // @mention emails — best effort: a send failure never fails the comment
+        // (the comment is already persisted). Resolved server-side against the
+        // same RLS-scoped profiles read the responsável select uses.
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, email, full_name")
+          .eq("ativo", true)
+          .not("email", "ilike", "%example.invalid%");
 
-  const mencionados = resolverMencoes(conteudo.data, profiles ?? []);
-  if (mencionados.length > 0) {
-    const { data: autor } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", user.id)
-      .single();
+        const mencionados = resolverMencoes(conteudo.data, profiles ?? []);
+        if (mencionados.length > 0) {
+          const { data: autor } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", user.id)
+            .single();
 
-    const autorNome = autor ? displayName(autor) : "Um voluntário";
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    const link = `${siteUrl}/demandas/${demandaId}/editar`;
-    const resend = new Resend(process.env.RESEND_API_KEY);
+          const autorNome = autor ? displayName(autor) : "Um voluntário";
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+          const link = `${siteUrl}/demandas/${demandaId}/editar`;
+          const resend = new Resend(process.env.RESEND_API_KEY);
 
-    for (const email of mencionados) {
-      if (email === user.email) continue; // no self-mention email
-      const { error: sendError } = await sendCommentEmail({
-        resend,
-        to: email,
-        autorNome,
-        demandaTitulo: demanda.titulo,
-        comentario: conteudo.data,
-        link,
-      });
-      if (sendError) {
-        console.error("comentarDemanda: mention email failed for", email, sendError);
+          for (const email of mencionados) {
+            if (email === user.email) continue; // no self-mention email
+            const { error: sendError } = await sendCommentEmail({
+              resend,
+              to: email,
+              autorNome,
+              demandaTitulo: demanda.titulo,
+              comentario: conteudo.data,
+              link,
+            });
+            if (sendError) {
+              console.error("comentarDemanda: mention email failed for", email, sendError);
+            }
+          }
+        }
+
+      } catch (error) {
+        console.error("comentarDemanda: mention notification failed", error);
       }
-    }
+    });
   }
 
   revalidatePath(`/demandas/${demandaId}/editar`);

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import QuickCreate from "./quick-create";
 import { useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import {
@@ -88,7 +87,6 @@ export default function DemandaList({
   etiquetas = [],
   voluntarios = [],
 }: DemandaListProps) {
-  const router = useRouter();
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [confirming, setConfirming] = useState(false);
@@ -170,7 +168,6 @@ export default function DemandaList({
     setDeleting(false);
     if (result.ok) {
       exitSelection();
-      router.refresh();
     } else {
       setMessage({ ok: false, text: result.message });
       setConfirming(false);
@@ -187,7 +184,6 @@ export default function DemandaList({
   const aoEditar = (mensagem: string) => {
     exitSelection();
     setMessage({ ok: true, text: mensagem });
-    router.refresh();
   };
 
   const handleConclude = (id: number) => {
@@ -201,7 +197,6 @@ export default function DemandaList({
           setMessage({ ok: false, text: result.message });
           return;
         }
-        router.refresh();
       } catch {
         setMessage({ ok: false, text: "Não foi possível concluir a demanda. Tente novamente." });
       } finally {

@@ -6,9 +6,8 @@
 // add/remove via a dropdown picker. This replaces the full-page DemandaForm
 // that used to occupy the left column — the edit screen now has only
 // checklist and comments in its two-column grid.
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -285,8 +284,6 @@ export default function DemandaInlineEditor({
   areas = [],
   projetos = [],
 }: InlineEditorProps) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
   const [localTitulo, setLocalTitulo] = useState(demanda.titulo);
   const [localPrazo, setLocalPrazo] = useState(demanda.prazo);
   const [localArea, setLocalArea] = useState(demanda.area);
@@ -357,7 +354,6 @@ export default function DemandaInlineEditor({
   const editingRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
   useEffect(() => { editingRef.current?.focus(); }, [editingPill]);
 
-  function refresh() { startTransition(() => router.refresh()); }
 
   const respIds = new Set(localResponsaveis.map((r) => r.id));
   const membroIds = new Set(localMembros.map((m) => m.id));
@@ -366,15 +362,14 @@ export default function DemandaInlineEditor({
   async function saveTitulo(val: string) {
     setLocalTitulo(val);
     const r = await updateDemandaTitulo(demanda.id, val);
-    if (r.ok) refresh(); else setLocalTitulo(demanda.titulo);
+    if (!r.ok) setLocalTitulo(demanda.titulo);
     return r.ok;
   }
   async function savePrazo(val: string) {
     setLocalPrazo(val);
     setPrazoError(null);
     const r = await updateDemandaPrazo(demanda.id, val);
-    if (r.ok) refresh();
-    else {
+    if (!r.ok) {
       setLocalPrazo(demanda.prazo);
       setPrazoError(r.message || "Não foi possível salvar o prazo.");
     }
@@ -383,27 +378,27 @@ export default function DemandaInlineEditor({
   async function saveArea(val: string) {
     setLocalArea(val || null);
     const r = await updateDemandaArea(demanda.id, val || null);
-    if (r.ok) refresh(); else setLocalArea(demanda.area);
+    if (!r.ok) setLocalArea(demanda.area);
     return r.ok;
   }
   async function saveProjeto(val: string) {
     setLocalProjeto(val || null);
     const r = await updateDemandaProjeto(demanda.id, val || null);
-    if (r.ok) refresh(); else setLocalProjeto(demanda.projeto);
+    if (!r.ok) setLocalProjeto(demanda.projeto);
     return r.ok;
   }
   async function saveEvento(val: string) {
     const id = val ? Number(val) : null;
     setLocalEventoId(id);
     const r = await updateDemandaEvento(demanda.id, id);
-    if (r.ok) refresh(); else setLocalEventoId(demanda.eventoId);
+    if (!r.ok) setLocalEventoId(demanda.eventoId);
     return r.ok;
   }
   async function saveStatus(val: string) {
     const s = val as DemandaStatus;
     setLocalStatus(s);
     const r = await updateDemandaStatus(demanda.id, s);
-    if (r.ok) refresh(); else setLocalStatus(demanda.status);
+    if (!r.ok) setLocalStatus(demanda.status);
     return r.ok;
   }
   async function saveEtiqueta(val: string) {
@@ -413,7 +408,6 @@ export default function DemandaInlineEditor({
     if (r.ok) {
       const found = localEtiquetas.find((e) => e.id === id);
       setEtiquetaNome(found ? `${found.nome} (${found.area})` : null);
-      refresh();
     } else {
       setLocalEtiquetaId(demanda.etiquetaId);
     }
@@ -435,7 +429,13 @@ export default function DemandaInlineEditor({
       setLocalEtiquetas((c) => [...c, nova]);
       setLocalEtiquetaId(result.id);
       setEtiquetaNome(`${nova.nome} (${nova.area})`);
-      updateDemandaEtiqueta(demanda.id, result.id).then(refresh);
+      const saved = await updateDemandaEtiqueta(demanda.id, result.id);
+      if (!saved.ok) {
+        setLocalEtiquetaId(demanda.etiquetaId);
+        setEtiquetaNome(demanda.etiquetaNome);
+        setEtiquetaError(saved.message);
+        return;
+      }
       setCriandoEtiqueta(false);
       setNovaEtiquetaArea("");
       setNovaEtiquetaNome("");
@@ -450,24 +450,30 @@ export default function DemandaInlineEditor({
     if (!pessoa || respIds.has(id)) return;
     setLocalResponsaveis((c) => [...c, pessoa]);
     const r = await addDemandaResponsavel(demanda.id, id);
-    if (r.ok) refresh(); else setLocalResponsaveis((c) => c.filter((p) => p.id !== id));
+    if (!r.ok) setLocalResponsaveis((c) => c.filter((p) => p.id !== id));
   }
   async function removeResp(id: string) {
     setLocalResponsaveis((c) => c.filter((p) => p.id !== id));
     const r = await removeDemandaResponsavel(demanda.id, id);
-    if (r.ok) refresh();
+    if (!r.ok) {
+      const pessoa = allVoluntarios.find((item) => item.id === id);
+      if (pessoa) setLocalResponsaveis((current) => current.some((item) => item.id === id) ? current : [...current, pessoa]);
+    }
   }
   async function addMembro(id: string) {
     const pessoa = allVoluntarios.find((p) => p.id === id);
     if (!pessoa || membroIds.has(id)) return;
     setLocalMembros((c) => [...c, pessoa]);
     const r = await addDemandaMembro(demanda.id, id);
-    if (r.ok) refresh(); else setLocalMembros((c) => c.filter((p) => p.id !== id));
+    if (!r.ok) setLocalMembros((c) => c.filter((p) => p.id !== id));
   }
   async function removeMembro(id: string) {
     setLocalMembros((c) => c.filter((p) => p.id !== id));
     const r = await removeDemandaMembro(demanda.id, id);
-    if (r.ok) refresh();
+    if (!r.ok) {
+      const pessoa = allVoluntarios.find((item) => item.id === id);
+      if (pessoa) setLocalMembros((current) => current.some((item) => item.id === id) ? current : [...current, pessoa]);
+    }
   }
 
   const prazoFormatado = (() => {

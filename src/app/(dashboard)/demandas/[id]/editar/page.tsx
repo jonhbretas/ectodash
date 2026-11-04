@@ -1,3 +1,4 @@
+import { obterUsuarioAtual, obterPerfilAtual } from "@/lib/supabase/request-context";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft } from "lucide-react";
@@ -25,9 +26,7 @@ export default async function EditarDemandaPage({
   const id = Number(idParam);
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await obterUsuarioAtual();
 
   if (!user) {
     return null;
@@ -75,7 +74,7 @@ export default async function EditarDemandaPage({
     { data: comentariosRaw },
     { data: areasInstitucionais },
     { data: projetosRows },
-    perfilResult,
+    perfil,
   ] = await Promise.all([
     supabase.from("demanda_responsaveis").select("profile_id, voluntario_id").eq("demanda_id", id),
     supabase.from("demanda_membros").select("profile_id, voluntario_id").eq("demanda_id", id),
@@ -95,11 +94,7 @@ export default async function EditarDemandaPage({
       .eq("demanda_id", id).order("created_at", { ascending: true }),
     supabase.from("areas_institucionais").select("nome").order("nome"),
     supabase.from("projetos").select("nome").order("nome"),
-    supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single(),
+    obterPerfilAtual(),
   ]);
 
   // O roster vem da função roster_basico() (id, nome, tem_conta,
@@ -157,7 +152,7 @@ export default async function EditarDemandaPage({
 
   // UX gate mirroring the list view's bulk-delete gate (coordenador_geral or
   // coordenador_area). RLS (migration 0053) remains the real boundary.
-  const perfilRole = perfilResult.data?.role ?? null;
+  const perfilRole = perfil?.role ?? null;
   const canExcluir =
     perfilRole === "coordenador_geral" || perfilRole === "coordenador_area";
 

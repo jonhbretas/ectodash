@@ -37,7 +37,6 @@ export default function ExcluirDemandaButton({
     if (result.ok) {
       setOpen(false);
       router.push("/");
-      router.refresh();
     } else {
       setErro(result.message);
     }
