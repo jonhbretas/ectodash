@@ -13,8 +13,9 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null) as { exceptionId?: string; ledgerId?: string | null; date?: string; description?: string; amount?: number; type?: string; resolveOnly?: boolean; direction?: "entrada" | "saida" } | null;
   const types = ["RECEITA_FATURADA", "RECEITA_RECEBIDA", "DESPESA", "TRANSFERENCIA_INTERNA", "APLICACAO", "RESGATE", "RENDIMENTO_FINANCEIRO", "ESTORNO", "CHARGEBACK", "TARIFA", "AJUSTE", "SALDO_INICIAL", "SALDO_FINAL"];
   if (!body?.exceptionId) return NextResponse.json({ error: "Conferência não encontrada." }, { status: 400 });
-  const { data: exception } = await supabase.from("finance_exceptions").select("id,import_id,ledger_ids,status,problem").eq("id", body.exceptionId).single();
+  const { data: exception } = await supabase.from("finance_exceptions").select("id,import_id,ledger_ids,status,problem,alternatives").eq("id", body.exceptionId).single();
   if (!exception) return NextResponse.json({ error: "Conferência não encontrada." }, { status: 404 });
+  if (Array.isArray(exception.alternatives) && exception.alternatives.some((item: { kind?: string }) => item.kind === "POSSIBLE_DUPLICATE")) return NextResponse.json({ error: "Abra Financeiro com IA e escolha a mesclagem com o lançamento existente." }, { status: 409 });
   const { data: imported, error: importError } = exception.import_id
     ? await supabase.from("finance_imports").select("file_name,metadata").eq("id", exception.import_id).single()
     : { data: null, error: null };

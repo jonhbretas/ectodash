@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, LockKeyhole, Upload } from "lucide-react";
+import { ArrowRight, BarChart3, LockKeyhole, Upload, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { obterAcesso } from "@/lib/acesso-server";
 import { podeAcessar } from "@/lib/acesso";
@@ -22,7 +22,8 @@ export default async function FinanceiroHome() {
 
   return <PageContainer>
     <header className="flex w-full flex-col gap-2"><p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">Área financeira</p><h1 className="text-3xl font-bold tracking-tight text-zinc-900">O que você precisa fazer?</h1><p className="max-w-2xl text-base text-zinc-600">Envie os documentos do mês para organizar e conferir, ou consulte os dados que já estão no sistema.</p></header>
-    <section aria-label="Ações principais do financeiro" className="grid w-full gap-4 md:grid-cols-2">
+    <section aria-label="Ações principais do financeiro" className="grid w-full gap-4 md:grid-cols-3">
+      <ActionCard href="/financeiro/ia" title="Financeiro com IA" description="Envie os arquivos do mês para a IA conferir notas, conciliar recebimentos e preparar o fechamento e a análise do ano." Icon={Sparkles} action="Processar mês com IA" tone="cyan" />
       <ActionCard href="/financeiro/importar" title="Subir arquivos" description="Enviar extratos, notas, faturas e comprovantes. O sistema guarda os originais e prepara os dados para conferência." Icon={Upload} action="Começar envio" tone="cyan" />
       <ActionCard href="/financeiro/analise" title="Analisar dados" description="Consultar o fluxo financeiro, comparar períodos e abrir os lançamentos já registrados." Icon={BarChart3} action="Abrir análise" tone="navy" />
     </section>

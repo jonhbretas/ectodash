@@ -6,7 +6,7 @@ import readXlsxFile from "read-excel-file/node";
 import { parseCsv } from "./parse-file";
 import { calculateNet, classifyDescription, hashLine, type NormalizedFinancialRow } from "./automation";
 
-export type DocumentParseResult = { format: "CSV" | "XLSX" | "OFX" | "PDF" | "IMAGE"; sourceType: string; provider?: string; rows: NormalizedFinancialRow[]; warnings: string[] };
+export type DocumentParseResult = { format: "CSV" | "XLSX" | "OFX" | "PDF" | "IMAGE" | "XML"; sourceType: string; provider?: string; rows: NormalizedFinancialRow[]; warnings: string[] };
 
 type ParsedGrid = { rows: NormalizedFinancialRow[]; warnings: string[]; provider?: string; sourceType: string };
 const clean = (value: unknown) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();

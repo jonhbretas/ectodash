@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ScanSearch, UploadCloud, Home, ListChecks, ArrowLeftRight, LockKeyhole } from "lucide-react";
+import { BarChart3, ScanSearch, UploadCloud, Home, ListChecks, ArrowLeftRight, LockKeyhole, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/financeiro", label: "Início", description: "Ações principais", Icon: Home },
+  { href: "/financeiro/ia", label: "Financeiro com IA", description: "Processar e fechar mês", Icon: Sparkles },
   { href: "/financeiro/importar", label: "Subir arquivos", description: "Envio e validação", Icon: UploadCloud },
   { href: "/financeiro/lancamentos", label: "Lançamentos", description: "Dados extraídos", Icon: ListChecks },
   { href: "/financeiro/conciliacao", label: "Conciliação", description: "Venda e depósito", Icon: ArrowLeftRight },

@@ -6,11 +6,17 @@ import { parseFinancialDocument } from "@/lib/financeiro/parse-document";
 import { normalizeText } from "@/lib/financeiro/automation";
 import { getFinancialDriveFolder } from "@/lib/financeiro/drive-folders";
 import { uploadDriveFile } from "@/lib/google/drive";
+import { getEffectiveAIConfig } from "@/lib/ai/ai-client";
+import { parseDocumentWithAI, type AIParseResult } from "@/lib/financeiro/ai-document";
+import { allFinancialRows } from "@/lib/financeiro/data";
+import { separateDuplicates, type ExistingMovement, type DuplicateCandidate } from "@/lib/financeiro/duplicates";
 
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 const ALLOWED_MIME = new Set([
   "application/pdf",
+  "application/xml",
+  "text/xml",
   "text/csv",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-excel",
@@ -45,6 +51,10 @@ export async function POST(request: Request) {
   const files = form.getAll("files").filter((item): item is File => item instanceof File);
   const competencia = String(form.get("competencia") || new Date().toISOString().slice(0, 7));
   const categoria = String(form.get("categoria") || "outros");
+  const useAI = form.get("mode") === "ia";
+  const aiConfig = useAI ? await getEffectiveAIConfig(supabase) : null;
+  if (useAI && !aiConfig?.apiKey) return NextResponse.json({ error: "Configure a chave OpenAI no servidor antes de usar o Financeiro com IA." }, { status: 503 });
+  if (useAI && (files.length !== 1 || files[0].size > 3 * 1024 * 1024)) return NextResponse.json({ error: "Envie um arquivo de até 3 MB por vez para leitura com IA." }, { status: 400 });
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)) return NextResponse.json({ error: "Competência inválida" }, { status: 400 });
   const { data: closedPeriod, error: periodError } = await supabase.from("finance_periods").select("id").eq("competencia", `${competencia}-01`).eq("status", "FECHADO").maybeSingle();
   if (periodError) return NextResponse.json({ error: "Não foi possível verificar o fechamento da competência. Tente novamente." }, { status: 503 });
@@ -54,24 +64,44 @@ export async function POST(request: Request) {
   for (const file of files) {
     if (file.size === 0 || file.size > 10 * 1024 * 1024) { results.push({ file: file.name, status: "FAILED", error: "Arquivo vazio ou maior que 10MB" }); continue; }
     const extension = file.name.toLowerCase().split(".").pop();
-    if (!["ofx", "pdf", "csv", "xlsx", "xls", "jpg", "jpeg", "png", "webp", "heic"].includes(extension ?? "") || (file.type && file.type !== "application/octet-stream" && !ALLOWED_MIME.has(file.type))) { results.push({ file: file.name, status: "FAILED", error: "Tipo de arquivo não permitido. Envie OFX, PDF, CSV, Excel ou imagem." }); continue; }
+    if (!["ofx", "pdf", "xml", "csv", "xlsx", "xls", "jpg", "jpeg", "png", "webp", "heic"].includes(extension ?? "") || (file.type && file.type !== "application/octet-stream" && !ALLOWED_MIME.has(file.type))) { results.push({ file: file.name, status: "FAILED", error: "Tipo de arquivo não permitido. Envie OFX, PDF, CSV, Excel ou imagem." }); continue; }
     const bytes = Buffer.from(await file.arrayBuffer());
     const sha256 = createHash("sha256").update(bytes).digest("hex");
-    const { data: existing, error: duplicateError } = await supabase.from("finance_imports").select("id,status").eq("file_sha256", sha256).maybeSingle();
+    const { data: existing, error: duplicateError } = await supabase.from("finance_imports").select("id,status,storage_path,metadata").eq("file_sha256", sha256).maybeSingle();
     if (duplicateError) { results.push({ file: file.name, status: "FAILED", error: "Não foi possível verificar se o arquivo já foi importado." }); continue; }
-    if (existing) { results.push({ file: file.name, status: "DUPLICATE", importId: existing.id }); continue; }
+    const reprocessing = Boolean(useAI && existing && form.get("reprocessId") === existing.id && existing.metadata?.competencia === competencia);
+    if (existing && !reprocessing) { results.push({ file: file.name, status: "DUPLICATE", importId: existing.id }); continue; }
+    if (reprocessing && existing) {
+      const [ledger, reviews] = await Promise.all([
+        supabase.from("finance_ledger").select("id", { count: "exact", head: true }).eq("import_id", existing.id),
+        supabase.from("finance_exceptions").select("id", { count: "exact", head: true }).eq("import_id", existing.id).neq("status", "OPEN"),
+      ]);
+      if (ledger.error || reviews.error || ledger.count !== 0 || reviews.count !== 0 || existing.metadata?.note_reviewed_at) { results.push({ file: file.name, status: "FAILED", error: "Este arquivo já tem lançamentos ou conferências. Revise os registros existentes para preservar o histórico." }); continue; }
+      const { data: claimed, error } = await supabase.from("finance_imports").update({ status: "PROCESSING" }).eq("id", existing.id).neq("status", "PROCESSING").select("id").maybeSingle();
+      if (error || !claimed) { results.push({ file: file.name, status: "FAILED", error: "Este arquivo já está sendo processado ou o mês foi fechado." }); continue; }
+    }
     let driveFile;
     try {
-      const folder = await getFinancialDriveFolder(competencia, categoria);
-      const safeName = file.name.replace(/[\\/<>:"|?*\u0000-\u001f]/g, "_").slice(-180);
-      driveFile = await uploadDriveFile(folder.id, safeName, bytes, file.type || "application/octet-stream");
+      if (reprocessing && existing) driveFile = { id: existing.storage_path, webViewLink: existing.metadata?.drive_url };
+      else {
+        const folder = await getFinancialDriveFolder(competencia, categoria);
+        const safeName = file.name.replace(/[\\/<>:"|?*\u0000-\u001f]/g, "_").slice(-180);
+        driveFile = await uploadDriveFile(folder.id, safeName, bytes, file.type || "application/octet-stream");
+      }
     } catch (error) {
       results.push({ file: file.name, status: "FAILED", error: error instanceof Error ? error.message : "Falha ao arquivar no Drive." });
       continue;
     }
-    let parsed;
+    let parsed: AIParseResult;
+    let duplicates: DuplicateCandidate[] = [];
     try {
-      parsed = await parseFinancialDocument(file);
+      parsed = useAI && aiConfig ? await parseDocumentWithAI(file, aiConfig) : await parseFinancialDocument(file);
+      if (useAI && parsed.rows.length) {
+        const dates = parsed.rows.map((row) => row.date).sort();
+        const existingRows = await allFinancialRows<ExistingMovement>(supabase, "finance_ledger", "id,movement_date,type,net_amount,normalized_description,external_transaction_id", (query) => query.gte("movement_date", dates[0]).lte("movement_date", dates.at(-1)!).not("reconciliation_status", "in", "(IGNORADO,DUPLICADO)"));
+        const checked = separateDuplicates(parsed.rows, existingRows);
+        parsed.rows = checked.rows; duplicates = checked.duplicates;
+      }
     } catch (error) {
       parsed = { format: "PDF" as const, sourceType: "UNKNOWN", rows: [], warnings: [`Falha na leitura automática: ${error instanceof Error ? error.message : "arquivo não processado"}`] };
     }
@@ -80,8 +110,18 @@ export async function POST(request: Request) {
       ? [`Período fora da competência: o conteúdo inclui datas diferentes da competência selecionada (${competencia}); confira o documento antes de confirmar.`]
       : [];
     const allWarnings = [...parsed.warnings, ...dateRangeWarning];
-    const { data: imported, error: importError } = await supabase.from("finance_imports").insert({ file_name: file.name, file_sha256: sha256, mime_type: file.type || "application/octet-stream", file_size: file.size, storage_path: driveFile.id, source_type: parsed.sourceType, provider: parsed.provider ?? null, period_start: dates[0] ?? null, period_end: dates.at(-1) ?? null, status: "PROCESSING", row_count: parsed.rows.length, metadata: { format: parsed.format, warnings: allWarnings, drive_url: driveFile.webViewLink ?? null, competencia, categoria }, created_by: user.id }).select("id").single();
+    const importPayload = { file_name: file.name, file_sha256: sha256, mime_type: file.type || "application/octet-stream", file_size: file.size, storage_path: driveFile.id, source_type: parsed.sourceType, provider: parsed.provider ?? null, period_start: dates[0] ?? null, period_end: dates.at(-1) ?? null, status: "PROCESSING", row_count: parsed.rows.length, metadata: { format: parsed.format, warnings: allWarnings, drive_url: driveFile.webViewLink ?? null, competencia, categoria, ai_document: parsed.aiDocument ?? null, ai_model: parsed.aiModel ?? null }, created_by: user.id };
+    const { data: imported, error: importError } = reprocessing && existing
+      ? await supabase.from("finance_imports").update(importPayload).eq("id", existing.id).select("id").single()
+      : await supabase.from("finance_imports").insert(importPayload).select("id").single();
     if (importError || !imported) { results.push({ file: file.name, status: "FAILED", error: importError?.message ?? "Falha ao registrar importação" }); continue; }
+    if (reprocessing) {
+      const { error } = await supabase.from("finance_exceptions").delete().eq("import_id", imported.id).eq("status", "OPEN");
+      if (error) {
+        await supabase.from("finance_imports").update({ status: "FAILED", error_message: "Falha ao substituir pendencias da leitura anterior." }).eq("id", imported.id);
+        results.push({ file: file.name, status: "FAILED", error: "Falha ao atualizar as pendencias anteriores." }); continue;
+      }
+    }
     const entityIds = new Map<string, string | null>();
     for (const row of parsed.rows) {
       if (row.category) entityIds.set(`CATEGORY:${row.category}`, await ensureEntity(supabase, "CATEGORY", row.category));
@@ -91,15 +131,16 @@ export async function POST(request: Request) {
     const { data: savedLedger, error: ledgerError } = ledgerRows.length ? await supabase.from("finance_ledger").insert(ledgerRows).select("id,confidence,original_description,net_amount") : { data: [], error: null };
     const uncertain = (savedLedger ?? []).filter((row) => Number(row.confidence) < 0.8);
     const exceptions = [
+      ...duplicates.map((duplicate) => ({ import_id: imported.id, problem: `Possível duplicidade: ${duplicate.row.description}`, affected_amount: duplicate.row.net, alternatives: [duplicate], recommendation: "Confira os candidatos e mescle com o registro existente para manter a origem sem duplicar o caixa.", status: "OPEN" as const })),
       ...allWarnings.map((problem) => ({ import_id: imported.id, problem, recommendation: "Confira o arquivo original no Drive e complete os dados manualmente.", status: "OPEN" as const })),
       ...uncertain.map((row) => ({ import_id: imported.id, problem: `Classificação com baixa confiança: ${row.original_description}`, affected_amount: row.net_amount, ledger_ids: [row.id], recommendation: "Revise data, descrição e valor antes de considerar este lançamento conferido.", status: "OPEN" as const })),
     ];
     const { error: exceptionError } = exceptions.length ? await supabase.from("finance_exceptions").insert(exceptions) : { error: null };
     const { error: auditError } = !ledgerError ? await supabase.from("finance_audit_log").insert({ import_id: imported.id, action: "IMPORT_PROCESSED", after_data: { file: file.name, rows: parsed.rows.length }, actor: user.id }) : { error: null };
     const processingError = ledgerError ?? exceptionError ?? auditError;
-    const { error: statusError } = await supabase.from("finance_imports").update({ status: processingError ? "FAILED" : allWarnings.length || uncertain.length ? "PARTIAL" : "PROCESSED", error_message: processingError?.message ?? null, processed_at: new Date().toISOString() }).eq("id", imported.id);
+    const { error: statusError } = await supabase.from("finance_imports").update({ status: processingError ? "FAILED" : allWarnings.length || uncertain.length || duplicates.length ? "PARTIAL" : "PROCESSED", error_message: processingError?.message ?? null, processed_at: new Date().toISOString() }).eq("id", imported.id);
     if (processingError || statusError) { results.push({ file: file.name, status: "FAILED", importId: imported.id, error: "O processamento não foi concluído. Confira a importação existente antes de reenviar o arquivo." }); continue; }
-    results.push({ file: file.name, status: ledgerError ? "FAILED" : allWarnings.length || uncertain.length ? "PARTIAL" : "PROCESSED", importId: imported.id, rows: parsed.rows.length, warnings: allWarnings, uncertain: uncertain.length, provider: parsed.provider ?? null, sourceType: parsed.sourceType });
+    results.push({ file: file.name, status: ledgerError ? "FAILED" : allWarnings.length || uncertain.length || duplicates.length ? "PARTIAL" : "PROCESSED", importId: imported.id, rows: parsed.rows.length, warnings: allWarnings, uncertain: uncertain.length, provider: parsed.provider ?? null, sourceType: parsed.sourceType, duplicates: duplicates.length, document: parsed.aiDocument ?? null });
   }
   return NextResponse.json({ results });
 }
