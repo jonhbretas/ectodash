@@ -66,6 +66,7 @@ export default function QuickSearch({ onNavigate }: { onNavigate?: () => void })
     const sanitized = t.replace(/%/g, "%%").replace(/_/g, "\\_").replace(/[()'"]/g, "").trim();
 
     const seq = ++seqRef.current;
+    const controller = new AbortController();
 
     const timer = setTimeout(async () => {
       setBuscando(true);
@@ -77,34 +78,38 @@ export default function QuickSearch({ onNavigate }: { onNavigate?: () => void })
             .select("id, titulo, prazo")
             .ilike("titulo", `%${sanitized}%`)
             .order("updated_at", { ascending: false })
-            .limit(5),
+            .limit(5).abortSignal(controller.signal),
           supabase
             .from("eventos")
             .select("id, titulo, data_evento")
             .ilike("titulo", `%${sanitized}%`)
             .order("data_evento", { ascending: false })
-            .limit(5),
+            .limit(5).abortSignal(controller.signal),
           supabase
             .from("reunioes")
             .select("id, titulo, data_reuniao")
             .ilike("titulo", `%${sanitized}%`)
             .order("data_reuniao", { ascending: false })
-            .limit(5),
+            .limit(5).abortSignal(controller.signal),
           supabase
             .from("voluntarios")
             .select("id, nome, codigo_pf, funcao")
             .or(`nome.ilike.%${sanitized}%,codigo_pf.ilike.%${sanitized}%`)
             .order("nome", { ascending: true })
-            .limit(5),
+            .limit(5).abortSignal(controller.signal),
           supabase
             .from("projetos")
             .select("id, nome, area")
             .ilike("nome", `%${sanitized}%`)
             .order("nome", { ascending: true })
-            .limit(5),
+            .limit(5).abortSignal(controller.signal),
         ]);
 
         if (seqRef.current !== seq) return;
+        if ([demandas, eventos, atas, voluntarios, projetos].some((result) => result.error)) {
+          setErro(true);
+          return;
+        }
 
         const novos: Resultado[] = [];
         for (const row of demandas.data ?? []) {
@@ -162,7 +167,11 @@ export default function QuickSearch({ onNavigate }: { onNavigate?: () => void })
       }
     }, 200);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      seqRef.current += 1;
+      controller.abort();
+    };
   }, [termo, supabase]);
 
   const grupos = useMemo(() => {

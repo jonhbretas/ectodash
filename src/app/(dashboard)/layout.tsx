@@ -1,3 +1,4 @@
+import { obterUsuarioAtual, obterPerfilAtual, obterCargosAtuais, obterModulosDesativados } from "@/lib/supabase/request-context";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { Lock } from "lucide-react";
@@ -20,19 +21,13 @@ export default async function DashboardLayout({
   children: ReactNode;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await obterUsuarioAtual();
 
   if (!user) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, ativo, vincular_pendente, voluntario_id")
-    .eq("id", user.id)
-    .single();
+  const profile = await obterPerfilAtual();
 
   if (profile && profile.vincular_pendente) {
     redirect("/vincular");
@@ -60,23 +55,35 @@ export default async function DashboardLayout({
   // 0043) — decide a visibilidade da sidebar; as páginas têm os seus
   // próprios gates de servidor e a RLS é o limite real. Inclui o kill
   // switch global de módulos (0105): desativado some p/ todos, menos o geral.
-  const [{ data: cargos }, { data: flags }] = await Promise.all([
-    supabase.rpc("meus_cargos"),
-    supabase.from("system_module_flags").select("modulo").eq("ativo", false),
+  const isCoordenadorGeral = profile?.role === "coordenador_geral";
+  const [cargosRaw, modulosDesativados, notificacoesResult, feedbackResult,
+    profilesPreviewResult, modelosPreviewResult] = await Promise.all([
+    obterCargosAtuais(),
+    obterModulosDesativados(),
+    supabase.from("notificacoes")
+      .select("id, titulo, mensagem, link, created_at")
+      .eq("lida", false).order("created_at", { ascending: false }),
+    isCoordenadorGeral
+      ? supabase.from("feedback").select("id", { count: "exact", head: true }).eq("status", "novo")
+      : Promise.resolve({ count: 0 }),
+    isCoordenadorGeral
+      ? supabase.from("profiles")
+          .select("id, full_name, email, role, cargos(id, nivel, area_id, localidade_id, cargo_modulos(modulo))")
+          .order("full_name", { ascending: true }).limit(300)
+      : Promise.resolve({ data: [] }),
+    isCoordenadorGeral
+      ? supabase.from("cargo_modelos").select("id, nome, nivel, area_id, modulos").order("nome")
+      : Promise.resolve({ data: [] }),
   ]);
   const acesso = {
     role: profile?.role ?? null,
-    cargos: (cargos ?? []) as Acesso["cargos"],
-    modulosDesativados: ((flags ?? []) as { modulo: string }[]).map((f) => f.modulo),
+    cargos: cargosRaw as Acesso["cargos"],
+    modulosDesativados,
   };
 
   // Notificações não lidas — relatos de bug/sugestão do usuário que foram
   // marcados como resolvidos (migration 0070). Exibidas uma vez ao logar.
-  const { data: notificacoesRaw } = await supabase
-    .from("notificacoes")
-    .select("id, titulo, mensagem, link, created_at")
-    .eq("lida", false)
-    .order("created_at", { ascending: false });
+  const notificacoesRaw = notificacoesResult.data;
 
   const notificacoes: NotificacaoRow[] = (notificacoesRaw ?? []).map((n) => ({
     id: String(n.id),
@@ -87,7 +94,6 @@ export default async function DashboardLayout({
   }));
 
   // Contagem inicial de feedbacks novos para o banner + badge (só coordenador)
-  const isCoordenadorGeral = profile?.role === "coordenador_geral";
   const viewAsOptions: Array<ViewAsOption & { acesso: Acesso }> = [];
 
   // O seletor "Visualizar como" é exclusivo do coordenador geral e só
@@ -108,18 +114,6 @@ export default async function DashboardLayout({
         acesso: { role: funcao.role, cargos: [], modulosDesativados: acesso.modulosDesativados },
       });
     }
-
-    const [profilesPreviewResult, modelosPreviewResult] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, full_name, email, role, cargos(id, nivel, area_id, localidade_id, cargo_modulos(modulo))")
-        .order("full_name", { ascending: true })
-        .limit(300),
-      supabase
-        .from("cargo_modelos")
-        .select("id, nome, nivel, area_id, modulos")
-        .order("nome"),
-    ]);
 
     type CargoPreviewRaw = {
       id: number;
@@ -187,14 +181,7 @@ export default async function DashboardLayout({
       });
     }
   }
-  let feedbackNovos = 0;
-  if (isCoordenadorGeral) {
-    const { count } = await supabase
-      .from("feedback")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "novo");
-    feedbackNovos = count ?? 0;
-  }
+  const feedbackNovos = feedbackResult.count ?? 0;
 
   return (
     <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-[#E6E6E6]/20 lg:flex-row">

@@ -1,3 +1,4 @@
+import { obterUsuarioAtual, obterPerfilAtual } from "@/lib/supabase/request-context";
 import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/display-name";
 import Link from "next/link";
@@ -26,19 +27,13 @@ export default async function DemandasPage({
   const demandasDaCoordenacao = rawSearchParams.coordenacao === "1";
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await obterUsuarioAtual();
 
   if (!user) {
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("email, full_name, role, voluntario_id")
-    .eq("id", user.id)
-    .single();
+  const profile = await obterPerfilAtual();
 
   const role = profile?.role;
   const podeVerDemandasDaCoordenacao = role === "coordenador_geral";
@@ -131,23 +126,20 @@ export default async function DemandasPage({
     (filters.status ?? "pendente,em_andamento").split(",")
   );
 
-  const { data: baseDemandas } = await supabase
-    .from("demandas_com_status")
-    .select("id, area, projeto, status, atrasada, evento_id")
-    .eq("restrita_coordenacao_geral", demandasDaCoordenacao)
-    .order("prazo", { ascending: true });
-
-  const baseRows = baseDemandas ?? [];
-
-  const { data: areasInstitucionaisRows } = await supabase
-    .from("areas_institucionais")
-    .select("nome")
-    .order("nome");
-
-  const { data: projetosCadastrados } = await supabase
-    .from("projetos")
-    .select("nome")
-    .order("nome");
+  const [baseResult, areasResult, projetosResult, demandasResult] = await Promise.all([
+    supabase
+      .from("demandas_com_status")
+      .select("id, area, projeto, status, atrasada, evento_id")
+      .eq("restrita_coordenacao_geral", demandasDaCoordenacao)
+      .order("prazo", { ascending: true }),
+    supabase.from("areas_institucionais").select("nome").order("nome"),
+    supabase.from("projetos").select("nome").order("nome"),
+    query,
+  ]);
+  const baseRows = baseResult.data ?? [];
+  const areasInstitucionaisRows = areasResult.data;
+  const projetosCadastrados = projetosResult.data;
+  const demandas = demandasResult.data;
 
   const areaOptions = [
     ...new Set([
@@ -167,9 +159,8 @@ export default async function DemandasPage({
     ]),
   ].sort((a, b) => a.localeCompare(b));
 
-  const { data: demandas } = await query;
-
   const demandaIds = (demandas ?? []).map((demanda) => demanda.id);
+  const demandaIdSet = new Set(demandaIds);
   const baseDemandaIds = baseRows.map((demanda) => demanda.id);
 
   const [responsaveisResult, eventosResult, etiquetasResult, checklistResult] =
@@ -250,7 +241,7 @@ export default async function DemandasPage({
     const label = nomeDaRow(row);
     if (voluntarioId === null || !label) continue;
     responsavelOptionById.set(String(voluntarioId), label);
-    if (demandaIds.includes(row.demanda_id)) {
+    if (demandaIdSet.has(row.demanda_id)) {
       const labels = responsaveisPorDemanda.get(row.demanda_id) ?? [];
       labels.push(label);
       responsaveisPorDemanda.set(row.demanda_id, labels);

@@ -35,11 +35,6 @@ function isoMaisDias(baseISO: string, dias: number): string {
 
 export default async function PagamentosHome() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
   const acesso = await obterAcesso();
   const pode = acesso !== null && podeAcessar(acesso, "financeiro") !== false;
   if (!pode) return null;

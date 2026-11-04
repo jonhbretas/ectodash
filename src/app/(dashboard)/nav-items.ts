@@ -12,6 +12,7 @@ import {
   FlaskConical,
   CalendarDays,
   Wrench,
+  Link2,
   Wallet,
   DollarSign,
   LayoutDashboard,
@@ -143,7 +144,7 @@ export const navEntries: SidebarEntry[] = [
     href: "/utilidades",
     modulo: "utilidades",
     children: [
-      { href: "/utilidades", label: "Utilidades", Icon: Wrench, modulo: "utilidades" },
+      { href: "/utilidades", label: "Links Úteis", Icon: Link2, modulo: "utilidades" },
       { href: "/utilidades/dicionario", label: "Dicionário", Icon: BookOpen, modulo: "utilidades" },
     ],
   },

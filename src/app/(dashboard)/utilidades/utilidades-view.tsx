@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { ExternalLink, Search, Trash2, Pencil, Layers, FileText, BookOpen, Image, GraduationCap, Link2, Wrench, ChevronDown, X } from "lucide-react";
+import { ExternalLink, Search, Trash2, Pencil, Layers, ChevronDown, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { atualizarUtilidadeItem, excluirUtilidadeItemSimples, type UtilidadeState } from "./utilidades-actions";
+import { CATEGORIAS, CATEGORIA_SUGGESTIONS, categoriaInfo } from "./categorias";
 
 type Area = { id: number; nome: string };
 type Item = {
@@ -17,24 +18,6 @@ type Item = {
   area_nome: string | null;
   tags: string[];
 };
-
-const CATEGORIAS: Record<string, { label: string; icon: typeof BookOpen }> = {
-  ata_fundacao: { label: "Ata de Fundação", icon: FileText },
-  estatuto: { label: "Estatuto", icon: BookOpen },
-  logo: { label: "Logos e Identidade Visual", icon: Image },
-  ficha_proposicao: { label: "Ficha de Proposição de Curso", icon: FileText },
-  grade_curricular: { label: "Grade Curricular — IC", icon: GraduationCap },
-  links_uteis: { label: "Links Úteis", icon: Link2 },
-  qualificacao_docente: { label: "Qualificação Docente", icon: GraduationCap },
-  atividades_parapedagogicas: { label: "Atividades Parapedagógicas", icon: BookOpen },
-  outro: { label: "Outros Documentos", icon: Wrench },
-};
-
-function categoriaInfo(categoria: string) {
-  return CATEGORIAS[categoria] ?? { label: categoria, icon: Wrench };
-}
-
-const CATEGORIA_SUGGESTIONS = Object.values(CATEGORIAS).map((c) => c.label);
 
 const initialEdit: UtilidadeState = { ok: false, message: "" };
 
@@ -54,38 +37,41 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
     return all;
   }, [areas, items]);
 
+  // Itens da aba atual (área) — base para contar e filtrar categorias.
+  const itensDaAba = useMemo(() => {
+    if (activeTab === "todos") return items;
+    const areaId = Number(activeTab.replace("area-", ""));
+    return items.filter((i) => i.area_id === areaId);
+  }, [items, activeTab]);
+
+  // Só categorias que têm itens na aba atual, na ordem padrão e depois as livres.
   const categorias = useMemo(() => {
-    const seen = new Set<string>(Object.keys(CATEGORIAS));
-    const list = Object.entries(CATEGORIAS).map(([value, cat]) => ({ value, label: cat.label }));
-    for (const item of items) {
-      if (!seen.has(item.categoria)) {
-        seen.add(item.categoria);
-        list.push({ value: item.categoria, label: item.categoria });
-      }
-    }
-    return list;
-  }, [items]);
+    const counts = new Map<string, number>();
+    for (const item of itensDaAba) counts.set(item.categoria, (counts.get(item.categoria) ?? 0) + 1);
+    const ordem = [
+      ...Object.keys(CATEGORIAS).filter((k) => counts.has(k)),
+      ...[...counts.keys()].filter((k) => !CATEGORIAS[k]).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    ];
+    return ordem.map((value) => ({ value, count: counts.get(value) ?? 0, info: categoriaInfo(value) }));
+  }, [itensDaAba]);
+
+  // Categoria escolhida que sumiu ao trocar de área volta para "todas".
+  const catEfetiva = catFilter === "todas" || categorias.some((c) => c.value === catFilter) ? catFilter : "todas";
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    let result = items;
+    let result = itensDaAba;
 
-    if (activeTab !== "todos") {
-      const areaId = Number(activeTab.replace("area-", ""));
-      result = result.filter((i) => i.area_id === areaId);
-    }
-
-    if (catFilter !== "todas") {
-      result = result.filter((i) => i.categoria === catFilter);
+    if (catEfetiva !== "todas") {
+      result = result.filter((i) => i.categoria === catEfetiva);
     }
 
     if (q) {
       result = result.filter((i) => {
-        const catLabel = CATEGORIAS[i.categoria]?.label ?? i.categoria;
         const haystack = [
           i.titulo,
           i.descricao ?? "",
-          catLabel,
+          categoriaInfo(i.categoria).label,
           i.area_nome ?? "",
           ...i.tags,
         ]
@@ -96,78 +82,120 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
     }
 
     return result;
-  }, [items, activeTab, catFilter, search]);
+  }, [itensDaAba, catEfetiva, search]);
+
+  // Cards agrupados por categoria, cada grupo com título, ícone e cor própria.
+  const grupos = useMemo(() => {
+    const porCategoria = new Map<string, Item[]>();
+    for (const item of filtered) {
+      const lista = porCategoria.get(item.categoria) ?? [];
+      lista.push(item);
+      porCategoria.set(item.categoria, lista);
+    }
+    return categorias
+      .filter((c) => porCategoria.has(c.value))
+      .map((c) => ({ ...c, itens: porCategoria.get(c.value)! }));
+  }, [filtered, categorias]);
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <div
-        role="tablist"
-        aria-label="Áreas"
-        className="flex w-full flex-wrap items-center gap-1 rounded-2xl bg-zinc-100 p-1 ring-1 ring-zinc-200/60"
-      >
-        {tabs.map((tab) => {
-          const selected = tab.id === activeTab;
-          return (
-            <button
-              key={tab.id}
-              role="tab"
-              type="button"
-              aria-selected={selected}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "flex min-h-12 items-center gap-2 rounded-xl px-4 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]",
-                selected
-                  ? "bg-white text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
-                  : "text-zinc-500 hover:bg-zinc-200/60 hover:text-zinc-700"
-              )}
-            >
-              {tab.id === "todos" && <Layers size={16} aria-hidden="true" />}
-              {tab.label}
-              {tab.count > 0 && (
-                <span
-                  className={cn(
-                    "flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-sm font-semibold",
-                    selected
-                      ? "bg-[#2195B9]/10 text-[#2195B9]"
-                      : "bg-zinc-200 text-zinc-500"
-                  )}
-                >
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-stretch">
-        <div className="relative flex-1">
-          <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
-          <input
-            type="text"
-            placeholder="Buscar por título, descrição, área ou tag..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-4 text-xl text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] placeholder:text-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
-          />
+      <section aria-labelledby="filtro-area" className="flex flex-col gap-2">
+        <h2 id="filtro-area" className="text-base font-semibold uppercase tracking-wide text-zinc-500">
+          1. Escolha a área
+        </h2>
+        <div
+          role="tablist"
+          aria-label="Áreas"
+          className="flex w-full flex-wrap items-center gap-1 rounded-2xl bg-zinc-100 p-1 ring-1 ring-zinc-200/60"
+        >
+          {tabs.map((tab) => {
+            const selected = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                type="button"
+                aria-selected={selected}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex min-h-12 items-center gap-2 rounded-xl px-4 text-base font-medium transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]",
+                  selected
+                    ? "bg-white text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+                    : "text-zinc-500 hover:bg-zinc-200/60 hover:text-zinc-700"
+                )}
+              >
+                {tab.id === "todos" && <Layers size={16} aria-hidden="true" />}
+                {tab.label}
+                {tab.count > 0 && (
+                  <span
+                    className={cn(
+                      "flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-sm font-semibold",
+                      selected
+                        ? "bg-[#2195B9]/10 text-[#2195B9]"
+                        : "bg-zinc-200 text-zinc-500"
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-        <div className="relative">
-          <ChevronDown size={18} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
-          <select
-            aria-label="Filtrar por categoria"
-            value={catFilter}
-            onChange={(e) => setCatFilter(e.target.value)}
-            className="min-h-14 w-full appearance-none rounded-xl border border-zinc-200 bg-white py-3 pl-4 pr-10 text-xl text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:w-72"
-          >
-            <option value="todas">Todas as categorias</option>
-            {categorias.map((cat) => (
-              <option key={cat.value} value={cat.value}>{cat.label}</option>
+      </section>
+
+      {categorias.length > 0 && (
+        <section aria-labelledby="filtro-tipo" className="flex flex-col gap-2">
+          <h2 id="filtro-tipo" className="text-base font-semibold uppercase tracking-wide text-zinc-500">
+            2. Escolha o tipo de material
+          </h2>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Tipos de material">
+            <CategoriaChip
+              ativo={catEfetiva === "todas"}
+              onClick={() => setCatFilter("todas")}
+              label="Todos os tipos"
+              count={itensDaAba.length}
+              icon={Layers}
+              chip="bg-zinc-100 text-zinc-800"
+            />
+            {categorias.map((c) => (
+              <CategoriaChip
+                key={c.value}
+                ativo={catEfetiva === c.value}
+                onClick={() => setCatFilter(c.value)}
+                label={c.info.label}
+                count={c.count}
+                icon={c.info.icon}
+                chip={c.info.chip}
+              />
             ))}
-          </select>
-        </div>
+          </div>
+        </section>
+      )}
+
+      <div className="relative w-full">
+        <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+        <input
+          type="text"
+          aria-label="Buscar"
+          placeholder="Ou busque por nome, descrição ou palavra-chave..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="min-h-14 w-full rounded-xl border border-zinc-200 bg-white py-3 pl-10 pr-12 text-xl text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.04)] placeholder:text-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+        />
+        {search && (
+          <button
+            type="button"
+            aria-label="Limpar busca"
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+          >
+            <X size={20} />
+          </button>
+        )}
       </div>
 
-      <div role="tabpanel" className="flex w-full flex-col gap-4">
+      <div className="flex w-full flex-col gap-8">
         {filtered.length === 0 ? (
           <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-500 ring-1 ring-zinc-200/60">
             {search
@@ -175,14 +203,61 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
               : "Nenhum item cadastrado nesta seção."}
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((item) => (
-              <ItemCard key={item.id} item={item} areas={areas} podeGerenciar={podeGerenciar} />
-            ))}
-          </div>
+          grupos.map((grupo) => (
+            <section key={grupo.value} aria-labelledby={`grupo-${grupo.value}`} className="flex flex-col gap-3">
+              <h2
+                id={`grupo-${grupo.value}`}
+                className="flex items-center gap-3 text-2xl font-semibold text-zinc-900"
+              >
+                <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl", grupo.info.iconBg, grupo.info.iconText)}>
+                  <grupo.info.icon size={22} aria-hidden="true" />
+                </span>
+                {grupo.info.label}
+                <span className="text-lg font-normal text-zinc-500">({grupo.itens.length})</span>
+              </h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {grupo.itens.map((item) => (
+                  <ItemCard key={item.id} item={item} areas={areas} podeGerenciar={podeGerenciar} />
+                ))}
+              </div>
+            </section>
+          ))
         )}
       </div>
     </div>
+  );
+}
+
+function CategoriaChip({
+  ativo,
+  onClick,
+  label,
+  count,
+  icon: Icon,
+  chip,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  icon: typeof Layers;
+  chip: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={ativo}
+      onClick={onClick}
+      className={cn(
+        "flex min-h-12 items-center gap-2 rounded-full px-4 text-base font-medium ring-2 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]",
+        chip,
+        ativo ? "ring-zinc-900 shadow-sm" : "ring-transparent opacity-80 hover:opacity-100"
+      )}
+    >
+      <Icon size={18} aria-hidden="true" />
+      {label}
+      <span className="rounded-full bg-white/70 px-2 text-sm font-semibold">{count}</span>
+    </button>
   );
 }
 
@@ -191,26 +266,36 @@ function ItemCard({ item, areas, podeGerenciar }: { item: Item; areas: Area[]; p
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60">
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-2xl border-l-[6px] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60",
+        cat.border
+      )}
+    >
       {editing ? (
         <ItemEditForm item={item} areas={areas} onCancel={() => setEditing(false)} />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            {item.area_nome && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-sm font-medium text-[#2195B9]">
-                {item.area_nome}
-              </span>
-            )}
-            {cat && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#2195B9]/10 px-2.5 py-0.5 text-sm font-medium text-[#2195B9]">
-                <cat.icon size={12} aria-hidden="true" />
+          <div className="flex items-start gap-3">
+            <span
+              className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl", cat.iconBg, cat.iconText)}
+              title={cat.label}
+            >
+              <cat.icon size={26} aria-hidden="true" />
+            </span>
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className={cn("w-fit rounded-full px-2.5 py-0.5 text-sm font-semibold", cat.chip)}>
                 {cat.label}
               </span>
-            )}
+              <h3 className="text-lg font-semibold leading-snug text-zinc-900">{item.titulo}</h3>
+            </div>
           </div>
 
-          <h3 className="text-lg font-semibold leading-snug text-zinc-900">{item.titulo}</h3>
+          {item.area_nome && (
+            <p className="text-base text-zinc-600">
+              <span className="font-medium text-zinc-800">Área:</span> {item.area_nome}
+            </p>
+          )}
 
           {item.descricao && (
             <DescricaoToggle descricao={item.descricao} />
@@ -235,10 +320,10 @@ function ItemCard({ item, areas, podeGerenciar }: { item: Item; areas: Area[]; p
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-[#28627B]"
+                className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-[#28627B]"
               >
-                <ExternalLink size={16} />
-                Acessar
+                <ExternalLink size={16} aria-hidden="true" />
+                Abrir link
               </a>
             )}
             {item.arquivo_nome && (
@@ -304,7 +389,7 @@ function ItemEditForm({
   areas: Area[];
   onCancel: () => void;
 }) {
-  const [state, formAction] = useActionState(atualizarUtilidadeItem, initialEdit);
+  const [state, formAction, pending] = useActionState(atualizarUtilidadeItem, initialEdit);
 
   useEffect(() => {
     if (state.ok) onCancel();
@@ -375,8 +460,14 @@ function ItemEditForm({
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 text-lg font-medium text-white transition-colors hover:bg-[#28627B]">
-          Salvar
+        <button
+          type="submit"
+          disabled={pending}
+          aria-busy={pending}
+          className="flex min-h-12 items-center gap-1.5 rounded-lg bg-[#2195B9] px-4 text-lg font-medium text-white transition-colors hover:bg-[#28627B] disabled:cursor-wait disabled:opacity-70"
+        >
+          {pending && <Loader2 size={18} className="animate-spin" aria-hidden="true" />}
+          {pending ? "Salvando..." : "Salvar"}
         </button>
         <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-lg text-zinc-600 hover:text-zinc-900">
           Cancelar

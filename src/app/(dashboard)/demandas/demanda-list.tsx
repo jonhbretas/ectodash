@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import QuickCreate from "./quick-create";
-import { useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   FilterX,
   ClipboardList,
@@ -17,11 +18,13 @@ import DemandaCard from "./demanda-card";
 import DemandaTable from "./demanda-table";
 import { DemandaAgruparFilter } from "./demanda-quick-filters";
 import { excluirDemandas, updateDemandaStatus } from "./actions";
-import EdicaoEmMassaDialog, {
-  type BulkEditEvento,
-  type BulkEditEtiqueta,
-  type BulkEditVoluntario,
+import type {
+  BulkEditEvento,
+  BulkEditEtiqueta,
+  BulkEditVoluntario,
 } from "./edicao-em-massa-dialog";
+
+const EdicaoEmMassaDialog = dynamic(() => import("./edicao-em-massa-dialog"));
 import {
   groupDemandas,
   compareDemandas,
@@ -92,10 +95,13 @@ export default function DemandaList({
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const sorted = [...demandas].sort(compareDemandas);
+  const sorted = useMemo(() => [...demandas].sort(compareDemandas), [demandas]);
   const count = demandas.length;
   const countLabel = count === 1 ? "1 demanda" : `${count} demandas`;
-  const grouped = groupBy ? groupDemandas(demandas, groupBy) : null;
+  const grouped = useMemo(
+    () => groupBy ? groupDemandas(demandas, groupBy) : null,
+    [demandas, groupBy]
+  );
 
   const lastToggledRef = useRef<number | null>(null);
 
@@ -298,7 +304,7 @@ export default function DemandaList({
         </p>
       )}
 
-      <EdicaoEmMassaDialog
+      {editing && <EdicaoEmMassaDialog
         key={editing ? "aberto" : "fechado"}
         open={editing}
         onOpenChange={setEditing}
@@ -309,7 +315,7 @@ export default function DemandaList({
         etiquetas={etiquetas}
         voluntarios={voluntarios}
         onSucesso={aoEditar}
-      />
+      />}
 
       {quickCreate && !selectionMode && (count > 0 || filtersActive) && <QuickCreate />}
       {count === 0 && filtersActive ? (

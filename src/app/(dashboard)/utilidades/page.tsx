@@ -1,4 +1,4 @@
-import { BookOpen } from "lucide-react";
+import { Link2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import UtilidadesView from "./utilidades-view";
@@ -54,11 +54,11 @@ export default async function UtilidadesPage() {
       <header className="flex w-full flex-wrap items-start justify-between gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900">
-            <BookOpen size={30} aria-hidden="true" />
-            Utilidades
+            <Link2 size={30} aria-hidden="true" />
+            Links Úteis
           </h1>
           <p className="max-w-2xl text-xl text-zinc-500">
-            Acervo de dados institucionais — documentos, logos, fichas, links úteis e recursos.
+            Documentos, logos, fichas e sites da instituição. Escolha a área e o tipo de material para encontrar o que precisa.
           </p>
         </div>
       </header>

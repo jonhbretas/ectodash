@@ -1,3 +1,4 @@
+import { obterUsuarioAtual, obterPerfilAtual, obterCargosAtuais, obterModulosDesativados } from "@/lib/supabase/request-context";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -49,29 +50,23 @@ function isoMaisDias(baseISO: string, dias: number): string {
 
 export default async function InicioPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await obterUsuarioAtual();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("email, full_name, role, voluntario_id")
-    .eq("id", user.id)
-    .single();
+  const profile = await obterPerfilAtual();
 
   const meuVoluntarioId = profile?.voluntario_id ?? null;
   const nome = displayName(profile ?? { email: user.email ?? "" });
   const primeiroNome = nome.split(" ")[0] || nome;
 
-  const [{ data: cargosRaw }, { data: flags }] = await Promise.all([
-    supabase.rpc("meus_cargos"),
-    supabase.from("system_module_flags").select("modulo").eq("ativo", false),
+  const [cargosRaw, modulosDesativados] = await Promise.all([
+    obterCargosAtuais(),
+    obterModulosDesativados(),
   ]);
   const acesso: Acesso = {
     role: (profile?.role as Acesso["role"]) ?? null,
-    cargos: (cargosRaw ?? []) as Acesso["cargos"],
-    modulosDesativados: (flags ?? []).map((flag) => String(flag.modulo)),
+    cargos: cargosRaw as Acesso["cargos"],
+    modulosDesativados,
   };
   const pode = (modulo?: ModuloAcesso) =>
     !modulo || podeAcessar(acesso, modulo) !== false;
@@ -82,44 +77,7 @@ export default async function InicioPage() {
   const em7 = isoMaisDias(today, 7);
 
   // ── Minhas demandas (ativas) ──
-  let minhasAtrasadas = 0;
-  let minhasHoje = 0;
-  let minhasSemana = 0;
-  let minhasTotal = 0;
-
-  if (meuVoluntarioId !== null) {
-    const { data: vinculos } = await supabase
-      .from("demanda_responsaveis")
-      .select("demanda_id")
-      .eq("voluntario_id", meuVoluntarioId);
-    const idsPorVoluntario = (vinculos ?? []).map((v) => v.demanda_id);
-
-    const { data: vinculosPerfil } = await supabase
-      .from("demanda_responsaveis")
-      .select("demanda_id")
-      .eq("profile_id", user.id);
-    const idsPorPerfil = (vinculosPerfil ?? []).map((v) => v.demanda_id);
-
-    const meusIds = [...new Set([...idsPorVoluntario, ...idsPorPerfil])];
-    if (meusIds.length > 0) {
-      const { data: minhas } = await supabase
-        .from("demandas_com_status")
-        .select("id, prazo, atrasada")
-        .in("id", meusIds)
-        .neq("status", "concluida");
-      const rows = minhas ?? [];
-      minhasTotal = rows.length;
-      minhasAtrasadas = rows.filter((r) => r.atrasada).length;
-      minhasHoje = rows.filter((r) => r.prazo === today).length;
-      minhasSemana = rows.filter(
-        (r) => r.prazo > today && r.prazo <= em7
-      ).length;
-    }
-  }
-
-  // ── Próximos eventos + pautas + atrasadas gerais ──
-  const [{ data: proximosEventos }, { data: pautasPendentes }, atrasadasGeralResult] =
-    await Promise.all([
+  const resumoPromise = Promise.all([
       supabase
         .from("eventos")
         .select("id, titulo, data_evento, local")
@@ -139,6 +97,38 @@ export default async function InicioPage() {
             .eq("atrasada", true)
         : Promise.resolve({ count: 0 as number | null }),
     ]);
+
+
+  let minhasAtrasadas = 0;
+  let minhasHoje = 0;
+  let minhasSemana = 0;
+  let minhasTotal = 0;
+
+  if (meuVoluntarioId !== null) {
+    const { data: vinculos } = await supabase
+      .from("demanda_responsaveis")
+      .select("demanda_id")
+      .or(`voluntario_id.eq.${meuVoluntarioId},profile_id.eq.${user.id}`);
+    const meusIds = [...new Set((vinculos ?? []).map((v) => v.demanda_id))];
+    if (meusIds.length > 0) {
+      const { data: minhas } = await supabase
+        .from("demandas_com_status")
+        .select("id, prazo, atrasada")
+        .in("id", meusIds)
+        .neq("status", "concluida");
+      const rows = minhas ?? [];
+      minhasTotal = rows.length;
+      minhasAtrasadas = rows.filter((r) => r.atrasada).length;
+      minhasHoje = rows.filter((r) => r.prazo === today).length;
+      minhasSemana = rows.filter(
+        (r) => r.prazo > today && r.prazo <= em7
+      ).length;
+    }
+  }
+
+  // ── Próximos eventos + pautas + atrasadas gerais ──
+  const [{ data: proximosEventos }, { data: pautasPendentes }, atrasadasGeralResult] =
+    await resumoPromise;
 
   const eventos = (proximosEventos ?? []).map((e) => ({
     id: e.id,
@@ -198,7 +188,7 @@ export default async function InicioPage() {
     },
     {
       href: "/utilidades",
-      titulo: "Materiais e utilidades",
+      titulo: "Links Úteis",
       descricao: "Documentos, logos, fichas e links úteis",
       Icon: Wrench,
       cor: "bg-[#ea580c]",
