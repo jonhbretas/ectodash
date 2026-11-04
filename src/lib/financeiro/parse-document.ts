@@ -2,7 +2,7 @@
 // deterministic: unreadable values become review warnings, never zero/today.
 import { parseFinancialAmount as number, parseFinancialDate as date } from "./values";
 import { readFinancialPdf } from "./parse-pdf";
-import readXlsxFile from "read-excel-file/node";
+import { readFinancialWorkbook } from "./workbook";
 import { parseCsv } from "./parse-file";
 import { calculateNet, classifyDescription, hashLine, type NormalizedFinancialRow } from "./automation";
 
@@ -19,7 +19,7 @@ function makeRow(description: string, amount: number, movementDate: string, line
 }
 
 function rowsFromGrid(grid: unknown[][], sheet?: string, filename = ""): ParsedGrid {
-  const headerRow = grid.findIndex((row) => row.some((cell) => /data|date|created|movimento|lancamento/.test(clean(cell))) && row.some((cell) => /valor|amount|credito|debito|entrada|saida/.test(clean(cell))));
+  const headerRow = grid.findIndex((row) => row.filter((cell) => String(cell ?? "").trim()).length >= 3 && row.some((cell) => /^(data\b|date\b|created\b|movimento\b|lancamento\b)/.test(clean(cell))) && row.some((cell) => /^(valor\b|amount\b|credito\b|debito\b|entrada\b|saida\b)/.test(clean(cell))));
   if (headerRow < 0) return { rows: [], warnings: ["Cabeçalho financeiro não identificado."], sourceType: "UNKNOWN" };
   const headers = grid[headerRow].map(clean);
   const joined = `${headers.join(" ")} ${clean(filename)} ${clean(sheet)}`;
@@ -38,9 +38,13 @@ function rowsFromGrid(grid: unknown[][], sheet?: string, filename = ""): ParsedG
     const netCol = col(headers, [/valor liquido/, /valor recebido/]);
     const expectedCol = col(headers, [/previsao de pag/, /data prevista/, /data.*pagamento/]);
     const idCol = col(headers, [/nsu/, /id.*venda/, /codigo.*venda/, /tid/]);
+    const statusCol = col(headers, [/status.*venda/, /^status$/]);
     if (saleDateCol < 0 || grossCol < 0) return { rows, warnings: ["Layout Cielo reconhecido, mas faltam data ou valor bruto."], provider, sourceType: "PAYMENT_PROCESSOR" };
     grid.slice(headerRow + 1).forEach((cells, index) => {
       const line = headerRow + index + 2;
+      if (cells.every((cell, i) => clean(cell) === headers[i])) return;
+      const status = statusCol >= 0 ? clean(cells[statusCol]) : "";
+      if (/nao aprovad|negad|recusad|cancelad|declined|failed/.test(status)) return;
       const gross = number(cells[grossCol]);
       if (cells.every((cell) => !String(cell ?? "").trim())) return;
       if (gross === null) { warnings.push(`Linha ${line}: valor bruto inválido; revise o documento.`); return; }
@@ -100,17 +104,19 @@ function rowsFromGrid(grid: unknown[][], sheet?: string, filename = ""): ParsedG
   }
 
   const dateCol = col(headers, [/^data$|date|movimento|lancamento/]);
-  const descriptionCol = col(headers, [/descri|memo|historico|favorecido|merchant|estabelecimento|^historico$/]);
-  const amountCol = col(headers, [/^valor r\$|^valor$|amount|montante/]);
+  const descriptionCol = col(headers, [/descri|memo|historico|favorecido|merchant|estabelecimento|pagador|recebedor|recebor/]);
+  const amountCol = col(headers, [/^valor(?:\s|$)|amount|montante/]);
   const creditCol = col(headers, [/credito|credit|entrada/]);
   const debitCol = col(headers, [/debito|debit|saida/]);
-  const directionCol = col(headers, [/^tipo$/]);
+  const directionCol = col(headers, [/^tipo(?:\s|$)/]);
   const idCol = col(headers, [/codigo da transacao|transaction.?id|^id$/]);
   const detailCol = col(headers, [/detalhamento hist|detalhamento|descricao/]);
   const categoryCol = col(headers, [/categoria|category|plano de contas|centro de custo/]);
   if (dateCol < 0 || descriptionCol < 0 || (amountCol < 0 && creditCol < 0 && debitCol < 0)) return { rows: [], warnings: ["Cabeçalho financeiro não identificado."], provider, sourceType: "UNKNOWN" };
   grid.slice(headerRow + 1).forEach((cells, index) => {
     const line = headerRow + index + 2;
+    if (/^(posicao em|total\b|pagina\b|page\b)/.test(clean(cells[dateCol]))) return;
+    if (![dateCol, descriptionCol, amountCol, creditCol, debitCol].some((index) => index >= 0 && String(cells[index] ?? "").trim())) return;
     const movementDate = date(cells[dateCol]);
     const baseAmount = amountCol >= 0 ? number(cells[amountCol]) : null;
     const credit = creditCol >= 0 ? number(cells[creditCol]) : null;
@@ -163,12 +169,26 @@ export async function parseFinancialDocument(file: File): Promise<DocumentParseR
   if (name.endsWith(".csv")) { const parsed = rowsFromGrid(parseCsv(await file.text()), undefined, file.name); return { format: "CSV", ...parsed, warnings: parsed.rows.length ? parsed.warnings : [...parsed.warnings, "Nenhuma transação reconhecida."] }; }
   if (name.endsWith(".xls")) return { format: "XLSX", sourceType: "UNKNOWN", rows: [], warnings: ["O formato .xls não é suportado — salve como .xlsx ou .csv."] };
   const buffer = Buffer.from(await file.arrayBuffer());
-  const sheets = (await readXlsxFile(buffer).catch(() => [])) as { sheet: string; data: unknown[][] }[];
+  let sheets: { sheet: string; data: unknown[][] }[];
+  try { sheets = await readFinancialWorkbook(buffer); }
+  catch { return { format: "XLSX", sourceType: "UNKNOWN", rows: [], warnings: ["Não foi possível abrir a estrutura da planilha. Verifique o arquivo original ou salve novamente como XLSX."] }; }
   const rows: NormalizedFinancialRow[] = []; const warnings: string[] = []; let provider: string | undefined; let sourceType = "UNKNOWN";
   for (const { sheet, data } of sheets) {
     const parsed = rowsFromGrid(normalizeGrid(data), sheet, file.name);
     rows.push(...parsed.rows.map((row) => ({ ...row, lineHash: hashLine(`${sheet}|${row.lineHash}`) }))); warnings.push(...parsed.warnings.map((warning) => `${sheet}: ${warning}`)); provider ??= parsed.provider;
     if (parsed.sourceType !== "UNKNOWN") sourceType = parsed.sourceType;
+  }
+  // Printed totals can include records absent from the exported detail.
+  // Surface the discrepancy; never manufacture a balancing transaction.
+  for (const { data } of sheets) for (const cells of data) {
+    const totalColumn = cells.findIndex((cell) => /^total (credito|debito)\s*:?$/.test(clean(cell)));
+    if (totalColumn < 0) continue;
+    const expected = cells.slice(totalColumn + 1).map(number).find((value) => value !== null);
+    if (expected === undefined) continue;
+    const credit = clean(cells[totalColumn]).includes("credito");
+    const actual = rows.reduce((sum, row) => sum + Math.round((credit ? row.inflow : row.outflow) * 100), 0);
+    const difference = Math.round(expected * 100) - actual;
+    if (difference) warnings.push(`Total de ${credit ? "crédito" : "débito"} diverge dos detalhes exportados em R$ ${(difference / 100).toFixed(2)}. Confira as linhas ausentes no documento original; nenhum ajuste foi inventado.`);
   }
   return { format: "XLSX", sourceType, provider, rows, warnings: rows.length ? warnings : [...warnings, "Nenhuma tabela financeira foi identificada."] };
 }

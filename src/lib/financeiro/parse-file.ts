@@ -3,7 +3,7 @@
 // delimited, quoted fields) e XLSX (via read-excel-file, mantida — o pacote
 // xlsx/SheetJS do npm (0.18.5) está descontinuado e possui CVEs conhecidas,
 // auditoria 0063/M3).
-import readXlsxFile from "read-excel-file/node";
+import { readFinancialWorkbook as readXlsxFile } from "./workbook";
 import { parseSheetRows } from "@/lib/sheets/parse-rows";
 import type { FinancialEntry } from "@/lib/sheets/parse-rows";
 import {

@@ -7,7 +7,7 @@ import { normalizeText } from "@/lib/financeiro/automation";
 import { getFinancialDriveFolder } from "@/lib/financeiro/drive-folders";
 import { uploadDriveFile } from "@/lib/google/drive";
 import { getEffectiveAIConfig } from "@/lib/ai/ai-client";
-import { parseDocumentWithAI, type AIParseResult } from "@/lib/financeiro/ai-document";
+import { parseDocumentWithAI, FINANCIAL_READING_VERSION, type AIParseResult } from "@/lib/financeiro/ai-document";
 import { allFinancialRows } from "@/lib/financeiro/data";
 import { separateDuplicates, type ExistingMovement, type DuplicateCandidate } from "@/lib/financeiro/duplicates";
 
@@ -98,53 +98,48 @@ export async function POST(request: Request) {
     }
     let parsed: AIParseResult;
     let duplicates: DuplicateCandidate[] = [];
+    let sourceDates: string[] = [];
     try {
       parsed = useAI && aiConfig ? await parseDocumentWithAI(file, aiConfig) : await parseFinancialDocument(file);
+      sourceDates = parsed.rows.map((row) => row.date).sort();
       if (useAI && parsed.rows.length) {
-        const dates = parsed.rows.map((row) => row.date).sort();
-        const existingRows = await allFinancialRows<ExistingMovement>(supabase, "finance_ledger", "id,movement_date,type,net_amount,normalized_description,external_transaction_id", (query) => query.gte("movement_date", dates[0]).lte("movement_date", dates.at(-1)!).not("reconciliation_status", "in", "(IGNORADO,DUPLICADO)"));
+        const dates = sourceDates;
+        const existingRows = await allFinancialRows<ExistingMovement>(supabase, "finance_ledger", "id,movement_date,type,net_amount,normalized_description,external_transaction_id,provider:finance_entities!provider_id(name)", (query) => query.gte("movement_date", dates[0]).lte("movement_date", dates.at(-1)!).not("reconciliation_status", "in", "(IGNORADO,DUPLICADO)"));
         const checked = separateDuplicates(parsed.rows, existingRows);
         parsed.rows = checked.rows; duplicates = checked.duplicates;
       }
     } catch (error) {
       parsed = { format: "PDF" as const, sourceType: "UNKNOWN", rows: [], warnings: [`Falha na leitura automática: ${error instanceof Error ? error.message : "arquivo não processado"}`] };
     }
-    const dates = parsed.rows.map((row) => row.date).sort();
+    const dates = sourceDates;
     const dateRangeWarning = dates.length && dates.some((date) => date.slice(0, 7) !== competencia)
       ? [`Período fora da competência: o conteúdo inclui datas diferentes da competência selecionada (${competencia}); confira o documento antes de confirmar.`]
       : [];
     const allWarnings = [...parsed.warnings, ...dateRangeWarning];
-    const importPayload = { file_name: file.name, file_sha256: sha256, mime_type: file.type || "application/octet-stream", file_size: file.size, storage_path: driveFile.id, source_type: parsed.sourceType, provider: parsed.provider ?? null, period_start: dates[0] ?? null, period_end: dates.at(-1) ?? null, status: "PROCESSING", row_count: parsed.rows.length, metadata: { format: parsed.format, warnings: allWarnings, drive_url: driveFile.webViewLink ?? null, competencia, categoria, ai_document: parsed.aiDocument ?? null, ai_model: parsed.aiModel ?? null }, created_by: user.id };
+    const importPayload = { file_name: file.name, file_sha256: sha256, mime_type: file.type || "application/octet-stream", file_size: file.size, storage_path: driveFile.id, source_type: parsed.sourceType, provider: parsed.provider ?? null, period_start: dates[0] ?? null, period_end: dates.at(-1) ?? null, status: "PROCESSING", row_count: parsed.rows.length, metadata: { format: parsed.format, warnings: allWarnings, drive_url: driveFile.webViewLink ?? null, competencia, categoria, ai_document: parsed.aiDocument ?? null, ai_model: parsed.aiModel ?? null, reading_version: FINANCIAL_READING_VERSION, information: parsed.information ?? [], alerts: parsed.alerts ?? [] }, created_by: user.id };
     const { data: imported, error: importError } = reprocessing && existing
       ? await supabase.from("finance_imports").update(importPayload).eq("id", existing.id).select("id").single()
       : await supabase.from("finance_imports").insert(importPayload).select("id").single();
     if (importError || !imported) { results.push({ file: file.name, status: "FAILED", error: importError?.message ?? "Falha ao registrar importação" }); continue; }
-    if (reprocessing) {
-      const { error } = await supabase.from("finance_exceptions").delete().eq("import_id", imported.id).eq("status", "OPEN");
-      if (error) {
-        await supabase.from("finance_imports").update({ status: "FAILED", error_message: "Falha ao substituir pendencias da leitura anterior." }).eq("id", imported.id);
-        results.push({ file: file.name, status: "FAILED", error: "Falha ao atualizar as pendencias anteriores." }); continue;
-      }
-    }
     const entityIds = new Map<string, string | null>();
     for (const row of parsed.rows) {
-      if (row.category) entityIds.set(`CATEGORY:${row.category}`, await ensureEntity(supabase, "CATEGORY", row.category));
-      if (row.provider) entityIds.set(`PROVIDER:${row.provider}`, await ensureEntity(supabase, "PROVIDER", row.provider));
+      if (row.category && !entityIds.has(`CATEGORY:${row.category}`)) entityIds.set(`CATEGORY:${row.category}`, await ensureEntity(supabase, "CATEGORY", row.category));
+      if (row.provider && !entityIds.has(`PROVIDER:${row.provider}`)) entityIds.set(`PROVIDER:${row.provider}`, await ensureEntity(supabase, "PROVIDER", row.provider));
     }
-    const ledgerRows = parsed.rows.map((row) => ({ import_id: imported.id, file_name: file.name, sheet_name: row.sheet ?? null, source_line: row.line, line_hash: row.lineHash, external_transaction_id: row.externalId ?? null, movement_date: row.date, sale_date: row.saleDate ?? null, settlement_date: row.settlementDate ?? null, expected_date: row.expectedDate ?? null, type: row.type, original_description: row.description, normalized_description: row.normalizedDescription, gross_amount: row.gross, fee_amount: row.fee, tax_amount: row.tax, refund_amount: row.refund, chargeback_amount: row.chargeback, net_amount: row.net, inflow: row.inflow, outflow: row.outflow, category_id: row.category ? entityIds.get(`CATEGORY:${row.category}`) : null, provider_id: row.provider ? entityIds.get(`PROVIDER:${row.provider}`) : (parsed.provider ? entityIds.get(`PROVIDER:${parsed.provider}`) : null), reconciliation_status: "PENDENTE", confidence: row.confidence, classification_explanation: row.explanation }));
-    const { data: savedLedger, error: ledgerError } = ledgerRows.length ? await supabase.from("finance_ledger").insert(ledgerRows).select("id,confidence,original_description,net_amount") : { data: [], error: null };
-    const uncertain = (savedLedger ?? []).filter((row) => Number(row.confidence) < 0.8);
+    const ledgerRows = parsed.rows.map((row) => ({ id: crypto.randomUUID(), import_id: imported.id, file_name: file.name, sheet_name: row.sheet ?? null, source_line: row.line, line_hash: row.lineHash, external_transaction_id: row.externalId ?? null, movement_date: row.date, sale_date: row.saleDate ?? null, settlement_date: row.settlementDate ?? null, expected_date: row.expectedDate ?? null, type: row.type, original_description: row.description, normalized_description: row.normalizedDescription, gross_amount: row.gross, fee_amount: row.fee, tax_amount: row.tax, refund_amount: row.refund, chargeback_amount: row.chargeback, net_amount: row.net, inflow: row.inflow, outflow: row.outflow, category_id: row.category ? entityIds.get(`CATEGORY:${row.category}`) : null, provider_id: row.provider ? entityIds.get(`PROVIDER:${row.provider}`) : (parsed.provider ? entityIds.get(`PROVIDER:${parsed.provider}`) : null), reconciliation_status: "PENDENTE", confidence: row.confidence, classification_explanation: row.explanation }));
+    const uncertain = ledgerRows.filter((row) => Number(row.confidence) < 0.8);
     const exceptions = [
       ...duplicates.map((duplicate) => ({ import_id: imported.id, problem: `Possível duplicidade: ${duplicate.row.description}`, affected_amount: duplicate.row.net, alternatives: [duplicate], recommendation: "Confira os candidatos e mescle com o registro existente para manter a origem sem duplicar o caixa.", status: "OPEN" as const })),
       ...allWarnings.map((problem) => ({ import_id: imported.id, problem, recommendation: "Confira o arquivo original no Drive e complete os dados manualmente.", status: "OPEN" as const })),
       ...uncertain.map((row) => ({ import_id: imported.id, problem: `Classificação com baixa confiança: ${row.original_description}`, affected_amount: row.net_amount, ledger_ids: [row.id], recommendation: "Revise data, descrição e valor antes de considerar este lançamento conferido.", status: "OPEN" as const })),
-    ];
-    const { error: exceptionError } = exceptions.length ? await supabase.from("finance_exceptions").insert(exceptions) : { error: null };
-    const { error: auditError } = !ledgerError ? await supabase.from("finance_audit_log").insert({ import_id: imported.id, action: "IMPORT_PROCESSED", after_data: { file: file.name, rows: parsed.rows.length }, actor: user.id }) : { error: null };
-    const processingError = ledgerError ?? exceptionError ?? auditError;
-    const { error: statusError } = await supabase.from("finance_imports").update({ status: processingError ? "FAILED" : allWarnings.length || uncertain.length || duplicates.length ? "PARTIAL" : "PROCESSED", error_message: processingError?.message ?? null, processed_at: new Date().toISOString() }).eq("id", imported.id);
-    if (processingError || statusError) { results.push({ file: file.name, status: "FAILED", importId: imported.id, error: "O processamento não foi concluído. Confira a importação existente antes de reenviar o arquivo." }); continue; }
-    results.push({ file: file.name, status: ledgerError ? "FAILED" : allWarnings.length || uncertain.length || duplicates.length ? "PARTIAL" : "PROCESSED", importId: imported.id, rows: parsed.rows.length, warnings: allWarnings, uncertain: uncertain.length, provider: parsed.provider ?? null, sourceType: parsed.sourceType, duplicates: duplicates.length, document: parsed.aiDocument ?? null });
+    ].map((exception) => ({ affected_amount: 0, ledger_ids: [] as string[], alternatives: [] as unknown[], ...exception }));
+    const { error: commitError } = await supabase.rpc("finance_commit_import", { p_import: imported.id, p_rows: ledgerRows, p_exceptions: exceptions });
+    if (commitError) {
+      console.error("financeiro import commit", { importId: imported.id, error: commitError.message });
+      await supabase.from("finance_imports").update({ status: "FAILED", error_message: commitError.message }).eq("id", imported.id);
+      results.push({ file: file.name, status: "FAILED", importId: imported.id, error: "Falha ao gravar o processamento. Nenhum novo movimento foi efetivado; tente reler o arquivo." }); continue;
+    }
+    results.push({ file: file.name, status: allWarnings.length || uncertain.length || duplicates.length ? "PARTIAL" : "PROCESSED", importId: imported.id, rows: parsed.rows.length, warnings: allWarnings, uncertain: uncertain.length, provider: parsed.provider ?? null, sourceType: parsed.sourceType, duplicates: duplicates.length, document: parsed.aiDocument ?? null, information: parsed.information ?? [], alerts: parsed.alerts ?? [], suggestedCompetencia: dates.length && dates[0].slice(0,7) === dates.at(-1)?.slice(0,7) ? dates[0].slice(0,7) : null });
   }
   return NextResponse.json({ results });
 }

@@ -45,3 +45,4 @@ next-env.d.ts
 
 # graphify cache
 /graphify-out/
+/tmp/finance-debug/

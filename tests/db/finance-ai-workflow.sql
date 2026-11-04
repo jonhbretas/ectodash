@@ -11,8 +11,32 @@ set local role authenticated;
 do $$
 declare
   source uuid; second_source uuid; note_source uuid; billed uuid; received uuid; pending uuid;
-  report_id uuid; closed_id uuid; pair uuid; rejected boolean; ledger_count bigint;
+  report_id uuid; closed_id uuid; pair uuid; rejected boolean; ledger_count bigint; atomic_source uuid; atomic_row uuid := gen_random_uuid(); doc_exception uuid;
 begin
+  insert into public.finance_imports(file_name,file_sha256,mime_type,file_size,status,metadata,created_by)
+    values('atomic-test',gen_random_uuid()::text,'text/csv',100,'PROCESSING','{"competencia":"2099-10"}',auth.uid()) returning id into atomic_source;
+  perform public.finance_commit_import(atomic_source,
+    jsonb_build_array(jsonb_build_object('id',atomic_row,'file_name','test','line_hash',gen_random_uuid(),'movement_date','2099-10-01','type','DESPESA','original_description','Fixture expense','normalized_description','fixture expense','gross_amount',10,'net_amount',10,'inflow',0,'outflow',10,'confidence',0.5)),
+    jsonb_build_array(jsonb_build_object('problem','Document summary discrepancy'),jsonb_build_object('problem','Low confidence fixture','affected_amount',10,'ledger_ids',jsonb_build_array(atomic_row))));
+  if (select status from public.finance_imports where id=atomic_source)<>'PARTIAL' then raise exception 'Atomic import status missing.'; end if;
+  if (select affected_amount from public.finance_exceptions where import_id=atomic_source and problem='Document summary discrepancy')<>0 then raise exception 'Missing exception amount did not default to zero.'; end if;
+  select id into doc_exception from public.finance_exceptions where import_id=atomic_source and problem='Document summary discrepancy';
+  perform public.finance_acknowledge_exception(doc_exception,'Conferido no extrato completo; não há novo movimento a criar.');
+  if (select count(*) from public.finance_ledger where import_id=atomic_source)<>1 then raise exception 'Document review created another movement.'; end if;
+  rejected:=false;
+  begin perform public.finance_commit_import(atomic_source,'[]','[]'); exception when others then rejected:=true; end;
+  if not rejected then raise exception 'Atomic import accepted a repeated batch.'; end if;
+  perform public.finance_move_import(atomic_source,'2099-09-01');
+  if (select metadata->>'competencia' from public.finance_imports where id=atomic_source)<>'2099-09' then raise exception 'Document competence was not changed.'; end if;
+  if not exists(select 1 from public.finance_exceptions where import_id=atomic_source and status='OPEN' and problem like 'Período fora da competência%') then raise exception 'Moving did not check movement dates.'; end if;
+  insert into public.finance_imports(file_name,file_sha256,mime_type,file_size,status,metadata,created_by)
+    values('atomic-rollback',gen_random_uuid()::text,'text/csv',100,'PROCESSING','{"competencia":"2099-10"}',auth.uid()) returning id into atomic_source;
+  rejected:=false;
+  begin
+    perform public.finance_commit_import(atomic_source,
+      '[{"file_name":"test","line_hash":"valid","movement_date":"2099-10-01","type":"DESPESA","original_description":"Valid","normalized_description":"valid"},{"file_name":"test","line_hash":"invalid","type":"INVALID","original_description":"Invalid","normalized_description":"invalid"}]','[]');
+  exception when others then rejected:=true; end;
+  if not rejected or exists(select 1 from public.finance_ledger where import_id=atomic_source) then raise exception 'An invalid batch left partial ledger rows.'; end if;
   insert into public.finance_imports(file_name,file_sha256,mime_type,file_size,status,metadata,created_by)
     values ('finance-ai-integration.csv',gen_random_uuid()::text,'text/csv',100,'PROCESSED','{"competencia":"2099-11"}',auth.uid()) returning id into source;
   insert into public.finance_imports(file_name,file_sha256,mime_type,file_size,status,metadata,created_by)

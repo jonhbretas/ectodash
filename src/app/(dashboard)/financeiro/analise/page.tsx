@@ -21,7 +21,7 @@ export default async function AnaliseFinanceiroPage({ searchParams }: { searchPa
   const params = await searchParams;
   const rawMonth = Array.isArray(params.mes) ? params.mes[0] : params.mes;
   const selectedMonth = rawMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth) ? rawMonth : "";
-  const { data } = await supabase.from("finance_ledger").select("id,movement_date,original_description,type,inflow,outflow,net_amount,reconciliation_status,confidence").order("movement_date", { ascending: false }).limit(2000);
+  const { data } = await supabase.from("finance_ledger").select("id,movement_date,original_description,type,inflow,outflow,net_amount,reconciliation_status,confidence").not("reconciliation_status", "in", "(IGNORADO,DUPLICADO)").order("movement_date", { ascending: false }).limit(2000);
   const allRows = (data ?? []) as LedgerRow[];
   const months = [...new Set(allRows.map((row) => row.movement_date.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
   const rows = allRows.filter((row) => !selectedMonth || row.movement_date.startsWith(selectedMonth));

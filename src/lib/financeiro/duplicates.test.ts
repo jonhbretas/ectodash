@@ -12,4 +12,16 @@ describe("cross-file financial duplicates", () => {
     const row = classifyDescription("PIX recebido", 100, "2026-11-01", 1);
     expect(separateDuplicates([row], [{ id: "other", movement_date: row.date, type: row.type, net_amount: row.net, normalized_description: "outra operacao", external_transaction_id: null }]).rows).toEqual([row]);
   });
+  it("offers a merge when PIX and bank exports abbreviate the same counterparty", () => {
+    const row = classifyDescription("Cliente Exemplo Completo", 100, "2026-10-01", 1);
+    const result = separateDuplicates([row], [{ id: "existing", movement_date: row.date, type: row.type, net_amount: 100, normalized_description: "credito pix cliente exemplo compl", external_transaction_id: null }]);
+    expect(result.duplicates).toHaveLength(1);
+    expect(result.rows).toHaveLength(0);
+  });
+  it("quarantines PDF/XLSX platform matches even if their descriptions differ", () => {
+    const row = classifyDescription("Venda Cielo", 100, "2026-10-01", 1); row.type = "RECEITA_FATURADA"; row.provider = "CIELO";
+    const result = separateDuplicates([row], [{ id: "existing", movement_date: row.date, type: row.type, net_amount: 100, normalized_description: "venda parcelada mastercard", external_transaction_id: null, provider: { name: "Cielo" } }]);
+    expect(result.rows).toEqual([]);
+    expect(result.duplicates).toHaveLength(1);
+  });
 });

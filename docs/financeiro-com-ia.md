@@ -37,3 +37,14 @@ O fechamento é um registro operacional no sistema. A análise não substitui a 
 As migrations `20261104153755` a `20261104155510` foram aplicadas com `supabase db push --linked --yes`. `tests/db/finance-ai-workflow.sql` executa testes reais em transação revertida, sem deixar registros de teste. Há testes de parsers, requisições estruturadas, cálculos, paginação completa, duplicatas, autorização e interface.
 
 A leitura real pela OpenAI e a recuperação de originais pelo Drive precisam das credenciais do servidor. Esses dois serviços são simulados nos testes locais; as funções financeiras e os bloqueios foram verificados no banco vinculado.
+
+## Ajustes após os primeiros documentos reais
+
+- PIX: cabeçalhos `Pagador/Recebor` e `Tipo Transação`, valores como `+ R$ 40,10`, timestamps e paginação são reconhecidos. Totalizadores são conferidos contra as linhas; diferenças viram pendência, sem criar ajustes fictícios.
+- Cielo: exports com cabeçalhos locais ZIP64 são reconstruídos a partir do diretório central antes da leitura. Linhas de filtros e totalizadores não são confundidas com o cabeçalho da tabela; vendas recusadas são excluídas. O arquivo real usado na regressão tem 26 vendas aprovadas e líquido de R$ 15.491,74.
+- Observações (`findings`) ficam em Informações. A IA informa a severidade dos problemas em `issues`; apenas bloqueios e erros estruturais geram pendências obrigatórias. Falta de CNPJ em recibo/extrato não exige criar nota ou lançamento.
+- Posições de investimentos são documentos de suporte. Capital contratado e saldo projetado não geram fluxo de caixa. Crédito efetivo de plataforma dentro de extrato bancário é receita recebida, não novo faturamento.
+- Livro, pendências, auditoria e estado final da importação são gravados na mesma transação por `finance_commit_import`. Todas as pendências têm `affected_amount` definido; um lote inválido é revertido inteiro.
+- A lista de documentos permite ajustar a competência sem reenviar o original. A movimentação conserva sua data e a alteração é auditada. Uma pendência documental já explicada pode ser encerrada com justificativa, sem inventar uma entrada ou saída; isso não substitui corrigir ou mesclar lançamentos vinculados.
+- As migrations de recuperação preservam os 92 movimentos do extrato que falhou, corrigem créditos bancários classificados como faturamento e neutralizam posições de investimento importadas como caixa. As alterações ficam auditadas; registros revisados, conciliados ou de períodos fechados são preservados.
+- Originais usados nos testes reais ficam somente no diretório local ignorado `tmp/finance-debug`. A suíte também contém fixtures sintéticos sem nomes, contas ou documentos pessoais.

@@ -8,7 +8,7 @@ import type { AIDocument } from "./ai-document";
 import { parseFinancialDate } from "./values";
 
 export type LedgerMovement = { id: string; import_id: string; movement_date: string; expected_date: string | null; type: string; net_amount: number; inflow: number; outflow: number; confidence: number; original_description: string; normalized_description: string; provider_id: string | null; reconciliation_status: string };
-export type FinancialImport = { id: string; file_name: string; status: string; metadata: { competencia?: string; categoria?: string; drive_url?: string; ai_document?: Omit<AIDocument, "transactions"> | null } };
+export type FinancialImport = { id: string; file_name: string; status: string; period_start?: string | null; period_end?: string | null; metadata: { competencia?: string; categoria?: string; drive_url?: string; information?: string[]; alerts?: string[]; warnings?: string[]; ai_document?: Omit<AIDocument, "transactions"> | null } };
 export type FinancialException = { id: string; import_id: string | null; problem: string; ledger_ids: string[]; alternatives: unknown[] };
 export type Metrics = { count: number; cashIn: number; cashOut: number; balance: number; operatingIn: number; operatingOut: number; result: number; billed: number; outstanding: number };
 const cents = (value: unknown) => Math.round(Number(value ?? 0) * 100);
@@ -84,7 +84,7 @@ export async function loadFinanceContext(db: SupabaseClient, month: string) {
   const [monthlyRows, annualRows, imports, allExceptions, reconciliationRows] = await Promise.all([
     allFinancialRows<LedgerMovement>(db, "finance_ledger", columns, (query) => query.gte("movement_date", `${month}-01`).lt("movement_date", nextMonth.toISOString().slice(0, 10))),
     allFinancialRows<LedgerMovement>(db, "finance_ledger", columns, (query) => query.gte("movement_date", `${year}-01-01`).lt("movement_date", `${year + 1}-01-01`)),
-    allFinancialRows<FinancialImport>(db, "finance_imports", "id,file_name,status,metadata", (query) => query.eq("metadata->>competencia", month)),
+    allFinancialRows<FinancialImport>(db, "finance_imports", "id,file_name,status,period_start,period_end,metadata", (query) => query.eq("metadata->>competencia", month)),
     allFinancialRows<FinancialException>(db, "finance_exceptions", "id,import_id,problem,ledger_ids,alternatives", (query) => query.eq("status", "OPEN")),
     allFinancialRows<LedgerMovement>(db, "finance_ledger", columns, (query) => query.or(`and(movement_date.gte.${from},movement_date.lt.${until}),and(expected_date.gte.${from},expected_date.lt.${until})`)),
   ]);

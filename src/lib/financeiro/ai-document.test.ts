@@ -22,4 +22,20 @@ describe("AI document normalization", () => {
     const doc = document({ kind: "PLATAFORMA" }); doc.transactions[0].type = "RECEITA_FATURADA";
     expect(normalizeAIDocument(doc, "PDF", "model").rows[0]).toMatchObject({ type: "RECEITA_FATURADA", inflow: 0, outflow: 0 });
   });
+  it("keeps observations separate from blocking extraction issues", () => {
+    const parsed = normalizeAIDocument(document({ kind: "COMPROVANTE", findings: ["Recibo não é nota fiscal; não há CNPJ."], issues: [{ severity: "INFO", message: "Dois pagamentos compõem o total." }] }), "PDF", "model");
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.warnings).toEqual([]);
+    expect(parsed.information).toHaveLength(2);
+  });
+  it("does not turn investment positions into cash movements", () => {
+    const parsed = normalizeAIDocument(document({ kind: "PLATAFORMA", findings: ["Documento de posição de aplicações financeiras; não informa data de emissão."] }), "PDF", "model");
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.aiDocument?.kind).toBe("POSICAO_INVESTIMENTO");
+    expect(parsed.warnings).toEqual([]);
+  });
+  it("recognizes a platform credit in a bank statement as received cash", () => {
+    const doc = document(); doc.transactions[0].type = "RECEITA_FATURADA";
+    expect(normalizeAIDocument(doc, "PDF", "model").rows[0]).toMatchObject({ type: "RECEITA_RECEBIDA", inflow: 100, outflow: 0 });
+  });
 });

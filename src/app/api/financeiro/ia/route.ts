@@ -6,8 +6,8 @@ import { parseFinancialDate } from "@/lib/financeiro/values";
 
 export const maxDuration = 180;
 const noteSchema = z.object({ number: z.string().trim().min(1).max(100), issuer: z.string().trim().min(1).max(300), issuerDocument: z.string().trim().min(11).max(30), issueDate: z.string().refine((date) => parseFinancialDate(date) === date), total: z.number().finite().nonnegative(), recipient: z.string().max(300).nullable(), recipientDocument: z.string().max(30).nullable(), accessKey: z.string().max(100).nullable() });
-const schema = z.object({ competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), action: z.enum(["analyze", "close", "merge", "reviewNote"]),
-  reportId: z.uuid().optional(), exceptionId: z.uuid().optional(), ledgerId: z.uuid().optional(), documentsComplete: z.boolean().optional(), importId: z.uuid().optional(), note: noteSchema.optional() });
+const schema = z.object({ competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), action: z.enum(["analyze", "close", "merge", "reviewNote", "moveImport", "acknowledgeIssue"]),
+  reportId: z.uuid().optional(), exceptionId: z.uuid().optional(), ledgerId: z.uuid().optional(), documentsComplete: z.boolean().optional(), importId: z.uuid().optional(), note: noteSchema.optional(), reason: z.string().trim().min(20).max(3000).optional() });
 
 export async function POST(request: Request) {
   let ctx;
@@ -16,6 +16,18 @@ export async function POST(request: Request) {
   if (!input.success) return NextResponse.json({ error: "Informe uma competência e ação válidas." }, { status: 400 });
   const body = input.data;
   try {
+    if (body.action === "acknowledgeIssue") {
+      if (!body.exceptionId || !body.reason) return NextResponse.json({ error: "Explique a conferência desta pendência." }, { status: 400 });
+      const { error } = await ctx.supabase.rpc("finance_acknowledge_exception", { p_exception: body.exceptionId, p_reason: body.reason });
+      if (error) return NextResponse.json({ error: error.message }, { status: 409 });
+      return NextResponse.json({ ok: true });
+    }
+    if (body.action === "moveImport") {
+      if (!body.importId) return NextResponse.json({ error: "Selecione o documento." }, { status: 400 });
+      const { error } = await ctx.supabase.rpc("finance_move_import", { p_import: body.importId, p_month: `${body.competencia}-01` });
+      if (error) return NextResponse.json({ error: error.message }, { status: 409 });
+      return NextResponse.json({ ok: true });
+    }
     if (body.action === "reviewNote") {
       if (!body.importId || !body.note || body.documentsComplete !== true) return NextResponse.json({ error: "Preencha os campos da nota e confirme a conferência do original." }, { status: 400 });
       const { error } = await ctx.supabase.rpc("finance_ai_review_note", { p_import: body.importId, p_month: `${body.competencia}-01`, p_fields: body.note });

@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ from: vi.fn(), upload: vi.fn(), parse: vi.fn(), folder: vi.fn(), parseAI: vi.fn() }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ from: mocks.from, auth: { getUser: async () => ({ data: { user: { id: "user" } } }) } }) }));
+const mocks = vi.hoisted(() => ({ from: vi.fn(), upload: vi.fn(), parse: vi.fn(), folder: vi.fn(), parseAI: vi.fn(), rpc: vi.fn() }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ from: mocks.from, rpc: mocks.rpc, auth: { getUser: async () => ({ data: { user: { id: "user" } } }) } }) }));
 vi.mock("@/lib/role-gates", () => ({ temCargoModulo: async () => false }));
 vi.mock("@/lib/google/drive", () => ({ uploadDriveFile: mocks.upload }));
 vi.mock("@/lib/financeiro/drive-folders", () => ({ getFinancialDriveFolder: mocks.folder }));
 vi.mock("@/lib/financeiro/parse-document", () => ({ parseFinancialDocument: mocks.parse }));
 vi.mock("@/lib/ai/ai-client", () => ({ getEffectiveAIConfig: async () => ({ apiKey: "key" }) }));
-vi.mock("@/lib/financeiro/ai-document", () => ({ parseDocumentWithAI: mocks.parseAI }));
+vi.mock("@/lib/financeiro/ai-document", () => ({ parseDocumentWithAI: mocks.parseAI, FINANCIAL_READING_VERSION: 2 }));
 import { POST } from "./route";
 
 function setup(failure?: string, duplicate = false, existingMetadata: Record<string, unknown> = {}) {
   const updates: Record<string, unknown>[] = [];
+  mocks.rpc.mockResolvedValue({ data: null, error: failure === "finance_commit_import" ? { message: "Transaction rolled back" } : null });
   mocks.from.mockImplementation((table: string) => {
     let operation = "select";
     const result = () => {
@@ -20,7 +21,7 @@ function setup(failure?: string, duplicate = false, existingMetadata: Record<str
       return { data: null, error: null, count: 0 };
     };
     const builder: Record<string, unknown> = {};
-    for (const method of ["select", "eq", "neq", "delete"]) builder[method] = () => builder;
+    for (const method of ["select", "eq", "neq", "delete", "gte", "lte", "not", "order", "range"]) builder[method] = () => builder;
     for (const method of ["insert", "update"]) builder[method] = (value: Record<string, unknown>) => { operation = method; if (table === "finance_imports" && method === "update") updates.push(value); return builder; };
     builder.single = builder.maybeSingle = async () => result();
     builder.then = (resolve: (value: unknown) => unknown) => Promise.resolve(result()).then(resolve);
@@ -72,13 +73,14 @@ describe("financial import persistence failures", () => {
     expect((await (await POST(request("ia"))).json()).results[0].status).toBe("DUPLICATE");
     expect(mocks.parseAI).not.toHaveBeenCalled();
   });
-  it.each(["finance_exceptions:insert", "finance_audit_log:insert", "finance_imports:update"])("reports failure instead of success when %s fails", async (failure) => {
-    setup(failure);
+  it("reports an atomic failure instead of leaving partially inserted ledger rows", async () => {
+    setup("finance_commit_import");
     expect((await (await POST(request())).json()).results[0].status).toBe("FAILED");
+    expect(mocks.rpc).toHaveBeenCalledWith("finance_commit_import", expect.objectContaining({ p_rows: [], p_exceptions: expect.any(Array) }));
   });
   it("keeps an unrecognized PDF pending review", async () => {
-    const updates = setup();
+    setup();
     expect((await (await POST(request())).json()).results[0]).toMatchObject({ status: "PARTIAL", rows: 0 });
-    expect(updates.at(-1)?.status).toBe("PARTIAL");
+    expect(mocks.rpc.mock.calls[0][1].p_exceptions[0]).toMatchObject({ affected_amount: 0, ledger_ids: [], alternatives: [] });
   });
 });

@@ -1,7 +1,7 @@
 // Fail closed: corrupted cells must never become a plausible financial amount.
 export function parseFinancialAmount(value: unknown): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  let text = String(value ?? "").trim().replace(/^R\$\s*/i, "").replace(/\s/g, "");
+  let text = String(value ?? "").trim().replace(/^([+-]?)\s*R\$\s*/i, "$1").replace(/\s/g, "");
   if (!text) return null;
   const debit = /D$/i.test(text);
   text = text.replace(/[DC]$/i, "");

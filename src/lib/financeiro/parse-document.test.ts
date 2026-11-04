@@ -73,6 +73,13 @@ function buildXlsx(sheets: { name: string; rows: Cell[][] }[]): Uint8Array {
 }
 
 describe("financial document parser", () => {
+  it("reads PIX headers, signed currency, timestamp and ignores footer totals as movements", async () => {
+    const result = await parseFinancialDocument(new File(["EXTRATO PIX;;;;\nData;Instituição Financeira;Pagador/Recebor;Tipo Transação;Valor\n2026-10-30 18:59:58;Banco;Cliente Exemplo;Crédito;+ R$ 40,10\n2026-10-30 19:00:00;Banco;Fornecedor Exemplo;Débito;- R$ 10,00\nPosição em 02/11/2026;;;;"], "pix.csv"));
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0]).toMatchObject({ date: "2026-10-30", inflow: 40.1 });
+    expect(result.rows[1]).toMatchObject({ date: "2026-10-30", outflow: 10 });
+    expect(result.warnings).toEqual([]);
+  });
   it("respects debit direction in a generic CSV and warns about corrupt amounts", async () => {
     const result = await parseFinancialDocument(new File(["Data;Descrição;Tipo;Valor\n01/11/2026;Fornecedor;saída;100,00\n02/11/2026;PIX;entrada;ilegível123"], "extrato.csv"));
     expect(result.rows).toHaveLength(1);
@@ -102,6 +109,20 @@ describe("financial document parser", () => {
     const result = await parseFinancialDocument(new File([bytes as unknown as ArrayBuffer], "extrato.xlsx"));
     expect(result.rows).toHaveLength(2);
     expect(result.rows.map((row) => row.type)).toEqual(["TARIFA", "RESGATE"]);
+  });
+  it("repairs invalid ZIP64 local sizes using the intact central directory", async () => {
+    const bytes = buildXlsx([{ name: "Extrato", rows: [["Data", "Descrição", "Valor"], ["2026-10-01", "PIX", 100]] }]);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    view.setUint16(4, 45, true); view.setUint32(18, 0xffffffff, true); view.setUint32(22, 0xffffffff, true);
+    const result = await parseFinancialDocument(new File([bytes as unknown as ArrayBuffer], "extrato.xlsx"));
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({ inflow: 100, date: "2026-10-01" });
+  });
+  it("excludes declined Cielo rows before considering their invalid settlement dates", async () => {
+    const result = await parseFinancialDocument(new File(["Data da venda;Valor bruto;Taxa/tarifa;Valor líquido;Status da venda;Data prevista do pagamento\n01/10/2026;100;5;95;Aprovada;01/11/2026\n01/10/2026;500;0;0;Não aprovada;01/01/1001"], "cielo.csv"));
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({ net: 95, gross: 100, expectedDate: "2026-11-01" });
+    expect(result.warnings).toEqual([]);
   });
   it("keeps identical transactions on separate sheets independently traceable", async () => {
     const rows = [["Data", "Descrição", "Valor"], ["2026-11-01", "Tarifa", -10]];
