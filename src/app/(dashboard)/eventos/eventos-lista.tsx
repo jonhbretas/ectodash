@@ -28,6 +28,7 @@ import { DateInput } from "@/components/ui/date-input";
 import {
   editarEventosEmMassa,
   excluirEventosEmMassa,
+  mesclarEventosEmMassa,
 } from "./actions";
 
 export type EventoRow = {
@@ -98,7 +99,9 @@ export default function EventosLista({
 
   const [selecionando, setSelecionando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
-  const [painel, setPainel] = useState<"editar" | "excluir" | null>(null);
+  const [painel, setPainel] = useState<"editar" | "excluir" | "mesclar" | null>(null);
+  // Evento escolhido para ficar na mesclagem; os demais selecionados saem.
+  const [manterMescla, setManterMescla] = useState<number | null>(null);
   const [mensagem, setMensagem] = useState<{ ok: boolean; texto: string } | null>(null);
   const [executando, setExecutando] = useState(false);
 
@@ -166,6 +169,38 @@ export default function EventosLista({
     setMensagem({ ok: r.ok, texto: r.message });
     if (r.ok) {
       setSelecionados(new Set());
+      setPainel(null);
+    }
+  }
+
+  const selecionadosParaMesclar = useMemo(
+    () =>
+      [...proximos, ...anteriores]
+        .filter((e) => selecionados.has(e.id))
+        .sort((a, b) => a.data_evento.localeCompare(b.data_evento) || a.id - b.id),
+    [proximos, anteriores, selecionados]
+  );
+
+  async function executarMesclagem() {
+    if (manterMescla === null) {
+      setMensagem({ ok: false, texto: "Escolha qual evento fica." });
+      return;
+    }
+    const remover = selecionadosParaMesclar
+      .map((e) => e.id)
+      .filter((id) => id !== manterMescla);
+    if (remover.length === 0) {
+      setMensagem({ ok: false, texto: "Selecione ao menos 2 eventos para mesclar." });
+      return;
+    }
+    setExecutando(true);
+    setMensagem(null);
+    const r = await mesclarEventosEmMassa(manterMescla, remover);
+    setExecutando(false);
+    setMensagem({ ok: r.ok, texto: r.message });
+    if ((r.mesclados ?? 0) > 0) {
+      setSelecionados(new Set());
+      setManterMescla(null);
       setPainel(null);
     }
   }
@@ -290,15 +325,15 @@ export default function EventosLista({
               <button
                 type="button"
                 disabled={selecionados.size < 2}
-                onClick={() =>
-                  document
-                    .getElementById("mesclar-eventos")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
+                onClick={() => {
+                  setPainel("mesclar");
+                  setMensagem(null);
+                  setManterMescla(null);
+                }}
                 title={
                   selecionados.size < 2
                     ? "Selecione ao menos 2 eventos para mesclar"
-                    : "Ir à seção Mesclar com os eventos visíveis"
+                    : "Escolher qual dos selecionados fica"
                 }
                 className="flex min-h-11 items-center gap-1.5 rounded-xl border border-green-700/40 bg-white px-4 text-base font-semibold text-green-800 transition-colors hover:bg-green-50 disabled:opacity-50"
               >
@@ -426,6 +461,90 @@ export default function EventosLista({
                 className="rounded-xl px-3 py-2 text-base text-zinc-600 transition-colors hover:text-zinc-900"
               >
                 Fechar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {selecionando && painel === "mesclar" && (
+          <div className="flex w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-green-700/40">
+            <h2 className="flex items-center gap-2 text-xl font-semibold text-zinc-900">
+              <GitMerge size={20} aria-hidden="true" className="text-green-700" />
+              Mesclar {selecionadosParaMesclar.length} eventos — qual fica?
+            </h2>
+            <p className="text-base text-zinc-600">
+              Clique no evento que deve ficar. Os outros saem: suas demandas,
+              contratos e turmas PROEP passam para o que fica, e eles são removidos.
+            </p>
+            <div role="radiogroup" aria-label="Evento que fica" className="flex flex-col gap-2">
+              {selecionadosParaMesclar.map((e) => {
+                const fica = manterMescla === e.id;
+                const sai = manterMescla !== null && !fica;
+                const [ano, mes, dia] = e.data_evento.slice(0, 10).split("-");
+                return (
+                  <label
+                    key={e.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                      fica
+                        ? "border-green-700 bg-green-50"
+                        : sai
+                          ? "border-red-200 bg-red-50/60"
+                          : "border-zinc-200 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="evento-fica"
+                      checked={fica}
+                      onChange={() => setManterMescla(e.id)}
+                      aria-label={`Manter ${e.titulo}`}
+                      className="mt-1 h-5 w-5 shrink-0 accent-green-700"
+                    />
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="text-base font-semibold text-zinc-900">{e.titulo}</span>
+                      <span className="text-sm text-zinc-600">
+                        {dia}/{mes}/{ano}
+                        {e.local ? ` · ${e.local}` : ""}
+                        {e.tipo_nome ? ` · ${e.tipo_nome}` : ""}
+                      </span>
+                      {e.descricao && (
+                        <span className="line-clamp-2 text-sm text-zinc-500">{e.descricao}</span>
+                      )}
+                    </span>
+                    {fica && (
+                      <span className="shrink-0 rounded-full bg-green-700 px-2.5 py-0.5 text-sm font-semibold text-white">
+                        Fica
+                      </span>
+                    )}
+                    {sai && (
+                      <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-semibold text-red-800">
+                        Sai
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={executarMesclagem}
+                disabled={executando || manterMescla === null || selecionadosParaMesclar.length < 2}
+                className="flex min-h-12 items-center gap-1.5 rounded-xl bg-green-700 px-5 text-base font-semibold text-white transition-colors hover:bg-green-600 disabled:opacity-60"
+              >
+                <GitMerge size={17} aria-hidden="true" />
+                {executando
+                  ? "Mesclando..."
+                  : manterMescla === null
+                    ? "Escolha qual fica"
+                    : `Confirmar mesclagem (${selecionadosParaMesclar.length - 1} sai${selecionadosParaMesclar.length - 1 === 1 ? "" : "em"})`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPainel(null)}
+                className="rounded-xl px-3 py-2 text-base text-zinc-600 transition-colors hover:text-zinc-900"
+              >
+                Voltar
               </button>
             </div>
           </div>
