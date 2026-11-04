@@ -368,3 +368,123 @@ export async function salvarItensGeradosIA(
     message: `${valido.length} ${valido.length === 1 ? "card salvo" : "cards salvos"}.`,
   };
 }
+
+// ── Edição em massa ──
+
+export type EdicaoMassa = {
+  ids: number[];
+  // undefined = manter; null = remover área; número = nova área
+  area_id?: number | null;
+  // vazio/undefined = manter
+  categoria?: string;
+  tagsAdicionar?: string[];
+  tagsRemover?: string[];
+};
+
+const idsSchema = z.array(z.number().int().positive()).min(1).max(500);
+
+function limparTags(tags: string[] | undefined): string[] {
+  return (tags ?? []).map((t) => t.trim()).filter(Boolean).slice(0, 30);
+}
+
+export async function editarUtilidadesEmMassa(
+  input: EdicaoMassa
+): Promise<UtilidadeState> {
+  let gate;
+  try {
+    gate = await requireUtilidades();
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "Sem permissão." };
+  }
+  const supabase = gate.supabase;
+
+  const ids = idsSchema.safeParse(input.ids);
+  if (!ids.success) return { ok: false, message: "Selecione ao menos um item." };
+
+  const patch: { area_id?: number | null; categoria?: string } = {};
+  if (input.area_id !== undefined) {
+    patch.area_id =
+      input.area_id === null || !Number.isFinite(input.area_id) ? null : input.area_id;
+  }
+  const categoriaRaw = (input.categoria ?? "").trim();
+  if (categoriaRaw) {
+    const cat = categoriaSchema.safeParse(categoriaRaw);
+    if (!cat.success) return { ok: false, message: "Categoria inválida." };
+    patch.categoria = categoriaLabels[cat.data] ?? cat.data;
+  }
+
+  const adicionar = limparTags(input.tagsAdicionar);
+  const remover = new Set(limparTags(input.tagsRemover).map((t) => t.toLowerCase()));
+  const mexeTags = adicionar.length > 0 || remover.size > 0;
+
+  if (Object.keys(patch).length === 0 && !mexeTags) {
+    return { ok: false, message: "Escolha ao menos uma alteração para aplicar." };
+  }
+
+  if (!mexeTags) {
+    const { error } = await supabase
+      .from("utilidades_itens")
+      .update(patch)
+      .in("id", ids.data);
+    if (error) {
+      console.error("editarUtilidadesEmMassa: update failed", error);
+      return { ok: false, message: "Não foi possível salvar as alterações." };
+    }
+  } else {
+    // Tags variam por item: lê as atuais e grava cada linha com a nova lista.
+    const { data: atuais, error: readError } = await supabase
+      .from("utilidades_itens")
+      .select("id, tags")
+      .in("id", ids.data);
+    if (readError) {
+      console.error("editarUtilidadesEmMassa: read failed", readError);
+      return { ok: false, message: "Não foi possível carregar os itens." };
+    }
+    const resultados = await Promise.all(
+      (atuais ?? []).map((row) => {
+        const base = Array.isArray(row.tags) ? row.tags.map(String) : [];
+        const novas = base.filter((t) => !remover.has(t.toLowerCase()));
+        for (const tag of adicionar) {
+          if (!novas.some((t) => t.toLowerCase() === tag.toLowerCase())) novas.push(tag);
+        }
+        return supabase
+          .from("utilidades_itens")
+          .update({ ...patch, tags: novas })
+          .eq("id", Number(row.id));
+      })
+    );
+    const falha = resultados.find((r) => r.error);
+    if (falha?.error) {
+      console.error("editarUtilidadesEmMassa: update failed", falha.error);
+      return { ok: false, message: "Algumas alterações não foram salvas. Tente novamente." };
+    }
+  }
+
+  revalidatePath("/utilidades");
+  const n = ids.data.length;
+  return { ok: true, message: `${n} ${n === 1 ? "item atualizado" : "itens atualizados"}.` };
+}
+
+export async function excluirUtilidadesEmMassa(ids: number[]): Promise<UtilidadeState> {
+  let gate;
+  try {
+    gate = await requireUtilidades();
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "Sem permissão." };
+  }
+  const parsed = idsSchema.safeParse(ids);
+  if (!parsed.success) return { ok: false, message: "Selecione ao menos um item." };
+
+  const { error } = await gate.supabase
+    .from("utilidades_itens")
+    .delete()
+    .in("id", parsed.data);
+  if (error) {
+    console.error("excluirUtilidadesEmMassa: delete failed", error);
+    return { ok: false, message: "Não foi possível excluir os itens." };
+  }
+
+  revalidatePath("/utilidades");
+  const n = parsed.data.length;
+  return { ok: true, message: `${n} ${n === 1 ? "item excluído" : "itens excluídos"}.` };
+}

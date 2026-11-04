@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { ExternalLink, Search, Trash2, Pencil, Layers, ChevronDown, X, Loader2 } from "lucide-react";
+import { ExternalLink, Search, Trash2, Pencil, Layers, ChevronDown, X, Loader2, CheckSquare, Square, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { atualizarUtilidadeItem, excluirUtilidadeItemSimples, type UtilidadeState } from "./utilidades-actions";
 import { CATEGORIAS, CATEGORIA_SUGGESTIONS, categoriaInfo } from "./categorias";
+import EdicaoMassa from "./edicao-massa";
 
 type Area = { id: number; nome: string };
 type Item = {
@@ -27,6 +28,24 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
   const [activeTab, setActiveTab] = useState("todos");
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("todas");
+  // Seleção para edição em massa (só gestores).
+  const [selecionando, setSelecionando] = useState(false);
+  const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
+  const [avisoMassa, setAvisoMassa] = useState<string | null>(null);
+
+  function alternarSelecao(id: number) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }
+
+  function sairSelecao() {
+    setSelecionando(false);
+    setSelecionados(new Set());
+  }
 
   const tabs = useMemo(() => {
     const all = [{ id: "todos", label: "Todos", count: items.length }];
@@ -195,6 +214,51 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
         )}
       </div>
 
+      {podeGerenciar && filtered.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {!selecionando ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAvisoMassa(null);
+                setSelecionando(true);
+              }}
+              className="flex min-h-12 items-center gap-2 rounded-xl border-2 border-zinc-300 bg-white px-4 text-lg font-medium text-zinc-800 transition-colors hover:border-[#2195B9] hover:text-[#28627B]"
+            >
+              <CheckSquare size={20} aria-hidden="true" />
+              Selecionar vários
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setSelecionados(new Set(filtered.map((i) => i.id)))}
+                className="flex min-h-12 items-center gap-2 rounded-xl bg-[#2195B9]/10 px-4 text-lg font-medium text-[#28627B] hover:bg-[#2195B9]/20"
+              >
+                <CheckSquare size={20} aria-hidden="true" />
+                Selecionar todos que aparecem ({filtered.length})
+              </button>
+              <button
+                type="button"
+                onClick={sairSelecao}
+                className="flex min-h-12 items-center gap-2 rounded-xl px-4 text-lg font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+              >
+                <X size={20} aria-hidden="true" />
+                Sair da seleção
+              </button>
+              <span className="text-base text-zinc-500">Toque nos cards para marcar ou desmarcar.</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {avisoMassa && (
+        <p role="status" className="flex w-fit items-center gap-2 rounded-xl bg-green-50 px-4 py-3 text-lg font-medium text-green-800 ring-1 ring-green-200">
+          <CheckCircle2 size={20} aria-hidden="true" />
+          {avisoMassa}
+        </p>
+      )}
+
       <div className="flex w-full flex-col gap-8">
         {filtered.length === 0 ? (
           <p className="rounded-2xl bg-white px-5 py-4 text-xl text-zinc-500 ring-1 ring-zinc-200/60">
@@ -217,13 +281,33 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {grupo.itens.map((item) => (
-                  <ItemCard key={item.id} item={item} areas={areas} podeGerenciar={podeGerenciar} />
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    areas={areas}
+                    podeGerenciar={podeGerenciar}
+                    selecionando={selecionando}
+                    selecionado={selecionados.has(item.id)}
+                    onAlternar={() => alternarSelecao(item.id)}
+                  />
                 ))}
               </div>
             </section>
           ))
         )}
       </div>
+
+      {selecionando && selecionados.size > 0 && (
+        <EdicaoMassa
+          areas={areas}
+          selecionados={[...selecionados]}
+          onLimpar={() => setSelecionados(new Set())}
+          onConcluido={(msg) => {
+            setAvisoMassa(msg);
+            sairSelecao();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -261,9 +345,55 @@ function CategoriaChip({
   );
 }
 
-function ItemCard({ item, areas, podeGerenciar }: { item: Item; areas: Area[]; podeGerenciar: boolean }) {
+function ItemCard({
+  item,
+  areas,
+  podeGerenciar,
+  selecionando = false,
+  selecionado = false,
+  onAlternar,
+}: {
+  item: Item;
+  areas: Area[];
+  podeGerenciar: boolean;
+  selecionando?: boolean;
+  selecionado?: boolean;
+  onAlternar?: () => void;
+}) {
   const cat = categoriaInfo(item.categoria);
   const [editing, setEditing] = useState(false);
+
+  if (selecionando) {
+    return (
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={selecionado}
+        onClick={onAlternar}
+        className={cn(
+          "flex items-start gap-3 rounded-2xl border-l-[6px] p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]",
+          cat.border,
+          selecionado ? "bg-[#2195B9]/5 ring-[3px] ring-[#2195B9]" : "bg-white ring-1 ring-zinc-200/60 hover:ring-zinc-400"
+        )}
+      >
+        {selecionado ? (
+          <CheckSquare size={28} className="shrink-0 text-[#2195B9]" aria-hidden="true" />
+        ) : (
+          <Square size={28} className="shrink-0 text-zinc-400" aria-hidden="true" />
+        )}
+        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", cat.iconBg, cat.iconText)}>
+          <cat.icon size={22} aria-hidden="true" />
+        </span>
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="text-lg font-semibold leading-snug text-zinc-900">{item.titulo}</span>
+          <span className="text-base text-zinc-600">
+            {cat.label}
+            {item.area_nome ? ` · ${item.area_nome}` : " · Sem área"}
+          </span>
+        </span>
+      </button>
+    );
+  }
 
   return (
     <div
