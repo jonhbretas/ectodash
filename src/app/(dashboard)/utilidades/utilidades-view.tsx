@@ -56,6 +56,13 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
     return all;
   }, [areas, items]);
 
+  // Áreas sem nenhum item ficam ocultas por padrão (a aba ativa sempre aparece).
+  const [mostrarVazias, setMostrarVazias] = useState(false);
+  const qtdVazias = tabs.filter((t) => t.id !== "todos" && t.count === 0).length;
+  const tabsVisiveis = mostrarVazias
+    ? tabs
+    : tabs.filter((t) => t.id === "todos" || t.count > 0 || t.id === activeTab);
+
   // Itens da aba atual (área) — base para contar e filtrar categorias.
   const itensDaAba = useMemo(() => {
     if (activeTab === "todos") return items;
@@ -127,7 +134,7 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
           aria-label="Áreas"
           className="flex w-full flex-wrap items-center gap-1 rounded-2xl bg-zinc-100 p-1 ring-1 ring-zinc-200/60"
         >
-          {tabs.map((tab) => {
+          {tabsVisiveis.map((tab) => {
             const selected = tab.id === activeTab;
             return (
               <button
@@ -160,6 +167,18 @@ export default function UtilidadesView({ areas, items, podeGerenciar = false }: 
               </button>
             );
           })}
+          {qtdVazias > 0 && (
+            <button
+              type="button"
+              onClick={() => setMostrarVazias((v) => !v)}
+              aria-expanded={mostrarVazias}
+              className="flex min-h-12 items-center gap-1.5 rounded-xl px-4 text-base font-medium text-zinc-500 underline-offset-4 hover:text-zinc-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+            >
+              {mostrarVazias
+                ? "Ocultar áreas sem itens"
+                : `+ ${qtdVazias} ${qtdVazias === 1 ? "área sem itens" : "áreas sem itens"}`}
+            </button>
+          )}
         </div>
       </section>
 
