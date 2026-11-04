@@ -24,7 +24,6 @@ import type {
   BulkEditVoluntario,
 } from "./edicao-em-massa-dialog";
 
-const EdicaoEmMassaDialog = dynamic(() => import("./edicao-em-massa-dialog"));
 import {
   groupDemandas,
   compareDemandas,
@@ -72,6 +71,8 @@ export type DemandaListProps = {
   etiquetas?: BulkEditEtiqueta[];
   voluntarios?: BulkEditVoluntario[];
 };
+
+const EdicaoEmMassaDialog = dynamic(() => import("./edicao-em-massa-dialog"));
 
 export default function DemandaList({
   quickCreate = false,
@@ -305,7 +306,6 @@ export default function DemandaList({
       )}
 
       {editing && <EdicaoEmMassaDialog
-        key={editing ? "aberto" : "fechado"}
         open={editing}
         onOpenChange={setEditing}
         ids={[...selected]}

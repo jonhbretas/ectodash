@@ -1,4 +1,9 @@
-import { obterUsuarioAtual, obterPerfilAtual, obterCargosAtuais, obterModulosDesativados } from "@/lib/supabase/request-context";
+import {
+  obterUsuarioAtual,
+  obterPerfilAtual,
+  obterCargosAtuais,
+  obterModulosDesativados,
+} from "@/lib/supabase/request-context";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { Lock } from "lucide-react";

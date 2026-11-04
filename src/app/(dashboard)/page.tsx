@@ -1,4 +1,10 @@
-import { obterUsuarioAtual, obterPerfilAtual, obterCargosAtuais, obterModulosDesativados } from "@/lib/supabase/request-context";
+import { Suspense } from "react";
+import {
+  obterUsuarioAtual,
+  obterPerfilAtual,
+  obterCargosAtuais,
+  obterModulosDesativados,
+} from "@/lib/supabase/request-context";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -76,7 +82,7 @@ export default async function InicioPage() {
   const today = hojeISO();
   const em7 = isoMaisDias(today, 7);
 
-  // ── Minhas demandas (ativas) ──
+  // Fetch the independent summary while personal demands load.
   const resumoPromise = Promise.all([
       supabase
         .from("eventos")
@@ -97,7 +103,6 @@ export default async function InicioPage() {
             .eq("atrasada", true)
         : Promise.resolve({ count: 0 as number | null }),
     ]);
-
 
   let minhasAtrasadas = 0;
   let minhasHoje = 0;
@@ -326,7 +331,13 @@ export default async function InicioPage() {
       </section>
 
       {/* ── Pagamentos e cobranças (só financeiro/coordenador_geral) ── */}
-      <PagamentosHome />
+      <Suspense fallback={
+        <div role="status" aria-label="Carregando pagamentos" className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((key) => <div key={key} aria-hidden="true" className="h-32 animate-pulse rounded-2xl bg-slate-100 motion-reduce:animate-none" />)}
+        </div>
+      }>
+        <PagamentosHome />
+      </Suspense>
 
       {/* ── Faixa do coordenador: visão macro sem poluir o voluntário ── */}
       {isCoordenadorGeral && (
