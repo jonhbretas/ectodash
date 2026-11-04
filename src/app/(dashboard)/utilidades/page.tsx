@@ -2,8 +2,7 @@ import { Link2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import PageContainer from "../page-container";
 import UtilidadesView from "./utilidades-view";
-import UtilidadesClient from "./utilidades-client";
-import UtilidadesIA from "./utilidades-ia";
+import UtilidadesAcoes from "./utilidades-acoes";
 
 export default async function UtilidadesPage() {
   const supabase = await createClient();
@@ -63,14 +62,9 @@ export default async function UtilidadesPage() {
         </div>
       </header>
 
-      <UtilidadesView areas={areas ?? []} items={items} podeGerenciar={isCoord} />
+      {isCoord && <UtilidadesAcoes areas={areas ?? []} />}
 
-      {isCoord && (
-        <div className="flex w-full flex-col gap-3">
-          <UtilidadesIA areas={areas ?? []} />
-          <UtilidadesClient areas={areas ?? []} />
-        </div>
-      )}
+      <UtilidadesView areas={areas ?? []} items={items} podeGerenciar={isCoord} />
     </PageContainer>
   );
 }

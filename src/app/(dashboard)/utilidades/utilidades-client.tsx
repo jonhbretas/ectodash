@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { CheckCircle2, Loader2, PlusCircle, X } from "lucide-react";
+import { useActionState, useEffect } from "react";
+import { Loader2, X } from "lucide-react";
 import { criarUtilidadeItem, type UtilidadeState } from "./utilidades-actions";
 import { CATEGORIA_SUGGESTIONS } from "./categorias";
 
@@ -11,51 +11,7 @@ const initial: UtilidadeState = { ok: false, message: "" };
 
 const inputClass = "min-h-12 w-full rounded-lg border border-zinc-300 bg-white px-3 text-lg text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] disabled:bg-zinc-100";
 
-export default function UtilidadesClient({ areas }: { areas: Area[] }) {
-  const [show, setShow] = useState(false);
-  const [sucesso, setSucesso] = useState<string | null>(null);
-  // Remonta o formulário a cada abertura: estado da action e campos limpos.
-  const [formKey, setFormKey] = useState(0);
-
-  function abrir() {
-    setSucesso(null);
-    setFormKey((k) => k + 1);
-    setShow(true);
-  }
-
-  return (
-    <div className="flex w-full flex-col gap-3">
-      {sucesso && !show && (
-        <p role="status" className="flex w-fit items-center gap-2 rounded-xl bg-green-50 px-4 py-3 text-lg font-medium text-green-800 ring-1 ring-green-200">
-          <CheckCircle2 size={20} aria-hidden="true" />
-          {sucesso}
-        </p>
-      )}
-      {show ? (
-        <NovoItemForm
-          key={formKey}
-          areas={areas}
-          onClose={() => setShow(false)}
-          onSaved={(msg) => {
-            setSucesso(msg);
-            setShow(false);
-          }}
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={abrir}
-          className="flex min-h-12 w-fit items-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-white px-4 py-2 text-lg font-medium text-zinc-700 transition-colors hover:border-zinc-400 hover:text-zinc-900"
-        >
-          <PlusCircle size={20} />
-          Adicionar link manualmente
-        </button>
-      )}
-    </div>
-  );
-}
-
-function NovoItemForm({
+export default function NovoItemForm({
   areas,
   onClose,
   onSaved,

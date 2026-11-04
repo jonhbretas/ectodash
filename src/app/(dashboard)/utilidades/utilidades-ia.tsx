@@ -54,9 +54,10 @@ const CATEGORIA_SUGGESTIONS = [
 const inputClass =
   "min-h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]";
 
-export default function UtilidadesIA({ areas }: { areas: Area[] }) {
-  const [key, setKey] = useState(0);
-  return <AIFlow key={key} areas={areas} onReset={() => setKey((k) => k + 1)} />;
+// Painel aberto pelo botão "Criar cards com IA" no topo da página; fechar,
+// descartar ou concluir desmonta o painel (estado zerado na próxima abertura).
+export default function UtilidadesIA({ areas, onClose }: { areas: Area[]; onClose: () => void }) {
+  return <AIFlow areas={areas} onReset={onClose} />;
 }
 
 function AIFlow({
@@ -67,23 +68,9 @@ function AIFlow({
   onReset: () => void;
 }) {
   const [state, formAction] = useActionState(gerarItensComIA, initial);
-  const [show, setShow] = useState(false);
   const [areaId, setAreaId] = useState("");
 
   const hasResults = state.ok && state.itens !== null;
-
-  if (!show) {
-    return (
-      <button
-        type="button"
-        onClick={() => setShow(true)}
-        className="flex min-h-12 w-fit items-center gap-2 rounded-xl border border-dashed border-[#2195B9]/40 bg-[#2195B9]/5 px-4 py-2 text-lg font-medium text-[#2195B9] transition-colors hover:border-[#2195B9] hover:bg-[#2195B9]/10"
-      >
-        <Sparkles size={20} />
-        Adicionar por IA
-      </button>
-    );
-  }
 
   return (
     <div className="flex w-full flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
@@ -94,7 +81,7 @@ function AIFlow({
           setAreaId={setAreaId}
           formAction={formAction}
           state={state}
-          onClose={() => setShow(false)}
+          onClose={onReset}
         />
       ) : (
         <IAReview
