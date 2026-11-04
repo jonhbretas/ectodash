@@ -69,7 +69,11 @@ export async function POST(request: Request) {
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     const { data: existing, error: duplicateError } = await supabase.from("finance_imports").select("id,status,storage_path,metadata").eq("file_sha256", sha256).maybeSingle();
     if (duplicateError) { results.push({ file: file.name, status: "FAILED", error: "Não foi possível verificar se o arquivo já foi importado." }); continue; }
-    const reprocessing = Boolean(useAI && existing && form.get("reprocessId") === existing.id && existing.metadata?.competencia === competencia);
+    // Reenvio pelo Financeiro com IA de um arquivo que entrou antes pelo
+    // leitor sem IA (sem ai_document, sem lançamentos) = releitura automática,
+    // não "duplicado". As travas abaixo (lançamentos/conferências) continuam.
+    const semLeituraIA = Boolean(existing && !existing.metadata?.ai_document && ["PARTIAL", "FAILED"].includes(existing.status));
+    const reprocessing = Boolean(useAI && existing && (form.get("reprocessId") === existing.id || semLeituraIA) && existing.metadata?.competencia === competencia);
     if (existing && !reprocessing) { results.push({ file: file.name, status: "DUPLICATE", importId: existing.id }); continue; }
     if (reprocessing && existing) {
       const [ledger, reviews] = await Promise.all([
