@@ -14,7 +14,7 @@ export default function JourneyVisit({ userId }: { userId: string }) {
     const key = `${userId}:${step.id}`;
     if (recorded.current.has(key)) return;
     recorded.current.add(key);
-    void registrarExploracao(step.id).then((result) => {
+    void registrarExploracao(step.id, false).then((result) => {
       if (result.error) recorded.current.delete(key);
     }).catch(() => recorded.current.delete(key));
   }, [pathname, userId]);

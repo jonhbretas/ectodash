@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanelLeftOpen, Pin, X, ChevronDown } from "lucide-react";
@@ -133,23 +134,15 @@ function SidebarLinks({
     }`;
   };
 
-  function handleNavClick(e: React.MouseEvent, href: string) {
-    // Native <a> navigation (same mechanism as right-click → open in new
-    // tab): NO preventDefault and NO client-side router — the browser
-    // performs a full navigation, which cannot be silently swallowed by
-    // router errors. onNavigate only closes the mobile drawer.
-    onNavigate?.();
-  }
-
   const renderLink = (item: NavItem) => {
     const isFeedback = item.href === "/feedback";
     const showBadge = isFeedback && isCoordenador && (feedbackNovos ?? 0) > 0;
     const badgeCount = feedbackNovos ?? 0;
     return (
-      <a
+      <Link
         key={item.href}
         href={item.href}
-        onClick={(e) => handleNavClick(e, item.href)}
+        onNavigate={onNavigate}
         className={linkClassName(item.href)}
         aria-current={isNavItemActive(item.href, pathname, searchParams) ? "page" : undefined}
         title={collapsed ? item.label : undefined}
@@ -172,7 +165,7 @@ function SidebarLinks({
             {badgeCount > 99 ? "99+" : badgeCount}
           </span>
         )}
-      </a>
+      </Link>
     );
   };
 
@@ -202,15 +195,15 @@ function SidebarLinks({
             one); the chevron button only toggles collapse. */}
         <div className={groupHeaderClassName(active)}>
           {group.href ? (
-            <a
+            <Link
               href={group.href}
-              onClick={() => onNavigate?.()}
+              onNavigate={onNavigate}
               title={`Ir para ${group.label}`}
               className="flex min-w-0 flex-1 items-center gap-3 self-stretch text-left"
             >
               <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
               <span className="flex-1 truncate text-left">{group.label}</span>
-            </a>
+            </Link>
           ) : (
             <span className="flex min-w-0 flex-1 items-center gap-3 self-stretch text-left">
               <group.Icon size={20} aria-hidden="true" strokeWidth={1.75} />
@@ -271,7 +264,7 @@ function SidebarBrand({
   size?: "md" | "lg";
 }) {
   return (
-    <a
+    <Link
       href="/"
       title={collapsed ? "EctoLab — página inicial" : undefined}
       aria-label="EctoLab — página inicial"
@@ -292,7 +285,7 @@ function SidebarBrand({
           collapsed ? "-translate-x-2 opacity-0" : "translate-x-0 opacity-100"
         }`}
       />
-    </a>
+    </Link>
   );
 }
 
@@ -315,9 +308,11 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
   // Polling simples para badge da sidebar (coordenador_geral apenas).
   // Atualiza o contador de "novos" a cada 60s sem realtime.
   const [feedbackCount, setFeedbackCount] = useState(feedbackNovos);
-  useEffect(() => {
+  const [previousFeedbackNovos, setPreviousFeedbackNovos] = useState(feedbackNovos);
+  if (previousFeedbackNovos !== feedbackNovos) {
+    setPreviousFeedbackNovos(feedbackNovos);
     setFeedbackCount(feedbackNovos);
-  }, [feedbackNovos]);
+  }
   useEffect(() => {
     if (!isCoordenador) return;
     let cancelled = false;
@@ -451,7 +446,7 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
 
       <header className="sticky top-0 z-40 flex h-14 w-full items-center border-b border-[#e8ddd4]/60 glass px-4 lg:hidden">
         <div className="min-w-0 shrink-0">
-          <a
+          <Link
             href="/"
             aria-label="EctoLab — página inicial"
             className="flex min-h-12 items-center gap-2"
@@ -460,7 +455,7 @@ export default function Sidebar({ acesso = null, feedbackNovos = 0, viewAsOption
             <span className="font-[family-name:var(--font-poppins)] text-lg font-semibold tracking-wide text-slate-800">
               EctoLab
             </span>
-          </a>
+          </Link>
         </div>
         <div className="ml-auto">
           <button

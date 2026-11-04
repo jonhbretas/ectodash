@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { journeySteps } from "@/lib/journey";
 
-export async function registrarExploracao(etapaId: string) {
+export async function registrarExploracao(etapaId: string, atualizarTela = true) {
   if (!journeySteps.some((step) => step.id === etapaId)) {
     return { error: "Etapa inválida." };
   }
@@ -18,7 +18,11 @@ export async function registrarExploracao(etapaId: string) {
   );
   if (error) return { error: "Não foi possível salvar. Tente novamente." };
 
-  revalidatePath("/");
-  revalidatePath("/trilha");
+  // Automatic visits should not invalidate prefetched routes or render the
+  // destination a second time. Explicit confirmations still update progress.
+  if (atualizarTela) {
+    revalidatePath("/");
+    revalidatePath("/trilha");
+  }
   return { success: true };
 }
