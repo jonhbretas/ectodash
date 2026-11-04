@@ -62,7 +62,9 @@ export default async function UtilidadesPage() {
         </div>
       </header>
 
-      {isCoord && <UtilidadesAcoes areas={areas ?? []} />}
+      {isCoord && (
+        <UtilidadesAcoes areas={areas ?? []} isAdmin={profile?.role === "coordenador_geral"} />
+      )}
 
       <UtilidadesView areas={areas ?? []} items={items} podeGerenciar={isCoord} />
     </PageContainer>

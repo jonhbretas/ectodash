@@ -3,15 +3,16 @@
 // Ações de cadastro no topo de Links Úteis: dois botões bem visíveis
 // (IA e manual). Só um painel aberto por vez, logo abaixo dos botões.
 import { useState } from "react";
-import { CheckCircle2, PlusCircle, Sparkles } from "lucide-react";
+import { CheckCircle2, FolderTree, PlusCircle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UtilidadesIA from "./utilidades-ia";
 import NovoItemForm from "./utilidades-client";
+import OrganizarIA from "./organizar-ia";
 
 type Area = { id: number; nome: string };
-type Painel = "ia" | "manual" | null;
+type Painel = "ia" | "manual" | "organizar" | null;
 
-export default function UtilidadesAcoes({ areas }: { areas: Area[] }) {
+export default function UtilidadesAcoes({ areas, isAdmin = false }: { areas: Area[]; isAdmin?: boolean }) {
   const [painel, setPainel] = useState<Painel>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
@@ -51,6 +52,23 @@ export default function UtilidadesAcoes({ areas }: { areas: Area[] }) {
           <PlusCircle size={22} aria-hidden="true" />
           Adicionar manualmente
         </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => alternar("organizar")}
+            aria-expanded={painel === "organizar"}
+            className={cn(
+              "flex min-h-14 items-center gap-2 rounded-xl border-2 px-5 text-lg font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] sm:ml-auto",
+              painel === "organizar"
+                ? "border-amber-500 bg-amber-100 text-amber-900"
+                : "border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-500"
+            )}
+          >
+            <FolderTree size={22} aria-hidden="true" />
+            Organizar com IA
+            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold">ADMIN</span>
+          </button>
+        )}
       </div>
 
       {sucesso && painel === null && (
@@ -61,6 +79,17 @@ export default function UtilidadesAcoes({ areas }: { areas: Area[] }) {
       )}
 
       {painel === "ia" && <UtilidadesIA areas={areas} onClose={() => setPainel(null)} />}
+
+      {painel === "organizar" && isAdmin && (
+        <OrganizarIA
+          areas={areas}
+          onClose={() => setPainel(null)}
+          onConcluido={(msg) => {
+            setSucesso(msg);
+            setPainel(null);
+          }}
+        />
+      )}
 
       {painel === "manual" && (
         <NovoItemForm
