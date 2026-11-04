@@ -1,3 +1,4 @@
+import { obterUsuarioAtual, obterPerfilAtual, obterCargosAtuais } from "@/lib/supabase/request-context";
 // /voluntarios — the institutional roster (public.voluntarios, migration
 // 0017), full-width modern layout like demandas/eventos: stat pills, a
 // search/filter bar, and the roster grouped by área with multi-select,
@@ -52,24 +53,17 @@ export default async function VoluntariosPage({
 }) {
   const filters = parseVoluntariosFilters(await searchParams);
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await obterUsuarioAtual();
 
   if (!user) {
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, voluntario_id")
-    .eq("id", user.id)
-    .single();
+  const [profile, meusCargos] = await Promise.all([obterPerfilAtual(), obterCargosAtuais()]);
 
   const role = profile?.role;
   // Coordenadores por cargo (migration 0043) com o módulo voluntários
   // gerem o roster dentro do próprio escopo — somam-se aos legados.
-  const { data: meusCargos } = await supabase.rpc("meus_cargos");
   const temCargoVoluntarios = (meusCargos ?? []).some(
     (c: { modulos: string[] }) => c.modulos.includes("voluntarios")
   );

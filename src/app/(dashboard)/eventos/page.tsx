@@ -1,3 +1,4 @@
+import { obterUsuarioAtual, obterPerfilAtual } from "@/lib/supabase/request-context";
 // /eventos — agenda-style event list, full-width like the demandas screen.
 // Events are grouped by month with prominent month headers; each event is
 // a date-box + card row (classic agenda layout) that links to its
@@ -16,26 +17,18 @@ import AnaliseDuplicadosSection from "./analise-duplicados-section";
 
 export default async function EventosPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await obterUsuarioAtual();
 
   if (!user) {
     return null;
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const profile = await obterPerfilAtual();
   const isCoordenador = profile?.role === "coordenador_geral";
-  const { data: podeGerirEventos } = await supabase.rpc("pode_gerir_eventos");
-  const podeGerir = podeGerirEventos === true;
 
   // RLS (migration 0008): every authenticated volunteer reads every event.
-  const [proximosResult, anterioresResult, tiposResult, mergeResult] = await Promise.all([
+  const [proximosResult, anterioresResult, tiposResult, mergeResult, gerirResult] = await Promise.all([
     supabase
       .from("eventos")
       .select("id, titulo, descricao, data_evento, local, tipo_evento_id")
@@ -57,7 +50,9 @@ export default async function EventosPage() {
           .order("data_evento", { ascending: false })
           .limit(500)
       : Promise.resolve({ data: null, error: null }),
+    supabase.rpc("pode_gerir_eventos"),
   ]);
+  const podeGerir = gerirResult.data === true;
 
   const tipoNomeById = new Map(
     (tiposResult.data ?? []).map((tipo) => [tipo.id, tipo.nome])

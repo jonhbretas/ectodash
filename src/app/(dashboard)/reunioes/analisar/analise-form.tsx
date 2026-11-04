@@ -564,7 +564,8 @@ function ReviewScreen({
     }));
 
   const salvarDips = dips
-    .filter((d) => d.localidade.trim().length > 0 && d.pais.trim().length > 0)
+    // País vazio é completado no servidor pelo cadastro de localidades.
+    .filter((d) => d.localidade.trim().length > 0)
     .map((d) => ({
       localidade: d.localidade,
       pais: d.pais,

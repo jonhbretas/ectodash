@@ -17,6 +17,7 @@ import { dipLocalizacaoShape } from "@/lib/ai/dip-localizacao";
 import { detectarEventosDuplicadosNaAta, type SugestaoEvento } from "@/lib/eventos/duplicados-ata";
 import { listarEventosParaConferencia, salvarEventoDaAta } from "@/lib/eventos/salvar-evento-ata";
 import { salvarReuniaoPorData } from "@/lib/reunioes/salvar-por-data";
+import { completarPais, encontrarDipExistente, salvarDipsDaAta, type DipExistente } from "@/lib/dips/salvar-dips-da-ata";
 const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
 const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -363,7 +364,7 @@ export async function analisarComIA(
   // file's own import restriction. Profiles (linked accounts) AND the
   // institutional roster (public.voluntarios) are fetched: a volunteer is
   // matched by roster name first, then by account full_name/email.
-  const [profilesResult, voluntariosResult, demandasExistentes, eventosExistentes, dipsExistentes] =
+  const [profilesResult, voluntariosResult, demandasExistentes, eventosExistentes, dipsExistentes, dipLocalidades] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -374,6 +375,7 @@ export async function analisarComIA(
       supabase.from("demandas").select("id, titulo"),
       listarEventosParaConferencia(supabase),
       supabase.from("dips").select("id, localidade, pais, data_dip"),
+      supabase.from("dip_localidades").select("localidade, pais"),
     ]);
 
   const demandasExistentesRows = (demandasExistentes.data ?? []).map((d) => ({
@@ -381,14 +383,8 @@ export async function analisarComIA(
     titulo: d.titulo,
     norm: normalizeTexto(d.titulo),
   }));
-  const dipsExistentesRows = (dipsExistentes.data ?? []).map((d) => ({
-    id: d.id,
-    localidade: d.localidade,
-    pais: d.pais,
-    normLocalidade: normalizeTexto(d.localidade),
-    normPais: normalizeTexto(d.pais),
-    data: d.data_dip,
-  }));
+  const dipsExistentesRows = (dipsExistentes.data ?? []) as DipExistente[];
+  const dipLocalidadesCadastro = dipLocalidades.data ?? [];
 
   const profiles = (profilesResult.data ?? []).map((p) => ({
     id: p.id,
@@ -544,14 +540,12 @@ export async function analisarComIA(
         ? (data.dips as any[]).map((dip: any) => {
             const key = crypto.randomUUID();
             const localidade = String(dip.localidade ?? "").trim();
-            const pais = String(dip.pais ?? "").trim();
+            // País vazio vem do cadastro de localidades; a busca de duplicata
+            // usa a mesma regra do salvamento (salvar-dips-da-ata.ts).
+            const pais = completarPais(localidade, String(dip.pais ?? ""), dipLocalidadesCadastro);
             const dipData = String(dip.data ?? "").trim() || null;
-            const normLocalidade = normalizeTexto(localidade);
-            const normPais = normalizeTexto(pais);
-            const match = dipsExistentesRows.find(
-              (existing) => existing.normLocalidade === normLocalidade && existing.normPais === normPais && (existing.data === dipData || (existing.data === null && dipData === null))
-            );
-            if (match) duplicados.dips[key] = { id: match.id, localidade: match.localidade, data: match.data };
+            const match = encontrarDipExistente({ localidade, pais, data: dipData }, dipsExistentesRows);
+            if (match) duplicados.dips[key] = { id: match.id, localidade: match.localidade, data: match.data_dip };
             const obsParts: string[] = [];
             if (dip.observacoes) obsParts.push(String(dip.observacoes));
             else if (dip.evidencia) obsParts.push(String(dip.evidencia).slice(0, 200));
@@ -697,10 +691,12 @@ const salvarDipsSchema = z
   .array(
     z.object({
       localidade: z.string().trim().min(1).max(200),
-      pais: z.string().trim().min(1).max(100),
+      pais: z.string().trim().max(100),
       data: z.string().regex(dataRegex).nullable(),
       participantes: z.union([z.number().int().nonnegative(), z.null()]),
       observacoes: z.string().trim().max(3000),
+      acao: z.enum(["criar", "pular", "incrementar"]).optional(),
+      dipId: z.number().int().positive().nullable().optional(),
     })
   )
   .max(100);
@@ -814,10 +810,10 @@ async function salvarAta(
 
 async function salvarDips(
   supabase: SupabaseClient,
-  ataId: number,
+  ataId: number | null,
   dips: SalvarTudoInput["dips"]
 ): Promise<{ salvos: number; ignorados: number; atualizados: number; erros: string[] }> {
-  if (!dips || dips.length === 0 || ataId === null) {
+  if (!dips || dips.length === 0) {
     return { salvos: 0, ignorados: 0, atualizados: 0, erros: [] };
   }
 
@@ -826,55 +822,9 @@ async function salvarDips(
     return { salvos: 0, ignorados: 0, atualizados: 0, erros: ["dips (dados inválidos)"] };
   }
 
-  const ignorados = dips.filter((d) => d.acao === "pular").length;
-  const aCriar = dips.filter((d) => d.acao !== "pular" && d.acao !== "incrementar");
-  const aIncrementar = dips.filter((d) => d.acao === "incrementar" && d.dipId);
-
-  let salvos = 0;
-  let atualizados = 0;
-  const erros: string[] = [];
-
-  if (aCriar.length > 0) {
-    const rows = aCriar.map((dip) => ({
-      ata_id: ataId,
-      localidade: dip.localidade,
-      pais: dip.pais,
-      data_dip: dip.data,
-      participantes: dip.participantes,
-      observacoes: dip.observacoes || null,
-    }));
-    const { error } = await supabase.from("dips").insert(rows);
-    if (error) {
-      console.error("salvarTudoDaAnalise: dips insert failed", error);
-      erros.push("dips");
-    } else {
-      salvos = rows.length;
-    }
-  }
-
-  for (const dip of aIncrementar) {
-    // Incrementa o DIP existente com as novas informações da transcrição:
-    // mantém o vínculo com a ata anterior, mas atualiza participantes/
-    // observações (e corrige localidade/país/data se editados na revisão).
-    const { error } = await supabase
-      .from("dips")
-      .update({
-        localidade: dip.localidade,
-        pais: dip.pais,
-        data_dip: dip.data,
-        participantes: dip.participantes,
-        observacoes: dip.observacoes || null,
-      })
-      .eq("id", dip.dipId!);
-    if (error) {
-      console.error("salvarTudoDaAnalise: dips increment update failed", error);
-      erros.push(`${dip.localidade} (${dip.pais})`);
-    } else {
-      atualizados++;
-    }
-  }
-
-  return { salvos, ignorados, atualizados, erros };
+  // "incrementar" mescla via RPC aditiva (não apaga participantes/observações
+  // e acusa falta de permissão); "criar" insere; "pular" ignora.
+  return salvarDipsDaAta(supabase, ataId, parsed.data);
 }
 
 // Updates land as comments on the matching EXISTING demanda (same rule as
@@ -1252,9 +1202,7 @@ export async function salvarTudoDaAnalise(
     await Promise.all([
       salvarEventos(supabase, input.eventos, input.ata ? `${input.ata.titulo} (${input.ata.data})` : "análise de IA", ata.ataId),
       salvarDemandas(supabase, input.demandas),
-      ata.ataId === null
-        ? Promise.resolve({ salvos: 0, ignorados: 0, atualizados: 0, erros: [] as string[] })
-        : salvarDips(supabase, ata.ataId, input.dips),
+      salvarDips(supabase, ata.ataId, input.dips),
       ata.ataId === null
         ? Promise.resolve({ salvos: 0, erros: [] as string[] })
         : salvarAtualizacoes(

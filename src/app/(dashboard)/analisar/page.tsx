@@ -494,7 +494,8 @@ function ResultsScreen({
           }
         : undefined,
       dips: dipEdits
-        .filter((d) => d.localidade.trim() && d.pais.trim())
+        // Mesclar num DIP existente dispensa o país (já está no registro).
+        .filter((d) => d.localidade.trim() && (d.pais.trim() || state.duplicados.dips[d.key]))
         .map((d) => ({
           localidade: d.localidade,
           pais: d.pais,
@@ -936,7 +937,7 @@ function ResultsScreen({
                       dup ? "border-amber-200 bg-amber-50/60" : "border-zinc-200"
                     }`}
                   >
-                    {(!dip.localidade.trim() || !dip.pais.trim()) && (
+                    {(!dip.localidade.trim() || (!dip.pais.trim() && !dup)) && (
                       <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
                         Complete a localidade e o país para salvar este DIP. Os demais itens da análise podem ser revisados normalmente.
                       </p>

@@ -27,6 +27,7 @@ import { sanitizeSearch } from "@/lib/utils";
 import { detectarEventosDuplicadosNaAta } from "@/lib/eventos/duplicados-ata";
 import { listarEventosParaConferencia, salvarEventoDaAta } from "@/lib/eventos/salvar-evento-ata";
 import { salvarReuniaoPorData } from "@/lib/reunioes/salvar-por-data";
+import { salvarDipsDaAta } from "@/lib/dips/salvar-dips-da-ata";
 import {
   ataAnaliseEnvelopeSchema,
   type AtaAnalise,
@@ -447,7 +448,8 @@ const salvarDipsSchema = z
   .array(
     z.object({
       localidade: z.string().trim().min(1).max(200),
-      pais: z.string().trim().min(1).max(100),
+      // País vazio é completado pelo cadastro dip_localidades no salvamento.
+      pais: z.string().trim().max(100),
       data: z.string().regex(dataRegex).nullable(),
       participantes: z.union([z.number().int().nonnegative(), z.null()]),
       observacoes: z.string().trim().max(3000),
@@ -745,24 +747,10 @@ export async function salvarAtaAnalise(
     }
   }
 
-  // DIP records — one row per mention (user decision 2026-08-04).
-  const dipRows = (dips.data as AtaSalvarDip[])
-    .filter((dip) => dip.localidade.trim() && dip.pais.trim())
-    .map((dip) => ({
-      ata_id: ataId,
-      localidade: dip.localidade,
-      pais: dip.pais,
-      data_dip: dip.data,
-      participantes: dip.participantes,
-      observacoes: dip.observacoes || null,
-    }));
-
-  if (dipRows.length > 0) {
-    const { error: dipsError } = await supabase.from("dips").insert(dipRows);
-    if (dipsError) {
-      console.error("salvarAtaAnalise: dips insert failed", dipsError);
-    }
-  }
+  // DIP records — menção que já existe (mesma localidade/data) é MESCLADA
+  // no registro existente em vez de duplicar (AGENTS.md); reanalisar a mesma
+  // ata não gera cópias. Regra compartilhada com /analisar.
+  const resultadoDips = await salvarDipsDaAta(supabase, ataId, dips.data as AtaSalvarDip[]);
 
   // Pautas adiadas para a próxima reunião — origem 'ata' ligada à ata que
   // as levantou. Alimentam a lista de pauta do hub de Reuniões.
@@ -788,9 +776,17 @@ export async function salvarAtaAnalise(
   revalidatePath("/dips");
   revalidatePath("/");
 
+  const avisos: string[] = [];
+  if (errosEventos.length) {
+    avisos.push(`estes eventos precisam de conferência na agenda: ${errosEventos.join(", ")}`);
+  }
+  if (resultadoDips.erros.length) {
+    avisos.push(`estes registros DIP não foram salvos: ${resultadoDips.erros.join("; ")}`);
+  }
+
   return {
-    ok: errosEventos.length === 0,
-    message: errosEventos.length ? `A ata já foi salva, mas estes eventos precisam de conferência na agenda: ${errosEventos.join(", ")}.` : "Ata salva com sucesso.",
+    ok: avisos.length === 0,
+    message: avisos.length ? `A ata já foi salva, mas ${avisos.join(". Além disso, ")}.` : "Ata salva com sucesso.",
     ataId,
   };
 }

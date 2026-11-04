@@ -9,10 +9,9 @@ export const metadata = { title: "Financeiro — EctoDash" };
 
 export default async function FinanceiroHome() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
   const acesso = await obterAcesso();
-  if (!acesso || podeAcessar(acesso, "financeiro") === false) {
+  if (!acesso) return null;
+  if (podeAcessar(acesso, "financeiro") === false) {
     return <PageContainer><div className="flex w-full flex-col items-center gap-4 py-16 text-center"><LockKeyhole size={42} className="text-zinc-400"/><h1 className="text-2xl font-semibold text-zinc-900">Acesso restrito ao financeiro</h1><p className="max-w-md text-zinc-600">Este espaço é exclusivo para pessoas com acesso ao módulo financeiro.</p></div></PageContainer>;
   }
 
