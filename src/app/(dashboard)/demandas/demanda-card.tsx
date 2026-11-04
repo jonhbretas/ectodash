@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Check, User, CheckSquare, Square } from "lucide-react";
+import { Calendar, Check, Loader2, User, CheckSquare, Square } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import StatusBadge, { type DemandaStatus } from "./status-badge";
@@ -27,6 +27,7 @@ export type DemandaCardProps = {
   selectedIds?: Set<number>;
   onToggle?: (id: number, shiftKey?: boolean) => void;
   onConclude?: (id: number) => void;
+  concludingIds?: Set<number>;
 };
 
 export default function DemandaCard({
@@ -46,15 +47,17 @@ export default function DemandaCard({
   selectedIds,
   onToggle,
   onConclude,
+  concludingIds,
 }: DemandaCardProps) {
   const prazoFormatada = prazo ? format(new Date(`${prazo}T00:00:00`), "dd/MM/yyyy", {
     locale: ptBR,
   }) : "Sem prazo";
 
   const selected = selectionActive ? selectedIds?.has(id) ?? false : false;
+  const concluding = concludingIds?.has(id) ?? false;
 
   return (
-    <li className="flex items-start gap-2">
+    <li aria-busy={concluding} className={`flex items-start gap-2 transition-opacity duration-200 ${concluding ? "opacity-60" : ""}`}>
       {selectionActive && (
         <button
           type="button"
@@ -72,7 +75,7 @@ export default function DemandaCard({
       )}
       <Link
         href={`/demandas/${id}/editar`}
-        className="flex flex-1 flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
+        className={`flex flex-1 flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9] ${concluding ? "ring-2 ring-green-500" : "ring-1 ring-zinc-200/60"}`}
       >
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-2 min-w-0 flex-1 text-base font-semibold text-zinc-900">
@@ -136,10 +139,11 @@ export default function DemandaCard({
         <button
           type="button"
           onClick={() => onConclude(id)}
-          aria-label={`Marcar "${titulo}" como concluída`}
-          className="mt-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-green-500 transition-all duration-150 hover:bg-green-100 hover:text-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+          disabled={concluding}
+          aria-label={concluding ? `Concluindo "${titulo}"…` : `Marcar "${titulo}" como concluída`}
+          className="mt-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-green-500 transition-all duration-150 hover:bg-green-100 hover:text-green-600 disabled:cursor-wait disabled:bg-green-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
         >
-          <Check size={18} strokeWidth={2.5} aria-hidden="true" />
+          {concluding ? <Loader2 size={18} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Check size={18} strokeWidth={2.5} aria-hidden="true" />}
         </button>
       )}
     </li>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import QuickCreate from "./quick-create";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import {
   FilterX,
   ClipboardList,
@@ -73,6 +73,7 @@ export type DemandaListProps = {
 };
 
 const EdicaoEmMassaDialog = dynamic(() => import("./edicao-em-massa-dialog"));
+const SEM_CONCLUSOES = new Set<number>();
 
 export default function DemandaList({
   quickCreate = false,
@@ -95,6 +96,11 @@ export default function DemandaList({
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [concludingIds, marcarConclusao] = useOptimistic(
+    SEM_CONCLUSOES,
+    (ids, id: number) => new Set(ids).add(id)
+  );
+  const conclusoesEmCurso = useRef(new Set<number>());
 
   const sorted = useMemo(() => [...demandas].sort(compareDemandas), [demandas]);
   const count = demandas.length;
@@ -172,6 +178,7 @@ export default function DemandaList({
   };
 
   const selectionProps = {
+    concludingIds,
     selectionActive: selectionMode,
     selectedIds: selected,
     onToggle: toggleSelected,
@@ -184,9 +191,22 @@ export default function DemandaList({
   };
 
   const handleConclude = (id: number) => {
+    if (conclusoesEmCurso.current.has(id) || concludingIds.has(id)) return;
+    conclusoesEmCurso.current.add(id);
     startTransition(async () => {
-      await updateDemandaStatus(id, "concluida");
-      router.refresh();
+      marcarConclusao(id);
+      try {
+        const result = await updateDemandaStatus(id, "concluida");
+        if (!result.ok) {
+          setMessage({ ok: false, text: result.message });
+          return;
+        }
+        router.refresh();
+      } catch {
+        setMessage({ ok: false, text: "Não foi possível concluir a demanda. Tente novamente." });
+      } finally {
+        conclusoesEmCurso.current.delete(id);
+      }
     });
   };
 

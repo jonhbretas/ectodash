@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Check, CheckSquare, Square } from "lucide-react";
+import { Check, Loader2, CheckSquare, Square } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -40,6 +40,7 @@ export type DemandaTableProps = {
   selectedIds?: Set<number>;
   onToggle?: (id: number, shiftKey?: boolean) => void;
   onConclude?: (id: number) => void;
+  concludingIds?: Set<number>;
 };
 
 export default function DemandaTable({
@@ -48,6 +49,7 @@ export default function DemandaTable({
   selectedIds,
   onToggle,
   onConclude,
+  concludingIds,
 }: DemandaTableProps) {
   const router = useRouter();
 
@@ -86,6 +88,7 @@ export default function DemandaTable({
       </TableHeader>
       <TableBody>
         {demandas.map((demanda) => {
+          const concluding = concludingIds?.has(demanda.id) ?? false;
           const prazoFormatada = demanda.prazo ? format(
             new Date(`${demanda.prazo}T00:00:00`),
             "dd/MM/yyyy",
@@ -105,7 +108,8 @@ export default function DemandaTable({
               key={demanda.id}
               onClick={rowClick}
               aria-selected={selected}
-              className={`cursor-pointer border-t border-b-0 border-zinc-100 bg-white text-base text-zinc-900 transition-colors duration-200 ${
+              aria-busy={concluding}
+              className={`cursor-pointer border-t border-b-0 border-zinc-100 bg-white text-base text-zinc-900 transition-all duration-200 ${concluding ? "opacity-60 ring-2 ring-inset ring-green-500" : ""} ${
                 selected ? "bg-[#2195B9]/5 hover:bg-[#2195B9]/10" : "hover:bg-zinc-50"
               } ${demanda.atrasada ? "border-l-3 border-l-red-500" : ""}`}
             >
@@ -199,10 +203,11 @@ export default function DemandaTable({
                       e.stopPropagation();
                       onConclude(demanda.id);
                     }}
-                    aria-label={`Marcar "${demanda.titulo}" como concluída`}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-green-500 transition-all duration-150 hover:bg-green-100 hover:text-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
+                    disabled={concluding}
+                    aria-label={concluding ? `Concluindo "${demanda.titulo}"…` : `Marcar "${demanda.titulo}" como concluída`}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-green-500 transition-all duration-150 hover:bg-green-100 hover:text-green-600 disabled:cursor-wait disabled:bg-green-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500"
                   >
-                    <Check size={18} strokeWidth={2.5} aria-hidden="true" />
+                    {concluding ? <Loader2 size={18} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Check size={18} strokeWidth={2.5} aria-hidden="true" />}
                   </button>
                 )}
               </TableCell>
