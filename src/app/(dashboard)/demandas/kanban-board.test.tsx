@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import KanbanBoard, { type KanbanDemanda } from "./kanban-board";
@@ -35,7 +35,9 @@ describe("movimentação de demandas", () => {
     render(<KanbanBoard demandas={[demanda]} />);
     await userEvent.click(screen.getByRole("button", { name: 'Marcar "Preparar evento" como concluída' }));
     expect((await screen.findByRole("alert")).textContent).toBe("Sem permissão.");
-    expect(screen.getByRole("button", { name: 'Mover "Preparar evento" para Em andamento' }).hasAttribute("disabled")).toBe(false);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: 'Mover "Preparar evento" para Em andamento' }).hasAttribute("disabled")).toBe(false);
+    });
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
