@@ -36,7 +36,7 @@ afterEach(cleanup);
 describe("navegação do menu", () => {
   it("usa o roteador interno ao trocar de tela", async () => {
     renderSidebar();
-    await userEvent.click(screen.getByRole("link", { name: "Reuniões" }));
+    await userEvent.click(screen.getByRole("link", { name: "Atas de reunião" }));
     expect(router.push).toHaveBeenCalledWith("/reunioes", "/reunioes", expect.any(Object));
     expect(screen.getByRole("navigation", { name: "Menu principal" })).toBeTruthy();
   });
@@ -57,7 +57,7 @@ describe("navegação do menu", () => {
     renderSidebar();
     await userEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
     const menus = screen.getAllByRole("navigation", { name: "Menu principal" });
-    await userEvent.click(within(menus[1]).getByRole("link", { name: "Reuniões" }));
+    await userEvent.click(within(menus[1]).getByRole("link", { name: "Atas de reunião" }));
     expect(router.push).toHaveBeenCalledWith("/reunioes", "/reunioes", expect.any(Object));
     expect(screen.queryByRole("button", { name: "Fechar menu" })).toBeNull();
   });

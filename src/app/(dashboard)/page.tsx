@@ -168,7 +168,7 @@ export default async function InicioPage() {
       modulo: "demandas" as ModuloAcesso,
     },
     {
-      href: "/reunioes",
+      href: "/reunioes/pautas",
       titulo: "Pedir pauta",
       descricao: `Sugira um assunto para terça ${proximaLabel} às ${HORARIO_REUNIAO}`,
       Icon: MessageSquarePlus,
@@ -184,7 +184,7 @@ export default async function InicioPage() {
       modulo: "eventos" as ModuloAcesso,
     },
     {
-      href: "/reunioes?tab=atas",
+      href: "/reunioes",
       titulo: "Reuniões e atas",
       descricao: "Histórico, decisões e o que foi combinado",
       Icon: NotebookPen,
@@ -299,7 +299,7 @@ export default async function InicioPage() {
         </Link>
 
         <Link
-          href="/reunioes"
+          href="/reunioes/pautas"
           className="flex min-h-24 flex-col justify-between gap-1 rounded-2xl bg-white p-4 ring-1 ring-slate-200/70 transition-all hover:ring-[#2195B9]/40 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2195B9]"
         >
           <span className="flex items-center gap-2 text-sm font-medium text-slate-500">

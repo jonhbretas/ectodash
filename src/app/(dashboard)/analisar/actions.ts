@@ -1322,7 +1322,7 @@ export async function salvarTudoDaAnalise(
   ];
 
   revalidatePath("/eventos");
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   revalidatePath("/dips");
   revalidatePath("/");
   revalidatePath("/demandas");

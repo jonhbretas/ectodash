@@ -172,7 +172,7 @@ export async function criarPauta(
     };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   revalidatePath("/reunioes/pautas");
   revalidatePath("/reunioes/atas");
   const votacaoAviso = parsed.data.tipo === "deliberativa" ? " A votação prévia já está aberta." : "";
@@ -292,7 +292,7 @@ export async function marcarPautaDiscutida(
     return { ok: false, message: "Pauta não encontrada ou você não tem permissão para alterá-la." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   revalidatePath("/reunioes/pautas");
   revalidatePath(`/reunioes/${aId}`);
   return { ok: true };
@@ -320,7 +320,7 @@ export async function reabrirPauta(pautaId: number): Promise<PautaAcaoResult> {
     return { ok: false, message: "Não foi possível reabrir a pauta." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true };
 }
 
@@ -346,7 +346,7 @@ export async function emEspera(pautaId: number): Promise<PautaAcaoResult> {
     return { ok: false, message: "Não foi possível colocar em espera." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true };
 }
 
@@ -372,7 +372,7 @@ export async function retomarPauta(pautaId: number): Promise<PautaAcaoResult> {
     return { ok: false, message: "Não foi possível retomar a pauta." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true };
 }
 
@@ -402,7 +402,7 @@ export async function moverPauta(
     return { ok: false, message: "Não foi possível mover a pauta." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true };
 }
 
@@ -444,7 +444,7 @@ export async function excluirPauta(pautaId: number): Promise<PautaAcaoResult> {
     }
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true };
 }
 

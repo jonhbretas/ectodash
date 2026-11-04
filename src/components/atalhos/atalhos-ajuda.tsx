@@ -45,14 +45,14 @@ export default function AtalhosAjuda({ voluntarioId }: AtalhosAjudaProps) {
       color: "bg-[#2195B9]",
     },
     {
-      href: "/reunioes#pedir-pauta",
+      href: "/reunioes/pautas#pedir-pauta",
       label: "Pedir pauta",
       descricao: "Sugira um assunto para a próxima reunião",
       Icon: MessageSquarePlus,
       color: "bg-[#FDBA2F]",
     },
     {
-      href: "/reunioes#atas",
+      href: "/reunioes",
       label: "Ver atas das reuniões",
       descricao: "Consulte o histórico e as decisões registradas",
       Icon: FileText,

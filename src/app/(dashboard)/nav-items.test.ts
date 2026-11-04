@@ -19,9 +19,12 @@ describe("seleção de demandas no menu", () => {
     expect(isGroupActive(group, pathname, params)).toBe(normal);
   });
 
-  it("mantém a seleção de reuniões e pedidos de pauta separada", () => {
-    const params = new URLSearchParams("tab=pautas&status=aberto");
-    expect(isNavItemActive("/reunioes", "/reunioes", params)).toBe(false);
-    expect(isNavItemActive("/reunioes?tab=pautas", "/reunioes", params)).toBe(true);
+  it("mantém a seleção de atas e pedidos de pauta separada", () => {
+    const historico = new URLSearchParams("tab=historico");
+    expect(isNavItemActive("/reunioes", "/reunioes/pautas", historico)).toBe(false);
+    expect(isNavItemActive("/reunioes/pautas", "/reunioes/pautas", historico)).toBe(true);
+    expect(isNavItemActive("/reunioes", "/reunioes")).toBe(true);
+    expect(isNavItemActive("/reunioes", "/reunioes/12")).toBe(true);
+    expect(isNavItemActive("/reunioes/pautas", "/reunioes")).toBe(false);
   });
 });

@@ -160,7 +160,7 @@ async function vincularAnexo(
     return { ok: false, message: "O arquivo foi enviado, mas não foi possível vinculá-lo à pauta." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true };
 }
 
@@ -285,7 +285,7 @@ export async function removerAnexo(pautaId: number): Promise<{ ok: boolean; mess
       return { ok: false, message: "Não foi possível remover o anexo." };
     }
 
-    revalidatePath("/reunioes");
+    revalidatePath("/reunioes", "layout");
     return { ok: true };
   } catch (e) {
     console.error("removerAnexo failed", e);

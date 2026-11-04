@@ -50,7 +50,7 @@ export async function votarPauta(
     return { ok: false, message: "Não foi possível registrar seu voto agora. Tente novamente." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true, message: "Voto registrado." };
 }
 
@@ -79,7 +79,7 @@ export async function removerVoto(pautaId: number): Promise<PautaAcaoResult> {
     return { ok: false, message: "A votação desta pauta não está aberta." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true, message: "Voto retirado." };
 }
 
@@ -105,7 +105,7 @@ export async function encerrarVotacao(pautaId: number): Promise<PautaAcaoResult>
     return { ok: false, message: "Não foi possível encerrar a votação agora." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   const resultado = String(data);
   if (resultado === "aprovada") return { ok: true, message: "Votação encerrada: aprovada previamente." };
   if (resultado === "rejeitada") return { ok: true, message: "Votação encerrada: rejeitada." };
@@ -134,6 +134,6 @@ export async function reabrirVotacao(pautaId: number): Promise<PautaAcaoResult> 
     return { ok: false, message: "Não foi possível reabrir a votação agora." };
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true, message: "Votação reaberta." };
 }

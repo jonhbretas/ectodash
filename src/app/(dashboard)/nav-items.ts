@@ -71,8 +71,8 @@ export const navEntries: SidebarEntry[] = [
     Icon: ClipboardList,
     children: [
       { href: "/demandas", label: "Demandas", Icon: ClipboardList, modulo: "demandas" },
-      { href: "/reunioes", label: "Reuniões", Icon: NotebookPen, modulo: "reunioes" },
-      { href: "/reunioes?tab=pautas", label: "Pedidos de pauta", Icon: ListTodo, modulo: "reunioes" },
+      { href: "/reunioes", label: "Atas de reunião", Icon: NotebookPen, modulo: "reunioes" },
+      { href: "/reunioes/pautas", label: "Pedidos de pauta", Icon: ListTodo, modulo: "reunioes" },
       { href: "/projetos", label: "Projetos", Icon: FolderKanban, modulo: "projetos" },
     ],
   },
@@ -238,8 +238,10 @@ export function isNavItemActive(
       .every(([key, value]) => searchParams.get(key) === value);
   }
 
+  // Atas (/reunioes) e Pedidos de pauta (/reunioes/pautas) são telas irmãs:
+  // a de atas não acende quando o usuário está nos pedidos de pauta.
   if (targetPath === "/reunioes") {
-    return pathname === targetPath && !searchParams.get("tab");
+    return pathname !== "/reunioes/pautas" && !pathname.startsWith("/reunioes/pautas/");
   }
 
   return true;

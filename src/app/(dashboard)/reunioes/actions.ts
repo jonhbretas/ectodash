@@ -78,7 +78,7 @@ export async function criarAta(
     }
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true, message: "Ata salva. Informações da mesma data foram reunidas em uma única reunião." };
 }
 
@@ -191,7 +191,7 @@ export async function editarAta(formData: FormData): Promise<EditarAtaResult> {
   }
 
   revalidatePath(`/reunioes/${id}`);
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true, message: "Ata atualizada." };
 }
 
@@ -220,7 +220,7 @@ export async function addAtaParticipante(
   }
 
   revalidatePath(`/reunioes/${ataId}`);
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true };
 }
 
@@ -249,7 +249,7 @@ export async function removeAtaParticipante(
   }
 
   revalidatePath(`/reunioes/${ataId}`);
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   return { ok: true };
 }
 
@@ -278,6 +278,6 @@ export async function excluirAta(formData: FormData) {
     return;
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   revalidatePath("/dips");
 }

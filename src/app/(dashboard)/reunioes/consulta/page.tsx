@@ -40,7 +40,7 @@ export default async function ConsultaAtasPage() {
   return (
     <PageContainer>
       <div className="flex w-full flex-col gap-5">
-        <Link href="/reunioes?tab=atas" className="inline-flex min-h-11 items-center gap-2 self-start text-base font-medium text-[#28627B] hover:underline"><ArrowLeft size={18} aria-hidden="true" /> Voltar para atas</Link>
+        <Link href="/reunioes" className="inline-flex min-h-11 items-center gap-2 self-start text-base font-medium text-[#28627B] hover:underline"><ArrowLeft size={18} aria-hidden="true" /> Voltar para atas</Link>
         <header className="space-y-2">
           <h1 className="flex items-center gap-2 text-3xl font-semibold text-zinc-900"><Search size={28} aria-hidden="true" /> Consultar atas</h1>
           <p className="text-base text-zinc-600">Encontre o que foi registrado nas reuniões.</p>

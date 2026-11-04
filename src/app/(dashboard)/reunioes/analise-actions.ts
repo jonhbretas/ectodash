@@ -783,7 +783,7 @@ export async function salvarAtaAnalise(
     }
   }
 
-  revalidatePath("/reunioes");
+  revalidatePath("/reunioes", "layout");
   revalidatePath("/eventos");
   revalidatePath("/dips");
   revalidatePath("/");

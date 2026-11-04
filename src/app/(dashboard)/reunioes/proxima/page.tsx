@@ -1,2 +1,2 @@
 import { redirect } from "next/navigation";
-export default function ProximaRedirect() { redirect("/reunioes"); }
+export default function ProximaRedirect() { redirect("/reunioes/pautas"); }
