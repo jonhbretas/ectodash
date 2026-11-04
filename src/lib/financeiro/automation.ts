@@ -51,8 +51,8 @@ export function classifyDescription(description: string, amount: number, date: s
   let explanation = "Entrada/saída inferida pelo sinal do valor.";
   if (ownAccountWords.test(description)) { type = "TRANSFERENCIA_INTERNA"; confidence = .96; explanation = "Descrição indica movimentação entre contas próprias."; }
   else if (redemptionWords.test(description)) { type = "RESGATE"; confidence = .94; explanation = "Descrição indica resgate de aplicação."; }
-  else if (investmentWords.test(description)) { type = "APLICACAO"; confidence = .9; explanation = "Descrição indica aplicação financeira."; }
   else if (incomeWords.test(description)) { type = "RENDIMENTO_FINANCEIRO"; confidence = .92; explanation = "Descrição indica rendimento financeiro."; }
+  else if (investmentWords.test(description)) { type = "APLICACAO"; confidence = .9; explanation = "Descrição indica aplicação financeira."; }
   else if (chargebackWords.test(description)) { type = "CHARGEBACK"; confidence = .95; explanation = "Descrição indica chargeback."; }
   else if (refundWords.test(description)) { type = "ESTORNO"; confidence = .94; explanation = "Descrição indica estorno/devolução."; }
   else if (feeWords.test(description)) { type = "TARIFA"; confidence = .9; explanation = "Descrição indica tarifa ou taxa."; }

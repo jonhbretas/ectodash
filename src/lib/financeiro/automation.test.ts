@@ -15,4 +15,7 @@ describe("financial automation rules", () => {
     expect(calculateNet({ gross: 100, fee: 5, tax: 2, refund: 3, chargeback: 1 })).toBe(89);
     expect(outstandingReceivable(89, 40)).toBe(49);
   });
+  it("recognizes CDB income as income rather than a new investment", () => {
+    expect(classifyDescription("Rendimento CDB", 10, "2026-11-01", 1)).toMatchObject({ type: "RENDIMENTO_FINANCEIRO", inflow: 10, outflow: 0 });
+  });
 });

@@ -16,7 +16,7 @@ O módulo novo usa `finance_imports` como manifesto idempotente e `finance_ledge
 - Sisprime e PagBank: leem colunas bancárias, identificadores e a direção débito/crédito; data ou valor inválidos viram aviso de revisão, sem data atual ou valor zero inventado.
 - Cielo: mantém valor bruto, taxa, líquido, data de venda e previsão de recebimento como receita faturada para comparar com o crédito posterior.
 - Stripe: separa valor bruto, taxa, impostos e estornos e preserva o ID da transação.
-- PDF textual é tentado pelo leitor atual. PDF digitalizado e comprovantes em imagem são arquivados e entram na revisão humana; OCR ainda não está conectado.
+- PDF textual é lido por página, com colunas reconhecidas ou fallback de extrato com cabeçalho Data/Histórico/Valor, incluindo valores C/D e saldo separado. A origem mantém página e linha. Cada página sem texto ou sem layout reconhecido gera pendência, mesmo em PDFs mistos. Até 100 páginas são extraídas, com aviso para conferir o restante. PDFs digitalizados e comprovantes em imagem são arquivados e entram na revisão humana; OCR ainda não está conectado. Notas fiscais não viram lançamento apenas por conter um total.
 - A tela de conciliação sugere apenas pares únicos com líquido idêntico e até sete dias entre a previsão de depósito (ou data da venda) e o crédito bancário. A pessoa confirma; a API revalida ambos os registros e grava os vínculos e auditoria.
 - Data fora da competência escolhida é sinalizada e exige confirmação humana do período.
 - O fechamento mensal mantém um checklist de extratos, recebimentos, conciliação, cartões, notas e pagamentos. Só fecha com documentos importados, processamento concluído e nenhuma exceção aberta; períodos fechados bloqueiam novos envios.

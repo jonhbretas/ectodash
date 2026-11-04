@@ -32,9 +32,10 @@ export async function POST(request: Request) {
   const checklist = existing.checklist as Partial<Checklist>;
   const missing = keys.filter((key) => checklist[key] !== true);
   if (missing.length) return NextResponse.json({ error: "Confirme todos os itens do checklist antes de fechar." }, { status: 409 });
-  const { data: imports } = await supabase.from("finance_imports").select("id,status").eq("metadata->>competencia", body.competencia);
+  const { data: imports, error: importsError } = await supabase.from("finance_imports").select("id,status").eq("metadata->>competencia", body.competencia);
+  if (importsError) return NextResponse.json({ error: "Não foi possível validar os documentos do mês." }, { status: 503 });
   if (!imports?.length) return NextResponse.json({ error: "Envie e valide os documentos deste mês antes do fechamento." }, { status: 409 });
-  if (imports.some((item) => ["FAILED", "PROCESSING"].includes(item.status))) return NextResponse.json({ error: "Há arquivo com falha ou processamento em andamento." }, { status: 409 });
+  if (imports.some((item) => !["PROCESSED", "PARTIAL"].includes(item.status))) return NextResponse.json({ error: "Há arquivo com falha ou processamento em andamento." }, { status: 409 });
   const importIds = imports.map((item) => item.id);
   const { count: openExceptions, error: exceptionError } = await supabase.from("finance_exceptions").select("id", { count: "exact", head: true }).eq("status", "OPEN").in("import_id", importIds);
   if (exceptionError) return NextResponse.json({ error: "Não foi possível validar as pendências." }, { status: 400 });

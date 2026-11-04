@@ -73,6 +73,22 @@ function buildXlsx(sheets: { name: string; rows: Cell[][] }[]): Uint8Array {
 }
 
 describe("financial document parser", () => {
+  it("respects debit direction in a generic CSV and warns about corrupt amounts", async () => {
+    const result = await parseFinancialDocument(new File(["Data;Descrição;Tipo;Valor\n01/11/2026;Fornecedor;saída;100,00\n02/11/2026;PIX;entrada;ilegível123"], "extrato.csv"));
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({ outflow: 100, inflow: 0 });
+    expect(result.warnings.some((warning) => warning.includes("Linha 3"))).toBe(true);
+  });
+  it("warns about invalid dates in OFX instead of dropping them silently", async () => {
+    const result = await parseFinancialDocument(new File(["<OFX><STMTTRN><TRNAMT>100.00<DTPOSTED>20260231<MEMO>PIX</STMTTRN></OFX>"], "extrato.ofx"));
+    expect(result.rows).toEqual([]);
+    expect(result.warnings).toHaveLength(1);
+  });
+  it("does not treat an invalid processor fee as zero", async () => {
+    const result = await parseFinancialDocument(new File(["Data da venda;Valor da venda;Taxa;Valor líquido\n01/11/2026;100,00;ilegível;95,00"], "cielo.csv"));
+    expect(result.rows).toEqual([]);
+    expect(result.warnings.some((warning) => warning.includes("taxa inválida"))).toBe(true);
+  });
   it("reads a CSV bank statement", async () => {
     const file = new File(["Data;Descrição;Valor\n01/02/2026;PIX recebido;1.234,56"], "extrato.csv", { type: "text/csv" });
     const result = await parseFinancialDocument(file);
@@ -86,6 +102,13 @@ describe("financial document parser", () => {
     const result = await parseFinancialDocument(new File([bytes as unknown as ArrayBuffer], "extrato.xlsx"));
     expect(result.rows).toHaveLength(2);
     expect(result.rows.map((row) => row.type)).toEqual(["TARIFA", "RESGATE"]);
+  });
+  it("keeps identical transactions on separate sheets independently traceable", async () => {
+    const rows = [["Data", "Descrição", "Valor"], ["2026-11-01", "Tarifa", -10]];
+    const bytes = buildXlsx([{ name: "Conta A", rows }, { name: "Conta B", rows }]);
+    const result = await parseFinancialDocument(new File([bytes as unknown as ArrayBuffer], "extrato.xlsx"));
+    expect(result.rows).toHaveLength(2);
+    expect(new Set(result.rows.map((row) => row.lineHash)).size).toBe(2);
   });
   it("reads OFX transactions", async () => {
     const text = `<OFX><STMTTRN><TRNAMT>-200.00<DTPOSTED>20260315<MEMO>Fornecedor</STMTTRN></OFX>`;

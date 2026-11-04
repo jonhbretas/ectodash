@@ -1,40 +1,16 @@
 // Parsers for the source formats used by Ectolab. Keep amounts and dates
 // deterministic: unreadable values become review warnings, never zero/today.
+import { parseFinancialAmount as number, parseFinancialDate as date } from "./values";
+import { readFinancialPdf } from "./parse-pdf";
 import readXlsxFile from "read-excel-file/node";
 import { parseCsv } from "./parse-file";
-import { calculateNet, classifyDescription, type NormalizedFinancialRow } from "./automation";
+import { calculateNet, classifyDescription, hashLine, type NormalizedFinancialRow } from "./automation";
 
 export type DocumentParseResult = { format: "CSV" | "XLSX" | "OFX" | "PDF" | "IMAGE"; sourceType: string; provider?: string; rows: NormalizedFinancialRow[]; warnings: string[] };
 
 type ParsedGrid = { rows: NormalizedFinancialRow[]; warnings: string[]; provider?: string; sourceType: string };
 const clean = (value: unknown) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 const col = (headers: string[], patterns: RegExp[]) => headers.findIndex((header) => patterns.some((pattern) => pattern.test(clean(header))));
-
-function number(value: unknown): number | null {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  let text = String(value ?? "").replace(/R\$\s?/gi, "").replace(/\s/g, "").trim();
-  if (!text) return null;
-  const negative = /^\(.*\)$/.test(text);
-  text = text.replace(/[()]/g, "");
-  if (text.includes(",")) text = text.replace(/\./g, "").replace(",", ".");
-  text = text.replace(/[^0-9.+-]/g, "");
-  if (!text) return null;
-  const result = Number(text);
-  return Number.isFinite(result) ? (negative ? -Math.abs(result) : result) : null;
-}
-
-function date(value: unknown): string | null {
-  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString().slice(0, 10);
-  if (typeof value === "number" && value > 20000 && value < 90000) return new Date(Math.round((value - 25569) * 86400 * 1000)).toISOString().slice(0, 10);
-  const text = String(value ?? "").trim();
-  const br = /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/.exec(text);
-  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
-  const parts = br ? [br[3].length === 2 ? `20${br[3]}` : br[3], br[2].padStart(2, "0"), br[1].padStart(2, "0")] : iso?.slice(1);
-  if (!parts) return null;
-  const [year, month, day] = parts;
-  const parsed = new Date(`${year}-${month}-${day}T00:00:00Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === `${year}-${month}-${day}` ? `${year}-${month}-${day}` : null;
-}
 
 function makeRow(description: string, amount: number, movementDate: string, line: number, externalId?: string) {
   const row = classifyDescription(description, amount, movementDate, line, description);
@@ -43,7 +19,7 @@ function makeRow(description: string, amount: number, movementDate: string, line
 }
 
 function rowsFromGrid(grid: unknown[][], sheet?: string, filename = ""): ParsedGrid {
-  const headerRow = grid.findIndex((row) => row.filter((cell) => String(cell ?? "").trim()).length >= 2 && row.some((cell) => /data|date|valor|amount|descri|memo|historico|historico/i.test(clean(cell))));
+  const headerRow = grid.findIndex((row) => row.some((cell) => /data|date|created|movimento|lancamento/.test(clean(cell))) && row.some((cell) => /valor|amount|credito|debito|entrada|saida/.test(clean(cell))));
   if (headerRow < 0) return { rows: [], warnings: ["Cabeçalho financeiro não identificado."], sourceType: "UNKNOWN" };
   const headers = grid[headerRow].map(clean);
   const joined = `${headers.join(" ")} ${clean(filename)} ${clean(sheet)}`;
@@ -66,17 +42,23 @@ function rowsFromGrid(grid: unknown[][], sheet?: string, filename = ""): ParsedG
     grid.slice(headerRow + 1).forEach((cells, index) => {
       const line = headerRow + index + 2;
       const gross = number(cells[grossCol]);
-      if (gross === null || gross === 0) return;
+      if (cells.every((cell) => !String(cell ?? "").trim())) return;
+      if (gross === null) { warnings.push(`Linha ${line}: valor bruto inválido; revise o documento.`); return; }
+      if (gross === 0) return;
       const saleDate = date(cells[saleDateCol]);
       if (!saleDate) { warnings.push(`Linha ${line}: data da venda inválida; revise o documento.`); return; }
-      const fee = feeCol >= 0 ? Math.abs(number(cells[feeCol]) ?? 0) : 0;
+      const parsedFee = feeCol >= 0 && String(cells[feeCol] ?? "").trim() ? number(cells[feeCol]) : 0;
+      if (parsedFee === null) { warnings.push(`Linha ${line}: taxa inválida; revise o documento.`); return; }
+      const fee = Math.abs(parsedFee);
       const net = netCol >= 0 ? number(cells[netCol]) : calculateNet({ gross: Math.abs(gross), fee, tax: 0, refund: 0, chargeback: 0 });
       if (net === null) { warnings.push(`Linha ${line}: valor líquido ilegível; revise o documento.`); return; }
       const row = makeRow("Venda Cielo", Math.abs(net), saleDate, line, idCol >= 0 ? String(cells[idCol] ?? "") : undefined);
       row.type = "RECEITA_FATURADA"; row.gross = Math.abs(gross); row.fee = fee; row.net = Math.abs(net); row.inflow = 0; row.outflow = 0; row.provider = "CIELO"; row.confidence = .94; row.saleDate = saleDate;
       row.explanation = "Venda Cielo identificada; valor líquido e data de venda preservados para conciliação com o recebimento.";
       const expected = expectedCol >= 0 ? date(cells[expectedCol]) : null;
+      if (expectedCol >= 0 && String(cells[expectedCol] ?? "").trim() && !expected) warnings.push(`Linha ${line}: previsão de pagamento inválida; revise o documento.`);
       if (expected) row.expectedDate = expected;
+      row.sheet = sheet;
       rows.push(row);
     });
     return { rows, warnings, provider, sourceType: "PAYMENT_PROCESSOR" };
@@ -95,20 +77,23 @@ function rowsFromGrid(grid: unknown[][], sheet?: string, filename = ""): ParsedG
     grid.slice(headerRow + 1).forEach((cells, index) => {
       const line = headerRow + index + 2;
       const amount = number(cells[amountCol]);
-      if (amount === null || amount === 0) return;
+      if (cells.every((cell) => !String(cell ?? "").trim())) return;
+      if (amount === null) { warnings.push(`Linha ${line}: valor Stripe inválido; revise o documento.`); return; }
+      if (amount === 0) return;
       const status = statusCol >= 0 ? clean(cells[statusCol]) : "";
       if (status && !/succeeded|paid|captured|complete/.test(status)) return;
       const movementDate = date(cells[dateCol]);
       if (!movementDate) { warnings.push(`Linha ${line}: data Stripe inválida; revise o documento.`); return; }
       const gross = Math.abs(amount);
-      const fee = Math.abs(feeCol >= 0 ? number(cells[feeCol]) ?? 0 : 0);
-      const refund = Math.abs(refundCol >= 0 ? number(cells[refundCol]) ?? 0 : 0);
-      const tax = Math.abs(taxCol >= 0 ? number(cells[taxCol]) ?? 0 : 0);
+      const costs = [feeCol, refundCol, taxCol].map((index) => index >= 0 && String(cells[index] ?? "").trim() ? number(cells[index]) : 0);
+      if (costs.some((value) => value === null)) { warnings.push(`Linha ${line}: taxa, estorno ou imposto inválido; revise o documento.`); return; }
+      const [fee, refund, tax] = costs.map((value) => Math.abs(value!));
       const net = calculateNet({ gross, fee, tax, refund, chargeback: 0 });
       const description = descCol >= 0 ? String(cells[descCol] ?? "Pagamento Stripe") : "Pagamento Stripe";
       const row = makeRow(description || "Pagamento Stripe", net, movementDate, line, idCol >= 0 ? String(cells[idCol] ?? "") : undefined);
       row.type = refund ? "ESTORNO" : "RECEITA_FATURADA"; row.gross = gross; row.fee = fee; row.tax = tax; row.refund = refund; row.net = net; row.inflow = 0; row.outflow = 0; row.provider = "STRIPE"; row.confidence = .92; row.saleDate = movementDate;
       row.explanation = "Pagamento Stripe com valor bruto, taxa e estorno separados; recebimento bancário será conciliado em etapa própria.";
+      row.sheet = sheet;
       rows.push(row);
     });
     return { rows, warnings, provider, sourceType: "PAYMENT_PROCESSOR" };
@@ -128,16 +113,22 @@ function rowsFromGrid(grid: unknown[][], sheet?: string, filename = ""): ParsedG
     const line = headerRow + index + 2;
     const movementDate = date(cells[dateCol]);
     const baseAmount = amountCol >= 0 ? number(cells[amountCol]) : null;
-    const credit = creditCol >= 0 ? number(cells[creditCol]) : 0;
-    const debit = debitCol >= 0 ? number(cells[debitCol]) : 0;
-    if (!movementDate || (baseAmount === null && credit === null && debit === null)) {
+    const credit = creditCol >= 0 ? number(cells[creditCol]) : null;
+    const debit = debitCol >= 0 ? number(cells[debitCol]) : null;
+    if (cells.every((cell) => !String(cell ?? "").trim()) || cells.every((cell, i) => clean(cell) === headers[i])) return;
+    if (/^saldo(?:\s|$)/.test(clean(cells[descriptionCol]))) return;
+    const invalidAmount = amountCol >= 0 ? baseAmount === null :
+      (credit === null && debit === null) ||
+      (creditCol >= 0 && String(cells[creditCol] ?? "").trim() !== "" && credit === null) ||
+      (debitCol >= 0 && String(cells[debitCol] ?? "").trim() !== "" && debit === null);
+    if (!movementDate || invalidAmount || (baseAmount === null && credit === null && debit === null)) {
       if (cells.some((cell) => String(cell ?? "").trim())) warnings.push(`Linha ${line}: data ou valor inválido; linha separada para revisão.`);
       return;
     }
     let amount = baseAmount ?? Number(credit || 0) - Number(debit || 0);
     const direction = directionCol >= 0 ? clean(cells[directionCol]) : "";
-    if (isSisprime && /^(d|debito|debit|saida)$/.test(direction)) amount = -Math.abs(amount);
-    else if (isSisprime && /^(c|credito|credit|entrada)$/.test(direction)) amount = Math.abs(amount);
+    if (/^(d|debito|debit|saida|pagamento)$/.test(direction)) amount = -Math.abs(amount);
+    else if (/^(c|credito|credit|entrada)$/.test(direction)) amount = Math.abs(amount);
     if (isPagBank && /debit|saida|pagamento|tarifa/i.test(direction)) amount = -Math.abs(amount);
     if (amount === 0) return;
     const description = [cells[descriptionCol], detailCol >= 0 ? cells[detailCol] : ""].map((value) => String(value ?? "").trim()).filter(Boolean).join(" — ");
@@ -150,30 +141,25 @@ function rowsFromGrid(grid: unknown[][], sheet?: string, filename = ""): ParsedG
   return { rows, warnings, provider, sourceType: isSisprime || isPagBank ? "BANK_STATEMENT" : "UNKNOWN" };
 }
 
-function parseOfx(text: string): NormalizedFinancialRow[] {
-  return text.split(/<STMTTRN>/i).slice(1).flatMap((block, index) => {
+function parseOfx(text: string): ParsedGrid {
+  const warnings: string[] = [];
+  const rows = text.split(/<STMTTRN>/i).slice(1).flatMap((block, index) => {
     const value = number(/<TRNAMT>([^<]+)/i.exec(block)?.[1]);
     const dt = /<DTPOSTED>(\d{4})(\d{2})(\d{2})/i.exec(block);
     const memo = /<MEMO>([^<]+)/i.exec(block)?.[1] ?? /<NAME>([^<]+)/i.exec(block)?.[1] ?? "OFX transaction";
     const id = /<FITID>([^<]+)/i.exec(block)?.[1];
-    if (value === null || !dt) return [];
-    return [makeRow(memo.trim(), value, `${dt[1]}-${dt[2]}-${dt[3]}`, index + 1, id)];
+    const movementDate = dt ? date(`${dt[1]}-${dt[2]}-${dt[3]}`) : null;
+    if (value === null || !movementDate) { warnings.push(`Transação OFX ${index + 1}: data ou valor inválido; revise o documento.`); return []; }
+    return [makeRow(memo.trim(), value, movementDate, index + 1, id)];
   });
+  return { rows, warnings: rows.length || warnings.length ? warnings : ["Nenhuma transação OFX encontrada."], sourceType: "BANK_STATEMENT", provider: "BANK" };
 }
 
 export async function parseFinancialDocument(file: File): Promise<DocumentParseResult> {
   const name = file.name.toLowerCase();
-  if (name.endsWith(".ofx")) { const rows = parseOfx(await file.text()); return { format: "OFX", sourceType: "BANK_STATEMENT", provider: "BANK", rows, warnings: rows.length ? [] : ["Nenhuma transação OFX encontrada."] }; }
+  if (name.endsWith(".ofx")) return { format: "OFX", ...parseOfx(await file.text()) };
   if (/\.(jpe?g|png|webp|heic)$/.test(name)) return { format: "IMAGE", sourceType: "UNKNOWN", rows: [], warnings: ["Imagem arquivada; OCR não disponível nesta etapa. Confira os dados e preencha manualmente."] };
-  if (name.endsWith(".pdf")) {
-    try {
-      const { PDFParse } = await import("pdf-parse");
-      const parser = new PDFParse({ data: Buffer.from(await file.arrayBuffer()) });
-      const result = await parser.getText(); await parser.destroy();
-      const parsed = rowsFromGrid(result.text.split("\n").map((line) => line.split(/\s{2,}|\t/)), "PDF", file.name);
-      return { format: "PDF", sourceType: parsed.sourceType, provider: parsed.provider, rows: parsed.rows, warnings: parsed.rows.length ? parsed.warnings : [...parsed.warnings, "PDF lido, mas o layout exige revisão manual ou envio de CSV/Excel."] };
-    } catch { return { format: "PDF", sourceType: "UNKNOWN", rows: [], warnings: ["PDF sem extração legível neste ambiente; revisar manualmente ou enviar CSV/Excel."] }; }
-  }
+  if (name.endsWith(".pdf")) return readFinancialPdf(file, rowsFromGrid);
   if (name.endsWith(".csv")) { const parsed = rowsFromGrid(parseCsv(await file.text()), undefined, file.name); return { format: "CSV", ...parsed, warnings: parsed.rows.length ? parsed.warnings : [...parsed.warnings, "Nenhuma transação reconhecida."] }; }
   if (name.endsWith(".xls")) return { format: "XLSX", sourceType: "UNKNOWN", rows: [], warnings: ["O formato .xls não é suportado — salve como .xlsx ou .csv."] };
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -181,7 +167,7 @@ export async function parseFinancialDocument(file: File): Promise<DocumentParseR
   const rows: NormalizedFinancialRow[] = []; const warnings: string[] = []; let provider: string | undefined; let sourceType = "UNKNOWN";
   for (const { sheet, data } of sheets) {
     const parsed = rowsFromGrid(normalizeGrid(data), sheet, file.name);
-    rows.push(...parsed.rows); warnings.push(...parsed.warnings.map((warning) => `${sheet}: ${warning}`)); provider ??= parsed.provider;
+    rows.push(...parsed.rows.map((row) => ({ ...row, lineHash: hashLine(`${sheet}|${row.lineHash}`) }))); warnings.push(...parsed.warnings.map((warning) => `${sheet}: ${warning}`)); provider ??= parsed.provider;
     if (parsed.sourceType !== "UNKNOWN") sourceType = parsed.sourceType;
   }
   return { format: "XLSX", sourceType, provider, rows, warnings: rows.length ? warnings : [...warnings, "Nenhuma tabela financeira foi identificada."] };

@@ -35,7 +35,8 @@ const nextConfig: NextConfig = {
   // Turbopack bundles it the path resolves to a fake /ROOT that doesn't
   // exist (ENOENT Helvetica.afm → 500 on /api/atas/[id]/pdf). Keeping it
   // external makes Next require it from node_modules at runtime instead.
-  serverExternalPackages: ["pdfkit"],
+  // pdf-parse also resolves its PDF.js worker relative to its own package.
+  serverExternalPackages: ["pdfkit", "pdf-parse"],
   experimental: {
     // TypeScript 7.0.2 (pinned per RESEARCH.md Pitfall 7) does not yet expose
     // the compiler API Next.js's build-time type-checker relies on by

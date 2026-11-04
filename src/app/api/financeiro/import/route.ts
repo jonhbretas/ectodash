@@ -46,7 +46,8 @@ export async function POST(request: Request) {
   const competencia = String(form.get("competencia") || new Date().toISOString().slice(0, 7));
   const categoria = String(form.get("categoria") || "outros");
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)) return NextResponse.json({ error: "Competência inválida" }, { status: 400 });
-  const { data: closedPeriod } = await supabase.from("finance_periods").select("id").eq("competencia", `${competencia}-01`).eq("status", "FECHADO").maybeSingle();
+  const { data: closedPeriod, error: periodError } = await supabase.from("finance_periods").select("id").eq("competencia", `${competencia}-01`).eq("status", "FECHADO").maybeSingle();
+  if (periodError) return NextResponse.json({ error: "Não foi possível verificar o fechamento da competência. Tente novamente." }, { status: 503 });
   if (closedPeriod) return NextResponse.json({ error: "Este mês já foi fechado. Fale com a coordenação financeira antes de enviar novos documentos." }, { status: 409 });
   if (!files.length) return NextResponse.json({ error: "Envie ao menos um arquivo" }, { status: 400 });
   const results = [];
@@ -56,7 +57,8 @@ export async function POST(request: Request) {
     if (!["ofx", "pdf", "csv", "xlsx", "xls", "jpg", "jpeg", "png", "webp", "heic"].includes(extension ?? "") || (file.type && file.type !== "application/octet-stream" && !ALLOWED_MIME.has(file.type))) { results.push({ file: file.name, status: "FAILED", error: "Tipo de arquivo não permitido. Envie OFX, PDF, CSV, Excel ou imagem." }); continue; }
     const bytes = Buffer.from(await file.arrayBuffer());
     const sha256 = createHash("sha256").update(bytes).digest("hex");
-    const { data: existing } = await supabase.from("finance_imports").select("id,status").eq("file_sha256", sha256).maybeSingle();
+    const { data: existing, error: duplicateError } = await supabase.from("finance_imports").select("id,status").eq("file_sha256", sha256).maybeSingle();
+    if (duplicateError) { results.push({ file: file.name, status: "FAILED", error: "Não foi possível verificar se o arquivo já foi importado." }); continue; }
     if (existing) { results.push({ file: file.name, status: "DUPLICATE", importId: existing.id }); continue; }
     let driveFile;
     try {
@@ -88,13 +90,15 @@ export async function POST(request: Request) {
     const ledgerRows = parsed.rows.map((row) => ({ import_id: imported.id, file_name: file.name, sheet_name: row.sheet ?? null, source_line: row.line, line_hash: row.lineHash, external_transaction_id: row.externalId ?? null, movement_date: row.date, sale_date: row.saleDate ?? null, settlement_date: row.settlementDate ?? null, expected_date: row.expectedDate ?? null, type: row.type, original_description: row.description, normalized_description: row.normalizedDescription, gross_amount: row.gross, fee_amount: row.fee, tax_amount: row.tax, refund_amount: row.refund, chargeback_amount: row.chargeback, net_amount: row.net, inflow: row.inflow, outflow: row.outflow, category_id: row.category ? entityIds.get(`CATEGORY:${row.category}`) : null, provider_id: row.provider ? entityIds.get(`PROVIDER:${row.provider}`) : (parsed.provider ? entityIds.get(`PROVIDER:${parsed.provider}`) : null), reconciliation_status: "PENDENTE", confidence: row.confidence, classification_explanation: row.explanation }));
     const { data: savedLedger, error: ledgerError } = ledgerRows.length ? await supabase.from("finance_ledger").insert(ledgerRows).select("id,confidence,original_description,net_amount") : { data: [], error: null };
     const uncertain = (savedLedger ?? []).filter((row) => Number(row.confidence) < 0.8);
-    if (!ledgerError) await supabase.from("finance_audit_log").insert({ import_id: imported.id, action: "IMPORT_PROCESSED", after_data: { file: file.name, rows: parsed.rows.length }, actor: user.id });
-    await supabase.from("finance_imports").update({ status: ledgerError ? "FAILED" : allWarnings.length || uncertain.length ? "PARTIAL" : "PROCESSED", error_message: ledgerError?.message ?? null, processed_at: new Date().toISOString() }).eq("id", imported.id);
     const exceptions = [
       ...allWarnings.map((problem) => ({ import_id: imported.id, problem, recommendation: "Confira o arquivo original no Drive e complete os dados manualmente.", status: "OPEN" as const })),
       ...uncertain.map((row) => ({ import_id: imported.id, problem: `Classificação com baixa confiança: ${row.original_description}`, affected_amount: row.net_amount, ledger_ids: [row.id], recommendation: "Revise data, descrição e valor antes de considerar este lançamento conferido.", status: "OPEN" as const })),
     ];
-    if (exceptions.length) await supabase.from("finance_exceptions").insert(exceptions);
+    const { error: exceptionError } = exceptions.length ? await supabase.from("finance_exceptions").insert(exceptions) : { error: null };
+    const { error: auditError } = !ledgerError ? await supabase.from("finance_audit_log").insert({ import_id: imported.id, action: "IMPORT_PROCESSED", after_data: { file: file.name, rows: parsed.rows.length }, actor: user.id }) : { error: null };
+    const processingError = ledgerError ?? exceptionError ?? auditError;
+    const { error: statusError } = await supabase.from("finance_imports").update({ status: processingError ? "FAILED" : allWarnings.length || uncertain.length ? "PARTIAL" : "PROCESSED", error_message: processingError?.message ?? null, processed_at: new Date().toISOString() }).eq("id", imported.id);
+    if (processingError || statusError) { results.push({ file: file.name, status: "FAILED", importId: imported.id, error: "O processamento não foi concluído. Confira a importação existente antes de reenviar o arquivo." }); continue; }
     results.push({ file: file.name, status: ledgerError ? "FAILED" : allWarnings.length || uncertain.length ? "PARTIAL" : "PROCESSED", importId: imported.id, rows: parsed.rows.length, warnings: allWarnings, uncertain: uncertain.length, provider: parsed.provider ?? null, sourceType: parsed.sourceType });
   }
   return NextResponse.json({ results });
