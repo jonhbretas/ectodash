@@ -524,7 +524,7 @@ function ResultsScreen({
   return (
     <main
       id="main-content"
-      className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-24 pt-8"
+      className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-24 pt-6 sm:px-6 sm:pt-8"
     >
       {/* Header */}
       <header className="flex w-full flex-wrap items-start justify-between gap-4">
@@ -558,7 +558,7 @@ function ResultsScreen({
       {temAlgo ? (
         <>
           {/* Column distribution: Ata / Eventos / Demandas */}
-          <div className="grid w-full grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid min-w-0 w-full grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
             {/* Ata da reunião — editable quando a IA extraiu a ata */}
             <ResultColumn
               titulo="Ata da reunião"
@@ -660,12 +660,12 @@ function ResultsScreen({
                     return (
                       <div
                         key={e.key}
-                        className={`flex flex-col gap-2 rounded-xl border p-4 ${
+                        className={`flex min-w-0 flex-col gap-2 rounded-xl border p-3 sm:p-4 ${
                           dup ? "border-amber-200 bg-amber-50/60" : "border-slate-200 bg-white"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <label className="flex flex-1 flex-col gap-1">
+                          <label className="flex min-w-0 flex-1 flex-col gap-1">
                             <span className="text-xs font-medium text-slate-700">Título</span>
                             <input
                               value={e.titulo}
@@ -686,7 +686,7 @@ function ResultsScreen({
                             <Trash2 size={14} />
                           </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                           <label htmlFor={`evento-data-${e.key}`} className="flex flex-col gap-1">
                             <span className="text-xs font-medium text-slate-700">Data</span>
                             <DateInput
@@ -1350,7 +1350,7 @@ function ResultColumn({
   return (
     <section
       aria-label={titulo}
-      className="flex min-h-[24rem] w-full flex-col gap-3 rounded-2xl bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60"
+      className="flex min-h-[24rem] min-w-0 w-full flex-col gap-3 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/60 sm:p-5"
     >
       <header className="flex items-center gap-2 border-b border-slate-100 pb-3">
         <Icon size={20} className="text-[#2195B9]" aria-hidden="true" strokeWidth={1.75} />
@@ -1361,7 +1361,7 @@ function ResultColumn({
           </span>
         )}
       </header>
-      <div className="max-h-[calc(100vh-24rem)] overflow-y-auto pr-1">
+      <div className="min-w-0">
         {children}
       </div>
     </section>
