@@ -608,7 +608,9 @@ function ReviewScreen({
   function buildFormData(): FormData {
     const formData = new FormData();
     formData.set("titulo", titulo);
-    formData.set("data_reuniao", dataReuniao || new Date().toISOString().slice(0, 10));
+    // Never infer the meeting date from the upload/save day. If the source
+    // has no date, the required review field must be completed explicitly.
+    formData.set("data_reuniao", dataReuniao);
     formData.set("horario", horario);
     formData.set("resumo", resumo);
     formData.set("participantes", participantes);
